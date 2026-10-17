@@ -6,7 +6,7 @@ import { BUILT_IN_GRADES } from "@/lib/permissions";
 import { slugify } from "@/lib/slug";
 
 /** Slugs qui entreraient en conflit avec des pages du site. */
-const RESERVED = new Set(["app", "admin", "api", "connexion", "inscription", "bienvenue", "tarifs", "contact", "blog", "aide", "pro", "s", "r"]);
+const RESERVED = new Set(["app", "admin", "api", "connexion", "inscription", "bienvenue", "mot-de-passe-oublie", "tarifs", "contact", "blog", "aide", "pro", "s", "r"]);
 
 async function freeSlug(name: string) {
   const base = slugify(name) || "etablissement";

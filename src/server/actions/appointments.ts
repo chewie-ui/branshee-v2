@@ -4,11 +4,13 @@ import { TZDate } from "@date-fns/tz";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, appointments, customers, members, services } from "@/db/schema";
 import { getAvailableSlots } from "@/server/availability";
 import { requireContext } from "@/server/context";
+import { notifyBookingCreated, notifyRequestDecision } from "@/server/notifications";
 
 const idSchema = z.uuid();
 
@@ -45,6 +47,7 @@ async function setStatus(rawId: string, status: "confirmed" | "cancelled", actio
     description: `${label} : ${updated[0]!.contactName ?? "client"}`,
   });
 
+  after(() => notifyRequestDecision(id, status === "confirmed"));
   revalidatePath("/app", "layout");
   return { ok: true as const };
 }
@@ -68,6 +71,7 @@ const createSchema = z
     newEmail: z.union([z.email({ message: "Email invalide." }), z.literal("")]),
     newPhone: z.string().trim().max(40),
     note: z.string().trim().max(1000),
+    notify: z.string(),
   })
   .refine((v) => v.customerId !== "" || v.newName.length > 1, { message: "Choisissez un client ou saisissez un nom.", path: ["newName"] });
 
@@ -75,7 +79,7 @@ export type CreateAppointmentState = { error?: string; fieldErrors?: Record<stri
 
 export async function createAppointment(_prev: CreateAppointmentState, formData: FormData): Promise<CreateAppointmentState> {
   const ctx = await requireContext("appointments.manage");
-  const parsed = createSchema.safeParse(Object.fromEntries(["serviceId", "memberId", "date", "time", "customerId", "newName", "newEmail", "newPhone", "note"].map((k) => [k, String(formData.get(k) ?? "")])));
+  const parsed = createSchema.safeParse(Object.fromEntries(["serviceId", "memberId", "date", "time", "customerId", "newName", "newEmail", "newPhone", "note", "notify"].map((k) => [k, String(formData.get(k) ?? "")])));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] ??= issue.message;
@@ -93,6 +97,7 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
   const endsAt = new Date(startsAt.getTime() + service.durationMin * 60000);
 
   // Client + rendez-vous dans une seule transaction : si le créneau est pris, rien n'est créé.
+  let createdId: string | null = null;
   try {
     await db.transaction(async (tx) => {
       let customerId = v.customerId || null;
@@ -115,7 +120,7 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
         }
       }
 
-      await tx.insert(appointments).values({
+      const [created] = await tx.insert(appointments).values({
         businessId: ctx.business.id,
         status: "confirmed",
         startsAt,
@@ -130,7 +135,8 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
         contactPhone: contact.phone,
         internalNote: v.note || null,
         createdById: ctx.user.id,
-      });
+      }).returning({ id: appointments.id });
+      createdId = created!.id;
 
       await tx.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "appointment.create", description: `Rendez-vous créé : ${contact.name}, ${v.date} ${v.time}` });
     });
@@ -141,6 +147,10 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
     throw error;
   }
 
+  if (createdId && v.notify === "on") {
+    const id = createdId;
+    after(() => notifyBookingCreated(id, "pro"));
+  }
   revalidatePath("/app", "layout");
   redirect(`/app/agenda?semaine=${v.date}`);
 }

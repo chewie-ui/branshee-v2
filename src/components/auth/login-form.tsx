@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -23,6 +24,11 @@ export function LoginForm({ next }: { next?: string }) {
       <Field label="Mot de passe" htmlFor="password" error={err.password}>
         <PasswordInput id="password" name="password" autoComplete="current-password" required aria-invalid={!!err.password || undefined} />
       </Field>
+      <div className="-mt-2 text-right">
+        <Link href="/mot-de-passe-oublie" className="text-sm font-medium text-accent hover:text-accent-hover">
+          Mot de passe oublié ?
+        </Link>
+      </div>
       <Button type="submit" loading={pending} className="w-full">
         Se connecter
       </Button>

@@ -175,3 +175,20 @@ export const pageViews = pgTable(
   },
   (t) => [index("page_views_created_idx").on(t.createdAt)],
 );
+
+/** Journal des emails envoyés (ou tentés) : utile au support et pour éviter les doublons. */
+export const emailLogs = pgTable(
+  "email_logs",
+  {
+    id: id(),
+    businessId: uuid("business_id").references(() => businesses.id, { onDelete: "set null" }),
+    appointmentId: uuid("appointment_id"),
+    template: text("template").notNull(),
+    toEmail: text("to_email").notNull(),
+    subject: text("subject").notNull(),
+    status: text("status", { enum: ["sent", "failed", "logged"] }).notNull(),
+    error: text("error"),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("email_logs_created_idx").on(t.createdAt), index("email_logs_appointment_idx").on(t.appointmentId)],
+);

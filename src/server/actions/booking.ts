@@ -1,12 +1,14 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, appointments, customers } from "@/db/schema";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
+import { notifyBookingCreated } from "@/server/notifications";
 import { getPublicBusiness } from "@/server/public";
 
 async function ip() {
@@ -101,7 +103,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const status = data.settings.autoConfirm ? "confirmed" : "pending";
 
   try {
-    const token = await db.transaction(async (tx) => {
+    const created = await db.transaction(async (tx) => {
       const [existing] = await tx.select().from(customers).where(and(eq(customers.businessId, data.business.id), sql`lower(${customers.email}) = ${v.email}`));
       if (existing?.blockedAt) throw new BlockedError();
       let customerId = existing?.id;
@@ -130,12 +132,13 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
           customerMessage: v.message || null,
           formAnswers: answers,
         })
-        .returning({ token: appointments.manageToken });
+        .returning({ id: appointments.id, token: appointments.manageToken });
 
       await tx.insert(activityLogs).values({ businessId: data.business.id, actorName: fullName, action: "appointment.online", description: `Réservation en ligne : ${service.name}, ${v.date} ${v.time}` });
-      return appt!.token;
+      return appt!;
     });
-    return { ok: true, token };
+    after(() => notifyBookingCreated(created.id, "online"));
+    return { ok: true, token: created.token };
   } catch (error) {
     if (error instanceof BlockedError) return { ok: false, error: "La réservation en ligne n'est pas disponible. Contactez directement l'établissement." };
     const e = error as { code?: string; cause?: { code?: string } };

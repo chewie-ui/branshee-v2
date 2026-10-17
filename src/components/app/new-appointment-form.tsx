@@ -154,6 +154,13 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
         <Field label="Note interne" htmlFor="note" hint="Visible uniquement par votre équipe.">
           <Textarea id="note" name="note" rows={3} />
         </Field>
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" name="notify" defaultChecked className="mt-0.5 size-4 accent-[var(--accent)]" />
+          <span>
+            <span className="font-medium">Envoyer la confirmation au client par email</span>
+            <span className="block text-muted">Uniquement si le client a une adresse email.</span>
+          </span>
+        </label>
       </Card>
 
       <div className="flex justify-end gap-2">

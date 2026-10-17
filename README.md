@@ -9,6 +9,7 @@ pensée comme une plateforme à modules.
 - [`docs/FEATURES.md`](docs/FEATURES.md) — inventaire complet des fonctionnalités de l'ancien Branshee (cahier des charges)
 - [`docs/UI-ARCHITECTURE.md`](docs/UI-ARCHITECTURE.md) — organisation de l'interface : où va chaque option
 - [`docs/MIGRATION.md`](docs/MIGRATION.md) — correspondance MongoDB → PostgreSQL et plan de bascule
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — mise en ligne sur le VPS, variables, crontab, sauvegardes
 
 ## Démarrer en local
 ```bash
@@ -62,11 +63,12 @@ scripts/              seed, migration depuis MongoDB
 - Créneaux libres proposés dans le formulaire de création de RDV
 - Page publique `/{slug}` + tunnel de réservation (prestation → praticien → jour/heure → coordonnées), revérification du créneau côté serveur, anti-robots et limitation d'abus
 - Page client `/r/{jeton}` : récapitulatif, ajout à l'agenda (.ics), annulation
+- Emails : confirmation, demande reçue, acceptation, refus, annulation, notification au pro, rappels automatiques (`/api/cron/reminders`), journal des envois
+- Mot de passe oublié (code à 6 chiffres par email, sessions fermées après changement)
 
 **Prochaines étapes**
-1. Mot de passe oublié, connexion Google, double authentification (nécessitent l'envoi d'emails)
-2. Emails (confirmation, rappel, annulation) et tâches planifiées
-3. Réservation des cours collectifs, reprogrammation par le client
+1. Connexion Google, double authentification
+2. Réservation des cours collectifs, reprogrammation par le client
 4. Équipe, grades, réglages
 5. Script de migration depuis MongoDB
 6. Paiements, SMS/WhatsApp, avis, site, super-admin
