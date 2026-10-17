@@ -1,0 +1,346 @@
+"use client";
+
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, UserRound } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
+import { formatDuration, formatPrice } from "@/lib/time";
+import { createPublicBooking, getPublicSlots, type PublicDay } from "@/server/actions/booking";
+import type { PublicBusiness } from "@/server/public";
+
+type Step = "service" | "member" | "time" | "details";
+type Props = { data: PublicBusiness; today: string };
+
+const WEEKDAY = new Intl.DateTimeFormat("fr-BE", { weekday: "short", timeZone: "UTC" });
+const DAYNUM = new Intl.DateTimeFormat("fr-BE", { day: "numeric", timeZone: "UTC" });
+const LONG = new Intl.DateTimeFormat("fr-BE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const MONTH = new Intl.DateTimeFormat("fr-BE", { month: "long", year: "numeric", timeZone: "UTC" });
+const utc = (d: string) => new Date(d + "T12:00:00Z");
+const addDays = (d: string, n: number) => {
+  const x = utc(d);
+  x.setUTCDate(x.getUTCDate() + n);
+  return x.toISOString().slice(0, 10);
+};
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export function BookingFlow({ data, today }: Props) {
+  const router = useRouter();
+  const { services, categories, team, questions, settings } = data;
+  const [step, setStep] = useState<Step>("service");
+  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState(today);
+  const [days, setDays] = useState<PublicDay[] | null>(null);
+  const [day, setDay] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(null);
+  const [loadingSlots, startSlots] = useTransition();
+  const [submitting, startSubmit] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const service = services.find((s) => s.id === serviceId) ?? null;
+  const member = team.find((m) => m.id === memberId) ?? null;
+  const candidates = service ? team.filter((m) => service.memberIds.includes(m.id)) : [];
+
+  // Charge les créneaux de la semaine affichée dès que la prestation / le praticien / la semaine changent.
+  useEffect(() => {
+    if (step !== "time" || !serviceId) return;
+    let cancelled = false;
+    startSlots(async () => {
+      const res = await getPublicSlots(data.business.slug, serviceId, memberId, weekStart, 7);
+      if (cancelled) return;
+      setDays(res);
+      setDay((current) => (current && res.some((d) => d.date === current && d.slots.length) ? current : (res.find((d) => d.slots.length)?.date ?? null)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, serviceId, memberId, weekStart, data.business.slug]);
+
+  const grouped = useMemo(() => {
+    const byCat = categories.map((c) => ({ key: c.id, name: c.name, items: services.filter((s) => s.categoryId === c.id) }));
+    const rest = services.filter((s) => !s.categoryId || !categories.some((c) => c.id === s.categoryId));
+    return [...byCat, ...(rest.length ? [{ key: "rest", name: categories.length ? "Autres prestations" : "", items: rest }] : [])].filter((g) => g.items.length);
+  }, [services, categories]);
+
+  function pickService(id: string) {
+    setServiceId(id);
+    setTime(null);
+    setDays(null);
+    const s = services.find((x) => x.id === id)!;
+    const options = team.filter((m) => s.memberIds.includes(m.id));
+    if (options.length <= 1) {
+      setMemberId(options[0]?.id ?? null);
+      setStep("time");
+    } else {
+      setMemberId(null);
+      setStep("member");
+    }
+  }
+
+  const slotsOfDay = days?.find((d) => d.date === day)?.slots ?? [];
+  const periods = [
+    { label: "Matin", items: slotsOfDay.filter((s) => s.time < "12:00") },
+    { label: "Après-midi", items: slotsOfDay.filter((s) => s.time >= "12:00" && s.time < "17:00") },
+    { label: "Soir", items: slotsOfDay.filter((s) => s.time >= "17:00") },
+  ].filter((p) => p.items.length);
+
+  function submit(formData: FormData) {
+    if (!service || !day || !time) return;
+    setError(null);
+    setFieldErrors({});
+    const answers: Record<string, string> = {};
+    for (const q of questions) answers[q.id] = String(formData.get(`q_${q.id}`) ?? "");
+    startSubmit(async () => {
+      const res = await createPublicBooking({
+        slug: data.business.slug,
+        serviceId: service.id,
+        memberId,
+        date: day,
+        time,
+        firstName: String(formData.get("firstName") ?? ""),
+        lastName: String(formData.get("lastName") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        phone: String(formData.get("phone") ?? ""),
+        message: String(formData.get("message") ?? ""),
+        answers,
+        website: String(formData.get("website") ?? ""),
+      });
+      if (res.ok) {
+        router.push(`/r/${res.token}?nouveau=1`);
+        return;
+      }
+      setError(res.error);
+      setFieldErrors(res.fieldErrors ?? {});
+      if (res.slotTaken) {
+        setTime(null);
+        setStep("time");
+      }
+    });
+  }
+
+  const summary = (
+    <div className="space-y-2 rounded-lg bg-surface-muted p-4 text-sm">
+      {service ? (
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold">{service.name}</p>
+            <p className="text-muted">{formatDuration(service.durationMin, service.durationMaxMin)}</p>
+          </div>
+          <span className="font-semibold tabular-nums">{formatPrice(service.priceCents)}</span>
+        </div>
+      ) : null}
+      {candidates.length > 1 ? (
+        <p className="flex items-center gap-2 text-muted">
+          <UserRound className="size-4" aria-hidden="true" />
+          {member ? `Avec ${member.name}` : "Sans préférence de praticien"}
+        </p>
+      ) : null}
+      {day && time ? (
+        <p className="flex items-center gap-2 text-muted">
+          <Clock className="size-4" aria-hidden="true" />
+          {cap(LONG.format(utc(day)))} à {time}
+        </p>
+      ) : null}
+    </div>
+  );
+
+  if (services.length === 0) {
+    return <p className="p-6 text-sm text-muted">Aucune prestation n&apos;est réservable en ligne pour le moment.</p>;
+  }
+
+  return (
+    <div>
+      {step !== "service" ? (
+        <button
+          type="button"
+          onClick={() => setStep(step === "details" ? "time" : step === "time" && candidates.length > 1 ? "member" : "service")}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Retour
+        </button>
+      ) : null}
+
+      {step === "service" ? (
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold">Choisissez une prestation</h2>
+          {grouped.map((g) => (
+            <section key={g.key}>
+              {g.name ? <h3 className="mb-2 text-sm font-semibold text-muted">{g.name}</h3> : null}
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {g.items.map((s) => (
+                  <li key={s.id}>
+                    <button type="button" onClick={() => pickService(s.id)} className="flex w-full items-center gap-4 bg-surface px-4 py-4 text-left transition-colors hover:bg-surface-muted">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{s.name}</p>
+                        {s.description ? <p className="mt-0.5 line-clamp-2 text-sm text-muted">{s.description}</p> : null}
+                        <p className="mt-1 text-sm text-muted">{formatDuration(s.durationMin, s.durationMaxMin)}</p>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums">{formatPrice(s.priceCents)}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : null}
+
+      {step === "member" && service ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Avec qui ?</h2>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            <li>
+              <button type="button" onClick={() => { setMemberId(null); setStep("time"); }} className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent">
+                <span className="flex size-12 items-center justify-center rounded-full bg-surface-muted text-muted" aria-hidden="true">
+                  <UserRound className="size-5" />
+                </span>
+                <span>
+                  <span className="block font-medium">Sans préférence</span>
+                  <span className="block text-sm text-muted">Le premier disponible</span>
+                </span>
+              </button>
+            </li>
+            {candidates.map((m) => (
+              <li key={m.id}>
+                <button type="button" onClick={() => { setMemberId(m.id); setStep("time"); }} className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent">
+                  <Avatar name={m.name} src={m.photoUrl} size="lg" />
+                  <span className="min-w-0">
+                    <span className="block font-medium">{m.name}</span>
+                    {m.role ? <span className="block truncate text-sm text-muted">{m.role}</span> : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {step === "time" && service ? (
+        <div className="space-y-5">
+          <h2 className="text-lg font-semibold">Choisissez un créneau</h2>
+          {summary}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium">{cap(MONTH.format(utc(weekStart)))}</p>
+              <div className="flex gap-1">
+                <button type="button" disabled={weekStart <= today || loadingSlots} onClick={() => setWeekStart(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Semaine précédente">
+                  <ChevronLeft className="size-4" aria-hidden="true" />
+                </button>
+                <button type="button" disabled={loadingSlots || (settings?.horizonDays != null && addDays(weekStart, 7) > addDays(today, settings.horizonDays))} onClick={() => setWeekStart(addDays(weekStart, 7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Semaine suivante">
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Choisir un jour">
+              {(days ?? Array.from({ length: 7 }, (_, i) => ({ date: addDays(weekStart, i), slots: [] }))).map((d) => {
+                const available = d.slots.length > 0;
+                const selected = d.date === day;
+                return (
+                  <button
+                    key={d.date}
+                    type="button"
+                    disabled={!available || loadingSlots}
+                    onClick={() => { setDay(d.date); setTime(null); }}
+                    aria-pressed={selected}
+                    aria-label={`${LONG.format(utc(d.date))}${available ? `, ${d.slots.length} créneaux` : ", complet"}`}
+                    className={cn(
+                      "flex min-h-16 flex-col items-center justify-center rounded-lg border text-sm transition-colors disabled:cursor-not-allowed",
+                      selected ? "border-accent bg-accent text-accent-foreground" : available ? "border-border-strong bg-surface hover:border-accent" : "border-transparent bg-surface-muted text-muted",
+                      loadingSlots && "animate-pulse",
+                    )}
+                  >
+                    <span className="text-xs capitalize">{WEEKDAY.format(utc(d.date)).replace(".", "")}</span>
+                    <span className="text-base font-semibold">{DAYNUM.format(utc(d.date))}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div aria-live="polite">
+            {loadingSlots ? (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <span key={i} className="h-10 animate-pulse rounded-lg bg-surface-muted" />)}</div>
+            ) : days && !day ? (
+              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucun créneau libre cette semaine. Essayez la semaine suivante.</p>
+            ) : (
+              <div className="space-y-4">
+                {periods.map((p) => (
+                  <div key={p.label}>
+                    <p className="mb-2 text-sm font-medium text-muted">{p.label}</p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {p.items.map((s) => (
+                        <button
+                          key={s.time}
+                          type="button"
+                          onClick={() => { setTime(s.time); setError(null); setStep("details"); }}
+                          className={cn("h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
+                        >
+                          {s.time}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
+
+      {step === "details" && service && day && time ? (
+        <form action={submit} className="space-y-5" noValidate>
+          <h2 className="text-lg font-semibold">Vos coordonnées</h2>
+          {summary}
+          {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Prénom" htmlFor="firstName" error={fieldErrors.firstName}>
+              <Input id="firstName" name="firstName" autoComplete="given-name" required aria-invalid={!!fieldErrors.firstName || undefined} />
+            </Field>
+            <Field label="Nom" htmlFor="lastName" error={fieldErrors.lastName}>
+              <Input id="lastName" name="lastName" autoComplete="family-name" required aria-invalid={!!fieldErrors.lastName || undefined} />
+            </Field>
+            <Field label="Email" htmlFor="email" error={fieldErrors.email}>
+              <Input id="email" name="email" type="email" autoComplete="email" required aria-invalid={!!fieldErrors.email || undefined} />
+            </Field>
+            <Field label={settings?.phoneRequired ? "Téléphone" : "Téléphone (facultatif)"} htmlFor="phone" error={fieldErrors.phone}>
+              <Input id="phone" name="phone" type="tel" autoComplete="tel" required={settings?.phoneRequired} aria-invalid={!!fieldErrors.phone || undefined} />
+            </Field>
+          </div>
+          {questions.map((q) => {
+            const key = `q_${q.id}`;
+            const label = q.isRequired ? q.label : `${q.label} (facultatif)`;
+            return (
+              <Field key={q.id} label={label} htmlFor={key} error={fieldErrors[key]}>
+                {q.type === "text" ? (
+                  <Input id={key} name={key} required={q.isRequired} />
+                ) : (
+                  <Select id={key} name={key} defaultValue="" required={q.isRequired}>
+                    <option value="">Choisir…</option>
+                    {(q.type === "yes_no" ? ["Oui", "Non"] : q.options).map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            );
+          })}
+          <Field label="Message (facultatif)" htmlFor="message">
+            <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder="Une précision pour le praticien ?" />
+          </Field>
+          <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
+            {settings?.autoConfirm ? "Confirmer le rendez-vous" : "Envoyer la demande"}
+          </Button>
+          {!settings?.autoConfirm ? <p className="text-center text-sm text-muted">L&apos;établissement confirmera votre rendez-vous.</p> : null}
+        </form>
+      ) : null}
+    </div>
+  );
+}

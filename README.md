@@ -60,11 +60,13 @@ scripts/              seed, migration depuis MongoDB
 - Horaires : grille hebdomadaire (commune ou par membre), congés et fermetures, permissions respectées
 - Moteur de calcul des créneaux libres (`src/lib/booking/slots.ts`), testé (`npm test`) — y compris les changements d'heure
 - Créneaux libres proposés dans le formulaire de création de RDV
+- Page publique `/{slug}` + tunnel de réservation (prestation → praticien → jour/heure → coordonnées), revérification du créneau côté serveur, anti-robots et limitation d'abus
+- Page client `/r/{jeton}` : récapitulatif, ajout à l'agenda (.ics), annulation
 
 **Prochaines étapes**
-1. Page publique et tunnel de réservation client (branché sur le moteur de créneaux)
-2. Mot de passe oublié, connexion Google, double authentification (nécessitent l'envoi d'emails)
-3. Emails (confirmation, rappel, annulation) et tâches planifiées
+1. Mot de passe oublié, connexion Google, double authentification (nécessitent l'envoi d'emails)
+2. Emails (confirmation, rappel, annulation) et tâches planifiées
+3. Réservation des cours collectifs, reprogrammation par le client
 4. Équipe, grades, réglages
 5. Script de migration depuis MongoDB
 6. Paiements, SMS/WhatsApp, avis, site, super-admin

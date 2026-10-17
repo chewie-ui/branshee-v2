@@ -45,7 +45,7 @@ export default async function TodayPage() {
   const next = todayAppointments.find((a) => a.endsAt > now);
   const firstName = ctx.user.name.split(" ")[0];
   const hour = Number(formatTime(now, tz).slice(0, 2));
-  const bookingUrl = `https://branshee.com/${ctx.business.slug}`;
+  const bookingUrl = `${process.env.APP_URL ?? "https://branshee.com"}/${ctx.business.slug}`;
 
   const stats = [
     { label: "Rendez-vous aujourd'hui", value: todayAppointments.length, icon: CalendarCheck },
@@ -142,9 +142,14 @@ export default async function TodayPage() {
             <CardHeader title="Votre lien de réservation" description="À partager sur Google, Instagram, WhatsApp…" />
             <div className="space-y-3 p-5">
               <CopyLink url={bookingUrl} />
-              <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">
-                Personnaliser la page
-              </Link>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <Link href={`/${ctx.business.slug}`} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">
+                  Voir ma page
+                </Link>
+                <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-muted hover:text-text">
+                  Personnaliser
+                </Link>
+              </div>
             </div>
           </Card>
 

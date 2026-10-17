@@ -66,8 +66,8 @@ async function main() {
   const [mClaire, mThomas] = await db
     .insert(s.members)
     .values([
-      { businessId: bid, userId: owner!.id, isOwner: true, status: "active", displayName: "Claire Dumont", roleLabel: "Kinésithérapeute", calendarColor: "#4f46e5", joinedAt: new Date() },
-      { businessId: bid, userId: colleague!.id, status: "active", gradeId: collabGrade.id, displayName: "Thomas Lambert", roleLabel: "Kinésithérapeute du sport", calendarColor: "#0d9488", joinedAt: new Date() },
+      { businessId: bid, userId: owner!.id, isOwner: true, status: "active", displayName: "Claire Dumont", roleLabel: "Kinésithérapeute", showRole: true, calendarColor: "#4f46e5", joinedAt: new Date() },
+      { businessId: bid, userId: colleague!.id, status: "active", gradeId: collabGrade.id, displayName: "Thomas Lambert", roleLabel: "Kinésithérapeute du sport", showRole: true, calendarColor: "#0d9488", joinedAt: new Date() },
     ])
     .returning();
 
