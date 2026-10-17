@@ -254,10 +254,11 @@ async function main() {
           lastLoginAt: date(u.lastLoginAt),
           referralCode: text(u.referralCode),
           acquisition: u.acquisition && Object.values(u.acquisition).some(Boolean) ? { ...u.acquisition, capturedAt: date(u.acquisition.capturedAt)?.toISOString() } : null,
+          // Double authentification : même secret base32 (Google Authenticator), désormais chiffré en base.
+          twoFactorSecret: u.twoFA?.enabled && /^[A-Z2-7]{16,}=*$/.test(String(u.twoFA.secret ?? "")) ? encrypt(String(u.twoFA.secret)) : null,
           legacyId: id(u._id),
           createdAt: date(u.createdAt) ?? new Date(),
         });
-        if (u.twoFA?.enabled) warn(`${email} : double authentification non reprise (à réactiver).`);
       }
 
       // Clients finaux : fusion sur l'email avec les comptes pros.

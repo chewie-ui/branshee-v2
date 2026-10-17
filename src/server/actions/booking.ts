@@ -10,6 +10,7 @@ import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyBookingCreated } from "@/server/notifications";
 import { checkIntake, getPublicBusiness } from "@/server/public";
+import { getSessionUser } from "@/server/auth/session";
 
 async function ip() {
   const h = await headers();
@@ -105,6 +106,9 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const memberId = v.memberId ?? slot.memberIds[0]!;
 
   const fullName = `${v.firstName} ${v.lastName}`;
+  // Client connecté (adresse vérifiée, même email que la réservation) : la fiche est rattachée à son compte.
+  const session = await getSessionUser();
+  const linkUserId = session?.user.emailVerifiedAt && session.user.email.toLowerCase() === v.email ? session.user.id : null;
   const status = data.settings.autoConfirm ? "confirmed" : "pending";
 
   try {
@@ -113,10 +117,13 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
       if (existing?.blockedAt) throw new BlockedError();
       let customerId = existing?.id;
       if (!customerId) {
-        const [c] = await tx.insert(customers).values({ businessId: data.business.id, firstName: v.firstName, lastName: v.lastName, fullName, email: v.email, phone: v.phone || null }).returning({ id: customers.id });
+        const [c] = await tx.insert(customers).values({ businessId: data.business.id, userId: linkUserId, firstName: v.firstName, lastName: v.lastName, fullName, email: v.email, phone: v.phone || null }).returning({ id: customers.id });
         customerId = c!.id;
-      } else if (!existing!.phone && v.phone) {
-        await tx.update(customers).set({ phone: v.phone }).where(eq(customers.id, customerId));
+      } else {
+        const patch: { phone?: string; userId?: string } = {};
+        if (!existing!.phone && v.phone) patch.phone = v.phone;
+        if (!existing!.userId && linkUserId) patch.userId = linkUserId;
+        if (Object.keys(patch).length) await tx.update(customers).set(patch).where(eq(customers.id, customerId));
       }
 
       const [appt] = await tx

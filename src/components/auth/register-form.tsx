@@ -7,7 +7,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { register, type AuthState } from "@/server/actions/auth";
 import { submitKeepingValues } from "@/lib/form";
 
-export function RegisterForm() {
+export function RegisterForm({ client = false, next, defaults = {} }: { client?: boolean; next?: string; defaults?: { email?: string; fullName?: string } }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, undefined);
   const err = state?.fieldErrors ?? {};
   return (
@@ -17,11 +17,13 @@ export function RegisterForm() {
           {state.error}
         </p>
       ) : null}
+      {client ? <input type="hidden" name="kind" value="client" /> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Field label="Nom complet" htmlFor="fullName" error={err.fullName}>
-        <Input id="fullName" name="fullName" autoComplete="name" required defaultValue={state?.values?.fullName} aria-invalid={!!err.fullName || undefined} />
+        <Input id="fullName" name="fullName" autoComplete="name" required defaultValue={state?.values?.fullName ?? defaults.fullName} aria-invalid={!!err.fullName || undefined} />
       </Field>
-      <Field label="Email professionnel" htmlFor="email" error={err.email}>
-        <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={state?.values?.email} aria-invalid={!!err.email || undefined} />
+      <Field label={client ? "Email" : "Email professionnel"} htmlFor="email" error={err.email}>
+        <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={state?.values?.email ?? defaults.email} aria-invalid={!!err.email || undefined} />
       </Field>
       <Field label="Mot de passe" htmlFor="password" error={err.password} hint="10 caractères minimum.">
         <PasswordInput id="password" name="password" autoComplete="new-password" required aria-invalid={!!err.password || undefined} />

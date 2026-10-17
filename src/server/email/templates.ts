@@ -244,4 +244,38 @@ export const emails = {
       }),
     };
   },
+
+  /** Code à 6 chiffres : vérification d'email, changement d'email, suppression de compte… */
+  verificationCode(name: string, code: string, purpose: "email_verification" | "email_change" | "account_deletion") {
+    const t = {
+      email_verification: { title: "Confirmez votre adresse email", intro: "voici votre code pour confirmer votre adresse email.", note: "Vous n'avez pas créé de compte Branshee ? Ignorez cet email." },
+      email_change: { title: "Confirmez votre nouvelle adresse", intro: "voici votre code pour confirmer votre nouvelle adresse email.", note: "Vous n'avez rien demandé ? Ignorez cet email : votre adresse ne change pas." },
+      account_deletion: { title: "Suppression de votre compte", intro: "voici votre code pour confirmer la suppression définitive de votre compte.", note: "Vous n'avez rien demandé ? Ignorez cet email et changez votre mot de passe." },
+    }[purpose];
+    return {
+      subject: `${code} est votre code Branshee`,
+      ...render({
+        preheader: t.title,
+        title: t.title,
+        intro: `Bonjour ${firstName(name)}, ${t.intro} Il est valable 15 minutes.`,
+        details: [{ label: "Votre code", value: code }],
+        note: t.note,
+        footer: "Branshee",
+      }),
+    };
+  },
+
+  proRescheduledByCustomer(a: AppointmentInfo, previousWhen: string, appUrl: string) {
+    return {
+      subject: `RDV déplacé par le client : ${a.customerName}, ${a.when}`,
+      ...render({
+        preheader: `Avant : ${previousWhen}`,
+        title: "Un client a déplacé son rendez-vous",
+        intro: `${a.customerName} a déplacé son rendez-vous. Votre agenda est déjà à jour.`,
+        details: [{ label: "Avant", value: previousWhen }, { label: "Après", value: a.when }, ...apptDetails(a).filter((d) => d.label !== "Adresse" && d.label !== "Date")],
+        cta: { label: "Ouvrir l'agenda", url: appUrl },
+        footer: `Branshee — ${a.businessName}`,
+      }),
+    };
+  },
 };

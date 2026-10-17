@@ -4,7 +4,9 @@ import { and, asc, avg, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { serviceMatches } from "@/lib/intake";
 import { listIntake } from "@/server/intake";
-import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, reviews, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, reviews, scheduleExceptions, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { format } from "date-fns";
+import { zoned } from "@/lib/time";
 import { resolveTheme } from "@/lib/booking-theme";
 import { sanitizeRichText } from "@/server/rich-text";
 
@@ -68,6 +70,9 @@ export const getPublicBusiness = cache(async (slug: string) => {
         db.select({ id: reviews.id, author: reviews.authorName, rating: reviews.rating, comment: reviews.comment, createdAt: reviews.createdAt }).from(reviews).where(eq(reviews.businessId, biz.id)).orderBy(desc(reviews.createdAt)).limit(10),
       ])
     : [[{ n: 0, avg: null }], []];
+  // « Ouvert aujourd'hui » : horaires du jour, moins une fermeture exceptionnelle de tout l'établissement.
+  const todayStr = format(zoned(new Date(), biz.timezone), "yyyy-MM-dd");
+  const [todayException] = await db.select({ isClosed: scheduleExceptions.isClosed, hours: scheduleExceptions.hours }).from(scheduleExceptions).where(and(eq(scheduleExceptions.businessId, biz.id), eq(scheduleExceptions.date, todayStr), isNull(scheduleExceptions.memberId)));
 
   const teamIds = new Set(team.map((m) => m.id));
   // Cours collectifs : on réserve une séance planifiée, pas un praticien → pas de filtre sur l'équipe.
@@ -100,6 +105,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     gallery: page?.gallery ?? [],
     galleryLayout: page?.galleryLayout ?? "grid",
     embed: page?.embed ?? {},
+    todayException: todayException ?? null,
     reviews: { count: reviewStats[0]?.n ?? 0, average: reviewStats[0]?.avg ? Number(reviewStats[0].avg) : null, items: reviewList },
     faq: page?.faq ?? [],
     categoryStyle: page?.categoryStyle ?? "pills",

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/app/sidebar";
+import { RegisterServiceWorker } from "@/components/app/register-sw";
 import { NAV_FOOTER, NAV_GROUPS } from "@/lib/navigation";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
       <Sidebar groups={groups} footer={NAV_FOOTER.filter(visible)} business={ctx.business} businesses={ctx.businesses} user={ctx.user} pendingCount={pending} />
+      <RegisterServiceWorker />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>

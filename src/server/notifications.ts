@@ -185,3 +185,17 @@ export async function sendDueReminders(now = new Date()) {
   }
   return { checked: candidates.length, sent };
 }
+
+/** Le client a déplacé lui-même son RDV : confirmation au client, alerte au pro. */
+export function notifyRescheduledByCustomer(appointmentId: string, previousStart: Date) {
+  return safely("report client", async () => {
+    const row = await load(appointmentId);
+    if (!row) return;
+    const tz = row.business.timezone;
+    const before = `${formatDay(previousStart, tz, "EEEE d MMMM")} à ${formatTime(previousStart, tz)}`;
+    const prev = before.charAt(0).toUpperCase() + before.slice(1);
+    await toClient(row, "rescheduled_by_customer", emails.bookingConfirmed(row.info, row.settings?.confirmationMessage));
+    const mail = emails.proRescheduledByCustomer(row.info, prev, `${appUrl()}/app/agenda/rdv/${row.a.id}`);
+    for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_rescheduled", businessId: row.business.id, appointmentId: row.a.id });
+  });
+}

@@ -71,29 +71,28 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Sécurité : l'espace pro, l'admin et la connexion refusent d'être affichés dans le cadre d'un autre site (anti-clickjacking) ; la page publique reste intégrable
 - ✅ Questions avant réservation, FAQ
 
-## Lot F — Réservation en ligne (client)
+## Lot F — Réservation en ligne (client) ✅ (sauf paiement → Lot H)
 - ✅ Tunnel prestation → praticien → jour / créneau → coordonnées, revérification serveur, anti-robots
-- ✅ Questionnaire, première visite, cours collectifs
-- ✅ Styles de catégories (pastilles / accordéon / grille) — Lot C
-- ✅ Mise en avant des créneaux regroupés — Lot D
-- ❌ Paiement : en ligne (Stripe), prépaiement obligatoire ou au choix, empreinte de carte pour la politique d'annulation, infos virement (IBAN) / PayPal / QR code
-- ❌ Connexion / inscription client dans le tunnel, incitation à créer un compte
-- ✅ Ajout à l'agenda (.ics) · ❌ boutons Google / Apple / Outlook
-- ❌ **Reprogrammer** son RDV soi-même (choix d'un nouveau créneau) — annulation ✅
-- ❌ Avis : laisser un avis (note + commentaire), moyenne, signaler un avis (motifs)
-- 🔶 Page établissement : infos ✅, horaires ✅, équipe ✅, FAQ ✅, carte ✅, galerie ✅, réseaux ✅, avis (lecture) ✅ (Lot E) · « ouvert aujourd'hui », copier email / téléphone, visionneuse de la galerie, « voir plus » ❌
-- ❌ Page « établissement en pause » dédiée, installation comme application (PWA)
+- ✅ Questionnaire, première visite, cours collectifs, styles de catégories, créneaux regroupés
+- 🔶 Paiement en ligne (Stripe), prépaiement, empreinte de carte : avec Stripe Connect (Lot H)
+- ✅ Connexion dans le tunnel (coordonnées pré-remplies, fiche rattachée au compte), incitation à créer un compte après la réservation
+- ✅ Ajout à l'agenda : Google, Apple (.ics), Outlook, autre
+- ✅ **Déplacer** son RDV soi-même (même prestation et praticien, règles en ligne, revérifié à la validation, l'ancien créneau n'est jamais libéré entre-temps) + email au client et au pro
+- ✅ Avis : note + commentaire (compte vérifié, un par établissement, pas sur le sien), moyenne, signalement par tous (5 motifs, une fois par personne), demande de suppression par le pro (onglet « Avis »), décision par l'équipe Branshee (Lot N)
+- ✅ Page établissement : « ouvert aujourd'hui » (avec fermetures exceptionnelles), copier email / téléphone, visionneuse de la galerie, « voir plus »
+- ✅ Page « établissement en pause » dédiée, application installable (manifeste, icônes, service worker sans cache de données)
 
-## Lot G — Espace client
-- ❌ Tableau de bord : RDV à venir (déplacer, annuler, ajouter à l'agenda, adresse, réserver à nouveau), historique (laisser un avis, reprendre RDV), mes avis
-- ❌ Paramètres : photo, nom, téléphone, civilité, date de naissance, adresse, notifications email, changer d'email, mot de passe, langue, cartes enregistrées
-- ❌ Rattachement automatique des anciens RDV à un compte créé avec le même email
+## Lot G — Espace client ✅
+- ✅ `/espace-client` : RDV à venir (déplacer, annuler, ajouter à l'agenda, adresse + itinéraire, statut « en attente »), historique (laisser un avis, reprendre RDV), mes avis (supprimer)
+- ✅ Paramètres : photo, nom, téléphone, civilité, date de naissance, adresse, emails d'information, changement d'email avec code, mot de passe, langue, suppression du compte avec code — 🔶 cartes enregistrées avec Stripe (Lot H)
+- ✅ Rattachement automatique des anciens RDV par email **uniquement après vérification de l'adresse** (code à 6 chiffres) — l'ancien rattachait sans vérifier, ce qui permettait de lire les RDV de quelqu'un d'autre
+- ✅ Inscription client depuis une page de réservation, connexion qui renvoie vers la bonne page (pro → `/app`, client → `/espace-client`)
 
 ## Lot H — Paramètres du compte pro et paiements
-- ❌ Profil : nom, photo, téléphone avec indicatif, changement d'email avec code
-- ❌ Sécurité : changer le mot de passe, double authentification (TOTP)
-- ❌ Langue de l'interface, notification « nouvelle réservation » (🔶 existe dans Réglages)
-- ❌ Supprimer son compte (avec code), supprimer / mettre en pause un établissement (par le pro)
+- ✅ Profil : nom, photo, téléphone avec indicatif, changement d'email avec code (Mon compte)
+- ✅ Sécurité : changer le mot de passe (déconnecte les autres appareils), double authentification TOTP (QR code, secrets de l'ancien Branshee repris et chiffrés)
+- ✅ Langue (enregistrée ; traduction de l'interface au Lot R), notification « nouvelle réservation » dans Réglages
+- ✅ Supprimer son compte avec code (établissements fermés, compte anonymisé s'il en possédait) · 🔶 pause / suppression d'un établissement : Lot I
 - ❌ **Stripe Connect** (connexion du compte, retour, rafraîchissement, saisie manuelle, déconnexion)
 - ❌ Prépaiement, politique d'annulation (gratuite / 50 % sous 24 h / 100 % sous 12 h), décision rembourser / garder, pénalité d'absence
 - ❌ Modes acceptés sur place : espèces, carte, virement (IBAN, BIC, banque, note), PayPal.me, QR code (image + note)

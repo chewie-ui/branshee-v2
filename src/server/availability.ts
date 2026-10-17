@@ -11,7 +11,7 @@ const hhmm = (t: string) => t.slice(0, 5);
  * Charge tout ce qu'il faut depuis la base puis délègue au moteur pur `computeSlots`.
  * `days` : jours "YYYY-MM-DD" dans le fuseau de l'établissement.
  */
-export async function getAvailableSlots(params: { businessId: string; serviceId: string; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean }) {
+export async function getAvailableSlots(params: { businessId: string; serviceId: string; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean; excludeAppointmentId?: string }) {
   const { businessId, serviceId, days } = params;
   if (days.length === 0) return {};
 
@@ -73,6 +73,8 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
         // Un blocage sans membre (« tout l'établissement ») bloque toute l'équipe.
         or(inArray(appointments.memberId, ids), and(isNull(appointments.memberId), eq(appointments.kind, "block"))),
         ne(appointments.status, "cancelled"),
+        // Report d'un RDV : il ne doit pas se bloquer lui-même.
+        params.excludeAppointmentId ? ne(appointments.id, params.excludeAppointmentId) : undefined,
         lt(appointments.startsAt, windowEnd),
         gte(appointments.endsAt, windowStart),
       ),

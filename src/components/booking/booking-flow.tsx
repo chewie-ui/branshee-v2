@@ -15,7 +15,7 @@ import type { PublicBusiness } from "@/server/public";
 import { questionMatters, serviceMatches } from "@/lib/intake";
 
 type Step = "visit" | "service" | "member" | "time" | "session" | "details";
-type Props = { data: PublicBusiness; today: string };
+type Props = { data: PublicBusiness; today: string; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
 
 const WEEKDAY = new Intl.DateTimeFormat("fr-BE", { weekday: "short", timeZone: "UTC" });
 const DAYNUM = new Intl.DateTimeFormat("fr-BE", { day: "numeric", timeZone: "UTC" });
@@ -36,7 +36,7 @@ const sessionParts = (iso: string, timeZone: string) => {
   return { day, time };
 };
 
-export function BookingFlow({ data, today }: Props) {
+export function BookingFlow({ data, today, viewer = null }: Props) {
   const router = useRouter();
   const { categories, team, questions, settings } = data;
   const fv = settings?.firstVisitQuestion;
@@ -525,19 +525,27 @@ export function BookingFlow({ data, today }: Props) {
           <h2 className="text-lg font-semibold">Vos coordonnées</h2>
           {summary}
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
+          {viewer ? (
+            <p className="text-sm text-muted">Connecté en tant que <span className="font-medium text-text">{viewer.email}</span> : vos coordonnées sont pré-remplies.</p>
+          ) : (
+            <p className="text-sm text-muted">
+              Déjà un compte ?{" "}
+              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} className="font-medium text-accent hover:text-accent-hover">Connectez-vous</a> pour pré-remplir vos coordonnées et retrouver vos rendez-vous.
+            </p>
+          )}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Prénom" htmlFor="firstName" error={fieldErrors.firstName}>
-              <Input id="firstName" name="firstName" autoComplete="given-name" required aria-invalid={!!fieldErrors.firstName || undefined} />
+              <Input id="firstName" name="firstName" autoComplete="given-name" defaultValue={viewer?.firstName} required aria-invalid={!!fieldErrors.firstName || undefined} />
             </Field>
             <Field label="Nom" htmlFor="lastName" error={fieldErrors.lastName}>
-              <Input id="lastName" name="lastName" autoComplete="family-name" required aria-invalid={!!fieldErrors.lastName || undefined} />
+              <Input id="lastName" name="lastName" autoComplete="family-name" defaultValue={viewer?.lastName} required aria-invalid={!!fieldErrors.lastName || undefined} />
             </Field>
             <Field label="Email" htmlFor="email" error={fieldErrors.email}>
-              <Input id="email" name="email" type="email" autoComplete="email" required aria-invalid={!!fieldErrors.email || undefined} />
+              <Input id="email" name="email" type="email" autoComplete="email" defaultValue={viewer?.email} required aria-invalid={!!fieldErrors.email || undefined} />
             </Field>
             <Field label={settings?.phoneRequired ? "Téléphone" : "Téléphone (facultatif)"} htmlFor="phone" error={fieldErrors.phone}>
-              <Input id="phone" name="phone" type="tel" autoComplete="tel" required={settings?.phoneRequired} aria-invalid={!!fieldErrors.phone || undefined} />
+              <Input id="phone" name="phone" type="tel" autoComplete="tel" defaultValue={viewer?.phone} required={settings?.phoneRequired} aria-invalid={!!fieldErrors.phone || undefined} />
             </Field>
           </div>
           {questions.map((q) => {

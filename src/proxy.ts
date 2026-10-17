@@ -17,4 +17,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/app/:path*", "/admin/:path*", "/bienvenue"] };
+export const config = { matcher: ["/app/:path*", "/admin/:path*", "/bienvenue", "/espace-client/:path*", "/espace-client", "/verifier-email"] };

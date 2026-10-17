@@ -5,11 +5,19 @@ import { Clock, Facebook, Globe, Instagram, Languages, Linkedin, Mail, MapPin, M
 import { format } from "date-fns";
 import { BookingFlow } from "@/components/booking/booking-flow";
 import { EmbedResize, ThemePreview } from "@/components/public/frame-bridge";
+import { CopyButton } from "@/components/public/copy-button";
+import { Gallery } from "@/components/public/gallery";
+import { ReadMore } from "@/components/public/read-more";
+import { ReportReviewButton, ReviewForm } from "@/components/public/reviews";
+import Link from "next/link";
+import { getSessionUser } from "@/server/auth/session";
+import { reviewEligibility } from "@/server/client-account";
 import { Avatar } from "@/components/ui/avatar";
 import { LANGUAGE_NAMES } from "@/lib/languages";
 import { fontStylesheet, themeVars } from "@/lib/booking-theme";
 import { cn } from "@/lib/cn";
 import { zoned } from "@/lib/time";
+import { Brand } from "@/components/brand";
 import { getPublicBusiness, type PublicBusiness } from "@/server/public";
 import { richTextToPlain } from "@/server/rich-text";
 
@@ -42,6 +50,35 @@ const DAYS = [
 
 const CARD = "rounded-xl border border-border bg-surface shadow-[var(--card-shadow)]";
 
+type ReviewCtx = { state: "hidden" } | { state: "anon" | "unverified" | "can" | "own" | "done"; slug: string };
+
+/** « Ouvert aujourd'hui » à partir des horaires communs et d'une éventuelle fermeture exceptionnelle. */
+function todayStatus(data: PublicBusiness): { open: boolean; label: string } | null {
+  if (!data.hours.length) return null;
+  const wd = Number(format(zoned(new Date(), data.business.timezone), "i")) % 7;
+  const ex = data.todayException;
+  const ranges = ex ? (ex.isClosed ? [] : ex.hours) : data.hours.filter((h) => h.weekday === wd);
+  if (!ranges.length) return { open: false, label: "Fermé aujourd'hui" };
+  return { open: true, label: `Ouvert aujourd'hui · ${ranges.map((r) => `${r.start}–${r.end}`).join(", ")}` };
+}
+
+/** Établissement en pause : page dédiée, avec les coordonnées pour joindre le pro. */
+function PausedPage({ data }: { data: PublicBusiness }) {
+  const b = data.business;
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 text-center">
+      <Avatar name={b.name} src={b.photoUrl} size="lg" className="size-16 text-lg" />
+      <h1 className="mt-4 text-2xl font-semibold">{b.name}</h1>
+      <p className="mt-2 max-w-md text-muted">La réservation en ligne est momentanément suspendue. Contactez directement l&apos;établissement pour prendre rendez-vous.</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
+        {b.phone ? <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Phone className="size-4" aria-hidden="true" />{b.phone}</a> : null}
+        {b.email ? <a href={`mailto:${b.email}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Mail className="size-4" aria-hidden="true" />{b.email}</a> : null}
+      </div>
+      <footer className="mt-12 opacity-70"><Brand /></footer>
+    </div>
+  );
+}
+
 /** Lien social : accepte une URL complète ou un identifiant (« @moncabinet », un numéro WhatsApp). */
 function socialHref(kind: string, v: string) {
   if (/^https?:\/\//i.test(v)) return v;
@@ -57,6 +94,15 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const sp = await searchParams;
   const { business: b, theme } = data;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
+  if (b.pausedAt) return <PausedPage data={data} />;
+  const session = await getSessionUser();
+  const review: ReviewCtx = !data.sections.includes("reviews")
+    ? { state: "hidden" }
+    : !session
+      ? { state: "anon", slug: b.slug }
+      : !session.user.emailVerifiedAt
+        ? { state: "unverified", slug: b.slug }
+        : await reviewEligibility(session.user.id, b.id).then((r) => (r.ok ? { state: "can", slug: b.slug } : { state: r.reason, slug: b.slug }));
 
   // Calendrier intégré sur le site du pro : `?sections=booking,profile,about,hours,reviews` (format de l'ancien Branshee).
   const embedded = typeof sp.sections === "string";
@@ -67,7 +113,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const vars = themeVars(theme);
   if (embedded && data.embed.fontUrl && data.embed.fontFamily) vars["--font-sans"] = `"${data.embed.fontFamily}", ui-sans-serif, system-ui, sans-serif`;
 
-  const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} />);
+  const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} review={review} />);
 
   return (
     <div
@@ -83,14 +129,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
       <main className={cn("mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
         <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label="Réservation">
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
-          {b.pausedAt ? (
-            <div className="py-8 text-center">
-              <p className="font-semibold">Réservations en ligne suspendues</p>
-              <p className="mt-1 text-sm text-muted">Contactez directement l&apos;établissement pour prendre rendez-vous.</p>
-            </div>
-          ) : (
-            <BookingFlow data={data} today={today} />
-          )}
+          <BookingFlow data={data} today={today} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
         </section>
 
         {aside.length ? <aside className="space-y-4 lg:group-data-[layout=split]:order-first">{aside}</aside> : null}
@@ -131,6 +170,10 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{b.name}</h1>
             <p className="text-sm text-muted">{[b.businessType, b.locationMode === "online" ? "En ligne" : b.city].filter(Boolean).join(" · ")}</p>
+            {(() => {
+              const t = todayStatus(data);
+              return t ? <p className={cn("mt-0.5 text-sm font-medium", t.open ? "text-success" : "text-muted")}>{t.label}</p> : null;
+            })()}
             {data.reviews.count > 0 && data.reviews.average != null ? (
               <p className="mt-0.5 flex items-center gap-1 text-sm">
                 <Star className="size-4 fill-current text-warning" aria-hidden="true" />
@@ -143,10 +186,13 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
         {links.length || socials.some((s) => s.on && social[s.key]) ? (
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             {links.map((l) => (
-              <a key={l.key} href={l.href} target={l.key === "website" ? "_blank" : undefined} rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1.5 text-muted hover:text-accent">
-                {l.icon}
-                <span className="truncate">{l.label}</span>
-              </a>
+              <span key={l.key} className="inline-flex min-w-0 items-center gap-0.5">
+                <a href={l.href} target={l.key === "website" ? "_blank" : undefined} rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1.5 text-muted hover:text-accent">
+                  {l.icon}
+                  <span className="truncate">{l.label}</span>
+                </a>
+                {l.key !== "website" ? <CopyButton value={l.label} label={l.key === "phone" ? "le numéro" : "l'email"} /> : null}
+              </span>
             ))}
             {socials
               .filter((s) => s.on && social[s.key])
@@ -174,7 +220,7 @@ function hasContent(kind: string, data: PublicBusiness) {
     case "gallery":
       return data.gallery.length > 0;
     case "reviews":
-      return data.reviews.count > 0;
+      return true;
     case "team":
       return data.team.length > 1;
     case "faq":
@@ -184,7 +230,7 @@ function hasContent(kind: string, data: PublicBusiness) {
   }
 }
 
-function SectionBlock({ kind, data }: { kind: string; data: PublicBusiness }) {
+function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusiness; review: ReviewCtx }) {
   const b = data.business;
   if (!hasContent(kind, data)) return null;
   const address = [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
@@ -195,12 +241,14 @@ function SectionBlock({ kind, data }: { kind: string; data: PublicBusiness }) {
       return (
         <div className={cn(CARD, "p-5")}>
           <h2 className="mb-2 font-semibold">À propos</h2>
-          {data.aboutHtml ? (
-            // HTML nettoyé côté serveur (liste blanche de balises de mise en forme).
-            <div className="about-html text-sm text-muted" dangerouslySetInnerHTML={{ __html: data.aboutHtml }} />
-          ) : (
-            <p className="text-sm whitespace-pre-line text-muted">{b.description}</p>
-          )}
+          <ReadMore long={(data.aboutHtml ? richTextToPlain(data.aboutHtml) : (b.description ?? "")).length > 420}>
+            {data.aboutHtml ? (
+              // HTML nettoyé côté serveur (liste blanche de balises de mise en forme).
+              <div className="about-html text-sm text-muted" dangerouslySetInnerHTML={{ __html: data.aboutHtml }} />
+            ) : (
+              <p className="text-sm whitespace-pre-line text-muted">{b.description}</p>
+            )}
+          </ReadMore>
         </div>
       );
     case "location":
@@ -258,32 +306,12 @@ function SectionBlock({ kind, data }: { kind: string; data: PublicBusiness }) {
       return (
         <div className={cn(CARD, "p-5")}>
           <h2 className="mb-3 font-semibold">Galerie</h2>
-          {data.galleryLayout === "carousel" ? (
-            <ul className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
-              {data.gallery.map((src, i) => (
-                <li key={src} className="w-4/5 shrink-0 snap-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`${b.name} — photo ${i + 1}`} className="aspect-[4/3] w-full rounded-lg object-cover" loading="lazy" />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className={cn("grid gap-2", data.galleryLayout === "mosaic" ? "grid-cols-3 [&>li:first-child]:col-span-2 [&>li:first-child]:row-span-2" : "grid-cols-2")}>
-              {data.gallery.map((src, i) => (
-                <li key={src}>
-                  <a href={src} target="_blank" rel="noopener noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`${b.name} — photo ${i + 1}`} className="aspect-square h-full w-full rounded-lg object-cover" loading="lazy" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
+          <Gallery images={data.gallery} layout={data.galleryLayout} name={b.name} />
         </div>
       );
     case "reviews":
       return (
-        <div className={cn(CARD, "p-5")}>
+        <div id="avis" className={cn(CARD, "scroll-mt-6 p-5")}>
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             Avis clients
             {data.reviews.average != null ? (
@@ -293,19 +321,38 @@ function SectionBlock({ kind, data }: { kind: string; data: PublicBusiness }) {
               </span>
             ) : null}
           </h2>
-          <ul className="space-y-3">
-            {data.reviews.items.map((r) => (
-              <li key={r.id} className="text-sm">
-                <p className="flex items-center gap-2">
-                  <span className="font-medium">{r.author}</span>
-                  <span className="flex text-warning" aria-label={`${r.rating} sur 5`}>
-                    {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-current" : "opacity-30")} aria-hidden="true" />)}
-                  </span>
-                </p>
-                {r.comment ? <p className="mt-0.5 text-muted">{r.comment}</p> : null}
-              </li>
-            ))}
-          </ul>
+          {data.reviews.items.length ? (
+            <ul className="space-y-3">
+              {data.reviews.items.map((r) => (
+                <li key={r.id} className="text-sm">
+                  <p className="flex items-center gap-2">
+                    <span className="font-medium">{r.author}</span>
+                    <span className="flex text-warning" aria-label={`${r.rating} sur 5`}>
+                      {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-current" : "opacity-30")} aria-hidden="true" />)}
+                    </span>
+                  </p>
+                  {r.comment ? <p className="mt-0.5 text-muted">{r.comment}</p> : null}
+                  <ReportReviewButton reviewId={r.id} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">Pas encore d&apos;avis. Soyez le premier !</p>
+          )}
+          <div className="mt-4">
+            {review.state === "can" ? <ReviewForm slug={review.slug} /> : null}
+            {review.state === "anon" ? (
+              <p className="text-sm text-muted">
+                <Link href={`/connexion?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">Connectez-vous</Link> pour laisser un avis.
+              </p>
+            ) : null}
+            {review.state === "unverified" ? (
+              <p className="text-sm text-muted">
+                <Link href={`/verifier-email?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">Confirmez votre email</Link> pour laisser un avis.
+              </p>
+            ) : null}
+            {review.state === "done" ? <p className="text-sm text-muted">Merci, vous avez déjà donné votre avis.</p> : null}
+          </div>
         </div>
       );
     case "team":

@@ -10,7 +10,7 @@ export async function getAppointmentByToken(token: string) {
     .select({
       a: appointments,
       memberName: members.displayName,
-      business: { name: businesses.name, slug: businesses.slug, timezone: businesses.timezone, address: businesses.address, postalCode: businesses.postalCode, city: businesses.city, phone: businesses.phone },
+      business: { id: businesses.id, locationMode: businesses.locationMode, name: businesses.name, slug: businesses.slug, timezone: businesses.timezone, address: businesses.address, postalCode: businesses.postalCode, city: businesses.city, phone: businesses.phone },
     })
     .from(appointments)
     .innerJoin(businesses, eq(businesses.id, appointments.businessId))

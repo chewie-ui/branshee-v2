@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
@@ -49,4 +49,46 @@ export async function destroySession() {
   if (token) await db.delete(sessions).where(eq(sessions.tokenHash, sha256(token)));
   jar.delete(SESSION_COOKIE);
   jar.delete(BUSINESS_COOKIE);
+}
+
+/* ── Double authentification : étape intermédiaire entre le mot de passe et la session ── */
+
+const PENDING_COOKIE = "bs_2fa";
+const PENDING_MIN = 10;
+const pendingKey = () => createHash("sha256").update(`2fa:${process.env.DATA_ENCRYPTION_KEY ?? "dev"}`).digest();
+
+/** Mot de passe correct, code à 6 chiffres attendu : cookie signé de 10 minutes, sans session. */
+export async function setPendingTwoFactor(userId: string, next: string | null) {
+  const exp = Date.now() + PENDING_MIN * 60000;
+  const payload = Buffer.from(JSON.stringify({ u: userId, e: exp, n: next })).toString("base64url");
+  const sig = createHmac("sha256", pendingKey()).update(payload).digest("base64url");
+  (await cookies()).set(PENDING_COOKIE, `${payload}.${sig}`, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: PENDING_MIN * 60 });
+}
+
+export async function getPendingTwoFactor(): Promise<{ userId: string; next: string | null } | null> {
+  const raw = (await cookies()).get(PENDING_COOKIE)?.value;
+  if (!raw) return null;
+  const [payload, sig] = raw.split(".");
+  if (!payload || !sig) return null;
+  const expected = createHmac("sha256", pendingKey()).update(payload).digest();
+  const given = Buffer.from(sig, "base64url");
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+  try {
+    const v = JSON.parse(Buffer.from(payload, "base64url").toString()) as { u: string; e: number; n: string | null };
+    return v.e > Date.now() ? { userId: v.u, next: v.n } : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingTwoFactor() {
+  (await cookies()).delete(PENDING_COOKIE);
+}
+
+/** Ferme toutes les sessions d'un compte (changement de mot de passe, d'email, suppression). */
+export async function destroyAllSessions(userId: string, keepCurrent = false) {
+  const token = keepCurrent ? (await cookies()).get(SESSION_COOKIE)?.value : undefined;
+  const all = await db.select({ id: sessions.id, tokenHash: sessions.tokenHash }).from(sessions).where(eq(sessions.userId, userId));
+  const keep = token ? sha256(token) : null;
+  for (const s of all) if (s.tokenHash !== keep) await db.delete(sessions).where(eq(sessions.id, s.id));
 }

@@ -8,8 +8,12 @@ import { db } from "@/db";
 import { loginEvents, users } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
 import { rateLimit } from "@/server/auth/rate-limit";
-import { createSession, destroySession } from "@/server/auth/session";
+import { clearPendingTwoFactor, createSession, destroySession, getPendingTwoFactor, setPendingTwoFactor } from "@/server/auth/session";
+import { decrypt } from "@/lib/field-crypto";
+import { verifyTotp } from "@/lib/totp";
 import { linkInvitations } from "@/server/team";
+import { isPro } from "@/server/client-account";
+import { issueCode } from "@/server/codes";
 
 export type AuthState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -24,10 +28,20 @@ function fieldErrors(error: z.ZodError) {
   return out;
 }
 
-/** Évite les redirections ouvertes : seuls les chemins internes de l'espace pro sont acceptés. */
-function safeNext(value: FormDataEntryValue | null) {
+/**
+ * Évite les redirections ouvertes : seuls des chemins internes connus sont acceptés
+ * (espace pro, espace client, page d'un établissement, lien de gestion d'un RDV).
+ */
+function safeNext(value: FormDataEntryValue | null): string | null {
   const v = typeof value === "string" ? value : "";
-  return /^\/app(\/[\w\-/?=&%.]*)?$/.test(v) ? v : "/app";
+  if (!v.startsWith("/") || v.startsWith("//") || v.includes("\\")) return null;
+  return /^\/(app|espace-client|r)(\/[\w\-/?=&%.]*)?$/.test(v) || /^\/[a-z0-9-]{3,60}(\?[\w\-=&%.]*)?$/.test(v) ? v : null;
+}
+
+/** Page d'arrivée après connexion : l'espace pro pour un membre d'établissement, sinon l'espace client. */
+async function landing(userId: string, verified: boolean) {
+  if (await isPro(userId)) return "/app";
+  return verified ? "/espace-client" : "/verifier-email";
 }
 
 const registerSchema = z.object({
@@ -54,6 +68,12 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   await db.insert(loginEvents).values({ userId: user!.id, method: "password", ip: meta.ip });
   // Invité par un établissement ? Il arrive directement dans son espace, sans créer d'établissement.
   await linkInvitations(user!.id, email);
+  // Client (inscription depuis une page de réservation) : on vérifie l'adresse avant de lui montrer ses RDV.
+  if (formData.get("kind") === "client") {
+    await issueCode({ id: user!.id, name: fullName }, email, "email_verification");
+    const next = safeNext(formData.get("next")) ?? "/espace-client";
+    redirect(`/verifier-email?suite=${encodeURIComponent(next)}`);
+  }
   redirect("/app");
 }
 
@@ -83,10 +103,16 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   // Compte repris de l'ancien Branshee : on remplace le hash bcrypt par un hash scrypt.
   if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
 
+  // Double authentification activée : la session n'est ouverte qu'après le code de l'application.
+  if (user.twoFactorSecret) {
+    await setPendingTwoFactor(user.id, safeNext(formData.get("next")));
+    redirect("/connexion/verification");
+  }
+
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "password", ip: meta.ip });
   await linkInvitations(user.id, email);
-  redirect(safeNext(formData.get("next")));
+  redirect(safeNext(formData.get("next")) ?? (await landing(user.id, !!user.emailVerifiedAt)));
 }
 
 export async function logout() {
@@ -94,3 +120,26 @@ export async function logout() {
   redirect("/connexion");
 }
 
+
+export type TwoFactorState = { error?: string } | undefined;
+
+export async function verifyLoginTwoFactor(_prev: TwoFactorState, formData: FormData): Promise<TwoFactorState> {
+  const pending = await getPendingTwoFactor();
+  if (!pending) redirect("/connexion");
+  const meta = await clientMeta();
+  if (!rateLimit(`2fa:${pending.userId}`, 6, 10 * 60 * 1000).ok) return { error: "Trop d'essais. Reconnectez-vous dans quelques minutes." };
+  const [user] = await db.select().from(users).where(eq(users.id, pending.userId));
+  if (!user || user.disabledAt || !user.twoFactorSecret) redirect("/connexion");
+  let secret: string | null = null;
+  try {
+    secret = decrypt(user.twoFactorSecret);
+  } catch {
+    return { error: "Double authentification illisible : contactez le support." };
+  }
+  if (!secret || !verifyTotp(secret, String(formData.get("code") ?? ""))) return { error: "Code incorrect. Vérifiez l'heure de votre téléphone et réessayez." };
+  await clearPendingTwoFactor();
+  await createSession(user.id, meta);
+  await db.insert(loginEvents).values({ userId: user.id, method: "two_factor", ip: meta.ip });
+  await linkInvitations(user.id, user.email);
+  redirect(pending.next ?? (await landing(user.id, !!user.emailVerifiedAt)));
+}

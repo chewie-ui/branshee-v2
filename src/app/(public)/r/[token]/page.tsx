@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarPlus, CheckCircle2, Clock, Hourglass, MapPin, UserRound, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Hourglass, MapPin, Star, UserRound, XCircle } from "lucide-react";
+import { format } from "date-fns";
+import { AddToCalendar } from "@/components/booking/add-to-calendar";
 import { CancelButton } from "@/components/booking/cancel-button";
+import { RescheduleWidget } from "@/components/booking/reschedule-widget";
+import { zoned } from "@/lib/time";
+import { getSessionUser } from "@/server/auth/session";
 import { Brand } from "@/components/brand";
 import { ButtonLink } from "@/components/ui/button";
 import { formatDay, formatTime } from "@/lib/time";
@@ -11,15 +16,19 @@ import { getAppointmentByToken } from "@/server/manage";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Votre rendez-vous", robots: { index: false } };
 
-export default async function ManageAppointmentPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ nouveau?: string }> }) {
+export default async function ManageAppointmentPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ nouveau?: string; deplacer?: string }> }) {
   const { token } = await params;
   const row = await getAppointmentByToken(token);
   if (!row) notFound();
   const { a, business: b, memberName } = row;
-  const isNew = (await searchParams).nouveau === "1";
+  const sp = await searchParams;
+  const isNew = sp.nouveau === "1";
+  const session = await getSessionUser();
   const tz = b.timezone;
   const past = a.startsAt <= new Date();
-  const address = [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const address = b.locationMode === "online" ? "En ligne" : [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const today = format(zoned(new Date(), tz), "yyyy-MM-dd");
+  const canMove = a.status !== "cancelled" && !past && !a.groupSessionId && !!a.serviceId && !!a.memberId;
 
   const state =
     a.status === "cancelled"
@@ -66,10 +75,25 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
 
           {a.status !== "cancelled" && !past ? (
             <div className="mt-6 space-y-3">
-              <ButtonLink href={`/r/${token}/calendrier.ics`} variant="secondary" className="w-full" icon={<CalendarPlus className="size-4" aria-hidden="true" />} prefetch={false}>
-                Ajouter à mon agenda
-              </ButtonLink>
+              <AddToCalendar token={token} title={`${a.serviceName ?? "Rendez-vous"} — ${b.name}`} start={a.startsAt} end={a.endsAt} location={address || null} details={memberName ? `Avec ${memberName}` : null} />
+              {canMove ? <RescheduleWidget token={token} today={today} defaultOpen={sp.deplacer === "1"} /> : null}
               <CancelButton token={token} />
+            </div>
+          ) : null}
+
+          {past && a.status === "confirmed" ? (
+            <ButtonLink href={`/${b.slug}#avis`} variant="secondary" className="mt-6 w-full" icon={<Star className="size-4" aria-hidden="true" />}>
+              Laisser un avis sur {b.name}
+            </ButtonLink>
+          ) : null}
+
+          {!session && a.contactEmail ? (
+            <div className="mt-6 rounded-lg border border-accent/30 bg-accent-soft p-4 text-sm">
+              <p className="font-medium text-accent-soft-foreground">Retrouvez tous vos rendez-vous au même endroit</p>
+              <p className="mt-1 text-muted">Créez votre compte client : déplacer, annuler ou reprendre rendez-vous en un clic.</p>
+              <ButtonLink href={`/inscription?client=1&email=${encodeURIComponent(a.contactEmail)}&nom=${encodeURIComponent(a.contactName ?? "")}&suite=${encodeURIComponent("/espace-client")}`} size="sm" className="mt-3">
+                Créer mon compte
+              </ButtonLink>
             </div>
           ) : null}
 
