@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Blocks, CalendarDays, ChevronsUpDown, Clock, Globe, LayoutTemplate, LifeBuoy, Menu, Scissors, Settings, Sun, UserRound, Users, X,
+  Blocks, CalendarDays, Check, ChevronsUpDown, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
 } from "lucide-react";
+import { logout } from "@/server/actions/auth";
+import { switchBusiness } from "@/server/actions/business";
 import { cn } from "@/lib/cn";
 import type { NavItem } from "@/lib/navigation";
 import { Avatar } from "@/components/ui/avatar";
@@ -27,7 +29,8 @@ const ICONS: Record<NavItem["icon"], typeof Sun> = {
 type Props = {
   groups: { label: string | null; items: NavItem[] }[];
   footer: NavItem[];
-  business: { name: string; businessType: string | null };
+  business: { id: string; name: string; businessType: string | null };
+  businesses: { id: string; name: string; businessType: string | null }[];
   user: { name: string; email: string; avatarUrl: string | null };
   pendingCount: number;
 };
@@ -59,24 +62,56 @@ function NavLink({ item, pathname, badge }: { item: NavItem; pathname: string; b
   );
 }
 
-function SidebarContent({ groups, footer, business, user, pendingCount, pathname }: Props & { pathname: string }) {
+function BusinessSwitcher({ current, all }: { current: Props["business"]; all: Props["businesses"] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="flex w-full items-center gap-3 rounded-lg border border-border bg-surface p-2 text-left transition-colors hover:bg-surface-muted"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-semibold text-accent-foreground" aria-hidden="true">
+          {current.name.charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-text">{current.name}</span>
+          {current.businessType ? <span className="block truncate text-xs text-muted">{current.businessType}</span> : null}
+        </span>
+        <ChevronsUpDown className="size-4 shrink-0 text-muted" aria-hidden="true" />
+      </button>
+      {open ? (
+        <>
+          <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} aria-label="Fermer" tabIndex={-1} />
+          <div role="menu" className="absolute inset-x-0 top-full z-20 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg">
+            <p className="px-2 py-1.5 text-xs font-medium text-muted">Vos établissements</p>
+            {all.map((b) => (
+              <form key={b.id} action={switchBusiness.bind(null, b.id)}>
+                <button type="submit" role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted">
+                  <span className="min-w-0 flex-1 truncate">{b.name}</span>
+                  {b.id === current.id ? <Check className="size-4 shrink-0 text-accent" aria-label="Actif" /> : null}
+                </button>
+              </form>
+            ))}
+            <div className="my-1 border-t border-border" />
+            <Link href="/bienvenue" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
+              <Plus className="size-4" aria-hidden="true" />
+              Ajouter un établissement
+            </Link>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function SidebarContent({ groups, footer, business, businesses, user, pendingCount, pathname }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="p-3">
-        <Link
-          href="/app/reglages"
-          className="flex w-full items-center gap-3 rounded-lg border border-border bg-surface p-2 text-left transition-colors hover:bg-surface-muted"
-          aria-label={`${business.name} — réglages de l'établissement`}
-        >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-semibold text-accent-foreground" aria-hidden="true">
-            {business.name.charAt(0).toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-text">{business.name}</span>
-            {business.businessType ? <span className="block truncate text-xs text-muted">{business.businessType}</span> : null}
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0 text-muted" aria-hidden="true" />
-        </Link>
+        <BusinessSwitcher current={business} all={businesses} />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-3" aria-label="Navigation principale">
@@ -102,13 +137,20 @@ function SidebarContent({ groups, footer, business, user, pendingCount, pathname
             </li>
           ))}
         </ul>
-        <Link href="/app/compte" className="mt-2 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-surface-muted">
-          <Avatar name={user.name} src={user.avatarUrl} size="sm" />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-text">{user.name}</span>
-            <span className="block truncate text-xs text-muted">{user.email}</span>
-          </span>
-        </Link>
+        <div className="mt-2 flex items-center gap-1">
+          <Link href="/app/compte" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 transition-colors hover:bg-surface-muted">
+            <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-text">{user.name}</span>
+              <span className="block truncate text-xs text-muted">{user.email}</span>
+            </span>
+          </Link>
+          <form action={logout}>
+            <button type="submit" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Se déconnecter" title="Se déconnecter">
+              <LogOut className="size-4" aria-hidden="true" />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

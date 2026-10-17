@@ -9,6 +9,10 @@ import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
 import { BUILT_IN_GRADES } from "../src/lib/permissions";
+import { hashPassword } from "../src/server/auth/password";
+
+/** Mot de passe des comptes de démo — uniquement pour le développement local. */
+export const DEMO_PASSWORD = "demo-branshee-2026";
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL manquant");
@@ -29,8 +33,8 @@ async function main() {
     await db.delete(s.users).where(eq(s.users.email, "thomas@cabinet-horizon.example"));
   }
 
-  const [owner] = await db.insert(s.users).values({ email: "claire@cabinet-horizon.example", fullName: "Claire Dumont", locale: "fr" }).returning();
-  const [colleague] = await db.insert(s.users).values({ email: "thomas@cabinet-horizon.example", fullName: "Thomas Lambert", locale: "fr" }).returning();
+  const [owner] = await db.insert(s.users).values({ email: "claire@cabinet-horizon.example", fullName: "Claire Dumont", locale: "fr", passwordHash: await hashPassword(DEMO_PASSWORD) }).returning();
+  const [colleague] = await db.insert(s.users).values({ email: "thomas@cabinet-horizon.example", fullName: "Thomas Lambert", locale: "fr", passwordHash: await hashPassword(DEMO_PASSWORD) }).returning();
 
   const [biz] = await db
     .insert(s.businesses)
@@ -176,6 +180,7 @@ async function main() {
   }
 
   console.log(`Démo créée : ${custs.length} clients, ${svc.length} prestations, ${inserted} rendez-vous.`);
+  console.log(`Connexion : claire@cabinet-horizon.example (propriétaire) ou thomas@cabinet-horizon.example (collaborateur), mot de passe ${DEMO_PASSWORD}`);
   await client.end();
 }
 

@@ -1,55 +1,80 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { businesses, grades, members, users } from "@/db/schema";
+import { businesses, grades, members } from "@/db/schema";
 import { can, type PermissionKey, type Permissions } from "@/lib/permissions";
+import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
 
 export type AppContext = {
   user: { id: string; name: string; email: string; avatarUrl: string | null };
   business: { id: string; name: string; slug: string; businessType: string | null; timezone: string };
   member: { id: string; isOwner: boolean };
+  /** Tous les établissements dont l'utilisateur est membre actif (pour le sélecteur). */
+  businesses: { id: string; name: string; businessType: string | null }[];
   permissions: Permissions | null;
   can: (key: PermissionKey) => boolean;
 };
 
+type Resolved = { kind: "anonymous" } | { kind: "no-business"; user: AppContext["user"] } | { kind: "ok"; ctx: AppContext };
+
 /**
  * Contexte de la requête : utilisateur connecté + établissement actif + ses droits.
- *
- * Étape actuelle (fondations) : l'authentification n'est pas encore branchée, on prend
- * le propriétaire du premier établissement — c'est ce que crée `npm run db:seed`.
- * L'étape « Comptes & connexion » remplacera uniquement la sélection de l'utilisateur
- * (lecture de la session) ; le reste de la fonction ne change pas.
+ * L'établissement actif est mémorisé dans un cookie ; s'il est absent ou invalide, on prend le premier.
  */
-export const getAppContext = cache(async (): Promise<AppContext | null> => {
-  const row = await db
-    .select({ user: users, business: businesses, member: members, permissions: grades.permissions })
+const resolveContext = cache(async (): Promise<Resolved> => {
+  const session = await getSessionUser();
+  if (!session) return { kind: "anonymous" };
+  const u = session.user;
+  const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl };
+
+  const rows = await db
+    .select({ business: businesses, member: members, permissions: grades.permissions })
     .from(members)
     .innerJoin(businesses, eq(businesses.id, members.businessId))
-    .innerJoin(users, eq(users.id, members.userId))
     .leftJoin(grades, eq(grades.id, members.gradeId))
-    .where(and(eq(members.isOwner, true), eq(members.status, "active"), isNull(businesses.deletedAt)))
-    .orderBy(asc(businesses.createdAt))
-    .limit(1)
-    .then((r) => r[0]);
+    .where(and(eq(members.userId, u.id), eq(members.status, "active"), eq(members.isActive, true), isNull(businesses.deletedAt)))
+    .orderBy(asc(businesses.createdAt));
 
-  if (!row) return null;
+  if (rows.length === 0) return { kind: "no-business", user };
+
+  const wanted = (await cookies()).get(BUSINESS_COOKIE)?.value;
+  const row = rows.find((r) => r.business.id === wanted) ?? rows[0]!;
   const isOwner = row.member.isOwner;
   const permissions = row.permissions ?? null;
 
   return {
-    user: { id: row.user.id, name: row.user.fullName, email: row.user.email, avatarUrl: row.user.avatarUrl },
-    business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone },
-    member: { id: row.member.id, isOwner },
-    permissions,
-    can: (key) => can(permissions, key, isOwner),
+    kind: "ok",
+    ctx: {
+      user,
+      business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone },
+      member: { id: row.member.id, isOwner },
+      businesses: rows.map((r) => ({ id: r.business.id, name: r.business.name, businessType: r.business.businessType })),
+      permissions,
+      can: (key) => can(permissions, key, isOwner),
+    },
   };
 });
 
-/** Pour les pages et actions : contexte obligatoire, sinon erreur explicite. */
+/** Utilisateur connecté (sans exiger d'établissement), sinon redirection vers la connexion. */
+export async function requireUser() {
+  const r = await resolveContext();
+  if (r.kind === "anonymous") redirect("/connexion");
+  return r.kind === "ok" ? r.ctx.user : r.user;
+}
+
+/**
+ * Pour les pages et actions de l'espace pro.
+ * - pas connecté → page de connexion
+ * - connecté sans établissement → création d'établissement
+ * - permission manquante → page « accès refusé » (la navigation masque déjà ces liens)
+ */
 export async function requireContext(permission?: PermissionKey): Promise<AppContext> {
-  const ctx = await getAppContext();
-  if (!ctx) throw new Error("Aucun établissement trouvé. Lancez `npm run db:seed` pour créer l'établissement de démonstration.");
-  if (permission && !ctx.can(permission)) throw new Error("Vous n'avez pas accès à cette section.");
-  return ctx;
+  const r = await resolveContext();
+  if (r.kind === "anonymous") redirect("/connexion");
+  if (r.kind === "no-business") redirect("/bienvenue");
+  if (permission && !r.ctx.can(permission)) redirect("/app/acces-refuse");
+  return r.ctx;
 }
