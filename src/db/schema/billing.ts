@@ -42,6 +42,27 @@ export const modules = pgTable("modules", {
   ...timestamps,
 });
 
+/**
+ * Forfait d'un établissement (le forfait est porté par l'établissement, comme dans l'ancien
+ * Branshee). Pas de ligne = gratuit, sauf abonnement « compte » hérité de l'ancien système.
+ * `grantedUntil` = accès offert (super-admin, lien d'accès) sans paiement Stripe.
+ */
+export const businessPlans = pgTable("business_plans", {
+  businessId: uuid("business_id")
+    .primaryKey()
+    .references(() => businesses.id, { onDelete: "cascade" }),
+  plan: planEnum("plan").notNull().default("free"),
+  interval: billingIntervalEnum("interval"),
+  status: subscriptionStatusEnum("status").notNull().default("active"),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  periodEnd: timestamp("period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  grantedUntil: timestamp("granted_until", { withTimezone: true }),
+  extraSeats: integer("extra_seats").notNull().default(0),
+  customUrlAddon: boolean("custom_url_addon").notNull().default(false),
+  ...timestamps,
+});
+
 /** Modules activés sur un établissement. */
 export const businessModules = pgTable(
   "business_modules",

@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/lib/permissions";
 import { requireContext } from "@/server/context";
+import { businessHas } from "@/server/plan";
+import { UpgradeNotice } from "@/components/app/upgrade-notice";
 
 export const metadata: Metadata = { title: "Grades et permissions" };
 
@@ -18,7 +20,8 @@ const TOTAL = Object.values(PERMISSIONS).reduce((n, d) => n + Object.keys(d.acti
 
 export default async function GradesPage() {
   const ctx = await requireContext("grades.view");
-  const canManage = ctx.can("grades.manage");
+  const allowed = await businessHas(ctx.business.id, "grades");
+  const canManage = ctx.can("grades.manage") && allowed;
   const rows = await db
     .select({ g: grades, n: count(members.id) })
     .from(grades)
@@ -35,6 +38,7 @@ export default async function GradesPage() {
         action={canManage ? <ButtonLink href="/app/equipe/grades/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>Nouveau grade</ButtonLink> : null}
       />
       <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: "Grades et permissions" }]} />
+      {!allowed ? <div className="mb-4"><UpgradeNotice feature="Grades sur mesure" required="pro_plus">Les grades intégrés restent appliqués. Créer et modifier des grades est inclus dans le forfait Pro+.</UpgradeNotice></div> : null}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border">
           {rows.map(({ g, n }) => {

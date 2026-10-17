@@ -7,11 +7,14 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDay, formatTime } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { businessHas } from "@/server/plan";
+import { UpgradeNotice } from "@/components/app/upgrade-notice";
 
 export const metadata: Metadata = { title: "Journal d'activité · Réglages" };
 
 export default async function ActivityLogPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const ctx = await requireContext("logs.view");
+  if (!(await businessHas(ctx.business.id, "activityLog"))) return <UpgradeNotice feature="Journal d'activité" required="pro_plus">Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.</UpgradeNotice>;
   const tz = ctx.business.timezone;
   const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const like = `%${q.replace(/[%_\\]/g, (c) => "\\" + c)}%`;

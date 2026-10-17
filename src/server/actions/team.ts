@@ -9,6 +9,7 @@ import { activityLogs, grades, members, users } from "@/db/schema";
 import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions";
 import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
+import { businessHas, collaboratorUsage } from "@/server/plan";
 import { emails } from "@/server/email/templates";
 
 export type TeamState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
@@ -41,6 +42,10 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
     return { error: "Vérifiez les champs indiqués.", fieldErrors };
   }
   const v = parsed.data;
+  const seats = await collaboratorUsage(ctx.business.id);
+  if (seats.used >= seats.max) {
+    return { error: seats.max === 0 ? "Le forfait Amateur ne permet pas d'ajouter de collaborateurs : passez au forfait Pro (Réglages › Abonnement)." : `Votre forfait inclut ${seats.max} collaborateur${seats.max > 1 ? "s" : ""}. Ajoutez un siège ou passez au forfait supérieur (Réglages › Abonnement).` };
+  }
 
   let userId: string | null = null;
   if (v.email) {
@@ -152,6 +157,10 @@ export async function removeMember(memberId: string): Promise<{ ok: boolean; err
 }
 
 export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: FormData): Promise<TeamState> {
+  {
+    const c = await requireContext("grades.manage");
+    if (!(await businessHas(c.business.id, "grades"))) return { error: "Les grades sur mesure sont inclus dans le forfait Pro+." };
+  }
   const ctx = await requireContext("grades.manage");
   const name = str(fd, "name");
   if (name.length < 2 || name.length > 40) return { error: "Vérifiez les champs indiqués.", fieldErrors: { name: "Entre 2 et 40 caractères." } };

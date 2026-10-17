@@ -108,13 +108,17 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Infos complémentaires (libellé / valeur) et présentation sur le profil public d'un membre
 - ❌ Sièges collaborateurs supplémentaires (10 €/mois)
 
-## Lot J — Abonnements (Branshee → pro)
-- ❌ Forfaits par établissement (Gratuit / Pro / Business) et **limites** partout (prestations, membres, questions de formulaire, historique 7 jours, rappels, confirmations auto au-delà de 20 RDV/mois en gratuit, personnalisation, Google Agenda, grades et journal réservés à Business, Mon site…)
-- ❌ Paiement Stripe (checkout), changement d'offre au prorata, résiliation, reprise, cartes, factures PDF, adresse de facturation
-- ❌ Options : URL personnalisée, sièges
-- ❌ Codes promo, campagne avec compte à rebours, liens d'accès offerts, essai gratuit
-- ❌ Parrainage (code, lien, filleuls, mois offerts)
-- 🔶 Accès offert par le super-admin ✅ (par compte ; à passer par établissement)
+## Lot J — Abonnements (Branshee → pro) ✅
+- ✅ Forfaits **par établissement** : Amateur (gratuit), Pro (19 € ou 15 €/mois à l'année), Pro+ (49 € ou 39 €) — l'ancien abonnement « compte » reste lu tant qu'il existe
+- ✅ Limites appliquées partout : prestations actives (5), collaborateurs (0 / 2 / 10 + sièges), questions du formulaire (1 / 5 / 10), confirmation automatique jusqu'à 20 RDV/mois en gratuit (ensuite « à confirmer », rien n'est bloqué), rappels automatiques, personnalisation de la page, réseaux sociaux, battements et durée des créneaux, grades et journal (Pro+), URL personnalisée (Pro+ ou option), sans mention Branshee (Pro+), création d'établissements (1 gratuit + 1 par Pro+)
+- ✅ Historique limité à 7 jours en gratuit **sans rien supprimer** (l'ancien effaçait les RDV de plus de 7 jours : perte de données patients)
+- ✅ Passage à un forfait inférieur : prestations / collaborateurs / questions en trop désactivés, jamais supprimés
+- ✅ Paiement Stripe Checkout, changement d'offre au prorata, résiliation à l'échéance, reprise, portail Stripe (cartes, factures PDF, adresse de facturation, n° de TVA), webhook signé, retour vérifié auprès de Stripe
+- ✅ Options dans le même abonnement : URL personnalisée (5 €/mois), sièges collaborateurs (10 €/mois l'unité)
+- ✅ Codes promo (essai gratuit, %, montant ; forfait visé ; usage unique par compte ; annuel + % = un mois de remise), campagne avec compte à rebours (premier mois à prix cassé, une fois par compte), liens d'accès offerts (`/acces/<code>`)
+- ✅ Parrainage : code et lien personnels, filleuls listés, 3 abonnés = 2 mois offerts (coupon sur l'abonnement)
+- ✅ Accès offert par le super-admin, désormais par établissement
+- ℹ️ Sans clés Stripe, les forfaits s'affichent mais le paiement est désactivé (testé) ; à tester avec les clés de test sur le VPS
 
 ## Lot K — SMS et WhatsApp
 - ❌ Rappel et confirmation par SMS, quota inclus par forfait, solde prépayé, recharge, recharge automatique, compteur mensuel, repli email

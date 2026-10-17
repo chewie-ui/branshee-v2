@@ -61,6 +61,8 @@ export type AppointmentInfo = {
   customerName: string;
   manageUrl: string;
   businessPhone: string | null;
+  /** Forfait Pro+ : pas de mention Branshee dans les emails aux clients. */
+  noBranding?: boolean;
 };
 
 function apptDetails(a: AppointmentInfo): Detail[] {
@@ -75,7 +77,7 @@ function apptDetails(a: AppointmentInfo): Detail[] {
 /** Modes de paiement rappelés dans l'email de rappel (mêmes codes que l'ancien Branshee). */
 export const PAYMENT_LABELS: Record<string, string> = { carte: "Carte bancaire", especes: "Espèces", qr_code: "QR code (Payconiq…)", virement: "Virement" };
 
-const clientFooter = (a: AppointmentInfo) => `${a.businessName}${a.businessPhone ? ` · ${a.businessPhone}` : ""} — rendez-vous géré avec Branshee`;
+const clientFooter = (a: AppointmentInfo) => `${a.businessName}${a.businessPhone ? ` · ${a.businessPhone}` : ""}${a.noBranding ? "" : " — rendez-vous géré avec Branshee"}`;
 const firstName = (n: string) => n.split(" ")[0] ?? n;
 
 export const emails = {

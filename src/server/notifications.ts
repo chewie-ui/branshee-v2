@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { sendEmail } from "@/server/email/mailer";
+import { businessHas } from "@/server/plan";
 
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
@@ -30,6 +31,7 @@ async function load(appointmentId: string) {
     customerName: a.contactName ?? "Client",
     manageUrl: `${appUrl()}/r/${a.manageToken}`,
     businessPhone: b.phone,
+    noBranding: await businessHas(b.id, "noBranding"),
   };
   return { ...row, info, bookingUrl: `${appUrl()}/${b.slug}` };
 }
@@ -156,7 +158,7 @@ export async function sendManualReminder(appointmentId: string) {
 export async function sendDueReminders(now = new Date()) {
   const horizon = new Date(now.getTime() + 72 * 3600000); // délai maximum réglable
   const candidates = await db
-    .select({ id: appointments.id, startsAt: appointments.startsAt, delay: notificationSettings.reminderDelayHours })
+    .select({ id: appointments.id, businessId: appointments.businessId, startsAt: appointments.startsAt, delay: notificationSettings.reminderDelayHours })
     .from(appointments)
     .leftJoin(notificationSettings, eq(notificationSettings.businessId, appointments.businessId))
     .where(
@@ -171,7 +173,11 @@ export async function sendDueReminders(now = new Date()) {
     );
 
   let sent = 0;
+  // Rappels automatiques : à partir du forfait Pro (le rappel manuel reste possible partout).
+  const allowed = new Map<string, boolean>();
   for (const c of candidates) {
+    if (!allowed.has(c.businessId)) allowed.set(c.businessId, await businessHas(c.businessId, "emailReminders"));
+    if (!allowed.get(c.businessId)) continue;
     const delayMs = (c.delay ?? 24) * 3600000;
     if (c.startsAt.getTime() - now.getTime() > delayMs) continue;
     const claimed = await db

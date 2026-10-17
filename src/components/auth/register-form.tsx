@@ -7,7 +7,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { register, type AuthState } from "@/server/actions/auth";
 import { submitKeepingValues } from "@/lib/form";
 
-export function RegisterForm({ client = false, next, defaults = {} }: { client?: boolean; next?: string; defaults?: { email?: string; fullName?: string } }) {
+export function RegisterForm({ client = false, next, refCode, defaults = {} }: { client?: boolean; next?: string; refCode?: string; defaults?: { email?: string; fullName?: string } }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, undefined);
   const err = state?.fieldErrors ?? {};
   return (
@@ -19,6 +19,7 @@ export function RegisterForm({ client = false, next, defaults = {} }: { client?:
       ) : null}
       {client ? <input type="hidden" name="kind" value="client" /> : null}
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      {refCode ? <input type="hidden" name="ref" value={refCode} /> : null}
       <Field label="Nom complet" htmlFor="fullName" error={err.fullName}>
         <Input id="fullName" name="fullName" autoComplete="name" required defaultValue={state?.values?.fullName ?? defaults.fullName} aria-invalid={!!err.fullName || undefined} />
       </Field>

@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, eq, inArray, isNull, max } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, bookingPageSettings, members, serviceCategories, serviceHours, serviceMembers, services } from "@/db/schema";
 import { weekError, weekSchema } from "@/lib/week-schema";
+import { serviceLimitReached } from "@/server/plan";
 import { requireContext } from "@/server/context";
 import { deletePublicImage, savePublicImage } from "@/server/storage";
 
@@ -110,10 +111,18 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
   if (priceCents === "invalid") return { error: "Vérifiez les champs indiqués.", fieldErrors: { price: "Prix invalide (ex. 45 ou 45,50)." } };
 
   let previousImage: string | null = null;
+  let wasActive = false;
   if (serviceId) {
-    const [existing] = await db.select({ id: services.id, imageUrl: services.imageUrl }).from(services).where(and(eq(services.id, serviceId), eq(services.businessId, bid)));
+    const [existing] = await db.select({ id: services.id, imageUrl: services.imageUrl, isActive: services.isActive }).from(services).where(and(eq(services.id, serviceId), eq(services.businessId, bid)));
     if (!existing) return { error: "Prestation introuvable." };
     previousImage = existing.imageUrl;
+    wasActive = existing.isActive;
+  }
+  // Forfait : nombre de prestations actives.
+  if (v.isActive && !wasActive) {
+    const [{ n }] = await db.select({ n: count() }).from(services).where(and(eq(services.businessId, bid), eq(services.isActive, true)));
+    const lim = await serviceLimitReached(bid, n);
+    if (lim.reached) return { error: `Votre forfait permet ${lim.max} prestations actives. Masquez-en une ou passez au forfait Pro (Réglages › Abonnement).` };
   }
 
   // Les membres choisis doivent appartenir à l'établissement.
@@ -178,6 +187,10 @@ export async function deleteService(serviceId: string): Promise<{ ok: boolean; e
 
 export async function toggleService(serviceId: string, active: boolean): Promise<void> {
   const ctx = await requireContext("services.manage");
+  if (active) {
+    const [{ n }] = await db.select({ n: count() }).from(services).where(and(eq(services.businessId, ctx.business.id), eq(services.isActive, true)));
+    if ((await serviceLimitReached(ctx.business.id, n)).reached) return;
+  }
   await db.update(services).set({ isActive: active }).where(and(eq(services.id, z.uuid().parse(serviceId)), eq(services.businessId, ctx.business.id)));
   revalidatePath("/app/prestations");
 }
@@ -185,9 +198,15 @@ export async function toggleService(serviceId: string, active: boolean): Promise
 /* ───────────────────────────── Liste : activation, ordre ───────────────────────────── */
 
 /** Active / masque une ou plusieurs prestations en un clic. */
-export async function setServicesActive(rawIds: string[], active: boolean): Promise<{ ok: boolean }> {
+export async function setServicesActive(rawIds: string[], active: boolean): Promise<{ ok: boolean; error?: string }> {
   const ctx = await requireContext("services.manage");
   const ids = z.array(z.uuid()).min(1).max(500).parse(rawIds);
+  if (active) {
+    const rows = await db.select({ id: services.id, isActive: services.isActive }).from(services).where(eq(services.businessId, ctx.business.id));
+    const willBe = rows.filter((r) => r.isActive || ids.includes(r.id)).length;
+    const lim = await serviceLimitReached(ctx.business.id, willBe - 1);
+    if (lim.reached) return { ok: false, error: `Votre forfait permet ${lim.max} prestations actives. Passez au forfait Pro pour en proposer plus.` };
+  }
   const updated = await db.update(services).set({ isActive: active }).where(and(eq(services.businessId, ctx.business.id), inArray(services.id, ids))).returning({ name: services.name });
   if (updated.length) await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: active ? "service.activate" : "service.deactivate", description: updated.length === 1 ? `Prestation ${active ? "activée" : "masquée"} : ${updated[0]!.name}` : `${updated.length} prestations ${active ? "activées" : "masquées"}` });
   revalidatePath("/app/prestations");

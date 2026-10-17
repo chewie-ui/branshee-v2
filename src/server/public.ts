@@ -8,6 +8,8 @@ import { bookingPageSettings, bookingSettings, businesses, formQuestions, member
 import { format } from "date-fns";
 import { zoned } from "@/lib/time";
 import { resolveTheme } from "@/lib/booking-theme";
+import { hasFeature } from "@/lib/plans";
+import { effectivePlan } from "@/server/plan";
 import { sanitizeRichText } from "@/server/rich-text";
 
 /**
@@ -46,6 +48,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
   const [page] = await db.select().from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
   const [pay] = await db.select().from(paymentSettings).where(eq(paymentSettings.businessId, biz.id));
+  const plan = await effectivePlan(biz.id);
   const sections = page?.sections ?? ["about", "location", "hours"];
 
   const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
@@ -99,7 +102,9 @@ export const getPublicBusiness = cache(async (slug: string) => {
     categories: cats,
     team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio, customInfo: m.customInfo })),
     questions,
-    theme: resolveTheme(page?.theme),
+    // Personnalisation et réseaux sociaux : à partir du forfait Pro ; sans mention Branshee : Pro+.
+    theme: plan && hasFeature(plan.plan, "customization") ? resolveTheme(page?.theme) : resolveTheme(null),
+    features: { social: !!plan && hasFeature(plan.plan, "socialLinks"), noBranding: !!plan && hasFeature(plan.plan, "noBranding") },
     aboutHtml: biz.aboutHtml ? sanitizeRichText(biz.aboutHtml) : null,
     sections,
     showContact: page?.showContact ?? { email: true, phone: true, instagram: true, facebook: true, whatsapp: true, website: true },

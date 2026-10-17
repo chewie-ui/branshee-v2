@@ -11,6 +11,7 @@ import { getSessionUser } from "@/server/auth/session";
 import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
+import { collaboratorUsage } from "@/server/plan";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
@@ -93,6 +94,8 @@ export async function decideJoinRequest(memberId: string, accept: boolean): Prom
   const [m] = await db.select().from(members).where(and(eq(members.id, uuid(memberId)), eq(members.businessId, ctx.business.id), eq(members.status, "requested")));
   if (!m) return { ok: false, error: "Demande introuvable." };
   if (accept) {
+    const seats = await collaboratorUsage(ctx.business.id);
+    if (seats.used >= seats.max) return { ok: false, error: seats.max === 0 ? "Le forfait Amateur ne permet pas d'avoir des collaborateurs : passez au forfait Pro." : "Plus de place de collaborateur : ajoutez un siège dans Réglages › Abonnement." };
     const [grade] = await db.select({ id: grades.id }).from(grades).where(and(eq(grades.businessId, ctx.business.id), eq(grades.name, "Collaborateur")));
     await db.update(members).set({ status: "active", joinedAt: new Date(), gradeId: grade?.id ?? null, isBookable: true }).where(eq(members.id, m.id));
   } else await db.delete(members).where(eq(members.id, m.id));

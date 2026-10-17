@@ -135,7 +135,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
         {aside.length ? <aside className="space-y-4 lg:group-data-[layout=split]:order-first">{aside}</aside> : null}
       </main>
 
-      {!embedded ? (
+      {!embedded && !data.features.noBranding ? (
         <footer className="pb-8 text-center text-xs text-muted">
           Réservation en ligne propulsée par <span className="font-medium text-text">Branshee</span>
         </footer>
@@ -151,7 +151,7 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
   const links: { key: string; href: string; label: string; icon: ReactNode }[] = [];
   if (b.phone && show.phone) links.push({ key: "phone", href: `tel:${b.phone.replace(/\s/g, "")}`, label: b.phone, icon: <Phone className="size-4" aria-hidden="true" /> });
   if (b.email && show.email) links.push({ key: "email", href: `mailto:${b.email}`, label: b.email, icon: <Mail className="size-4" aria-hidden="true" /> });
-  if (b.website && show.website) links.push({ key: "website", href: b.website, label: b.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""), icon: <Globe className="size-4" aria-hidden="true" /> });
+  if (b.website && show.website && data.features.social) links.push({ key: "website", href: b.website, label: b.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""), icon: <Globe className="size-4" aria-hidden="true" /> });
   const socials: { key: string; label: string; icon: ReactNode; on: boolean }[] = [
     { key: "instagram", label: "Instagram", icon: <Instagram className="size-4" aria-hidden="true" />, on: show.instagram },
     { key: "facebook", label: "Facebook", icon: <Facebook className="size-4" aria-hidden="true" />, on: show.facebook },
@@ -160,7 +160,7 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
     { key: "linkedin", label: "LinkedIn", icon: <Linkedin className="size-4" aria-hidden="true" />, on: true },
     { key: "youtube", label: "YouTube", icon: <Youtube className="size-4" aria-hidden="true" />, on: true },
   ];
-  const social = b.social as Record<string, string | undefined>;
+  const social = (data.features.social ? b.social : {}) as Record<string, string | undefined>;
 
   return (
     <header className="border-b border-border bg-surface">

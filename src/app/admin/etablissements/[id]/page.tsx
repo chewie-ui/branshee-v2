@@ -12,6 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { format } from "date-fns";
 import { formatDay, formatTime, zoned } from "@/lib/time";
 import { requireSuperadmin } from "@/server/admin";
+import { effectivePlan } from "@/server/plan";
 
 export const metadata: Metadata = { title: "Établissement" };
 
@@ -32,7 +33,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
     .leftJoin(subscriptions, eq(subscriptions.userId, businesses.ownerId))
     .where(eq(businesses.id, id.data));
   if (!row) notFound();
-  const { b, owner, sub } = row;
+  const { b, owner } = row;
   const tz = b.timezone;
   const d30 = new Date(new Date().getTime() - 30 * 86400000);
 
@@ -43,8 +44,9 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
     db.select({ id: activityLogs.id, at: activityLogs.createdAt, actor: activityLogs.actorName, description: activityLogs.description }).from(activityLogs).where(eq(activityLogs.businessId, b.id)).orderBy(desc(activityLogs.createdAt)).limit(10),
   ]);
 
-  const granted = sub?.grantedUntil && sub.grantedUntil > new Date() ? sub.grantedUntil : null;
-  const plan = granted || sub?.stripeSubscriptionId ? (sub?.plan ?? "free") : "free";
+  const eff = await effectivePlan(b.id);
+  const granted = eff.source === "granted" ? eff.grantedUntil : null;
+  const plan = eff.plan;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -91,9 +93,9 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
         </Card>
 
         <Card>
-          <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${granted ? ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})` : sub?.stripeSubscriptionId ? " (Stripe)" : ""}`} />
+          <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${eff.source === "granted" ? (granted ? ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})` : " (offert)") : eff.source === "stripe" ? " (Stripe)" : eff.source === "account" ? " (ancien abonnement du compte)" : ""}`} />
           <div className="p-5">
-            <GrantPlanForm userId={owner.id} plan={sub?.plan ?? "free"} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} />
+            <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} />
           </div>
         </Card>
 

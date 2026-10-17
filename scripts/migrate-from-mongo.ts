@@ -306,8 +306,9 @@ async function main() {
       for (const [legacy, u] of userDocById) {
         const uid = userByLegacy.get(legacy)!;
         if (u.referredBy && userByLegacy.get(id(u.referredBy)!)) {
-          await tx.update(s.users).set({ referredById: userByLegacy.get(id(u.referredBy)!)! }).where(sql`${s.users.id} = ${uid}`);
+          await tx.update(s.users).set({ referredById: userByLegacy.get(id(u.referredBy)!)!, referralPaidAt: u.referralPaidCounted ? (date(u.updatedAt) ?? new Date()) : null }).where(sql`${s.users.id} = ${uid}`);
         }
+        if (u.referral?.creditMonths) await tx.insert(s.referralCredits).values({ userId: uid, monthsClaimed: Number(u.referral.creditMonths) || 0 }).onConflictDoNothing();
         const sub = u.subscription ?? {};
         const granted = (u.manualPremium || u.isPremium) && u.manualPremiumExpiry ? date(u.manualPremiumExpiry) : null;
         const plan = PLAN[sub.plan ?? ""] ?? "free";
@@ -416,6 +417,21 @@ async function main() {
           createdAt: date(c.createdAt) ?? new Date(),
         });
         count("businesses");
+
+        // Forfait porté par l'établissement (company.plan) ; à défaut, celui du compte reste lu via `subscriptions`.
+        const cPlan = PLAN[c.plan ?? ""] ?? "free";
+        if (cPlan !== "free" && (!c.planStatus || c.planStatus === "active")) {
+          await tx.insert(s.businessPlans).values({
+            businessId: bizId,
+            plan: cPlan,
+            status: "active",
+            stripeSubscriptionId: text(c.stripeSubscriptionId),
+            grantedUntil: date(c.grantExpiry),
+            customUrlAddon: !!owner?.addons?.customUrl,
+            extraSeats: Number(owner?.addons?.extraCollaboratorSeats ?? 0) || 0,
+          });
+          count("business_plans");
+        }
 
         const lead = c.minBookingLeadTime?.enabled ? Number(c.minBookingLeadTime.minutes) || null : null;
         const bq = c.bookingQuestion ?? {};

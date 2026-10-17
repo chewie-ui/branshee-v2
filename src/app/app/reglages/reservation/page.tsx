@@ -4,11 +4,19 @@ import { db } from "@/db";
 import { bookingSettings } from "@/db/schema";
 import { RulesForm } from "@/components/settings/rules-form";
 import { requireContext } from "@/server/context";
+import { businessHas } from "@/server/plan";
+import { UpgradeNotice } from "@/components/app/upgrade-notice";
 
 export const metadata: Metadata = { title: "Règles de réservation · Réglages" };
 
 export default async function BookingRulesPage() {
   const ctx = await requireContext("settings.manage");
   const [s] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, ctx.business.id));
-  return <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} />;
+  const advanced = await businessHas(ctx.business.id, "advancedAvailability");
+  return (
+    <div className="space-y-4">
+      {!advanced ? <UpgradeNotice feature="Battements et durée des créneaux" required="pro">Avec le forfait Amateur, l&apos;intervalle des créneaux et les battements restent ceux d&apos;origine ; le reste se règle librement.</UpgradeNotice> : null}
+      <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} />
+    </div>
+  );
 }

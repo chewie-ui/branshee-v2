@@ -7,6 +7,8 @@ import { EmbedBuilder, QrCard, SlugCard } from "@/components/booking-page/share-
 import { PageHeader } from "@/components/ui/page-header";
 import { resolveTheme } from "@/lib/booking-theme";
 import { requireContext } from "@/server/context";
+import { businessHas } from "@/server/plan";
+import { UpgradeNotice } from "@/components/app/upgrade-notice";
 
 export const metadata: Metadata = { title: "Partager · Page de réservation" };
 
@@ -19,6 +21,7 @@ export default async function SharePage() {
       <PageHeader title="Page de réservation" description="Partagez votre lien, imprimez votre QR code ou ajoutez le calendrier à votre site." />
       <PageTabs />
       <div className="mx-auto max-w-3xl space-y-6">
+        {!(await businessHas(ctx.business.id, "customUrl")) ? <UpgradeNotice feature="Adresse personnalisée" required="pro_plus">Incluse dans Pro+, ou en option à 5 €/mois avec Pro.</UpgradeNotice> : null}
         <SlugCard origin={origin} slug={ctx.business.slug} />
         <QrCard url={`${origin}/${ctx.business.slug}`} name={ctx.business.name} />
         <EmbedBuilder origin={origin} slug={ctx.business.slug} accent={resolveTheme(page?.theme).accentColor} initial={{ title: page?.embed.title ?? "", fontUrl: page?.embed.fontUrl ?? "", fontFamily: page?.embed.fontFamily ?? "" }} />

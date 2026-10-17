@@ -43,6 +43,8 @@ export const users = pgTable(
     /** Parrainage : code personnel et parrain éventuel. */
     referralCode: text("referral_code").unique(),
     referredById: uuid("referred_by_id"),
+    /** Premier paiement d'un filleul : il compte alors pour son parrain (une seule fois). */
+    referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }),
 
     /** Origine de l'inscription (UTM, gclid, page d'atterrissage…). */
     acquisition: jsonb("acquisition").$type<{

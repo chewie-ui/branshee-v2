@@ -10,8 +10,9 @@ import { businesses, members, users } from "@/db/schema";
 import { BUSINESS_COOKIE } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
 import { requireContext, requireUser } from "@/server/context";
+import { canUserCreateBusiness } from "@/server/plan";
 
-export type CreateBusinessState = { fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
+export type CreateBusinessState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
 const schema = z.object({
   name: z.string().trim().min(2, "Indiquez le nom de votre établissement.").max(80),
@@ -28,6 +29,8 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
     for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
     return { fieldErrors, values };
   }
+  const can = await canUserCreateBusiness(user.id);
+  if (!can.ok) return { error: "Vous avez déjà un établissement au forfait Amateur. Passez-le au forfait Pro pour en créer un autre (chaque établissement Pro+ ouvre droit à un établissement gratuit de plus).", values };
   const [owner] = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(eq(users.id, user.id));
   const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null });
   (await cookies()).set(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, appointmentPayments, appointments, customers, paymentSettings, waitlistEntries } from "@/db/schema";
 import { stripe } from "@/server/payments";
+import { autoConfirmAllowed } from "@/server/plan";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyBookingCreated } from "@/server/notifications";
@@ -146,7 +147,8 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   // Client connecté (adresse vérifiée, même email que la réservation) : la fiche est rattachée à son compte.
   const session = await getSessionUser();
   const linkUserId = session?.user.emailVerifiedAt && session.user.email.toLowerCase() === v.email ? session.user.id : null;
-  const status = data.settings.autoConfirm ? "confirmed" : "pending";
+  // Forfait gratuit : confirmation automatique jusqu'à 20 RDV en ligne par mois, ensuite « à confirmer » (rien n'est bloqué).
+  const status = data.settings.autoConfirm && (await autoConfirmAllowed(data.business.id, data.business.timezone)) ? "confirmed" : "pending";
 
   try {
     const created = await db.transaction(async (tx) => {

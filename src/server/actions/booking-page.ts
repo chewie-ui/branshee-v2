@@ -9,6 +9,8 @@ import { resolveTheme, themeSchema } from "@/lib/booking-theme";
 import { slugify } from "@/lib/slug";
 import { RESERVED_SLUGS } from "@/server/business";
 import { requireContext } from "@/server/context";
+import { businessHas, effectivePlan } from "@/server/plan";
+import { limitOf } from "@/lib/plans";
 import { richTextToPlain, sanitizeRichText } from "@/server/rich-text";
 import { deletePublicImage, savePublicImage } from "@/server/storage";
 
@@ -27,6 +29,9 @@ export async function saveFormQuestions(input: unknown): Promise<Result> {
   const parsed = z.array(questionSchema).max(10, "10 questions maximum.").safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   for (const q of parsed.data) if (q.type === "choice" && q.options.length < 2) return { ok: false, error: `« ${q.label} » : ajoutez au moins deux choix.` };
+  const plan = (await effectivePlan(ctx.business.id)).plan;
+  const maxQ = limitOf(plan, "formQuestions");
+  if (parsed.data.length > maxQ) return { ok: false, error: `Votre forfait permet ${maxQ} question${maxQ > 1 ? "s" : ""}. Passez au forfait supérieur pour en ajouter.` };
   await db.transaction(async (tx) => {
     await tx.delete(formQuestions).where(eq(formQuestions.businessId, ctx.business.id));
     if (parsed.data.length) {
@@ -199,6 +204,7 @@ export async function saveSocial(input: unknown): Promise<Result> {
 
 export async function saveTheme(input: unknown): Promise<Result> {
   const ctx = await requireContext("customization.manage");
+  if (!(await businessHas(ctx.business.id, "customization"))) return { ok: false, error: "La personnalisation de la page est disponible à partir du forfait Pro." };
   const parsed = themeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const t = parsed.data;
@@ -212,6 +218,7 @@ export async function saveTheme(input: unknown): Promise<Result> {
 
 export async function saveSlug(input: string): Promise<Result & { slug?: string }> {
   const ctx = await requireContext("customization.manage");
+  if (!(await businessHas(ctx.business.id, "customUrl"))) return { ok: false, error: "L'URL personnalisée est incluse dans le forfait Pro+, ou en option à 5 €/mois avec le forfait Pro (Réglages › Abonnement)." };
   const slug = slugify(String(input ?? ""));
   if (slug.length < 3) return { ok: false, error: "3 caractères minimum (lettres, chiffres, tirets)." };
   if (RESERVED_SLUGS.has(slug)) return { ok: false, error: "Cette adresse est réservée, choisissez-en une autre." };

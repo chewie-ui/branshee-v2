@@ -22,7 +22,7 @@ export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
   );
 }
 
-export function GrantPlanForm({ userId, plan, until }: { userId: string; plan: string; until: string }) {
+export function GrantPlanForm({ businessId, plan, until }: { businessId: string; plan: string; until: string }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   return (
@@ -31,7 +31,7 @@ export function GrantPlanForm({ userId, plan, until }: { userId: string; plan: s
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         start(async () => {
-          const r = await grantPlan(userId, { plan: String(fd.get("plan")), until: String(fd.get("until") ?? "") });
+          const r = await grantPlan(businessId, { plan: String(fd.get("plan")), until: String(fd.get("until") ?? "") });
           setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Enregistré.") : (r.error ?? "Erreur.") });
         });
       }}

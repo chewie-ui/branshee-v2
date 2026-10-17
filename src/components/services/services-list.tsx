@@ -73,6 +73,13 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
   const [showCols, setShowCols] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, start] = useTransition();
+  const [notice, setNotice] = useState<string | null>(null);
+  const activate = (ids: string[], active: boolean, after?: () => void) =>
+    start(async () => {
+      const r = await setServicesActive(ids, active);
+      setNotice(r.ok ? null : (r.error ?? null));
+      after?.();
+    });
 
   const toggleCol = (c: Column) => {
     const next = hidden.includes(c) ? hidden.filter((x) => x !== c) : [...hidden, c];
@@ -146,14 +153,15 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
         </div>
       </div>
 
+      {notice ? <p className="rounded-lg border border-warning/40 bg-warning-soft px-4 py-2.5 text-sm text-warning" role="alert">{notice}</p> : null}
       {canManage && selected.length ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent bg-accent-soft px-4 py-2.5 text-sm">
           <SlidersHorizontal className="size-4 text-accent" aria-hidden="true" />
           <span className="font-medium">{selected.length} sélectionnée{selected.length > 1 ? "s" : ""}</span>
           <button type="button" onClick={() => setSelected([])} className="text-muted hover:text-text">Tout désélectionner</button>
           <span className="ml-auto flex gap-2">
-            <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { await setServicesActive(selected, true); setSelected([]); })}>Activer</Button>
-            <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { await setServicesActive(selected, false); setSelected([]); })}>Masquer</Button>
+            <Button size="sm" variant="secondary" loading={pending} onClick={() => activate(selected, true, () => setSelected([]))}>Activer</Button>
+            <Button size="sm" variant="secondary" loading={pending} onClick={() => activate(selected, false, () => setSelected([]))}>Masquer</Button>
           </span>
         </div>
       ) : null}
@@ -195,7 +203,7 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
                       aria-label={`${s.name} : ${s.isActive ? "réservable en ligne" : "masquée"}`}
                       title={s.isActive ? "Réservable en ligne" : "Masquée de votre page"}
                       disabled={pending}
-                      onClick={() => start(async () => void (await setServicesActive([s.id], !s.isActive)))}
+                      onClick={() => activate([s.id], !s.isActive)}
                       className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", s.isActive ? "bg-accent" : "bg-border-strong")}
                     >
                       <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", s.isActive && "translate-x-4")} />

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, bookingSettings, businesses, notificationSettings } from "@/db/schema";
 import { requireContext } from "@/server/context";
+import { businessHas } from "@/server/plan";
 
 export type SettingsState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -99,6 +100,11 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
   });
   if (!parsed.success) return fail(parsed.error);
   const v = parsed.data;
+  // Battements et durée des créneaux : à partir du forfait Pro ; sinon les valeurs actuelles sont gardées.
+  if (!(await businessHas(ctx.business.id, "advancedAvailability"))) {
+    const [cur] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, ctx.business.id));
+    if (cur) Object.assign(v, { slotMode: cur.slotMode, slotIntervalMin: cur.slotIntervalMin, bufferBeforeMin: cur.bufferBeforeMin, bufferAfterMin: cur.bufferAfterMin });
+  }
   await db
     .update(bookingSettings)
     .set({

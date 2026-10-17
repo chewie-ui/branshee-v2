@@ -46,3 +46,15 @@ npm run admin:grant -- votre@email.com          # donne l'accès à /admin
 npm run admin:grant -- votre@email.com --remove # le retire
 ```
 Pour tout autre compte, `/admin` répond 404. L'espace admin n'affiche aucune donnée de dossier client.
+
+## Stripe (paiements des clients et abonnements)
+
+1. Clés : `STRIPE_SECRET_KEY` et `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (les mêmes que l'ancien Branshee).
+2. Prix des abonnements : reprendre les identifiants `price_…` existants dans Stripe —
+   `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY` (ancien « premium »), `STRIPE_PRICE_PROPLUS_MONTHLY` / `_YEARLY` (ancien « business »),
+   `STRIPE_PRICE_CUSTOM_URL`, `STRIPE_PRICE_EXTRA_SEAT`. Les abonnements en cours restent valables.
+3. Webhook : dans Stripe › Développeurs › Webhooks, ajouter `https://<domaine>/api/stripe/webhook` avec les événements
+   `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.payment_failed`,
+   puis mettre le secret dans `STRIPE_WEBHOOK_SECRET`.
+4. Portail client (cartes, factures) : l'activer une fois dans Stripe › Paramètres › Billing › Portail client.
+5. Stripe Connect : activer Connect (comptes Express) — comme pour l'ancien.

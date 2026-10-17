@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, businesses, sessions, subscriptions, users } from "@/db/schema";
+import { activityLogs, businessPlans, businesses, sessions, users } from "@/db/schema";
 import { requireSuperadmin } from "@/server/admin";
 
 type Result = { ok: boolean; error?: string; message?: string };
@@ -26,10 +26,10 @@ const grantSchema = z.object({
   until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")),
 });
 
-/** Offre un forfait jusqu'à une date (sans paiement). Date vide = retire l'accès offert. */
-export async function grantPlan(userId: string, input: { plan: string; until: string }): Promise<Result> {
+/** Forfait offert à un établissement jusqu'à une date (vide = retirer l'accès offert). */
+export async function grantPlan(businessId: string, input: { plan: string; until: string }): Promise<Result> {
   await requireSuperadmin();
-  const id = z.uuid().parse(userId);
+  const id = z.uuid().parse(businessId);
   const parsed = grantSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Forfait ou date invalide." };
   const { plan, until } = parsed.data;
@@ -37,12 +37,12 @@ export async function grantPlan(userId: string, input: { plan: string; until: st
   const [y, m, d] = until.split("-").map(Number) as [number, number, number];
   const grantedUntil = until ? new Date(new TZDate(y, m - 1, d, 23, 59, 59, "Europe/Brussels").getTime()) : null;
   if (grantedUntil && grantedUntil < new Date()) return { ok: false, error: "Choisissez une date dans le futur." };
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, id));
-  if (!u) return { ok: false, error: "Utilisateur introuvable." };
-  await db
-    .insert(subscriptions)
-    .values({ userId: id, plan: grantedUntil ? plan : "free", grantedUntil })
-    .onConflictDoUpdate({ target: subscriptions.userId, set: grantedUntil ? { plan, grantedUntil } : { grantedUntil: null } });
+  const [b] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, id));
+  if (!b) return { ok: false, error: "Établissement introuvable." };
+  const [cur] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, id));
+  if (cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status)) return { ok: false, error: "Cet établissement a un abonnement Stripe actif : gérez-le depuis Stripe." };
+  const values = grantedUntil ? { plan, grantedUntil, status: "active" as const, stripeSubscriptionId: null } : { plan: "free" as const, grantedUntil: null };
+  await db.insert(businessPlans).values({ businessId: id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   revalidatePath("/admin", "layout");
   return { ok: true, message: grantedUntil ? "Forfait offert enregistré." : "Accès offert retiré." };
 }

@@ -8,7 +8,7 @@ import { getSessionUser } from "@/server/auth/session";
 export const metadata: Metadata = { title: "Créer un compte" };
 export const dynamic = "force-dynamic";
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ client?: string; suite?: string; email?: string; nom?: string }> }) {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ client?: string; suite?: string; email?: string; nom?: string; ref?: string }> }) {
   const sp = await searchParams;
   const client = sp.client === "1";
   if (await getSessionUser()) redirect(client ? "/espace-client" : "/app");
@@ -16,8 +16,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     <>
       <h1 className="text-center text-2xl font-semibold tracking-tight">{client ? "Créer votre compte client" : "Créer votre compte"}</h1>
       <p className="mt-1 text-center text-sm text-muted">{client ? "Retrouvez, déplacez ou annulez vos rendez-vous en un clic." : "Vos clients réservent en ligne, vous gardez la main."}</p>
+      {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur Branshee.</p> : null}
       <Card className="mt-6 p-6">
-        <RegisterForm client={client} next={sp.suite} defaults={{ email: sp.email?.slice(0, 200), fullName: sp.nom?.slice(0, 120) }} />
+        <RegisterForm client={client} next={sp.suite} refCode={sp.ref?.slice(0, 40)} defaults={{ email: sp.email?.slice(0, 200), fullName: sp.nom?.slice(0, 120) }} />
       </Card>
       <p className="mt-6 text-center text-sm text-muted">
         Déjà un compte ?{" "}

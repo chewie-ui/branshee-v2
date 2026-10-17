@@ -11,6 +11,7 @@ export function CreateBusinessForm() {
   const err = state?.fieldErrors ?? {};
   return (
     <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
+      {state?.error ? <p className="rounded-lg border border-warning/40 bg-warning-soft px-3 py-2.5 text-sm text-warning" role="alert">{state.error}</p> : null}
       <Field label="Nom de l'établissement" htmlFor="name" error={err.name} hint="Tel que vos clients le connaissent.">
         <Input id="name" name="name" required defaultValue={state?.values?.name} aria-invalid={!!err.name || undefined} />
       </Field>
