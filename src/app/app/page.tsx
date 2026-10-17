@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { activityLogs, appointments, businesses, customers, services } from "@/db/schema";
 import { CopyLink } from "@/components/app/copy-link";
 import { DismissOnboarding } from "@/components/app/dismiss-onboarding";
+import { WelcomeCard } from "@/components/app/welcome-card";
 import { RequestActions } from "@/components/app/request-actions";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +34,9 @@ function ago(date: Date, now: Date) {
   return d === 1 ? "hier" : `il y a ${d} jours`;
 }
 
-export default async function TodayPage() {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ bienvenue?: string }> }) {
   const ctx = await requireContext();
+  const welcome = !!(await searchParams).bienvenue && ctx.member.isOwner;
   const bid = ctx.business.id;
   const tz = ctx.business.timezone;
   const now = new Date();
@@ -103,6 +105,8 @@ export default async function TodayPage() {
         description={formatDay(now, tz, "EEEE d MMMM yyyy").replace(/^./, (c) => c.toUpperCase())}
         action={canManage ? <ButtonLink href="/app/agenda/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>Nouveau rendez-vous</ButtonLink> : null}
       />
+
+      {welcome ? <WelcomeCard firstName={firstName} /> : null}
 
       {showOnboarding ? (
         <Card className="mb-6 p-5">

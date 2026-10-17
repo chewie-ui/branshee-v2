@@ -35,6 +35,7 @@ type Props = {
   businesses: { id: string; name: string; businessType: string | null }[];
   user: { name: string; email: string; avatarUrl: string | null };
   pendingCount: number;
+  supportUnread?: number;
 };
 
 function isActive(pathname: string, href: string) {
@@ -113,7 +114,7 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
   );
 }
 
-function SidebarContent({ groups, footer, business, businesses, user, pendingCount, pathname }: Props & { pathname: string }) {
+function SidebarContent({ groups, footer, business, businesses, user, pendingCount, supportUnread = 0, pathname }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="p-3">
@@ -139,7 +140,7 @@ function SidebarContent({ groups, footer, business, businesses, user, pendingCou
         <ul className="space-y-0.5">
           {footer.map((item) => (
             <li key={item.href}>
-              <NavLink item={item} pathname={pathname} />
+              <NavLink item={item} pathname={pathname} badge={item.href === "/app/aide" ? supportUnread : undefined} />
             </li>
           ))}
         </ul>

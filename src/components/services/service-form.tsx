@@ -182,7 +182,7 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
             </Field>
           ) : null}
         </div>
-        <fieldset>
+        <fieldset data-tour="service-color">
           <legend className="mb-2 text-sm font-medium">Couleur dans l&apos;agenda</legend>
           <input type="hidden" name="color" value={color} />
           <div className="flex flex-wrap gap-2">

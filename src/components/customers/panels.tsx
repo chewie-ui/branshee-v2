@@ -61,7 +61,7 @@ export function GeneralNotes({ customerId, initial, canManage }: { customerId: s
   const [saved, setSaved] = useState(initial);
   const [pending, start] = useTransition();
   return (
-    <Card>
+    <Card data-tour="customer-general">
       <CardHeader title="Notes générales" description="Ce qu'il faut savoir à chaque visite. Chiffré." />
       <div className="space-y-3 p-5">
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} rows={4} maxLength={5000} readOnly={!canManage} placeholder="Ex. allergique aux arachides, préfère le matin, fidèle depuis 2019…" aria-label="Notes générales" />

@@ -135,11 +135,14 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ℹ️ Sans identifiants Google, les boutons sont masqués (testé) ; parcours Google à tester sur le VPS
 
 ## Lot M — Aide, support, accompagnement
-- ❌ Centre d'aide (sections, vidéos, FAQ, visites guidées)
-- ❌ Chat de support avec l'équipe + note de satisfaction
-- ❌ Messages de l'équipe Branshee affichés aux pros (bannière, fermeture)
-- ❌ Écran d'accueil + visite guidée, checklist « Bien démarrer »
-- ❌ Emails de relance (J+1, J+3, « créez votre établissement »)
+- ✅ Centre d'aide `/app/aide` : recherche, chapitres, sections vidéos + FAQ (contenu de l'éditeur super-admin, HTML nettoyé ; contenu par défaut sinon), contacts email / WhatsApp (`SUPPORT_EMAIL`, `SUPPORT_WHATSAPP`)
+- ✅ 12 visites guidées (moteur `components/app/guided-tour.tsx`, définitions `lib/tours.ts`) : mise en évidence de l'élément réel, navigation entre pages, passage au clic, dépliage des formulaires, Échap pour quitter
+- ✅ Chat de support (rafraîchi toutes les 10 s, badge non lu dans le menu, email à `SUPPORT_EMAIL`), clôture par l'équipe → note 1 à 5 (`support_ratings`), un nouveau message rouvre
+- ✅ Messages de l'équipe Branshee en bannière dans l'espace pro (pour tous ou un compte, 60 jours, fermeture mémorisée)
+- ✅ Écran de bienvenue après création de l'établissement → visite « Bien démarrer » ; checklist « Bien démarrer » (déjà là)
+- ✅ Migration : notes de satisfaction et contenu du centre d'aide repris
+- ➡️ Emails de relance (J+1, J+3, « créez votre établissement ») : lot Q (crons)
+- ➡️ Côté équipe (répondre, clôturer, éditer l'aide, écrire aux pros) : lot N
 
 ## Lot N — Super-admin
 - ✅ Tableau de bord, établissements (recherche, fiche, pause, forfait offert), utilisateurs (désactivation)

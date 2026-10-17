@@ -121,7 +121,7 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
           <WeeklyHoursEditor key={`${mode}-${editingMemberId}`} memberId={editingMemberId} initial={week} canEdit={canEditWeek} />
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden" data-tour="exceptions">
           <CardHeader title="Congés et fermetures" description="Jours fériés, vacances, formation ou horaires exceptionnels." />
           {targets.length > 0 ? (
             <details className="group border-b border-border">

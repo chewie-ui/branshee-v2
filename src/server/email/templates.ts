@@ -307,4 +307,32 @@ export const emails = {
       }),
     };
   },
+
+  supportNewMessage(p: { from: string; email: string; body: string; url: string }) {
+    return {
+      subject: `Support : nouveau message de ${p.from}`,
+      ...render({
+        preheader: p.body.slice(0, 90),
+        title: "Nouveau message au support",
+        intro: `${p.from} (${p.email}) a écrit :`,
+        details: [{ label: "Message", value: p.body.slice(0, 1500) }],
+        cta: { label: "Répondre", url: p.url },
+        footer: "Branshee — support",
+      }),
+    };
+  },
+
+  supportReply(p: { name: string; body: string; url: string }) {
+    return {
+      subject: "L'équipe Branshee vous a répondu",
+      ...render({
+        preheader: p.body.slice(0, 90),
+        title: `Bonjour ${p.name},`,
+        intro: "L'équipe Branshee a répondu à votre message :",
+        details: [{ label: "Réponse", value: p.body.slice(0, 1500) }],
+        cta: { label: "Voir la conversation", url: p.url },
+        footer: "Branshee — support",
+      }),
+    };
+  },
 };

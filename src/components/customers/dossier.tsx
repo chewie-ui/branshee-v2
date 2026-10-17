@@ -95,7 +95,7 @@ export function DossierNotes({ customerId, notes, canManage, today, term }: { cu
       <CardHeader
         title="Dossier de suivi"
         description="Notes chiffrées, visibles uniquement par votre équipe."
-        action={canManage && editing !== "new" ? <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setEditing("new")}>Nouvelle note</Button> : null}
+        action={canManage && editing !== "new" ? <Button size="sm" variant="secondary" data-tour="new-note" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setEditing("new")}>Nouvelle note</Button> : null}
       />
       <div className="space-y-4 p-5">
         {notes.length > 3 ? (

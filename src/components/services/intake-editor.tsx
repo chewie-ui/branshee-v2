@@ -68,7 +68,7 @@ export function NewIntakeQuestion({ services, first }: { services: Service[]; fi
   const [open, setOpen] = useState(false);
   if (!open)
     return (
-      <Button variant={first ? "primary" : "secondary"} icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
+      <Button variant={first ? "primary" : "secondary"} data-tour="new-intake" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
         {first ? "Ajouter une question" : "Ajouter une autre question"}
       </Button>
     );

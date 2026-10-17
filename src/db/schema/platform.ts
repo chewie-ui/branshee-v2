@@ -71,7 +71,19 @@ export const supportThreads = pgTable("support_threads", {
   unreadByUser: integer("unread_by_user").notNull().default(0),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
   rating: integer("rating"),
+  /** Conversation clôturée par l'équipe : le pro est invité à la noter ; un nouveau message la rouvre. */
+  closedAt: timestamp("closed_at", { withTimezone: true }),
   ...timestamps,
+});
+
+/** Notes de satisfaction laissées après la clôture d'une conversation de support. */
+export const supportRatings = pgTable("support_ratings", {
+  id: id(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  createdAt: timestamps.createdAt,
 });
 
 export const supportMessages = pgTable(

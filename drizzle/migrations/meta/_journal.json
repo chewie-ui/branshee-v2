@@ -78,6 +78,13 @@
       "when": 1792271755091,
       "tag": "0010_processed_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792272758468,
+      "tag": "0011_support_close_ratings",
+      "breakpoints": true
     }
   ]
 }

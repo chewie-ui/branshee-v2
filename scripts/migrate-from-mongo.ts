@@ -33,7 +33,7 @@ const TZ = "Europe/Brussels";
 const COLLECTIONS = [
   "users", "clients", "companies", "companygrades", "companymemberships", "employees", "daysoffs", "services", "forms",
   "clientdossiers", "bookings", "reviews", "reviewreports", "sites", "promocodes", "accesslinks", "articles",
-  "featureflags", "jobtitles", "supportchats", "adminmessages", "activitylogs",
+  "featureflags", "jobtitles", "supportchats", "supportratings", "supportcontents", "adminmessages", "activitylogs",
 ] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
@@ -1068,6 +1068,25 @@ async function main() {
         await tx.insert(s.supportThreads).values({ userId: uid, unreadByAdmin: Number(chat.unreadByAdmin) || 0, unreadByUser: Number(chat.unreadByUser) || 0, lastMessageAt: date(chat.lastMessageAt) ?? new Date() }).onConflictDoNothing();
         count("support_threads");
         await insertMany(tx, s.supportMessages, (chat.messages ?? []).filter((m: any) => text(m?.text)).map((m: any) => ({ threadUserId: uid, sender: m.sender === "admin" ? "admin" : "user", body: text(m.text)!, createdAt: date(m.createdAt) ?? new Date() })), "support_messages");
+      }
+      for (const r of src.supportratings) {
+        const uid = userByLegacy.get(id(r.user) ?? "");
+        const rating = Math.round(Number(r.rating));
+        if (!uid || !(rating >= 1 && rating <= 5)) continue;
+        await tx.insert(s.supportRatings).values({ userId: uid, rating, createdAt: date(r.createdAt) ?? new Date() });
+        count("support_ratings");
+      }
+      // Centre d'aide : un seul document « sections » dans l'ancien modèle.
+      const helpDoc = src.supportcontents[0];
+      for (const [i, sec] of ((helpDoc?.sections ?? []) as Doc[]).sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0)).entries()) {
+        if (!text(sec.title)) continue;
+        await tx.insert(s.helpSections).values({
+          title: text(sec.title)!,
+          position: i,
+          videos: (sec.videos ?? []).map((v: Doc) => ({ id: id(v._id) ?? crypto.randomUUID(), title: text(v.title) ?? "Vidéo", url: text(v.url) ?? "", duration: text(v.duration) ?? undefined })),
+          faqs: (sec.faqs ?? []).filter((f: Doc) => text(f.question) && text(f.answer)).map((f: Doc) => ({ id: id(f._id) ?? crypto.randomUUID(), question: text(f.question)!, answer: String(f.answer) })),
+        });
+        count("help_sections");
       }
       for (const m of src.adminmessages) {
         if (!text(m.title) || !text(m.body)) continue;

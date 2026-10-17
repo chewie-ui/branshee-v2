@@ -42,7 +42,7 @@ export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) 
   });
 
   return (
-    <Card>
+    <Card data-tour="form-questions">
       <CardHeader title="Questions avant la réservation" description="Posées au client à la dernière étape. Les réponses apparaissent sur le rendez-vous." />
       <div className="space-y-4 p-5">
         {list.length === 0 ? <p className="text-sm text-muted">Aucune question : le client donne seulement ses coordonnées.</p> : null}

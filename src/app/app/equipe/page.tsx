@@ -32,7 +32,7 @@ export default async function TeamPage() {
       <PageHeader
         title="Équipe"
         description={`${rows.length} membre${rows.length > 1 ? "s" : ""}`}
-        action={canManage ? <ButtonLink href="/app/equipe/ajouter" icon={<Plus className="size-4" aria-hidden="true" />}>Ajouter un membre</ButtonLink> : null}
+        action={canManage ? <ButtonLink href="/app/equipe/ajouter" data-tour="add-member" icon={<Plus className="size-4" aria-hidden="true" />}>Ajouter un membre</ButtonLink> : null}
       />
       {ctx.can("grades.view") ? <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: "Grades et permissions" }]} /> : null}
       {requests.length ? (

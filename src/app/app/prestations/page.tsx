@@ -39,7 +39,7 @@ export default async function ServicesPage() {
       <PageHeader
         title="Prestations"
         description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`}
-        action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
+        action={canManage ? <ButtonLink href="/app/prestations/nouvelle" data-tour="new-service" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
       />
       {canManage ? <ServiceTabs /> : null}
 

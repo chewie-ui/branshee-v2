@@ -116,7 +116,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </div>
       </div>
 
-      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label="Onglets de la fiche">
+      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label="Onglets de la fiche" data-tour="customer-tabs">
         {tabs.map((t) => (
           <Link key={t.key} href={t.href} aria-current={tab === t.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === t.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
             {t.label}
