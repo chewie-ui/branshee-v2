@@ -6,12 +6,12 @@ import { BUILT_IN_GRADES } from "@/lib/permissions";
 import { slugify } from "@/lib/slug";
 
 /** Slugs qui entreraient en conflit avec des pages du site. */
-const RESERVED = new Set(["app", "admin", "api", "connexion", "inscription", "bienvenue", "mot-de-passe-oublie", "tarifs", "contact", "blog", "aide", "pro", "s", "r"]);
+export const RESERVED_SLUGS = new Set(["app", "admin", "api", "connexion", "inscription", "bienvenue", "mot-de-passe-oublie", "tarifs", "contact", "blog", "aide", "pro", "s", "r"]);
 
 async function freeSlug(name: string) {
   const base = slugify(name) || "etablissement";
   const taken = new Set((await db.select({ slug: businesses.slug }).from(businesses).where(like(businesses.slug, `${base}%`))).map((r) => r.slug));
-  if (!taken.has(base) && !RESERVED.has(base)) return base;
+  if (!taken.has(base) && !RESERVED_SLUGS.has(base)) return base;
   for (let i = 2; i < 1000; i++) if (!taken.has(`${base}-${i}`)) return `${base}-${i}`;
   return `${base}-${Date.now()}`;
 }

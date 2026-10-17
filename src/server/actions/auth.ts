@@ -9,6 +9,7 @@ import { loginEvents, users } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, verifyPassword } from "@/server/auth/password";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { createSession, destroySession } from "@/server/auth/session";
+import { linkInvitations } from "@/server/team";
 
 export type AuthState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -51,7 +52,9 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   const [user] = await db.insert(users).values({ fullName, email, passwordHash: await hashPassword(password) }).returning({ id: users.id });
   await createSession(user!.id, meta);
   await db.insert(loginEvents).values({ userId: user!.id, method: "password", ip: meta.ip });
-  redirect("/bienvenue");
+  // Invité par un établissement ? Il arrive directement dans son espace, sans créer d'établissement.
+  await linkInvitations(user!.id, email);
+  redirect("/app");
 }
 
 const loginSchema = z.object({
@@ -80,6 +83,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
 
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "password", ip: meta.ip });
+  await linkInvitations(user.id, email);
   redirect(safeNext(formData.get("next")));
 }
 

@@ -38,6 +38,8 @@ export const members = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
     /** Null pour un membre sans compte (ex. ancien `Employee`). */
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** Email d'invitation : le membre est relié au compte créé (ou existant) avec cette adresse. */
+    inviteEmail: text("invite_email"),
     isOwner: boolean("is_owner").notNull().default(false),
     status: memberStatusEnum("status").notNull().default("invited"),
     gradeId: uuid("grade_id").references(() => grades.id, { onDelete: "set null" }),

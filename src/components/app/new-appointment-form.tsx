@@ -8,6 +8,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { createAppointment, fetchFreeSlots, type CreateAppointmentState } from "@/server/actions/appointments";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
+import { submitKeepingValues } from "@/lib/form";
 
 type Props = {
   services: { id: string; name: string; durationMin: number; priceCents: number | null; category: string | null }[];
@@ -35,7 +36,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
   }
 
   return (
-    <form action={action} className="space-y-6" noValidate>
+    <form onSubmit={submitKeepingValues(action)} className="space-y-6" noValidate>
       {state?.error ? (
         <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
           {state.error}

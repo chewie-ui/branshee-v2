@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { submitKeepingValues } from "@/lib/form";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { requestPasswordReset, resetPassword, type ResetState } from "@/server/actions/password-reset";
@@ -16,7 +17,7 @@ export function ResetForm() {
 
   if (!onCodeStep) {
     return (
-      <form action={action} className="space-y-4" noValidate>
+      <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
         <input type="hidden" name="intent" value="request" />
         {state?.error ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger" role="alert">{state.error}</p> : null}
         <Field label="Email du compte" htmlFor="email">
@@ -30,7 +31,7 @@ export function ResetForm() {
   }
 
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
       <input type="hidden" name="intent" value="reset" />
       {state?.info ? <p className="rounded-lg bg-success-soft px-3 py-2.5 text-sm text-success" role="status">{state.info}</p> : null}
       {state?.error ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger" role="alert">{state.error}</p> : null}

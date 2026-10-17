@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { register, type AuthState } from "@/server/actions/auth";
+import { submitKeepingValues } from "@/lib/form";
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, undefined);
   const err = state?.fieldErrors ?? {};
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
       {state?.error ? (
         <p className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger" role="alert">
           {state.error}

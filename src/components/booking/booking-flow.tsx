@@ -11,7 +11,7 @@ import { formatDuration, formatPrice } from "@/lib/time";
 import { createPublicBooking, getPublicSlots, type PublicDay } from "@/server/actions/booking";
 import type { PublicBusiness } from "@/server/public";
 
-type Step = "service" | "member" | "time" | "details";
+type Step = "visit" | "service" | "member" | "time" | "details";
 type Props = { data: PublicBusiness; today: string };
 
 const WEEKDAY = new Intl.DateTimeFormat("fr-BE", { weekday: "short", timeZone: "UTC" });
@@ -28,8 +28,12 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function BookingFlow({ data, today }: Props) {
   const router = useRouter();
-  const { services, categories, team, questions, settings } = data;
-  const [step, setStep] = useState<Step>("service");
+  const { categories, team, questions, settings } = data;
+  const fv = settings?.firstVisitQuestion;
+  const [visit, setVisit] = useState<"new" | "existing" | null>(null);
+  const [step, setStep] = useState<Step>(fv?.enabled ? "visit" : "service");
+  // Prestations proposées selon la réponse à « première visite ? ».
+  const services = useMemo(() => (visit ? data.services.filter((s) => s.audience === "all" || s.audience === visit) : data.services), [data.services, visit]);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(today);
@@ -154,15 +158,28 @@ export function BookingFlow({ data, today }: Props) {
 
   return (
     <div>
-      {step !== "service" ? (
+      {step !== "service" && step !== "visit" || (step === "service" && fv?.enabled) ? (
         <button
           type="button"
-          onClick={() => setStep(step === "details" ? "time" : step === "time" && candidates.length > 1 ? "member" : "service")}
+          onClick={() => setStep(step === "details" ? "time" : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service")}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Retour
         </button>
+      ) : null}
+
+      {step === "visit" && fv ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">{fv.question}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([["new", fv.newLabel], ["existing", fv.existingLabel]] as const).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => { setVisit(value); setStep("service"); }} className="rounded-xl border border-border bg-surface p-4 text-left font-medium transition-colors hover:border-accent">
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       {step === "service" ? (
@@ -295,7 +312,7 @@ export function BookingFlow({ data, today }: Props) {
       ) : null}
 
       {step === "details" && service && day && time ? (
-        <form action={submit} className="space-y-5" noValidate>
+        <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="space-y-5" noValidate>
           <h2 className="text-lg font-semibold">Vos coordonnées</h2>
           {summary}
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}

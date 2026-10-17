@@ -65,10 +65,13 @@ scripts/              seed, migration depuis MongoDB
 - Page client `/r/{jeton}` : récapitulatif, ajout à l'agenda (.ics), annulation
 - Emails : confirmation, demande reçue, acceptation, refus, annulation, notification au pro, rappels automatiques (`/api/cron/reminders`), journal des envois
 - Mot de passe oublié (code à 6 chiffres par email, sessions fermées après changement)
+- Prestations : création, modification, catégories, couleur, praticiens, masquer, supprimer
+- Réglages : établissement (dont lien public), règles de réservation (créneaux, battements, délais, confirmation, question « première visite »), notifications
+- Équipe : ajout de membres (avec invitation par email, reliée automatiquement à l'inscription), profil, grade, désactivation, retrait ; grades personnalisés avec grille de permissions
 
 **Prochaines étapes**
 1. Connexion Google, double authentification
 2. Réservation des cours collectifs, reprogrammation par le client
-4. Équipe, grades, réglages
+4. Page de réservation (apparence, galerie, FAQ, formulaire de questions), journal d'activité
 5. Script de migration depuis MongoDB
 6. Paiements, SMS/WhatsApp, avis, site, super-admin

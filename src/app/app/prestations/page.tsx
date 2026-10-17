@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Scissors, Users } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Plus, Scissors, Users } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { members, serviceCategories, serviceMembers, services } from "@/db/schema";
@@ -15,6 +17,7 @@ export const metadata: Metadata = { title: "Prestations" };
 export default async function ServicesPage() {
   const ctx = await requireContext("services.view");
   const bid = ctx.business.id;
+  const canManage = ctx.can("services.manage");
 
   const [rows, cats, links, team] = await Promise.all([
     db.select().from(services).where(eq(services.businessId, bid)).orderBy(asc(services.position), asc(services.name)),
@@ -35,11 +38,20 @@ export default async function ServicesPage() {
 
   return (
     <>
-      <PageHeader title="Prestations" description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`} />
+      <PageHeader
+        title="Prestations"
+        description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`}
+        action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
+      />
 
       {rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<Scissors />} title="Aucune prestation" description="Ajoutez vos prestations pour que vos clients puissent réserver." />
+          <EmptyState
+            icon={<Scissors />}
+            title="Aucune prestation"
+            description="Ajoutez vos prestations pour que vos clients puissent réserver."
+            action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Créer ma première prestation</ButtonLink> : null}
+          />
         </Card>
       ) : (
         <div className="space-y-6">
@@ -47,8 +59,11 @@ export default async function ServicesPage() {
             <Card key={g.key} className="overflow-hidden">
               <h2 className="border-b border-border bg-surface-muted px-5 py-2.5 text-sm font-semibold">{g.name}</h2>
               <ul className="divide-y divide-border">
-                {g.items.map((s) => (
-                  <li key={s.id} className={`flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-4 ${s.isActive ? "" : "opacity-60"}`}>
+                {g.items.map((s) => {
+                  const Row = canManage ? Link : "div";
+                  return (
+                  <li key={s.id}>
+                    <Row href={`/app/prestations/${s.id}`} className={`flex flex-col gap-2 px-5 py-4 transition-colors sm:flex-row sm:items-center sm:gap-4 ${canManage ? "hover:bg-surface-muted/60" : ""}`}>
                     <span className="hidden size-3 shrink-0 rounded-full sm:block" style={{ background: s.color ?? "var(--accent)" }} aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <p className="flex flex-wrap items-center gap-2 font-medium">
@@ -65,9 +80,12 @@ export default async function ServicesPage() {
                       </span>
                       <span className="tabular-nums">{formatDuration(s.durationMin, s.durationMaxMin)}</span>
                       <span className="w-16 text-right font-medium text-text tabular-nums">{formatPrice(s.priceCents)}</span>
+                      {canManage ? <ChevronRight className="hidden size-4 text-muted sm:block" aria-hidden="true" /> : null}
                     </div>
+                    </Row>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </Card>
           ))}

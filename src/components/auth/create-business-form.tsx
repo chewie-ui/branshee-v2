@@ -4,12 +4,13 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { createBusinessAction, type CreateBusinessState } from "@/server/actions/business";
+import { submitKeepingValues } from "@/lib/form";
 
 export function CreateBusinessForm() {
   const [state, action, pending] = useActionState<CreateBusinessState, FormData>(createBusinessAction, undefined);
   const err = state?.fieldErrors ?? {};
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
       <Field label="Nom de l'établissement" htmlFor="name" error={err.name} hint="Tel que vos clients le connaissent.">
         <Input id="name" name="name" required defaultValue={state?.values?.name} aria-invalid={!!err.name || undefined} />
       </Field>
