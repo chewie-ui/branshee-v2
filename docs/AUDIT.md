@@ -128,10 +128,11 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Interrupteur global `sms_notifications` (super-admin)
 - ℹ️ Sans jetons Spryng / Meta, rien ne part et l'email prend le relais (testé, facturation testée en base)
 
-## Lot L — Intégrations
-- ❌ Synchronisation Google Agenda (connexion, envoi des RDV, événements Google bloquants)
-- ❌ Flux iCal personnel par membre — schéma prêt
-- ❌ Connexion avec Google (pro et client)
+## Lot L — Intégrations ✅
+- ✅ Google Agenda (forfait Pro) : connexion OAuth, RDV envoyés / mis à jour / supprimés automatiquement (création, confirmation, report, annulation, restauration), RDV à venir envoyés à la connexion, événements personnels Google qui bloquent les créneaux, déconnexion avec révocation — connexions de l'ancien reprises
+- ✅ Flux iCal personnel (même adresse `/ical/<jeton>` que l'ancien) : propriétaire = tout l'établissement, collaborateur = ses RDV ; nom + prestation uniquement ; régénérer le lien
+- ✅ Connexion avec Google (pro et client) : compte relié par adresse vérifiée, création de compte, double authentification respectée, invitations et RDV rattachés
+- ℹ️ Sans identifiants Google, les boutons sont masqués (testé) ; parcours Google à tester sur le VPS
 
 ## Lot M — Aide, support, accompagnement
 - ❌ Centre d'aide (sections, vidéos, FAQ, visites guidées)

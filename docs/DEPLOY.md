@@ -58,3 +58,10 @@ Pour tout autre compte, `/admin` répond 404. L'espace admin n'affiche aucune do
    puis mettre le secret dans `STRIPE_WEBHOOK_SECRET`.
 4. Portail client (cartes, factures) : l'activer une fois dans Stripe › Paramètres › Billing › Portail client.
 5. Stripe Connect : activer Connect (comptes Express) — comme pour l'ancien.
+
+## Google (connexion et Google Agenda)
+
+Dans Google Cloud › Identifiants, sur le client OAuth existant : ajouter l'URI de redirection
+`https://<domaine>/auth/google/retour` (une seule adresse pour la connexion et l'agenda), puis renseigner
+`GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Les connexions Google Agenda de l'ancien Branshee sont reprises
+par la migration (jetons chiffrés). Les flux iCal gardent la même adresse (`/ical/<jeton>`).

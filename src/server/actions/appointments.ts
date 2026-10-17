@@ -11,6 +11,7 @@ import { activityLogs, appointmentPayments, appointments, bookingSettings, custo
 import { parseQuickTime } from "@/lib/time-input";
 import { getAvailableSlots } from "@/server/availability";
 import { requireContext, type AppContext } from "@/server/context";
+import { syncAppointmentToGoogle } from "@/server/google";
 import { applyBusinessCancellation, applyNoShow, reviewPenalty } from "@/server/payments";
 import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision, notifyRescheduled, sendManualReminder } from "@/server/notifications";
 
@@ -369,6 +370,7 @@ export async function restoreAppointment(rawId: string): Promise<{ ok: boolean; 
       .returning({ name: appointments.contactName });
     if (!updated.length) return { ok: false, error: "Rendez-vous introuvable ou déjà actif." };
     await log(ctx, "appointment.restore", `Rendez-vous restauré : ${updated[0]!.name ?? "client"}`);
+    after(() => syncAppointmentToGoogle(id));
   } catch (error) {
     if (isOverlap(error)) return { ok: false, error: "Le créneau a été repris entre-temps : impossible de restaurer ce rendez-vous." };
     throw error;

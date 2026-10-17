@@ -8,6 +8,7 @@ import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, effectivePlan } from "@/server/plan";
+import { syncAppointmentToGoogle } from "@/server/google";
 import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, whatsappConfigured } from "@/server/sms";
 
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
@@ -97,6 +98,7 @@ async function safely(label: string, fn: () => Promise<unknown>) {
 }
 
 export function notifyBookingCreated(appointmentId: string, source: "online" | "pro") {
+  void syncAppointmentToGoogle(appointmentId);
   return safely("création", async () => {
     const row = await load(appointmentId);
     if (!row) return;
@@ -112,6 +114,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
 }
 
 export function notifyRequestDecision(appointmentId: string, accepted: boolean, reason?: string | null) {
+  void syncAppointmentToGoogle(appointmentId);
   if (!accepted) void notifyWaitlist(appointmentId);
   return safely("décision", async () => {
     const row = await load(appointmentId);
@@ -121,6 +124,7 @@ export function notifyRequestDecision(appointmentId: string, accepted: boolean, 
 }
 
 export function notifyCancelledByCustomer(appointmentId: string) {
+  void syncAppointmentToGoogle(appointmentId);
   void notifyWaitlist(appointmentId);
   return safely("annulation client", async () => {
     const row = await load(appointmentId);
@@ -134,6 +138,7 @@ export function notifyCancelledByCustomer(appointmentId: string) {
 }
 
 export function notifyCancelledByBusiness(appointmentId: string) {
+  void syncAppointmentToGoogle(appointmentId);
   void notifyWaitlist(appointmentId);
   return safely("annulation établissement", async () => {
     const row = await load(appointmentId);
@@ -169,6 +174,7 @@ export function notifyWaitlist(appointmentId: string) {
 
 /** RDV déplacé par le pro : le client reçoit le nouveau créneau, et le mot du pro s'il y en a un. */
 export function notifyRescheduled(appointmentId: string, previousStart: Date, message?: string | null) {
+  void syncAppointmentToGoogle(appointmentId);
   return safely("déplacement", async () => {
     const row = await load(appointmentId);
     if (!row) return;
@@ -236,6 +242,7 @@ export async function sendDueReminders(now = new Date()) {
 
 /** Le client a déplacé lui-même son RDV : confirmation au client, alerte au pro. */
 export function notifyRescheduledByCustomer(appointmentId: string, previousStart: Date) {
+  void syncAppointmentToGoogle(appointmentId);
   return safely("report client", async () => {
     const row = await load(appointmentId);
     if (!row) return;

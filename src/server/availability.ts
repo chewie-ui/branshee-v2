@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { appointments, bookingSettings, businesses, members, scheduleExceptions, serviceHours, serviceMembers, services, weeklyHours } from "@/db/schema";
 import { computeSlots, type DayException, type MemberAvailability } from "@/lib/booking/slots";
 import { groupBusy } from "@/server/group-sessions";
+import { googleBusy } from "@/server/google";
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -82,7 +83,9 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
 
   // Cours collectifs qui bloquent les RDV individuels de leurs animateurs (séances enregistrées et récurrentes).
   const sessionRows = await groupBusy(businessId, ids, { from: windowStart, to: windowEnd }, biz.timezone);
-  const allBusy: { memberId: string | null; start: Date; end: Date }[] = [...busyRows, ...sessionRows];
+  // Événements personnels des agendas Google connectés (forfait Pro et plus).
+  const googleRows = await googleBusy(ids, windowStart, windowEnd).catch(() => []);
+  const allBusy: { memberId: string | null; start: Date; end: Date }[] = [...busyRows, ...sessionRows, ...googleRows];
   const busy = allBusy.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
 
   // Plages propres à la prestation (aucune = toutes les heures d'ouverture).
