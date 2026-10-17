@@ -37,9 +37,30 @@ jamais en local, et aucun export n'est envoyé ailleurs.
 - Le plan « essentiel » est abandonné : il retombe sur `free` (aucune fonctionnalité perdue, cf. `planLimits.js`).
 - Heures en texte : valider le format `HH:MM` avant conversion ; les RDV invalides sont listés dans le rapport, jamais ignorés en silence.
 
+## Le script : `scripts/migrate-from-mongo.ts`
+
+```bash
+# Sur le VPS, avec la base v2 créée et migrée (npm run db:migrate)
+export MONGO_URI="mongodb://…/branshee"        # l'ancienne base (lecture seule suffit)
+export DATABASE_URL="postgres://…/branshee"     # la nouvelle
+export DATA_ENCRYPTION_KEY="…"                  # 64 caractères hex, la même que l'app en production
+
+npm run migrate:mongo -- --dry-run              # essai à blanc : rapport seul, rien n'est écrit
+npm run migrate:mongo                           # migration réelle (une seule transaction)
+npm run migrate:mongo -- --force                # rejouer : remplace la migration précédente
+```
+
+- **Tout ou rien** : une seule transaction ; à la moindre erreur, PostgreSQL reste intact.
+- **Rapport** `migration-report.json` : nombre de documents lus, de lignes écrites par table, et la liste des anomalies (RDV à l'heure invalide, établissements supprimés ignorés, chevauchements conservés en « surréservation », membres sans horaires, 2FA à réactiver…).
+- **Mots de passe** : les hash bcrypt de l'ancien Branshee sont acceptés tels quels et remplacés par un hash scrypt à la première connexion. Personne n'a à réinitialiser son mot de passe.
+- **Liens déjà envoyés** : le jeton d'annulation de chaque RDV est conservé, les liens dans les anciens emails restent valides.
+- **Données sensibles** : informations générales et notes des dossiers clients, et jetons Google Agenda, sont chiffrés (AES-256-GCM) pendant la copie.
+- Alternative sans accès direct à MongoDB : `mongoexport --jsonArray` de chaque collection dans un dossier, puis `--json <dossier>`.
+- Test sur données fictives : `npm run migrate:sample` (génère un faux export couvrant les cas limites et l'importe à blanc).
+
 ## Étapes de la bascule
 1. `pg_dump` vide de la v2 + `mongodump` de sécurité de l'ancienne base.
-2. Lancer `scripts/migrate-from-mongo.ts` en mode `--dry-run` → rapport (comptes par table, anomalies).
-3. Lancer pour de vrai, puis le script de vérification (mêmes totaux, échantillon de RDV comparés).
+2. Lancer `npm run migrate:mongo -- --dry-run` → lire le rapport (comptes par table, anomalies).
+3. Lancer pour de vrai, puis vérifier dans l'app quelques agendas et dossiers clients ; copier le dossier `public/uploads` de l'ancien serveur (photos, pièces jointes).
 4. Mettre l'ancien site en lecture seule, dernière passe incrémentale, puis bascule DNS.
 5. Ancienne version gardée prête à être rallumée pendant 2 semaines.

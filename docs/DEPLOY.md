@@ -12,6 +12,7 @@
 | `SMTP_URL` | serveur d'envoi des emails ; vide = emails seulement affichés dans les logs |
 | `MAIL_FROM` | expéditeur, ex. `Branshee <no-reply@branshee.com>` (domaine vérifié SPF/DKIM) |
 | `CRON_SECRET` | secret partagé avec la crontab (`openssl rand -hex 32`) |
+| `DATA_ENCRYPTION_KEY` | clé de chiffrement des dossiers clients (`openssl rand -hex 32`). **À sauvegarder à part : sans elle, les dossiers sont illisibles.** |
 
 ## Mise en ligne
 ```bash

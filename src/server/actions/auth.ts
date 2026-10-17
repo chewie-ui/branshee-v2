@@ -2,11 +2,11 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { loginEvents, users } from "@/db/schema";
-import { burnPasswordCheck, hashPassword, verifyPassword } from "@/server/auth/password";
+import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { createSession, destroySession } from "@/server/auth/session";
 import { linkInvitations } from "@/server/team";
@@ -80,6 +80,8 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   }
   if (!(await verifyPassword(password, user.passwordHash))) return { error: "Email ou mot de passe incorrect.", values };
   if (user.disabledAt) return { error: "Ce compte est désactivé. Contactez le support.", values };
+  // Compte repris de l'ancien Branshee : on remplace le hash bcrypt par un hash scrypt.
+  if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
 
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "password", ip: meta.ip });

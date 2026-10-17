@@ -1,5 +1,6 @@
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import bcrypt from "bcryptjs";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, keylen: number, opts: { N: number; r: number; p: number; maxmem: number }) => Promise<Buffer>;
 
@@ -14,8 +15,12 @@ export async function hashPassword(password: string): Promise<string> {
   return ["scrypt", PARAMS.N, PARAMS.r, PARAMS.p, salt.toString("base64"), hash.toString("base64")].join("$");
 }
 
+/** Hash hérité de l'ancien Branshee (bcrypt) : à remplacer par un hash scrypt à la prochaine connexion. */
+export const isLegacyHash = (stored: string | null | undefined) => !!stored && /^\$2[aby]\$/.test(stored);
+
 export async function verifyPassword(password: string, stored: string | null | undefined): Promise<boolean> {
   if (!stored) return false;
+  if (isLegacyHash(stored)) return bcrypt.compare(password, stored);
   const [algo, n, r, p, saltB64, hashB64] = stored.split("$");
   if (algo !== "scrypt" || !saltB64 || !hashB64) return false;
   const expected = Buffer.from(hashB64, "base64");
