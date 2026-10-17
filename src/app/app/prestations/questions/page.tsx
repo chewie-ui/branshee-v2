@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { services } from "@/db/schema";
 import { IntakeQuestionCard, NewIntakeQuestion } from "@/components/services/intake-editor";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tabs } from "@/components/ui/tabs";
+import { ServiceTabs } from "@/components/services/service-tabs";
 import { requireContext } from "@/server/context";
 import { listIntake } from "@/server/intake";
 
@@ -20,7 +20,7 @@ export default async function IntakePage() {
   return (
     <>
       <PageHeader title="Prestations" />
-      <Tabs items={[{ href: "/app/prestations", label: "Prestations" }, { href: "/app/prestations/questions", label: "Questions avant réservation" }]} />
+      <ServiceTabs />
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Orienter le client vers les bonnes prestations</h2>

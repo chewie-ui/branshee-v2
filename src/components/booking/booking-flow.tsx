@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, MapPin, UserRound, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -66,6 +66,8 @@ export function BookingFlow({ data, today }: Props) {
   const [sessions, setSessions] = useState<PublicSession[] | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const tz = data.business.timezone;
+  const style = data.categoryStyle;
+  const [catFilter, setCatFilter] = useState("all");
 
   const service = services.find((s) => s.id === serviceId) ?? null;
   const member = team.find((m) => m.id === memberId) ?? null;
@@ -112,7 +114,7 @@ export function BookingFlow({ data, today }: Props) {
   const chosenSession = sessions?.find((s) => s.id === sessionId) ?? null;
 
   const grouped = useMemo(() => {
-    const byCat = categories.map((c) => ({ key: c.id, name: c.name, items: services.filter((s) => s.categoryId === c.id) }));
+    const byCat = categories.map((c) => ({ key: c.id, name: `${c.icon ? `${c.icon} ` : ""}${c.name}`, items: services.filter((s) => s.categoryId === c.id) }));
     const rest = services.filter((s) => !s.categoryId || !categories.some((c) => c.id === s.categoryId));
     return [...byCat, ...(rest.length ? [{ key: "rest", name: categories.length ? "Autres prestations" : "", items: rest }] : [])].filter((g) => g.items.length);
   }, [services, categories]);
@@ -293,26 +295,40 @@ export function BookingFlow({ data, today }: Props) {
       ) : null}
 
       {step === "service" && !nextQuestion && services.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <h2 className="text-lg font-semibold">Choisissez une prestation</h2>
-          {grouped.map((g) => (
-            <section key={g.key}>
-              {g.name ? <h3 className="mb-2 text-sm font-semibold text-muted">{g.name}</h3> : null}
+          {/* Pastilles : un filtre par catégorie au-dessus de la liste. */}
+          {style === "pills" && grouped.length > 1 ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Catégories">
+              {[{ key: "all", name: "Tout" }, ...grouped].map((g) => (
+                <button key={g.key} type="button" aria-pressed={catFilter === g.key} onClick={() => setCatFilter(g.key)} className={cn("rounded-full border px-3 py-1.5 text-sm font-medium", catFilter === g.key ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface text-muted hover:text-text")}>
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {(style === "pills" ? grouped.filter((g) => catFilter === "all" || g.key === catFilter) : grouped).map((g) => {
+            const list = (
               <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
                 {g.items.map((s) => (
                   <li key={s.id}>
                     <button type="button" onClick={() => pickService(s.id)} className="flex w-full items-center gap-4 bg-surface px-4 py-4 text-left transition-colors hover:bg-surface-muted">
+                      {s.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.imageUrl} alt="" className="size-14 shrink-0 rounded-lg object-cover" />
+                      ) : null}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{s.name}</p>
                         {s.description ? <p className="mt-0.5 line-clamp-2 text-sm text-muted">{s.description}</p> : null}
-                        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
-                          {formatDuration(s.durationMin, s.durationMaxMin)}
+                        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted">
+                          <span className="inline-flex items-center gap-1"><Clock className="size-3.5" aria-hidden="true" />{formatDuration(s.durationMin, s.durationMaxMin)}</span>
                           {s.kind === "group" ? (
                             <span className="inline-flex items-center gap-1 font-medium text-accent">
                               <Users className="size-3.5" aria-hidden="true" />
                               Cours collectif
                             </span>
                           ) : null}
+                          {s.location ? <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" aria-hidden="true" />{s.location}</span> : null}
                         </p>
                       </div>
                       <span className="shrink-0 font-semibold tabular-nums">{formatPrice(s.priceCents)}</span>
@@ -321,8 +337,25 @@ export function BookingFlow({ data, today }: Props) {
                   </li>
                 ))}
               </ul>
-            </section>
-          ))}
+            );
+            // Accordéon : chaque catégorie se déplie (la première est ouverte).
+            if (style === "accordion" && g.name)
+              return (
+                <details key={g.key} open={g.key === grouped[0]?.key} className="group rounded-xl border border-border">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-semibold">
+                    {g.name}
+                    <span className="flex items-center gap-2 text-sm font-normal text-muted">{g.items.length}<ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" /></span>
+                  </summary>
+                  <div className="border-t border-border p-2">{list}</div>
+                </details>
+              );
+            return (
+              <section key={g.key}>
+                {g.name && !(style === "pills" && grouped.length > 1) ? <h3 className="mb-2 text-sm font-semibold text-muted">{g.name}</h3> : null}
+                {list}
+              </section>
+            );
+          })}
         </div>
       ) : null}
 

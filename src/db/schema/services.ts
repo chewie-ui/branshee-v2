@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid, jsonb, check, smallint, time } from "drizzle-orm/pg-core";
+import { boolean, index, uniqueIndex, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid, jsonb, check, smallint, time } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { id, legacyId, timestamps } from "./_shared";
 import { businesses, serviceCategories } from "./businesses";
@@ -77,7 +77,8 @@ export const groupSessions = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     ...timestamps,
   },
-  (t) => [index("group_sessions_service_idx").on(t.serviceId, t.startsAt)],
+  // Une seule séance par cours et par horaire : les séances récurrentes sont créées à la demande, sans doublon.
+  (t) => [uniqueIndex("group_sessions_service_start_uq").on(t.serviceId, t.startsAt)],
 );
 
 /** Questions du formulaire posé avant chaque réservation. */

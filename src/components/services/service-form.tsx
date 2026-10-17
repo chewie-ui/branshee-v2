@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { ImageIcon, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -30,6 +30,10 @@ type Initial = {
   blocksIndividual: boolean;
   /** Plages où la prestation est proposée ; vide = toutes les heures d'ouverture. */
   hours: Week;
+  durationMaxMin: number | null;
+  location: string;
+  imageUrl: string | null;
+  fee: { type: "percent" | "amount"; value: string } | null;
 };
 
 type Props = {
@@ -50,13 +54,27 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
   const hasHours = Object.values(initial.hours).some((r) => r.length > 0);
   const [limited, setLimited] = useState(hasHours);
   const [hours, setHours] = useState<Week>(hasHours ? initial.hours : { 1: [{ start: "09:00", end: "12:00" }] });
+  const [variable, setVariable] = useState(initial.durationMaxMin != null);
+  const [image, setImage] = useState<{ url: string | null; file: File | null; removed: boolean }>({ url: initial.imageUrl, file: null, removed: false });
+  const [fee, setFee] = useState(initial.fee != null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
   const err = state?.fieldErrors ?? {};
   const durations = DURATIONS.includes(initial.durationMin) ? DURATIONS : [...DURATIONS, initial.durationMin].sort((a, b) => a - b);
 
+  const preview = image.file ? URL.createObjectURL(image.file) : image.removed ? null : image.url;
+
   return (
-    <form onSubmit={submitKeepingValues(action)} className="space-y-6" noValidate>
+    <form
+      onSubmit={submitKeepingValues((fd) => {
+        if (image.file) fd.set("image", image.file);
+        else fd.delete("image");
+        if (image.removed) fd.set("removeImage", "1");
+        action(fd);
+      })}
+      className="space-y-6"
+      noValidate
+    >
       {state?.error ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">{state.error}</p> : null}
 
       <Card className="space-y-5 p-5">
@@ -94,14 +112,55 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
         <Field label="Description (facultatif)" htmlFor="description" hint="Affichée aux clients sous le nom de la prestation.">
           <Textarea id="description" name="description" defaultValue={initial.description} rows={3} maxLength={500} />
         </Field>
+        <div>
+          <p className="mb-1.5 text-sm font-medium">Image (facultatif)</p>
+          <div className="flex items-center gap-4">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="size-20 rounded-lg border border-border object-cover" />
+            ) : (
+              <span className="flex size-20 items-center justify-center rounded-lg border border-dashed border-border-strong text-muted"><ImageIcon className="size-6" aria-hidden="true" /></span>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover">
+                <Upload className="size-4" aria-hidden="true" />
+                {preview ? "Changer l'image" : "Ajouter une image"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setImage({ ...image, file: f, removed: false }); }} />
+              </label>
+              {preview ? <button type="button" onClick={() => setImage({ url: image.url, file: null, removed: true })} className="text-left text-sm font-medium text-muted hover:text-danger">Retirer</button> : null}
+              <p className="text-xs text-muted">JPG, PNG ou WebP, 5 Mo max.</p>
+            </div>
+          </div>
+          {err.image ? <p className="mt-1 text-sm text-danger" role="alert">{err.image}</p> : null}
+        </div>
+        <Field label="Lieu (facultatif)" htmlFor="location" hint="Si différent de votre adresse habituelle (ex. salle louée pour un cours).">
+          <Input id="location" name="location" defaultValue={initial.location} maxLength={200} placeholder="Laissez vide pour utiliser votre adresse" />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Durée" htmlFor="durationMin" error={err.durationMin}>
-            <Select id="durationMin" name="durationMin" defaultValue={String(initial.durationMin)}>
-              {durations.map((d) => (
-                <option key={d} value={d}>{fmt(d)}</option>
-              ))}
-            </Select>
-          </Field>
+          <div className="space-y-2">
+            <Field label={variable ? "Durée (de…)" : "Durée"} htmlFor="durationMin" error={err.durationMin}>
+              <Select id="durationMin" name="durationMin" defaultValue={String(initial.durationMin)}>
+                {durations.map((d) => (
+                  <option key={d} value={d}>{fmt(d)}</option>
+                ))}
+              </Select>
+            </Field>
+            {kind === "individual" ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={variable} onChange={(e) => setVariable(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+                Durée variable (ex. 30 à 45 min)
+              </label>
+            ) : null}
+          </div>
+          {variable && kind === "individual" ? (
+            <Field label="…à (durée maximale)" htmlFor="durationMaxMin" error={err.durationMaxMin} hint="Affichée au client ; l'agenda bloque la durée maximale.">
+              <Select id="durationMaxMin" name="durationMaxMin" defaultValue={String(initial.durationMaxMin ?? 45)}>
+                {DURATIONS.map((d) => (
+                  <option key={d} value={d}>{fmt(d)}</option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
           <Field label="Prix (facultatif)" htmlFor="price" error={err.price} hint="Laisser vide pour ne pas afficher de prix.">
             <div className="relative">
               <Input id="price" name="price" inputMode="decimal" defaultValue={initial.price} placeholder="45" className="pr-9" aria-invalid={!!err.price || undefined} />
@@ -173,6 +232,27 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
         ) : (
           <input type="hidden" name="audience" value={initial.audience} />
         )}
+
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="feeEnabled" checked={fee} onChange={(e) => setFee(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span className="font-medium">Frais d&apos;annulation propres à cette prestation</span>
+              <span className="block text-muted">Remplacent le pourcentage de votre politique d&apos;annulation, en cas d&apos;annulation tardive ou d&apos;absence non excusée.</span>
+            </span>
+          </label>
+          {fee ? (
+            <div className="flex flex-wrap items-start gap-3 pl-7">
+              <Select name="feeType" defaultValue={initial.fee?.type ?? "percent"} className="w-auto" aria-label="Type de frais">
+                <option value="percent">Pourcentage du prix</option>
+                <option value="amount">Montant fixe</option>
+              </Select>
+              <Field label="" htmlFor="feeValue" error={err.feeValue}>
+                <Input id="feeValue" name="feeValue" inputMode="decimal" defaultValue={initial.fee?.value ?? ""} placeholder="30" className="w-28" aria-label="Valeur des frais" aria-invalid={!!err.feeValue || undefined} />
+              </Field>
+            </div>
+          ) : null}
+        </div>
 
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" name="isActive" defaultChecked={initial.isActive} className="mt-0.5 size-4 accent-[var(--accent)]" />

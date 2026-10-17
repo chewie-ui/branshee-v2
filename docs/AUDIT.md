@@ -33,17 +33,18 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Fusionner deux fiches (RDV, notes, coordonnées, notes générales), bloquer / débloquer, supprimer (avec dossier et RDV)
 - ✅ Vocabulaire « patients » / « clients » selon le métier
 
-## Lot C — Prestations et cours collectifs
+## Lot C — Prestations et cours collectifs ✅
 - ✅ Nom, description, prix, durée, couleur, catégorie, membres, actif, public selon « première visite »
-- ❌ **Durée en fourchette** (« 30-40 min ») : affichage de la fourchette, créneaux calculés sur la durée max
-- ❌ Image de la prestation
-- ❌ Frais d'annulation propres à la prestation (% ou montant)
-- ❌ Lieu propre à la prestation
-- ❌ Catégories : icône (emoji), renommer, supprimer, réordonner ; style d'affichage public (pastilles / accordéon / grille)
-- ❌ Liste : recherche, tri (nom, prix, durée), filtres (type, statut), colonnes masquables, monter / descendre, activer / désactiver en un clic, sélection multiple
+- ✅ **Durée en fourchette** (« 30 à 45 min ») : affichée au client, l'agenda bloque la durée maximale
+- ✅ Image de la prestation (affichée dans la liste et sur la page de réservation)
+- ✅ Frais d'annulation propres à la prestation (% ou montant) — appliqués avec les paiements (lot H)
+- ✅ Lieu propre à la prestation (affiché au client)
+- ✅ Catégories : icône emoji, renommer, supprimer, réordonner ; style public pastilles / accordéon / liste groupée
+- ✅ Liste : recherche, tri (nom, prix, durée), filtres (type, statut), colonnes masquables (mémorisées), monter / descendre, activer / masquer en un clic, sélection multiple
 - ✅ Questionnaire d'orientation (➕ jours et heures par prestation)
-- 🔶 Cours collectifs : séances ponctuelles ✅, répétées N semaines ✅ · ❌ **cours récurrent sans fin** (« tous les lundis 18 h » comme dans l'ancien), ❌ séance ponctuelle avec heure de fin libre, ❌ animateurs multiples / « bloque tout le monde » si personne n'est assigné
-- ❌ Limites du forfait (5 prestations en gratuit…)
+- ✅ Cours collectifs : **cours récurrent sans fin** (jours + heure, séances calculées à la volée et enregistrées à la première inscription), dates ponctuelles avec heure de fin libre (répétables N semaines), annuler / rétablir une séance (récurrente comprise), animateur par séance ou membres assignés au cours, « bloque tout le monde » si personne n'est assigné
+- ✅ Migration : les inscriptions aux cours récurrents de l'ancien Branshee retrouvent leur séance
+- ⏳ Limites du forfait (5 prestations en gratuit…) → lot J
 
 ## Lot D — Disponibilités et règles
 - ✅ Horaires communs / par membre, plusieurs plages, congés et horaires spéciaux, droit de poser ses congés

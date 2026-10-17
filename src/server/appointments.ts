@@ -1,7 +1,8 @@
 import "server-only";
-import { and, asc, count, eq, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, isNull, lt, ne, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, customers, groupSessions, members, services } from "@/db/schema";
+import { appointments, businesses, customers, members } from "@/db/schema";
+import { groupServicesOf, sessionsFor } from "@/server/group-sessions";
 
 export type AgendaItem = {
   id: string;
@@ -62,44 +63,32 @@ export async function listAppointments(businessId: string, start: Date, end: Dat
 }
 
 async function listGroupSessionItems(businessId: string, start: Date, end: Date, opts: { includeCancelled?: boolean; memberId?: string }): Promise<AgendaItem[]> {
-  const where = [eq(services.businessId, businessId), gte(groupSessions.startsAt, start), lt(groupSessions.startsAt, end)];
-  if (!opts.includeCancelled) where.push(isNull(groupSessions.cancelledAt));
-  if (opts.memberId) where.push(eq(groupSessions.memberId, opts.memberId));
-  const rows = await db
-    .select({
-      g: groupSessions,
-      serviceId: services.id,
-      serviceName: services.name,
-      color: services.color,
-      capacity: services.capacity,
-      memberName: members.displayName,
-      booked: sql<number>`(select count(*)::int from ${appointments} where ${appointments.groupSessionId} = ${groupSessions.id} and ${appointments.status} <> 'cancelled')`,
-    })
-    .from(groupSessions)
-    .innerJoin(services, eq(services.id, groupSessions.serviceId))
-    .leftJoin(members, eq(members.id, groupSessions.memberId))
-    .where(and(...where));
-  return rows.map((r) => {
-    const cap = r.g.capacity ?? r.capacity;
-    return {
-      id: r.g.id,
-      kind: "group" as const,
-      status: r.g.cancelledAt ? ("cancelled" as const) : ("confirmed" as const),
-      startsAt: r.g.startsAt,
-      endsAt: r.g.endsAt,
-      title: `${r.serviceName} · ${r.booked}${cap ? `/${cap}` : ""}`,
-      serviceName: r.serviceName,
-      color: r.color,
-      memberId: r.g.memberId,
-      memberName: r.memberName,
-      customerId: null,
-      phone: null,
-      internalNote: null,
-      href: `/app/prestations/${r.serviceId}/seances/${r.g.id}`,
-    };
-  });
+  const svcs = await groupServicesOf(businessId);
+  if (!svcs.length) return [];
+  const [biz] = await db.select({ tz: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId));
+  const list = await sessionsFor(svcs, { from: start, to: new Date(end.getTime() - 1) }, biz?.tz ?? "Europe/Brussels", { includeCancelled: opts.includeCancelled });
+  return list
+    .filter((s) => !opts.memberId || s.memberId === opts.memberId)
+    .map((s) => {
+      const svc = svcs.find((x) => x.id === s.serviceId)!;
+      return {
+        id: s.id,
+        kind: "group" as const,
+        status: s.cancelled ? ("cancelled" as const) : ("confirmed" as const),
+        startsAt: s.startsAt,
+        endsAt: s.endsAt,
+        title: `${svc.name} · ${s.booked}${s.capacity ? `/${s.capacity}` : ""}`,
+        serviceName: svc.name,
+        color: svc.color,
+        memberId: s.memberId,
+        memberName: s.memberName,
+        customerId: null,
+        phone: null,
+        internalNote: null,
+        href: `/app/prestations/${s.serviceId}/seances/${s.id}`,
+      };
+    });
 }
-
 /** Demandes en attente (y compris celles dont la date est passée, à libérer). */
 export async function listPendingRequests(businessId: string) {
   const rows = await db

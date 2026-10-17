@@ -33,15 +33,15 @@ export const getPublicBusiness = cache(async (slug: string) => {
   if (!biz) return null;
 
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
-  const [page] = await db.select({ theme: bookingPageSettings.theme, faq: bookingPageSettings.faq }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
+  const [page] = await db.select({ theme: bookingPageSettings.theme, faq: bookingPageSettings.faq, categoryStyle: bookingPageSettings.categoryStyle }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
 
   const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
     db
-      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience })
+      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience, imageUrl: services.imageUrl, location: services.location })
       .from(services)
       .where(and(eq(services.businessId, biz.id), eq(services.isActive, true)))
       .orderBy(asc(services.position), asc(services.name)),
-    db.select({ id: serviceCategories.id, name: serviceCategories.name }).from(serviceCategories).where(eq(serviceCategories.businessId, biz.id)).orderBy(asc(serviceCategories.position)),
+    db.select({ id: serviceCategories.id, name: serviceCategories.name, icon: serviceCategories.icon }).from(serviceCategories).where(eq(serviceCategories.businessId, biz.id)).orderBy(asc(serviceCategories.position)),
     db.select({ serviceId: serviceMembers.serviceId, memberId: serviceMembers.memberId }).from(serviceMembers).innerJoin(services, eq(services.id, serviceMembers.serviceId)).where(eq(services.businessId, biz.id)),
     db
       .select({ id: members.id, name: members.displayName, photoUrl: members.photoUrl, roleLabel: members.roleLabel, showRole: members.showRole, bio: members.bio })
@@ -79,6 +79,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     questions,
     accentColor: page?.theme.accentColor ?? null,
     faq: page?.faq ?? [],
+    categoryStyle: page?.categoryStyle ?? "pills",
     /** Horaires communs (affichés seulement en mode « partagé »). */
     hours: settings?.scheduleMode === "shared" ? hours.map((h) => ({ weekday: h.weekday, start: h.start.slice(0, 5), end: h.end.slice(0, 5) })) : [],
   };

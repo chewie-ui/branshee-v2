@@ -832,7 +832,15 @@ async function main() {
 
         const status = bk.status === "canceled" ? "cancelled" : bk.status === "pending" ? "pending" : "confirmed";
         const memberId = memberFor(cid, bk.employee) ?? biz.ownerMemberId;
-        const groupSessionId = bk.isGroup && bk.service ? (groupSessionByKey.get(`${bk.service}:${day}:${start}`) ?? null) : null;
+        let groupSessionId = bk.isGroup && bk.service ? (groupSessionByKey.get(`${bk.service}:${day}:${start}`) ?? null) : null;
+        // Cours récurrent de l'ancien Branshee : les séances n'existaient pas en base, on crée celle de cette inscription.
+        const groupServiceId = bk.isGroup && bk.service ? serviceByLegacy.get(id(bk.service)!) : undefined;
+        if (bk.isGroup && !groupSessionId && groupServiceId) {
+          groupSessionId = randomUUID();
+          groupSessionByKey.set(`${bk.service}:${day}:${start}`, groupSessionId);
+          await tx.insert(s.groupSessions).values({ id: groupSessionId, serviceId: groupServiceId, memberId: memberFor(cid, bk.employee) ?? null, startsAt, endsAt, capacity: null });
+          count("group_sessions");
+        }
         if (bk.isGroup && !groupSessionId) warn(`RDV ${bk._id} : séance collective introuvable, migré comme RDV individuel en surréservation.`);
         const token = /^[a-f0-9]{64}$/.test(bk.cancelToken ?? "") ? bk.cancelToken : undefined;
         const values: typeof s.appointments.$inferInsert = {

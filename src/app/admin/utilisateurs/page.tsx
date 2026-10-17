@@ -28,7 +28,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
       lastLoginAt: users.lastLoginAt,
       disabledAt: users.disabledAt,
       isSuperadmin: users.isSuperadmin,
-      owned: sql<number>`(select count(*)::int from ${businesses} where ${businesses.ownerId} = ${users.id} and ${businesses.deletedAt} is null)`,
+      owned: sql<number>`(select count(*)::int from ${businesses} where ${businesses.ownerId} = "users"."id" and ${businesses.deletedAt} is null)`,
     })
     .from(users)
     .where(q ? or(ilike(users.email, like), ilike(users.fullName, like)) : undefined)

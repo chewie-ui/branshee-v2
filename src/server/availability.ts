@@ -1,8 +1,9 @@
 import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, bookingSettings, businesses, groupSessions, members, scheduleExceptions, serviceHours, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { appointments, bookingSettings, businesses, members, scheduleExceptions, serviceHours, serviceMembers, services, weeklyHours } from "@/db/schema";
 import { computeSlots, type DayException, type MemberAvailability } from "@/lib/booking/slots";
+import { groupBusy } from "@/server/group-sessions";
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -77,12 +78,8 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
       ),
     );
 
-  // Séances de cours collectifs animées par un membre : elles bloquent ses RDV individuels (option de la prestation).
-  const sessionRows = await db
-    .select({ memberId: groupSessions.memberId, start: groupSessions.startsAt, end: groupSessions.endsAt })
-    .from(groupSessions)
-    .innerJoin(services, eq(services.id, groupSessions.serviceId))
-    .where(and(eq(services.businessId, businessId), eq(services.blocksIndividual, true), inArray(groupSessions.memberId, ids), isNull(groupSessions.cancelledAt), lt(groupSessions.startsAt, windowEnd), gte(groupSessions.endsAt, windowStart)));
+  // Cours collectifs qui bloquent les RDV individuels de leurs animateurs (séances enregistrées et récurrentes).
+  const sessionRows = await groupBusy(businessId, ids, { from: windowStart, to: windowEnd }, biz.timezone);
   busyRows.push(...sessionRows);
   const busy = busyRows.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
 
@@ -99,7 +96,8 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     timezone: biz.timezone,
     days: sorted,
     now: params.now ?? new Date(),
-    durationMin: service.durationMin,
+    // Durée variable (« 30 à 45 min ») : on bloque toujours la durée maximale pour ne jamais déborder.
+    durationMin: service.durationMaxMin ?? service.durationMin,
     rules: {
       slotMode: settings.slotMode,
       slotIntervalMin: settings.slotIntervalMin,

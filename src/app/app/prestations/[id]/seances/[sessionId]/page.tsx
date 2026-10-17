@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronRight, Clock, Mail, Phone, UserRound, Users } from "lucide-react";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { appointments, groupSessions, members, services } from "@/db/schema";
-import { CancelSessionButton } from "@/components/services/group-sessions";
+import { CancelSessionButton, RestoreSessionButton } from "@/components/services/group-sessions";
+import { isOccurrence, parseVirtualSessionId } from "@/lib/booking/recurrence";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDay, formatTime } from "@/lib/time";
@@ -17,6 +18,18 @@ export const metadata: Metadata = { title: "Séance" };
 export default async function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const ctx = await requireContext("groupSessions.view");
   const p = await params;
+  const serviceId = z.uuid().safeParse(p.id);
+  if (!serviceId.success) notFound();
+
+  // Séance récurrente pas encore enregistrée : on l'affiche (vide) sans la créer ; si elle existe déjà en base, on y renvoie.
+  const virtual = parseVirtualSessionId(p.sessionId);
+  if (virtual) {
+    const [svc] = await db.select().from(services).where(and(eq(services.id, serviceId.data), eq(services.businessId, ctx.business.id)));
+    if (!svc?.recurrence || virtual.serviceId !== svc.id || !isOccurrence(svc.recurrence, virtual.startsAt, ctx.business.timezone)) notFound();
+    const [stored] = await db.select({ id: groupSessions.id }).from(groupSessions).where(and(eq(groupSessions.serviceId, svc.id), eq(groupSessions.startsAt, virtual.startsAt)));
+    if (stored) redirect(`/app/prestations/${svc.id}/seances/${stored.id}`);
+    return <SessionView tz={ctx.business.timezone} service={svc} g={{ id: p.sessionId, startsAt: virtual.startsAt, endsAt: new Date(virtual.startsAt.getTime() + svc.durationMin * 60000), capacity: null, cancelledAt: null }} memberName={null} participants={[]} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${svc.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? svc.name : "Agenda"} recurring />;
+  }
   const ids = z.object({ id: z.uuid(), sessionId: z.uuid() }).safeParse(p);
   if (!ids.success) notFound();
 
@@ -35,17 +48,21 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     .where(and(eq(appointments.groupSessionId, g.id), ne(appointments.status, "cancelled")))
     .orderBy(asc(appointments.createdAt));
 
-  const tz = ctx.business.timezone;
+  return <SessionView tz={ctx.business.timezone} service={service} g={g} memberName={memberName} participants={participants} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${service.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? service.name : "Agenda"} recurring={false} />;
+}
+
+type Participant = { id: string; name: string | null; email: string | null; phone: string | null; customerId: string | null; noShow: boolean };
+
+function SessionView({ tz, service, g, memberName, participants, canManage, back, backLabel, recurring }: { tz: string; service: { name: string; capacity: number | null }; g: { id: string; startsAt: Date; endsAt: Date; capacity: number | null; cancelledAt: Date | null }; memberName: string | null; participants: Participant[]; canManage: boolean; back: string; backLabel: string; recurring: boolean }) {
   const cap = g.capacity ?? service.capacity;
   const cancelled = g.cancelledAt != null;
   const upcoming = g.startsAt > new Date();
-  const back = ctx.can("services.manage") ? `/app/prestations/${service.id}#seances` : "/app/agenda";
 
   return (
     <div className="mx-auto max-w-2xl">
       <Link href={back} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text">
         <ArrowLeft className="size-4" aria-hidden="true" />
-        {ctx.can("services.manage") ? service.name : "Agenda"}
+        {backLabel}
       </Link>
 
       <div className="mb-6">
@@ -53,6 +70,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
           <h1 className="text-2xl font-semibold tracking-tight">{service.name}</h1>
           <Badge tone="accent">Cours collectif</Badge>
           {cancelled ? <Badge tone="danger">Annulée</Badge> : null}
+          {recurring ? <Badge>Récurrent</Badge> : null}
         </div>
         <p className="mt-1 flex items-center gap-2 text-sm text-muted">
           <Clock className="size-4" aria-hidden="true" />
@@ -94,7 +112,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
           )}
         </Card>
 
-        {!cancelled && upcoming && ctx.can("groupSessions.manage") ? <CancelSessionButton id={g.id} booked={participants.length} /> : null}
+        {!cancelled && upcoming && canManage ? <CancelSessionButton id={g.id} booked={participants.length} /> : null}
+        {cancelled && upcoming && canManage ? <RestoreSessionButton id={g.id} /> : null}
       </div>
     </div>
   );

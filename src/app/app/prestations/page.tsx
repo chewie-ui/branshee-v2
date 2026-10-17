@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronRight, Plus, Scissors, Users } from "lucide-react";
+import { Plus, Scissors } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { members, serviceCategories, serviceHours, serviceIntakeRules, serviceMembers, services } from "@/db/schema";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tabs } from "@/components/ui/tabs";
-import { formatDuration, formatPrice } from "@/lib/time";
+import { ServiceTabs } from "@/components/services/service-tabs";
+import { ServicesList } from "@/components/services/services-list";
 import { requireContext } from "@/server/context";
 
 export const metadata: Metadata = { title: "Prestations" };
@@ -31,11 +29,6 @@ export default async function ServicesPage() {
   const hasHours = new Set(hours.map((h) => h.serviceId));
   const hasRules = new Set(rules.map((r) => r.serviceId));
 
-  const groups = [
-    ...cats.map((c) => ({ key: c.id, name: c.name, items: rows.filter((s) => s.categoryId === c.id) })),
-    { key: "none", name: cats.length ? "Sans catégorie" : "Toutes les prestations", items: rows.filter((s) => !s.categoryId) },
-  ].filter((g) => g.items.length > 0);
-
   const whoDoes = (serviceId: string) => {
     const names = links.filter((l) => l.serviceId === serviceId).map((l) => l.name);
     return names.length === 0 || names.length === team.length ? "Toute l'équipe" : names.join(", ");
@@ -48,7 +41,7 @@ export default async function ServicesPage() {
         description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`}
         action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
       />
-      {canManage ? <Tabs items={[{ href: "/app/prestations", label: "Prestations" }, { href: "/app/prestations/questions", label: "Questions avant réservation" }]} /> : null}
+      {canManage ? <ServiceTabs /> : null}
 
       {rows.length === 0 ? (
         <Card>
@@ -60,44 +53,27 @@ export default async function ServicesPage() {
           />
         </Card>
       ) : (
-        <div className="space-y-6">
-          {groups.map((g) => (
-            <Card key={g.key} className="overflow-hidden">
-              <h2 className="border-b border-border bg-surface-muted px-5 py-2.5 text-sm font-semibold">{g.name}</h2>
-              <ul className="divide-y divide-border">
-                {g.items.map((s) => {
-                  const Row = canManage ? Link : "div";
-                  return (
-                  <li key={s.id}>
-                    <Row href={`/app/prestations/${s.id}`} className={`flex flex-col gap-2 px-5 py-4 transition-colors sm:flex-row sm:items-center sm:gap-4 ${canManage ? "hover:bg-surface-muted/60" : ""}`}>
-                    <span className="hidden size-3 shrink-0 rounded-full sm:block" style={{ background: s.color ?? "var(--accent)" }} aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-center gap-2 font-medium">
-                        {s.name}
-                        {s.kind === "group" ? <Badge tone="accent">Cours collectif{s.capacity ? ` · ${s.capacity} places` : ""}</Badge> : null}
-                        {hasHours.has(s.id) ? <Badge>Jours et heures limités</Badge> : null}
-                        {hasRules.has(s.id) ? <Badge>Selon les réponses</Badge> : null}
-                        {!s.isActive ? <Badge>Masquée</Badge> : null}
-                      </p>
-                      {s.description ? <p className="mt-0.5 line-clamp-1 text-sm text-muted">{s.description}</p> : null}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Users className="size-4" aria-hidden="true" />
-                        {whoDoes(s.id)}
-                      </span>
-                      <span className="tabular-nums">{formatDuration(s.durationMin, s.durationMaxMin)}</span>
-                      <span className="w-16 text-right font-medium text-text tabular-nums">{formatPrice(s.priceCents)}</span>
-                      {canManage ? <ChevronRight className="hidden size-4 text-muted sm:block" aria-hidden="true" /> : null}
-                    </div>
-                    </Row>
-                  </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          ))}
-        </div>
+        <ServicesList
+          canManage={canManage}
+          categories={cats.map((c) => ({ id: c.id, name: c.name, icon: c.icon }))}
+          rows={rows.map((s) => ({
+            id: s.id,
+            name: s.name,
+            description: s.description,
+            color: s.color,
+            imageUrl: s.imageUrl,
+            kind: s.kind,
+            capacity: s.capacity,
+            durationMin: s.durationMin,
+            durationMaxMin: s.durationMaxMin,
+            priceCents: s.priceCents,
+            isActive: s.isActive,
+            categoryId: s.categoryId,
+            who: whoDoes(s.id),
+            limitedHours: hasHours.has(s.id),
+            byAnswers: hasRules.has(s.id),
+          }))}
+        />
       )}
     </>
   );
