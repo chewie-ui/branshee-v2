@@ -14,7 +14,8 @@
     "db:studio": "drizzle-kit studio",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "migrate:mongo": "tsx scripts/migrate-from-mongo.ts",
-    "migrate:sample": "node test/fixtures/make-legacy-sample.mjs /tmp/legacy-sample && tsx scripts/migrate-from-mongo.ts --json /tmp/legacy-sample --dry-run --report /tmp/legacy-sample-report.json"
+    "migrate:sample": "node test/fixtures/make-legacy-sample.mjs /tmp/legacy-sample && tsx scripts/migrate-from-mongo.ts --json /tmp/legacy-sample --dry-run --report /tmp/legacy-sample-report.json",
+    "admin:grant": "tsx scripts/make-superadmin.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

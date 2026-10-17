@@ -38,3 +38,11 @@ L'envoi est idempotent : un RDV n'est rappelé qu'une fois, même si deux exécu
 ## Points d'attention
 - La limitation des tentatives de connexion est en mémoire : elle suppose **une seule instance** de l'app.
 - Les données des dossiers clients sont des données de santé : base et sauvegardes chiffrées au repos, accès SSH par clé uniquement.
+
+## Accès super-admin (`/admin`)
+Créez d'abord votre compte normalement sur l'app, puis sur le VPS :
+```bash
+npm run admin:grant -- votre@email.com          # donne l'accès à /admin
+npm run admin:grant -- votre@email.com --remove # le retire
+```
+Pour tout autre compte, `/admin` répond 404. L'espace admin n'affiche aucune donnée de dossier client.

@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, UserRound } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, UserRound, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
 import { createPublicBooking, getPublicSlots, type PublicDay } from "@/server/actions/booking";
+import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sessions";
+import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
 
-type Step = "visit" | "service" | "member" | "time" | "details";
+type Step = "visit" | "service" | "member" | "time" | "session" | "details";
 type Props = { data: PublicBusiness; today: string };
 
 const WEEKDAY = new Intl.DateTimeFormat("fr-BE", { weekday: "short", timeZone: "UTC" });
@@ -25,6 +27,13 @@ const addDays = (d: string, n: number) => {
   return x.toISOString().slice(0, 10);
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** Jour et heure d'une séance, dans le fuseau de l'établissement. */
+const sessionParts = (iso: string, timeZone: string) => {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const time = new Intl.DateTimeFormat("fr-BE", { timeZone, hour: "2-digit", minute: "2-digit" }).format(d);
+  return { day, time };
+};
 
 export function BookingFlow({ data, today }: Props) {
   const router = useRouter();
@@ -44,6 +53,9 @@ export function BookingFlow({ data, today }: Props) {
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [sessions, setSessions] = useState<PublicSession[] | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const tz = data.business.timezone;
 
   const service = services.find((s) => s.id === serviceId) ?? null;
   const member = team.find((m) => m.id === memberId) ?? null;
@@ -64,6 +76,31 @@ export function BookingFlow({ data, today }: Props) {
     };
   }, [step, serviceId, memberId, weekStart, data.business.slug]);
 
+  // Cours collectif : charge les séances à venir.
+  useEffect(() => {
+    if (step !== "session" || !serviceId) return;
+    let cancelled = false;
+    startSlots(async () => {
+      const res = await getPublicSessions(data.business.slug, serviceId);
+      if (!cancelled) setSessions(res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, serviceId, data.business.slug]);
+
+  const sessionsByDay = useMemo(() => {
+    const out: { day: string; items: (PublicSession & { time: string })[] }[] = [];
+    for (const s of sessions ?? []) {
+      const { day, time } = sessionParts(s.startsAt, tz);
+      const last = out.at(-1);
+      if (last?.day === day) last.items.push({ ...s, time });
+      else out.push({ day, items: [{ ...s, time }] });
+    }
+    return out;
+  }, [sessions, tz]);
+  const chosenSession = sessions?.find((s) => s.id === sessionId) ?? null;
+
   const grouped = useMemo(() => {
     const byCat = categories.map((c) => ({ key: c.id, name: c.name, items: services.filter((s) => s.categoryId === c.id) }));
     const rest = services.filter((s) => !s.categoryId || !categories.some((c) => c.id === s.categoryId));
@@ -74,7 +111,14 @@ export function BookingFlow({ data, today }: Props) {
     setServiceId(id);
     setTime(null);
     setDays(null);
+    setSessionId(null);
+    setSessions(null);
     const s = services.find((x) => x.id === id)!;
+    if (s.kind === "group") {
+      setMemberId(null);
+      setStep("session");
+      return;
+    }
     const options = team.filter((m) => s.memberIds.includes(m.id));
     if (options.length <= 1) {
       setMemberId(options[0]?.id ?? null);
@@ -93,11 +137,39 @@ export function BookingFlow({ data, today }: Props) {
   ].filter((p) => p.items.length);
 
   function submit(formData: FormData) {
-    if (!service || !day || !time) return;
+    if (!service) return;
     setError(null);
     setFieldErrors({});
     const answers: Record<string, string> = {};
     for (const q of questions) answers[q.id] = String(formData.get(`q_${q.id}`) ?? "");
+    const contact = {
+      firstName: String(formData.get("firstName") ?? ""),
+      lastName: String(formData.get("lastName") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      message: String(formData.get("message") ?? ""),
+      answers,
+      website: String(formData.get("website") ?? ""),
+    };
+    if (service.kind === "group") {
+      if (!sessionId) return;
+      startSubmit(async () => {
+        const res = await bookGroupSession({ slug: data.business.slug, sessionId, ...contact });
+        if (res.ok) {
+          router.push(`/r/${res.token}?nouveau=1`);
+          return;
+        }
+        setError(res.error);
+        setFieldErrors(res.fieldErrors ?? {});
+        if (res.full) {
+          setSessionId(null);
+          setSessions(null);
+          setStep("session");
+        }
+      });
+      return;
+    }
+    if (!day || !time) return;
     startSubmit(async () => {
       const res = await createPublicBooking({
         slug: data.business.slug,
@@ -143,6 +215,12 @@ export function BookingFlow({ data, today }: Props) {
           {member ? `Avec ${member.name}` : "Sans préférence de praticien"}
         </p>
       ) : null}
+      {chosenSession ? (
+        <p className="flex items-center gap-2 text-muted">
+          <Clock className="size-4" aria-hidden="true" />
+          {cap(LONG.format(utc(sessionParts(chosenSession.startsAt, tz).day)))} à {sessionParts(chosenSession.startsAt, tz).time}
+        </p>
+      ) : null}
       {day && time ? (
         <p className="flex items-center gap-2 text-muted">
           <Clock className="size-4" aria-hidden="true" />
@@ -161,7 +239,7 @@ export function BookingFlow({ data, today }: Props) {
       {step !== "service" && step !== "visit" || (step === "service" && fv?.enabled) ? (
         <button
           type="button"
-          onClick={() => setStep(step === "details" ? "time" : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service")}
+          onClick={() => setStep(step === "details" ? (service?.kind === "group" ? "session" : "time") : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service")}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -195,7 +273,15 @@ export function BookingFlow({ data, today }: Props) {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{s.name}</p>
                         {s.description ? <p className="mt-0.5 line-clamp-2 text-sm text-muted">{s.description}</p> : null}
-                        <p className="mt-1 text-sm text-muted">{formatDuration(s.durationMin, s.durationMaxMin)}</p>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
+                          {formatDuration(s.durationMin, s.durationMaxMin)}
+                          {s.kind === "group" ? (
+                            <span className="inline-flex items-center gap-1 font-medium text-accent">
+                              <Users className="size-3.5" aria-hidden="true" />
+                              Cours collectif
+                            </span>
+                          ) : null}
+                        </p>
                       </div>
                       <span className="shrink-0 font-semibold tabular-nums">{formatPrice(s.priceCents)}</span>
                       <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
@@ -311,7 +397,51 @@ export function BookingFlow({ data, today }: Props) {
         </div>
       ) : null}
 
-      {step === "details" && service && day && time ? (
+      {step === "session" && service ? (
+        <div className="space-y-5">
+          <h2 className="text-lg font-semibold">Choisissez une séance</h2>
+          {summary}
+          <div aria-live="polite">
+            {loadingSlots || !sessions ? (
+              <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <span key={i} className="block h-14 animate-pulse rounded-lg bg-surface-muted" />)}</div>
+            ) : sessions.length === 0 ? (
+              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucune séance planifiée pour le moment. Revenez bientôt ou contactez l&apos;établissement.</p>
+            ) : (
+              <div className="space-y-5">
+                {sessionsByDay.map((g) => (
+                  <section key={g.day}>
+                    <h3 className="mb-2 text-sm font-semibold text-muted">{cap(LONG.format(utc(g.day)))}</h3>
+                    <ul className="space-y-2">
+                      {g.items.map((s) => {
+                        const full = s.remaining === 0;
+                        return (
+                          <li key={s.id}>
+                            <button
+                              type="button"
+                              disabled={full}
+                              onClick={() => { setSessionId(s.id); setError(null); setStep("details"); }}
+                              className="flex w-full items-center gap-4 rounded-xl border border-border-strong bg-surface px-4 py-3 text-left transition-colors hover:border-accent disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted"
+                            >
+                              <span className="text-base font-semibold tabular-nums">{s.time}</span>
+                              <span className="min-w-0 flex-1 truncate text-sm text-muted">{s.memberName ? `Avec ${s.memberName}` : ""}</span>
+                              <span className={cn("shrink-0 text-sm font-medium", full ? "text-muted" : s.remaining != null && s.remaining <= 3 ? "text-warning" : "text-success")}>
+                                {full ? "Complet" : s.remaining == null ? "Places libres" : `${s.remaining} place${s.remaining > 1 ? "s" : ""}`}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+          {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
+
+      {step === "details" && service && ((day && time) || chosenSession) ? (
         <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="space-y-5" noValidate>
           <h2 className="text-lg font-semibold">Vos coordonnées</h2>
           {summary}
@@ -353,9 +483,9 @@ export function BookingFlow({ data, today }: Props) {
             <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder="Une précision pour le praticien ?" />
           </Field>
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
-            {settings?.autoConfirm ? "Confirmer le rendez-vous" : "Envoyer la demande"}
+            {service.kind === "group" ? "Confirmer l'inscription" : settings?.autoConfirm ? "Confirmer le rendez-vous" : "Envoyer la demande"}
           </Button>
-          {!settings?.autoConfirm ? <p className="text-center text-sm text-muted">L&apos;établissement confirmera votre rendez-vous.</p> : null}
+          {!settings?.autoConfirm && service.kind !== "group" ? <p className="text-center text-sm text-muted">L&apos;établissement confirmera votre rendez-vous.</p> : null}
         </form>
       ) : null}
     </div>

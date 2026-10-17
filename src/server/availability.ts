@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, bookingSettings, businesses, members, scheduleExceptions, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { appointments, bookingSettings, businesses, groupSessions, members, scheduleExceptions, serviceMembers, services, weeklyHours } from "@/db/schema";
 import { computeSlots, type DayException, type MemberAvailability } from "@/lib/booking/slots";
 
 const hhmm = (t: string) => t.slice(0, 5);
@@ -67,6 +67,14 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     .select({ memberId: appointments.memberId, start: appointments.startsAt, end: appointments.endsAt })
     .from(appointments)
     .where(and(eq(appointments.businessId, businessId), inArray(appointments.memberId, ids), ne(appointments.status, "cancelled"), lt(appointments.startsAt, windowEnd), gte(appointments.endsAt, windowStart)));
+
+  // Séances de cours collectifs animées par un membre : elles bloquent ses RDV individuels (option de la prestation).
+  const sessionRows = await db
+    .select({ memberId: groupSessions.memberId, start: groupSessions.startsAt, end: groupSessions.endsAt })
+    .from(groupSessions)
+    .innerJoin(services, eq(services.id, groupSessions.serviceId))
+    .where(and(eq(services.businessId, businessId), eq(services.blocksIndividual, true), inArray(groupSessions.memberId, ids), isNull(groupSessions.cancelledAt), lt(groupSessions.startsAt, windowEnd), gte(groupSessions.endsAt, windowStart)));
+  busyRows.push(...sessionRows);
 
   return computeSlots({
     timezone: biz.timezone,

@@ -35,7 +35,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
 
   const [svc, cats, links, team, questions, hours] = await Promise.all([
     db
-      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, audience: services.audience })
+      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience })
       .from(services)
       .where(and(eq(services.businessId, biz.id), eq(services.isActive, true)))
       .orderBy(asc(services.position), asc(services.name)),
@@ -51,17 +51,18 @@ export const getPublicBusiness = cache(async (slug: string) => {
   ]);
 
   const teamIds = new Set(team.map((m) => m.id));
+  // Cours collectifs : on réserve une séance planifiée, pas un praticien → pas de filtre sur l'équipe.
   const servicesWithMembers = svc
-    .filter((s) => s.kind === "individual")
     .map((s) => {
+      if (s.kind === "group") return { ...s, memberIds: [] as string[] };
       const restricted = links.filter((l) => l.serviceId === s.id && teamIds.has(l.memberId)).map((l) => l.memberId);
       return { ...s, memberIds: restricted.length ? restricted : [...teamIds] };
     })
-    .filter((s) => s.memberIds.length > 0);
+    .filter((s) => s.kind === "group" || s.memberIds.length > 0);
 
   return {
     business: biz,
-    settings: settings ? { phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
+    settings: settings ? { minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
     services: servicesWithMembers,
     categories: cats,
     team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio })),

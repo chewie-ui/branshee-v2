@@ -31,6 +31,9 @@ const schema = z.object({
   audience: z.enum(["all", "new", "existing"]),
   isActive: z.boolean(),
   memberIds: z.array(z.uuid()),
+  kind: z.enum(["individual", "group"]),
+  blocksIndividual: z.boolean(),
+  capacity: z.preprocess((v) => (v === "" || v == null ? null : Number(v)), z.number().int().min(2, "Au moins 2 places.").max(500).nullable()),
 });
 
 export async function saveService(serviceId: string | null, _prev: ServiceFormState, formData: FormData): Promise<ServiceFormState> {
@@ -48,6 +51,9 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
     audience: String(formData.get("audience") ?? "all"),
     isActive: formData.get("isActive") === "on",
     memberIds: formData.getAll("memberIds").map(String),
+    kind: String(formData.get("kind") ?? "individual"),
+    blocksIndividual: formData.get("blocksIndividual") === "on",
+    capacity: formData.get("capacity"),
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -55,6 +61,7 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
     return { error: "Vérifiez les champs indiqués.", fieldErrors };
   }
   const v = parsed.data;
+  if (v.kind === "group" && !v.capacity) return { error: "Vérifiez les champs indiqués.", fieldErrors: { capacity: "Indiquez le nombre de places." } };
   const priceCents = parsePrice(v.price);
   if (priceCents === "invalid") return { error: "Vérifiez les champs indiqués.", fieldErrors: { price: "Prix invalide (ex. 45 ou 45,50)." } };
 
@@ -68,7 +75,7 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
     ? (await db.select({ id: members.id }).from(members).where(and(eq(members.businessId, bid), inArray(members.id, v.memberIds)))).map((m) => m.id)
     : [];
 
-  await db.transaction(async (tx) => {
+  const savedId = await db.transaction(async (tx) => {
     let categoryId: string | null = null;
     if (v.categoryId === "__new" && v.newCategory) {
       const [{ pos } = { pos: 0 }] = await tx.select({ pos: max(serviceCategories.position) }).from(serviceCategories).where(eq(serviceCategories.businessId, bid));
@@ -83,7 +90,7 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
       categoryId = cat?.id ?? null;
     }
 
-    const values = { name: v.name, description: v.description || null, categoryId, durationMin: v.durationMin, priceCents, color: v.color, audience: v.audience, isActive: v.isActive };
+    const values = { name: v.name, description: v.description || null, categoryId, durationMin: v.durationMin, priceCents, color: v.color, audience: v.audience, isActive: v.isActive, kind: v.kind, capacity: v.kind === "group" ? v.capacity : null, blocksIndividual: v.kind === "group" ? v.blocksIndividual : true };
     let id = serviceId;
     if (id) {
       await tx.update(services).set(values).where(eq(services.id, id));
@@ -95,10 +102,12 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
     await tx.delete(serviceMembers).where(eq(serviceMembers.serviceId, id));
     if (validMembers.length) await tx.insert(serviceMembers).values(validMembers.map((memberId) => ({ serviceId: id!, memberId })));
     await tx.insert(activityLogs).values({ businessId: bid, userId: ctx.user.id, actorName: ctx.user.name, action: serviceId ? "service.update" : "service.create", description: `Prestation ${serviceId ? "modifiée" : "créée"} : ${v.name}` });
+    return id;
   });
 
   revalidatePath("/app/prestations");
-  redirect("/app/prestations");
+  // Nouveau cours collectif : on enchaîne directement sur la planification des séances.
+  redirect(!serviceId && v.kind === "group" ? `/app/prestations/${savedId}#seances` : "/app/prestations");
 }
 
 export async function deleteService(serviceId: string): Promise<{ ok: boolean; error?: string }> {

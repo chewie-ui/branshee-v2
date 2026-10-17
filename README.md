@@ -73,9 +73,10 @@ scripts/              seed, migration depuis MongoDB
 - Journal d'activité filtrable
 - Script de migration MongoDB → PostgreSQL (`npm run migrate:mongo`, voir docs/MIGRATION.md)
 - Équipe : ajout de membres (avec invitation par email, reliée automatiquement à l'inscription), profil, grade, désactivation, retrait ; grades personnalisés avec grille de permissions
+- Cours collectifs : capacité, séances ponctuelles ou répétées chaque semaine, inscription en ligne avec places restantes (capacité garantie même en cas d'inscriptions simultanées), liste des participants, annulation d'une séance (participants prévenus), séance affichée une seule fois dans l'agenda, agenda de l'animateur bloqué (option)
+- Super-admin `/admin` : tableau de bord, établissements (recherche, fiche, pause de la réservation en ligne, forfait offert), utilisateurs (désactivation) ; accès via `npm run admin:grant`
 
 **Prochaines étapes**
-1. Connexion Google, double authentification
-2. Réservation des cours collectifs, reprogrammation par le client
-4. Super-admin
-5. Paiements (Stripe Connect), abonnements Stripe, SMS/WhatsApp, avis, créateur de site
+1. Mon compte, aide, modules
+2. Connexion Google, double authentification, reprogrammation par le client
+3. Paiements (Stripe Connect), abonnements Stripe, SMS/WhatsApp, avis, créateur de site

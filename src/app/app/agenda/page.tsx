@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -145,10 +145,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
                       const color = a.kind === "block" ? "#a1a1aa" : (a.color ?? "#4f46e5");
                       const content = (
                         <>
-                          <p className="truncate font-semibold">{a.title}</p>
+                          <p className="truncate font-semibold">{a.kind === "group" ? <Users className="mr-1 inline size-3" aria-hidden="true" /> : null}{a.title}</p>
                           {height > 34 ? (
                             <p className="truncate opacity-80">
-                              {formatTime(a.startsAt, tz)} · {a.kind === "block" ? "Indisponible" : a.serviceName}
+                              {formatTime(a.startsAt, tz)} · {a.kind === "block" ? "Indisponible" : a.kind === "group" ? "Cours collectif" : a.serviceName}
                             </p>
                           ) : null}
                         </>
@@ -162,7 +162,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
                       const width = 100 / lanes.length;
                       const style = { top, height, left: `calc(${lane * width}% + 2px)`, width: `calc(${width}% - 4px)`, borderLeftColor: color, background: a.kind === "block" ? undefined : `${color}1f` };
                       return (
-                        <Link key={a.id} href={`/app/agenda/rdv/${a.id}`} className={cn(className, "hover:brightness-95")} style={style} title={`${a.title} — ${formatTime(a.startsAt, tz)}`}>
+                        <Link key={a.id} href={a.href} className={cn(className, "hover:brightness-95")} style={style} title={`${a.title} — ${formatTime(a.startsAt, tz)}`}>
                           {content}
                         </Link>
                       );

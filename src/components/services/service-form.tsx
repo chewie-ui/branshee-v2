@@ -24,6 +24,9 @@ type Initial = {
   audience: "all" | "new" | "existing";
   isActive: boolean;
   memberIds: string[];
+  kind: "individual" | "group";
+  capacity: number | null;
+  blocksIndividual: boolean;
 };
 
 type Props = {
@@ -40,6 +43,7 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
   const [category, setCategory] = useState(initial.categoryId);
   const [color, setColor] = useState(initial.color);
   const [everyone, setEveryone] = useState(initial.memberIds.length === 0);
+  const [kind, setKind] = useState(initial.kind);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
   const err = state?.fieldErrors ?? {};
@@ -53,6 +57,34 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
         <Field label="Nom" htmlFor="name" error={err.name}>
           <Input id="name" name="name" defaultValue={initial.name} placeholder="Séance de kinésithérapie" maxLength={80} aria-invalid={!!err.name || undefined} />
         </Field>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium">Type</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([["individual", "Rendez-vous individuel", "Un client à la fois."], ["group", "Cours collectif", "Plusieurs clients sur une même séance planifiée."]] as const).map(([v, t, d]) => (
+              <label key={v} className={cn("flex cursor-pointer gap-3 rounded-xl border p-4", kind === v ? "border-accent ring-1 ring-accent" : "border-border hover:border-border-strong")}>
+                <input type="radio" name="kind" value={v} checked={kind === v} onChange={() => setKind(v)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                <span>
+                  <span className="block text-sm font-semibold">{t}</span>
+                  <span className="mt-0.5 block text-sm text-muted">{d}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {kind === "group" ? (
+          <Field label="Nombre de places par séance" htmlFor="capacity" error={err.capacity}>
+            <Input id="capacity" name="capacity" type="number" min={2} max={500} defaultValue={initial.capacity ?? 8} className="sm:max-w-40" aria-invalid={!!err.capacity || undefined} />
+          </Field>
+        ) : null}
+        {kind === "group" ? (
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="blocksIndividual" defaultChecked={initial.blocksIndividual} className="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span className="block font-medium">Bloquer l&apos;agenda de l&apos;animateur</span>
+              <span className="block text-muted">Pas de rendez-vous individuel avec lui pendant une séance.</span>
+            </span>
+          </label>
+        ) : null}
         <Field label="Description (facultatif)" htmlFor="description" hint="Affichée aux clients sous le nom de la prestation.">
           <Textarea id="description" name="description" defaultValue={initial.description} rows={3} maxLength={500} />
         </Field>
@@ -105,7 +137,8 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
       </Card>
 
       <Card className="space-y-5 p-5">
-        <fieldset>
+        {/* Cours collectif : l'animateur se choisit séance par séance. */}
+        <fieldset hidden={kind === "group"}>
           <legend className="mb-2 text-sm font-medium">Qui réalise cette prestation ?</legend>
           <label className="flex items-center gap-3 text-sm">
             <input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} className="size-4 accent-[var(--accent)]" />

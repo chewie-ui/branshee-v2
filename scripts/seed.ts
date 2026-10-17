@@ -32,6 +32,8 @@ async function main() {
     await db.delete(s.users).where(eq(s.users.email, "claire@cabinet-horizon.example"));
     await db.delete(s.users).where(eq(s.users.email, "thomas@cabinet-horizon.example"));
   }
+  await db.delete(s.users).where(eq(s.users.email, "admin@branshee.example"));
+  await db.insert(s.users).values({ email: "admin@branshee.example", fullName: "Admin Branshee", locale: "fr", isSuperadmin: true, passwordHash: await hashPassword(DEMO_PASSWORD) });
 
   const [owner] = await db.insert(s.users).values({ email: "claire@cabinet-horizon.example", fullName: "Claire Dumont", locale: "fr", passwordHash: await hashPassword(DEMO_PASSWORD) }).returning();
   const [colleague] = await db.insert(s.users).values({ email: "thomas@cabinet-horizon.example", fullName: "Thomas Lambert", locale: "fr", passwordHash: await hashPassword(DEMO_PASSWORD) }).returning();
@@ -181,6 +183,7 @@ async function main() {
 
   console.log(`Démo créée : ${custs.length} clients, ${svc.length} prestations, ${inserted} rendez-vous.`);
   console.log(`Connexion : claire@cabinet-horizon.example (propriétaire) ou thomas@cabinet-horizon.example (collaborateur), mot de passe ${DEMO_PASSWORD}`);
+  console.log(`Super-admin : admin@branshee.example (même mot de passe) → /admin`);
   await client.end();
 }
 
