@@ -88,4 +88,28 @@ describe("computeSlots", () => {
     const [first] = computeSlots(base({ days: [day], now: new Date("2026-03-01T00:00:00Z") }))[day]!;
     assert.equal(first!.startsAt.toISOString(), "2026-03-30T07:00:00.000Z");
   });
+
+  describe("plages propres à la prestation", () => {
+    const day = { memberId: "a", weekly: { 1: [{ start: "08:00", end: "16:00" }] }, exceptions: {} };
+
+    it("ne propose la prestation que dans ses plages (ex. lundi avant 13 h)", () => {
+      const r = computeSlots(base({ durationMin: 60, members: [day], serviceWindows: { 1: [{ start: "08:00", end: "13:00" }] } }));
+      assert.deepEqual(times(r), ["08:00", "09:00", "10:00", "11:00", "12:00"]);
+    });
+
+    it("recale la grille sur le début de la plage de la prestation", () => {
+      const r = computeSlots(base({ durationMin: 45, members: [day], serviceWindows: { 1: [{ start: "13:00", end: "16:00" }] } }));
+      assert.deepEqual(times(r), ["13:00", "13:45", "14:30", "15:15"]);
+    });
+
+    it("jour absent des plages = prestation non proposée ce jour-là", () => {
+      const r = computeSlots(base({ members: [day], serviceWindows: { 2: [{ start: "08:00", end: "16:00" }] } }));
+      assert.deepEqual(times(r), []);
+    });
+
+    it("reste limitée aux horaires du praticien", () => {
+      const r = computeSlots(base({ durationMin: 60, members: [day], serviceWindows: { 1: [{ start: "14:00", end: "20:00" }] } }));
+      assert.deepEqual(times(r), ["14:00", "15:00"]);
+    });
+  });
 });

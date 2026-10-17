@@ -12,7 +12,7 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { requireContext } from "@/server/context";
 import { notifyBookingCreated, notifyCancelledByBusiness } from "@/server/notifications";
 import { listPublicSessions, type PublicSession } from "@/server/group-sessions";
-import { getPublicBusiness } from "@/server/public";
+import { checkIntake, getPublicBusiness } from "@/server/public";
 
 export type SessionFormState = { ok?: boolean; message?: string; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -116,6 +116,8 @@ const bookingSchema = z.object({
   phone: z.string().trim().max(40),
   message: z.string().trim().max(1000),
   answers: z.record(z.string(), z.string().max(1000)),
+  /** Réponses au questionnaire d'orientation : id de question → id de réponse. */
+  intake: z.record(z.string(), z.string().max(64)).optional(),
   website: z.string().max(0).optional(),
 });
 
@@ -166,6 +168,9 @@ export async function bookGroupSession(input: z.input<typeof bookingSchema>): Pr
         .where(and(eq(groupSessions.id, v.sessionId), eq(services.businessId, data.business.id), eq(services.isActive, true), isNull(groupSessions.cancelledAt)))
         .for("update", { of: groupSessions });
       if (!session || !data.services.some((s) => s.id === session.service.id)) throw new BookingError("Cette séance n'est plus disponible.", true);
+      const intake = checkIntake(data, session.service.id, v.intake ?? {});
+      if (!intake.ok) throw new BookingError("Ce cours ne correspond pas à vos réponses.");
+      answers.unshift(...intake.lines);
       const lead = (rules?.minLeadMin ?? 0) * 60000;
       if (session.startsAt.getTime() - lead < Date.now()) throw new BookingError("Les inscriptions à cette séance sont closes.", true);
 

@@ -12,6 +12,7 @@ import { createPublicBooking, getPublicSlots, type PublicDay } from "@/server/ac
 import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sessions";
 import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
+import { questionMatters, serviceMatches } from "@/lib/intake";
 
 type Step = "visit" | "service" | "member" | "time" | "session" | "details";
 type Props = { data: PublicBusiness; today: string };
@@ -42,7 +43,16 @@ export function BookingFlow({ data, today }: Props) {
   const [visit, setVisit] = useState<"new" | "existing" | null>(null);
   const [step, setStep] = useState<Step>(fv?.enabled ? "visit" : "service");
   // Prestations proposées selon la réponse à « première visite ? ».
-  const services = useMemo(() => (visit ? data.services.filter((s) => s.audience === "all" || s.audience === visit) : data.services), [data.services, visit]);
+  const byAudience = useMemo(() => (visit ? data.services.filter((s) => s.audience === "all" || s.audience === visit) : data.services), [data.services, visit]);
+  // Questionnaire d'orientation : réponses dans l'ordre où elles ont été données (pour pouvoir revenir en arrière).
+  const [intakeOrder, setIntakeOrder] = useState<{ questionId: string; optionId: string }[]>([]);
+  const intakeAnswers = useMemo(() => Object.fromEntries(intakeOrder.map((a) => [a.questionId, a.optionId])), [intakeOrder]);
+  const services = useMemo(() => {
+    const answered = data.intake.filter((q) => intakeAnswers[q.id]);
+    return byAudience.filter((s) => serviceMatches(s.id, answered, intakeAnswers));
+  }, [byAudience, data.intake, intakeAnswers]);
+  // Prochaine question utile : non répondue, et dont la réponse change encore les prestations proposées.
+  const nextQuestion = data.intake.find((q) => !intakeAnswers[q.id] && questionMatters(q, services.map((s) => s.id))) ?? null;
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(today);
@@ -149,6 +159,7 @@ export function BookingFlow({ data, today }: Props) {
       phone: String(formData.get("phone") ?? ""),
       message: String(formData.get("message") ?? ""),
       answers,
+      intake: intakeAnswers,
       website: String(formData.get("website") ?? ""),
     };
     if (service.kind === "group") {
@@ -183,6 +194,7 @@ export function BookingFlow({ data, today }: Props) {
         phone: String(formData.get("phone") ?? ""),
         message: String(formData.get("message") ?? ""),
         answers,
+        intake: intakeAnswers,
         website: String(formData.get("website") ?? ""),
       });
       if (res.ok) {
@@ -230,16 +242,19 @@ export function BookingFlow({ data, today }: Props) {
     </div>
   );
 
-  if (services.length === 0) {
+  if (data.services.length === 0) {
     return <p className="p-6 text-sm text-muted">Aucune prestation n&apos;est réservable en ligne pour le moment.</p>;
   }
 
   return (
     <div>
-      {step !== "service" && step !== "visit" || (step === "service" && fv?.enabled) ? (
+      {(step !== "service" && step !== "visit") || (step === "service" && (fv?.enabled || intakeOrder.length > 0)) ? (
         <button
           type="button"
-          onClick={() => setStep(step === "details" ? (service?.kind === "group" ? "session" : "time") : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service")}
+          onClick={() => {
+            if (step === "service" && intakeOrder.length > 0) return setIntakeOrder((o) => o.slice(0, -1));
+            setStep(step === "details" ? (service?.kind === "group" ? "session" : "time") : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service");
+          }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -260,7 +275,24 @@ export function BookingFlow({ data, today }: Props) {
         </div>
       ) : null}
 
-      {step === "service" ? (
+      {step === "service" && nextQuestion ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">{nextQuestion.question}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {nextQuestion.options.map((o) => (
+              <button key={o.id} type="button" onClick={() => setIntakeOrder((list) => [...list, { questionId: nextQuestion.id, optionId: o.id }])} className="rounded-xl border border-border bg-surface p-4 text-left font-medium transition-colors hover:border-accent">
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {step === "service" && !nextQuestion && services.length === 0 ? (
+        <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucune prestation ne correspond à vos réponses pour la réservation en ligne. Contactez directement l&apos;établissement.</p>
+      ) : null}
+
+      {step === "service" && !nextQuestion && services.length > 0 ? (
         <div className="space-y-6">
           <h2 className="text-lg font-semibold">Choisissez une prestation</h2>
           {grouped.map((g) => (

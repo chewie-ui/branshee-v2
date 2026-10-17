@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, bookingSettings, businesses, groupSessions, members, scheduleExceptions, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { appointments, bookingSettings, businesses, groupSessions, members, scheduleExceptions, serviceHours, serviceMembers, services, weeklyHours } from "@/db/schema";
 import { computeSlots, type DayException, type MemberAvailability } from "@/lib/booking/slots";
 
 const hhmm = (t: string) => t.slice(0, 5);
@@ -76,7 +76,16 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     .where(and(eq(services.businessId, businessId), eq(services.blocksIndividual, true), inArray(groupSessions.memberId, ids), isNull(groupSessions.cancelledAt), lt(groupSessions.startsAt, windowEnd), gte(groupSessions.endsAt, windowStart)));
   busyRows.push(...sessionRows);
 
+  // Plages propres à la prestation (aucune = toutes les heures d'ouverture).
+  const windowRows = await db.select().from(serviceHours).where(eq(serviceHours.serviceId, serviceId));
+  let serviceWindows: Record<number, { start: string; end: string }[]> | null = null;
+  if (windowRows.length) {
+    serviceWindows = {};
+    for (const w of windowRows) (serviceWindows[w.weekday] ??= []).push({ start: hhmm(w.startTime), end: hhmm(w.endTime) });
+  }
+
   return computeSlots({
+    serviceWindows,
     timezone: biz.timezone,
     days: sorted,
     now: params.now ?? new Date(),

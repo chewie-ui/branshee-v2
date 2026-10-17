@@ -85,6 +85,8 @@ La base PostgreSQL est fournie et stockée dans `.local/` (rien à installer). A
 - Script de migration MongoDB → PostgreSQL (`npm run migrate:mongo`, voir docs/MIGRATION.md)
 - Équipe : ajout de membres (avec invitation par email, reliée automatiquement à l'inscription), profil, grade, désactivation, retrait ; grades personnalisés avec grille de permissions
 - Cours collectifs : capacité, séances ponctuelles ou répétées chaque semaine, inscription en ligne avec places restantes (capacité garantie même en cas d'inscriptions simultanées), liste des participants, annulation d'une séance (participants prévenus), séance affichée une seule fois dans l'agenda, agenda de l'animateur bloqué (option)
+- Questions avant réservation : questionnaire d'orientation (ex. « Êtes-vous enceinte ? » → kiné prénatale), questions inutiles sautées, réponses jointes au RDV
+- Jours et heures propres à une prestation (ex. « mardi 8 h – 13 h seulement »), combinés aux horaires du praticien
 - Super-admin `/admin` : tableau de bord, établissements (recherche, fiche, pause de la réservation en ligne, forfait offert), utilisateurs (désactivation) ; accès via `npm run admin:grant`
 
 **Prochaines étapes**

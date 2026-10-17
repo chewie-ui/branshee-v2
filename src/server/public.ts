@@ -2,6 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import { serviceMatches } from "@/lib/intake";
+import { listIntake } from "@/server/intake";
 import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
 
 /**
@@ -33,7 +35,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
   const [page] = await db.select({ theme: bookingPageSettings.theme, faq: bookingPageSettings.faq }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
 
-  const [svc, cats, links, team, questions, hours] = await Promise.all([
+  const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
     db
       .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience })
       .from(services)
@@ -48,6 +50,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
       .orderBy(asc(members.createdAt)),
     db.select({ id: formQuestions.id, label: formQuestions.label, type: formQuestions.type, isRequired: formQuestions.isRequired, options: formQuestions.options }).from(formQuestions).where(eq(formQuestions.businessId, biz.id)).orderBy(asc(formQuestions.position)),
     db.select({ weekday: weeklyHours.weekday, start: weeklyHours.startTime, end: weeklyHours.endTime }).from(weeklyHours).where(and(eq(weeklyHours.businessId, biz.id), isNull(weeklyHours.memberId))).orderBy(asc(weeklyHours.startTime)),
+    listIntake(biz.id),
   ]);
 
   const teamIds = new Set(team.map((m) => m.id));
@@ -60,8 +63,15 @@ export const getPublicBusiness = cache(async (slug: string) => {
     })
     .filter((s) => s.kind === "group" || s.memberIds.length > 0);
 
+  // Questionnaire : on ne garde que les liens vers des prestations réellement réservables.
+  const publicIds = new Set(servicesWithMembers.map((s) => s.id));
+  const intake = intakeAll
+    .map((q) => ({ ...q, options: q.options.map((o) => ({ ...o, serviceIds: o.serviceIds.filter((id) => publicIds.has(id)) })) }))
+    .filter((q) => q.options.some((o) => o.serviceIds.length > 0));
+
   return {
     business: biz,
+    intake,
     settings: settings ? { minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
     services: servicesWithMembers,
     categories: cats,
@@ -75,3 +85,16 @@ export const getPublicBusiness = cache(async (slug: string) => {
 });
 
 export type PublicBusiness = NonNullable<Awaited<ReturnType<typeof getPublicBusiness>>>;
+
+/**
+ * Vérifie côté serveur que la prestation choisie correspond aux réponses du questionnaire,
+ * et renvoie ces réponses en clair pour les joindre au rendez-vous.
+ */
+export function checkIntake(data: PublicBusiness, serviceId: string, answers: Record<string, string>): { ok: true; lines: { question: string; answer: string }[] } | { ok: false } {
+  const lines: { question: string; answer: string }[] = [];
+  for (const q of data.intake) {
+    const option = q.options.find((o) => o.id === answers[q.id]);
+    if (option) lines.push({ question: q.question, answer: option.label });
+  }
+  return serviceMatches(serviceId, data.intake, answers) ? { ok: true, lines } : { ok: false };
+}

@@ -9,7 +9,7 @@ import { activityLogs, appointments, customers } from "@/db/schema";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyBookingCreated } from "@/server/notifications";
-import { getPublicBusiness } from "@/server/public";
+import { checkIntake, getPublicBusiness } from "@/server/public";
 
 async function ip() {
   const h = await headers();
@@ -57,6 +57,8 @@ const bookingSchema = z.object({
   phone: z.string().trim().max(40),
   message: z.string().trim().max(1000),
   answers: z.record(z.string(), z.string().max(1000)),
+  /** Réponses au questionnaire d'orientation : id de question → id de réponse. */
+  intake: z.record(z.string(), z.string().max(64)).optional(),
   /** Champ piège invisible : rempli uniquement par les robots. */
   website: z.string().max(0).optional(),
 });
@@ -83,8 +85,11 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
 
   if (data.settings.phoneRequired && v.phone.replace(/\D/g, "").length < 8) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { phone: "Indiquez un numéro de téléphone." } };
 
+  const intake = checkIntake(data, service.id, v.intake ?? {});
+  if (!intake.ok) return { ok: false, error: "Cette prestation ne correspond pas à vos réponses. Revenez en arrière pour en choisir une autre." };
+
   // Questions du formulaire : obligatoires remplies, réponses aux questions à choix valides.
-  const answers: { question: string; answer: string }[] = [];
+  const answers: { question: string; answer: string }[] = [...intake.lines];
   for (const q of data.questions) {
     const a = (v.answers[q.id] ?? "").trim();
     if (q.isRequired && !a) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { [`q_${q.id}`]: "Réponse obligatoire." } };

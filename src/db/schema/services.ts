@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid, jsonb, check, smallint } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid, jsonb, check, smallint, time } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { id, legacyId, timestamps } from "./_shared";
 import { businesses, serviceCategories } from "./businesses";
@@ -133,4 +133,28 @@ export const serviceIntakeRules = pgTable(
       .references(() => intakeOptions.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.serviceId, t.optionId] })],
+);
+
+/**
+ * Plages où une prestation est proposée (ex. « mardi 8 h – 13 h seulement »).
+ * Aucune ligne = proposée pendant toutes les heures d'ouverture.
+ * Les créneaux restent limités par les horaires du praticien : c'est l'intersection des deux.
+ */
+export const serviceHours = pgTable(
+  "service_hours",
+  {
+    id: id(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    /** 0 = dimanche … 6 = samedi. */
+    weekday: smallint("weekday").notNull(),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time").notNull(),
+  },
+  (t) => [
+    index("service_hours_service_idx").on(t.serviceId),
+    check("service_hours_weekday_ck", sql`${t.weekday} between 0 and 6`),
+    check("service_hours_order_ck", sql`${t.startTime} < ${t.endTime}`),
+  ],
 );

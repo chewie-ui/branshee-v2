@@ -9,6 +9,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { deleteService, saveService, type ServiceFormState } from "@/server/actions/services";
 import { submitKeepingValues } from "@/lib/form";
+import { WeekRanges, type Week } from "@/components/schedule/week-ranges";
 
 export const SERVICE_COLORS = ["#4f46e5", "#2563eb", "#0891b2", "#0d9488", "#059669", "#65a30d", "#d97706", "#dc2626", "#db2777", "#7c3aed", "#52525b"];
 const DURATIONS = [5, 10, 15, 20, 25, 30, 40, 45, 50, 60, 75, 90, 105, 120, 150, 180, 240];
@@ -27,6 +28,8 @@ type Initial = {
   kind: "individual" | "group";
   capacity: number | null;
   blocksIndividual: boolean;
+  /** Plages où la prestation est proposée ; vide = toutes les heures d'ouverture. */
+  hours: Week;
 };
 
 type Props = {
@@ -44,6 +47,9 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
   const [color, setColor] = useState(initial.color);
   const [everyone, setEveryone] = useState(initial.memberIds.length === 0);
   const [kind, setKind] = useState(initial.kind);
+  const hasHours = Object.values(initial.hours).some((r) => r.length > 0);
+  const [limited, setLimited] = useState(hasHours);
+  const [hours, setHours] = useState<Week>(hasHours ? initial.hours : { 1: [{ start: "09:00", end: "12:00" }] });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
   const err = state?.fieldErrors ?? {};
@@ -176,6 +182,29 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
           </span>
         </label>
       </Card>
+
+      {kind === "individual" ? (
+        <Card className="overflow-hidden">
+          <fieldset className="space-y-3 p-5">
+            <legend className="mb-2 text-sm font-medium">Quand cette prestation est-elle proposée ?</legend>
+            <input type="hidden" name="hours" value={limited ? JSON.stringify(hours) : "{}"} />
+            {([[false, "Pendant toutes les heures d'ouverture"], [true, "Seulement certains jours ou à certaines heures"]] as const).map(([v, label]) => (
+              <label key={String(v)} className="flex items-center gap-3 text-sm">
+                <input type="radio" name="hoursMode" checked={limited === v} onChange={() => setLimited(v)} className="size-4 accent-[var(--accent)]" />
+                {label}
+              </label>
+            ))}
+            {limited ? <p className="text-sm text-muted">Exemple : uniquement le mardi de 8 h à 13 h. Les créneaux restent limités aux horaires du praticien.</p> : null}
+          </fieldset>
+          {limited ? <WeekRanges value={hours} onChange={setHours} offLabel="Non proposée" defaultRange={{ start: "09:00", end: "12:00" }} className="border-t border-border" /> : null}
+          {err.hours ? <p className="px-5 pb-4 text-sm text-danger" role="alert">{err.hours}</p> : null}
+        </Card>
+      ) : null}
+
+      <p className="text-sm text-muted">
+        Pour ne proposer cette prestation qu&apos;à certains clients (ex. femmes enceintes), utilisez les{" "}
+        <Link href="/app/prestations/questions" className="font-medium text-accent hover:text-accent-hover">questions avant réservation</Link>.
+      </p>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
         {initial.id ? (

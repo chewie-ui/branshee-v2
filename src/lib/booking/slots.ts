@@ -41,6 +41,11 @@ export type SlotInput = {
   /** Exceptions qui s'appliquent à tout l'établissement (fermeture, jour férié…). */
   businessExceptions: Record<string, DayException>;
   busy: BusyInterval[];
+  /**
+   * Plages où la prestation est proposée, par jour de semaine (null = toutes les heures d'ouverture).
+   * Un jour absent = prestation non proposée ce jour-là.
+   */
+  serviceWindows?: Record<number, TimeRange[]> | null;
 };
 
 export type Slot = { time: string; startsAt: Date; endsAt: Date; memberIds: string[] };
@@ -79,6 +84,19 @@ export function workingRanges(member: MemberAvailability, day: string, timezone:
   return member.weekly[weekdayOf(day, timezone)] ?? [];
 }
 
+/** Intersection de deux listes de plages "HH:MM" (en minutes). */
+export function intersectRanges(a: TimeRange[], b: TimeRange[]): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  for (const x of a) {
+    for (const y of b) {
+      const start = Math.max(toMin(x.start), toMin(y.start));
+      const end = Math.min(toMin(x.end), toMin(y.end));
+      if (start < end) out.push({ start, end });
+    }
+  }
+  return out.sort((p, q) => p.start - q.start);
+}
+
 const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd;
 
 export function computeSlots(input: SlotInput): Record<string, Slot[]> {
@@ -104,9 +122,11 @@ export function computeSlots(input: SlotInput): Record<string, Slot[]> {
 
     for (const member of input.members) {
       const busy = busyByMember.get(member.memberId) ?? [];
-      for (const range of workingRanges(member, day, timezone, input.businessExceptions)) {
-        const rStart = toMin(range.start);
-        const rEnd = toMin(range.end);
+      const working = workingRanges(member, day, timezone, input.businessExceptions);
+      const ranges = input.serviceWindows
+        ? intersectRanges(working, input.serviceWindows[weekdayOf(day, timezone)] ?? [])
+        : working.map((r) => ({ start: toMin(r.start), end: toMin(r.end) }));
+      for (const { start: rStart, end: rEnd } of ranges) {
         for (let t = rStart; t + durationMin <= rEnd; t += step) {
           const startsAt = at(day, t, timezone);
           const endsAt = at(day, t + durationMin, timezone);

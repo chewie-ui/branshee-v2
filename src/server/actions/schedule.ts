@@ -7,20 +7,9 @@ import { db } from "@/db";
 import { activityLogs, bookingSettings, members, scheduleExceptions, weeklyHours } from "@/db/schema";
 import type { PermissionKey } from "@/lib/permissions";
 import { requireContext, type AppContext } from "@/server/context";
+import { range, weekError, weekSchema } from "@/lib/week-schema";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-
-const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure invalide");
-const range = z.object({ start: time, end: time }).refine((r) => r.start < r.end, "La fin doit être après le début.");
-const dayRanges = z
-  .array(range)
-  .max(6)
-  .refine((list) => {
-    const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start));
-    return sorted.every((r, i) => i === 0 || sorted[i - 1]!.end <= r.start);
-  }, "Deux plages se chevauchent.");
-
-const DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 
 /** Vérifie le droit de modifier les horaires (ou congés) d'un membre donné, ou de l'établissement si `memberId` est null. */
 async function assertCanEdit(ctx: AppContext, memberId: string | null, kind: "schedule" | "timeOff") {
@@ -52,12 +41,8 @@ export async function saveWeeklyHours(memberId: string | null, week: Record<stri
     return FORBIDDEN;
   }
 
-  const parsed = z.record(z.enum(["0", "1", "2", "3", "4", "5", "6"]), dayRanges).safeParse(week);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0]!;
-    const day = DAY_NAMES[Number(issue.path[0])];
-    return { ok: false, error: day ? `${day.charAt(0).toUpperCase() + day.slice(1)} : ${issue.message}` : issue.message };
-  }
+  const parsed = weekSchema.safeParse(week);
+  if (!parsed.success) return { ok: false, error: weekError(parsed.error.issues) };
 
   const rows = Object.entries(parsed.data).flatMap(([weekday, ranges]) =>
     ranges.map((r) => ({ businessId: ctx.business.id, memberId, weekday: Number(weekday), startTime: r.start, endTime: r.end })),

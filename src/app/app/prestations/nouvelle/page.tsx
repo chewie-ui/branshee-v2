@@ -14,7 +14,7 @@ export default async function NewServicePage() {
       <PageHeader title="Nouvelle prestation" />
       <ServiceForm
         {...data}
-        initial={{ id: null, name: "", description: "", categoryId: "", durationMin: 30, price: "", color: "#4f46e5", audience: "all", isActive: true, memberIds: [], kind: "individual", capacity: null, blocksIndividual: true }}
+        initial={{ id: null, name: "", description: "", categoryId: "", durationMin: 30, price: "", color: "#4f46e5", audience: "all", isActive: true, memberIds: [], kind: "individual", capacity: null, blocksIndividual: true, hours: {} }}
       />
     </div>
   );

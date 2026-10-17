@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { and, eq, inArray, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, members, serviceCategories, serviceMembers, services } from "@/db/schema";
+import { activityLogs, members, serviceCategories, serviceHours, serviceMembers, services } from "@/db/schema";
+import { weekError, weekSchema } from "@/lib/week-schema";
 import { requireContext } from "@/server/context";
 
 export type ServiceFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
@@ -62,6 +63,16 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
   }
   const v = parsed.data;
   if (v.kind === "group" && !v.capacity) return { error: "Vérifiez les champs indiqués.", fieldErrors: { capacity: "Indiquez le nombre de places." } };
+  let hoursRaw: unknown = {};
+  try {
+    hoursRaw = JSON.parse(String(formData.get("hours") ?? "{}"));
+  } catch {
+    /* champ absent ou illisible : aucune restriction */
+  }
+  const hours = weekSchema.safeParse(hoursRaw);
+  if (!hours.success) return { error: "Vérifiez les champs indiqués.", fieldErrors: { hours: weekError(hours.error.issues) } };
+  const hourRows = v.kind === "individual" ? Object.entries(hours.data).flatMap(([wd, ranges]) => ranges.map((r) => ({ weekday: Number(wd), startTime: r.start, endTime: r.end }))) : [];
+  if (formData.get("hoursMode") !== null && hourRows.length === 0 && String(formData.get("hours")) !== "{}") return { error: "Vérifiez les champs indiqués.", fieldErrors: { hours: "Activez au moins un jour." } };
   const priceCents = parsePrice(v.price);
   if (priceCents === "invalid") return { error: "Vérifiez les champs indiqués.", fieldErrors: { price: "Prix invalide (ex. 45 ou 45,50)." } };
 
@@ -99,6 +110,8 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
       const [created] = await tx.insert(services).values({ ...values, businessId: bid, position: (pos ?? 0) + 1 }).returning({ id: services.id });
       id = created!.id;
     }
+    await tx.delete(serviceHours).where(eq(serviceHours.serviceId, id));
+    if (hourRows.length) await tx.insert(serviceHours).values(hourRows.map((h) => ({ ...h, serviceId: id! })));
     await tx.delete(serviceMembers).where(eq(serviceMembers.serviceId, id));
     if (validMembers.length) await tx.insert(serviceMembers).values(validMembers.map((memberId) => ({ serviceId: id!, memberId })));
     await tx.insert(activityLogs).values({ businessId: bid, userId: ctx.user.id, actorName: ctx.user.name, action: serviceId ? "service.update" : "service.create", description: `Prestation ${serviceId ? "modifiée" : "créée"} : ${v.name}` });

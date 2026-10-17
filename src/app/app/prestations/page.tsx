@@ -4,11 +4,12 @@ import { ChevronRight, Plus, Scissors, Users } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { members, serviceCategories, serviceMembers, services } from "@/db/schema";
+import { members, serviceCategories, serviceHours, serviceIntakeRules, serviceMembers, services } from "@/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { Tabs } from "@/components/ui/tabs";
 import { formatDuration, formatPrice } from "@/lib/time";
 import { requireContext } from "@/server/context";
 
@@ -19,12 +20,16 @@ export default async function ServicesPage() {
   const bid = ctx.business.id;
   const canManage = ctx.can("services.manage");
 
-  const [rows, cats, links, team] = await Promise.all([
+  const [rows, cats, links, team, hours, rules] = await Promise.all([
     db.select().from(services).where(eq(services.businessId, bid)).orderBy(asc(services.position), asc(services.name)),
     db.select().from(serviceCategories).where(eq(serviceCategories.businessId, bid)).orderBy(asc(serviceCategories.position)),
     db.select({ serviceId: serviceMembers.serviceId, name: members.displayName }).from(serviceMembers).innerJoin(members, eq(members.id, serviceMembers.memberId)),
     db.select({ id: members.id }).from(members).where(and(eq(members.businessId, bid), eq(members.isBookable, true), eq(members.status, "active"))),
+    db.selectDistinct({ serviceId: serviceHours.serviceId }).from(serviceHours).innerJoin(services, eq(services.id, serviceHours.serviceId)).where(eq(services.businessId, bid)),
+    db.selectDistinct({ serviceId: serviceIntakeRules.serviceId }).from(serviceIntakeRules).innerJoin(services, eq(services.id, serviceIntakeRules.serviceId)).where(eq(services.businessId, bid)),
   ]);
+  const hasHours = new Set(hours.map((h) => h.serviceId));
+  const hasRules = new Set(rules.map((r) => r.serviceId));
 
   const groups = [
     ...cats.map((c) => ({ key: c.id, name: c.name, items: rows.filter((s) => s.categoryId === c.id) })),
@@ -43,6 +48,7 @@ export default async function ServicesPage() {
         description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`}
         action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
       />
+      {canManage ? <Tabs items={[{ href: "/app/prestations", label: "Prestations" }, { href: "/app/prestations/questions", label: "Questions avant réservation" }]} /> : null}
 
       {rows.length === 0 ? (
         <Card>
@@ -69,6 +75,8 @@ export default async function ServicesPage() {
                       <p className="flex flex-wrap items-center gap-2 font-medium">
                         {s.name}
                         {s.kind === "group" ? <Badge tone="accent">Cours collectif{s.capacity ? ` · ${s.capacity} places` : ""}</Badge> : null}
+                        {hasHours.has(s.id) ? <Badge>Jours et heures limités</Badge> : null}
+                        {hasRules.has(s.id) ? <Badge>Selon les réponses</Badge> : null}
                         {!s.isActive ? <Badge>Masquée</Badge> : null}
                       </p>
                       {s.description ? <p className="mt-0.5 line-clamp-1 text-sm text-muted">{s.description}</p> : null}

@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { serviceMembers, services } from "@/db/schema";
+import { serviceHours, serviceMembers, services } from "@/db/schema";
 import { NewSessionForm } from "@/components/services/group-sessions";
 import { ServiceForm } from "@/components/services/service-form";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -26,6 +26,8 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
   if (!service) notFound();
   const [data, links] = await Promise.all([serviceFormData(ctx.business.id), db.select({ memberId: serviceMembers.memberId }).from(serviceMembers).where(eq(serviceMembers.serviceId, service.id))]);
   const memberIds = links.map((l) => l.memberId);
+  const hours: Record<number, { start: string; end: string }[]> = {};
+  for (const h of await db.select().from(serviceHours).where(eq(serviceHours.serviceId, service.id)).orderBy(serviceHours.startTime)) (hours[h.weekday] ??= []).push({ start: h.startTime.slice(0, 5), end: h.endTime.slice(0, 5) });
   const canSessions = service.kind === "group" && ctx.can("groupSessions.manage");
   const sessions = canSessions ? await listServiceSessions(service.id, new Date()) : [];
   const tz = ctx.business.timezone;
@@ -53,6 +55,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           kind: service.kind,
           capacity: service.capacity,
           blocksIndividual: service.blocksIndividual,
+          hours,
         }}
       />
 

@@ -99,8 +99,19 @@ async function main() {
       { businessId: bid, categoryId: catSport!.id, name: "Rééducation sportive", description: "Reprise après blessure, renforcement ciblé.", durationMin: 45, priceCents: 4500, color: "#0d9488", position: 3 },
       { businessId: bid, categoryId: catSport!.id, name: "Bilan postural du coureur", durationMin: 60, priceCents: 6000, color: "#059669", position: 4 },
       { businessId: bid, categoryId: catGroup!.id, name: "Pilates en petit groupe", description: "Renforcement du centre, 6 personnes maximum.", durationMin: 60, priceCents: 1800, color: "#d97706", kind: "group", capacity: 6, position: 5, recurrence: { weekdays: [2, 4], startTime: "18:00" } },
+      { businessId: bid, categoryId: catKine!.id, name: "Kiné prénatale", description: "Soulagement du dos et préparation à l'accouchement.", durationMin: 45, priceCents: 4000, color: "#db2777", position: 6 },
     ])
     .returning();
+
+  // Questionnaire d'orientation : « Êtes-vous enceinte ? » → Oui : kiné prénatale ; Non : les autres soins.
+  const [q] = await db.insert(s.intakeQuestions).values({ businessId: bid, question: "Êtes-vous enceinte ?", position: 0 }).returning();
+  const [yes, no] = await db.insert(s.intakeOptions).values([{ questionId: q!.id, label: "Oui", position: 0 }, { questionId: q!.id, label: "Non", position: 1 }]).returning();
+  await db.insert(s.serviceIntakeRules).values([
+    { serviceId: svc[6]!.id, optionId: yes!.id },
+    ...[1, 2, 3, 4].map((i) => ({ serviceId: svc[i]!.id, optionId: no!.id })),
+  ]);
+  // Drainage lymphatique : uniquement le mardi et le jeudi matin.
+  await db.insert(s.serviceHours).values([2, 4].map((weekday) => ({ serviceId: svc[2]!.id, weekday, startTime: "08:00", endTime: "13:00" })));
   await db.insert(s.serviceMembers).values([
     { serviceId: svc[2]!.id, memberId: mClaire!.id },
     { serviceId: svc[3]!.id, memberId: mThomas!.id },
