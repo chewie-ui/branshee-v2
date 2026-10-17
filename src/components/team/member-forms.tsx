@@ -56,7 +56,7 @@ export function AddMemberForm({ grades, defaultGradeId }: { grades: Grade[]; def
   );
 }
 
-type Member = { id: string; displayName: string; roleLabel: string; bio: string; showRole: boolean; gradeId: string; isBookable: boolean; isActive: boolean; isOwner: boolean; timeOff: "inherit" | "yes" | "no"; isSelf: boolean };
+type Member = { id: string; displayName: string; roleLabel: string; bio: string; customInfo: string; showRole: boolean; gradeId: string; isBookable: boolean; isActive: boolean; isOwner: boolean; timeOff: "inherit" | "yes" | "no"; isSelf: boolean };
 
 export function EditMemberForm({ m, grades }: { m: Member; grades: Grade[] }) {
   const [state, action, pending] = useActionState<TeamState, FormData>(updateMember.bind(null, m.id), undefined);
@@ -80,6 +80,9 @@ export function EditMemberForm({ m, grades }: { m: Member; grades: Grade[] }) {
         </div>
         <Field label="Présentation (facultatif)" htmlFor="bio">
           <Textarea id="bio" name="bio" defaultValue={m.bio} rows={3} maxLength={500} />
+        </Field>
+        <Field label="Infos complémentaires (facultatif)" htmlFor="customInfo" hint="Une ligne par info, au format « Libellé : valeur ». Ex. : Langues : français, anglais — N° INAMI : 5-12345-67-890">
+          <Textarea id="customInfo" name="customInfo" defaultValue={m.customInfo} rows={3} maxLength={1200} placeholder={"Langues : français, anglais\nSpécialité : rééducation du sportif"} />
         </Field>
         <label className="flex items-center gap-3 text-sm">
           <input type="checkbox" name="showRole" defaultChecked={m.showRole} className="size-4 accent-[var(--accent)]" />

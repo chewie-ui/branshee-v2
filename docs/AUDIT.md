@@ -100,12 +100,12 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Moyen de reversement (virement, PayPal, espèces, autre) quand Branshee encaisse pour le pro
 - ℹ️ Sans clés Stripe sur le serveur, le paiement en ligne est simplement masqué (testé) ; le parcours Stripe réel est à tester avec les clés de test sur le VPS
 
-## Lot I — Établissements et équipe
+## Lot I — Établissements et équipe ✅ (sièges payants → Lot J)
 - ✅ Plusieurs établissements, sélecteur, membres, invitations par email, grades, profil public des membres
-- ❌ Page « Mes établissements » : modifier, supprimer, mettre en pause, forfait de chacun
-- ❌ Rejoindre un établissement (recherche + demande), accepter / refuser les demandes, invitations reçues (accepter / refuser)
-- ❌ Propriétaire réservable ou non (« afficher comme employé »)
-- ❌ Infos complémentaires sur le profil public d'un membre (libellé / valeur) — schéma prêt
+- ✅ Page « Mes établissements » : voir la page, mettre en pause / réactiver, supprimer (en retapant le nom), quitter un établissement · 🔶 forfait de chacun : Lot J
+- ✅ Rejoindre un établissement (recherche par nom ou ville + demande, email au propriétaire), accepter / refuser les demandes (page Équipe), invitations reçues à accepter / refuser (email d'invitation, visible sur Bienvenue et Mes établissements)
+- ✅ Propriétaire réservable ou non (case « Réservable par les clients » sur sa fiche)
+- ✅ Infos complémentaires (libellé / valeur) et présentation sur le profil public d'un membre
 - ❌ Sièges collaborateurs supplémentaires (10 €/mois)
 
 ## Lot J — Abonnements (Branshee → pro)

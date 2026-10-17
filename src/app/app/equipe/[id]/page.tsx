@@ -34,6 +34,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
           displayName: m.displayName,
           roleLabel: m.roleLabel ?? "",
           bio: m.bio ?? "",
+          customInfo: m.customInfo.map((c) => `${c.label} : ${c.value}`).join("\n"),
           showRole: m.showRole,
           gradeId: m.gradeId ?? "",
           isBookable: m.isBookable,

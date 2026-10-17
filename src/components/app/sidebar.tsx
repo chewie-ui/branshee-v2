@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Blocks, CalendarDays, Check, History, Inbox, ChevronsUpDown, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
+  Blocks, CalendarDays, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
 } from "lucide-react";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -98,6 +98,10 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
               </form>
             ))}
             <div className="my-1 border-t border-border" />
+            <Link href="/app/etablissements" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
+              <Building2 className="size-4" aria-hidden="true" />
+              Mes établissements
+            </Link>
             <Link href="/bienvenue" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Plus className="size-4" aria-hidden="true" />
               Ajouter un établissement

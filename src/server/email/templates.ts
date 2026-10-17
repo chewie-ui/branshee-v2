@@ -278,4 +278,31 @@ export const emails = {
       }),
     };
   },
+
+  teamInvitation(p: { businessName: string; inviterName: string; url: string; hasAccount: boolean }) {
+    return {
+      subject: `${p.inviterName} vous invite à rejoindre ${p.businessName} sur Branshee`,
+      ...render({
+        preheader: `Rejoignez l'équipe de ${p.businessName}`,
+        title: `Rejoignez ${p.businessName}`,
+        intro: `${p.inviterName} vous invite à rejoindre l'équipe de ${p.businessName} sur Branshee : agenda, clients et rendez-vous partagés.`,
+        cta: { label: p.hasAccount ? "Voir l'invitation" : "Créer mon compte", url: p.url },
+        note: "Vous ne connaissez pas cet établissement ? Ignorez simplement cet email.",
+        footer: "Branshee",
+      }),
+    };
+  },
+
+  joinRequest(p: { businessName: string; requesterName: string; url: string }) {
+    return {
+      subject: `${p.requesterName} demande à rejoindre ${p.businessName}`,
+      ...render({
+        preheader: "Nouvelle demande pour rejoindre votre équipe",
+        title: "Demande pour rejoindre votre équipe",
+        intro: `${p.requesterName} souhaite rejoindre ${p.businessName} sur Branshee. Acceptez ou refusez depuis la page Équipe.`,
+        cta: { label: "Voir la demande", url: p.url },
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
 };

@@ -8,6 +8,8 @@ import { db } from "@/db";
 import { activityLogs, grades, members, users } from "@/db/schema";
 import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions";
 import { requireContext, type AppContext } from "@/server/context";
+import { sendEmail } from "@/server/email/mailer";
+import { emails } from "@/server/email/templates";
 
 export type TeamState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
 
@@ -55,14 +57,20 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
     businessId: ctx.business.id,
     userId,
     inviteEmail: v.email || null,
-    status: userId || !v.email ? "active" : "invited",
+    // Avec un email, la personne doit accepter l'invitation ; sans email (membre sans compte), il est actif tout de suite.
+    status: v.email ? "invited" : "active",
     gradeId: await ownGrade(ctx, v.gradeId),
     displayName: v.displayName,
     roleLabel: v.roleLabel || null,
     showRole: !!v.roleLabel,
     isBookable: v.isBookable,
-    joinedAt: userId ? new Date() : null,
+    joinedAt: v.email ? null : new Date(),
   });
+  if (v.email) {
+    const appUrl = (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
+    const mail = emails.teamInvitation({ businessName: ctx.business.name, inviterName: ctx.user.name, hasAccount: !!userId, url: userId ? `${appUrl}/app/etablissements` : `${appUrl}/inscription?email=${encodeURIComponent(v.email)}` });
+    await sendEmail({ ...mail, to: v.email, template: "team_invitation", businessId: ctx.business.id });
+  }
   await log(ctx, "team.add", `Membre ajouté : ${v.displayName}`);
   revalidatePath("/app/equipe");
   redirect("/app/equipe");
@@ -77,6 +85,7 @@ const updateSchema = z.object({
   isBookable: z.boolean(),
   isActive: z.boolean(),
   timeOff: z.enum(["inherit", "yes", "no"]),
+  customInfo: z.array(z.object({ label: z.string().min(1).max(40), value: z.string().min(1).max(160) })).max(8, "8 infos maximum."),
 });
 
 export async function updateMember(memberId: string, _prev: TeamState, fd: FormData): Promise<TeamState> {
@@ -92,6 +101,14 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
     isBookable: fd.get("isBookable") === "on",
     isActive: m.isOwner ? true : fd.get("isActive") === "on",
     timeOff: str(fd, "timeOff") || "inherit",
+    customInfo: str(fd, "customInfo")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const i = l.indexOf(":");
+        return i > 0 ? { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() } : { label: "Info", value: l };
+      }),
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -113,6 +130,7 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
       isBookable: v.isBookable,
       isActive: v.isActive,
       canManageOwnTimeOff: v.timeOff === "inherit" ? null : v.timeOff === "yes",
+      customInfo: v.customInfo,
     })
     .where(eq(members.id, m.id));
   await log(ctx, "team.update", `Membre modifié : ${v.displayName}`);

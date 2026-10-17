@@ -361,11 +361,17 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
           <h2 className="mb-3 font-semibold">L&apos;équipe</h2>
           <ul className="space-y-3">
             {data.team.map((m) => (
-              <li key={m.id} className="flex items-center gap-3">
+              <li key={m.id} className="flex items-start gap-3">
                 <Avatar name={m.name} src={m.photoUrl} />
                 <div className="min-w-0 text-sm">
                   <p className="font-medium">{m.name}</p>
                   {m.role ? <p className="truncate text-muted">{m.role}</p> : null}
+                  {m.bio ? <p className="mt-1 text-muted">{m.bio}</p> : null}
+                  {m.customInfo.length ? (
+                    <dl className="mt-1 space-y-0.5 text-xs text-muted">
+                      {m.customInfo.map((c, i) => <div key={i}><dt className="inline font-medium text-text">{c.label} : </dt><dd className="inline">{c.value}</dd></div>)}
+                    </dl>
+                  ) : null}
                 </div>
               </li>
             ))}

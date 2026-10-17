@@ -57,7 +57,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     db.select({ id: serviceCategories.id, name: serviceCategories.name, icon: serviceCategories.icon }).from(serviceCategories).where(eq(serviceCategories.businessId, biz.id)).orderBy(asc(serviceCategories.position)),
     db.select({ serviceId: serviceMembers.serviceId, memberId: serviceMembers.memberId }).from(serviceMembers).innerJoin(services, eq(services.id, serviceMembers.serviceId)).where(eq(services.businessId, biz.id)),
     db
-      .select({ id: members.id, name: members.displayName, photoUrl: members.photoUrl, roleLabel: members.roleLabel, showRole: members.showRole, bio: members.bio })
+      .select({ id: members.id, name: members.displayName, photoUrl: members.photoUrl, roleLabel: members.roleLabel, showRole: members.showRole, bio: members.bio, customInfo: members.customInfo })
       .from(members)
       .where(and(eq(members.businessId, biz.id), eq(members.status, "active"), eq(members.isActive, true), eq(members.isBookable, true)))
       .orderBy(asc(members.createdAt)),
@@ -97,7 +97,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     settings: settings ? { waitlistEnabled: settings.waitlistEnabled, minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
     services: servicesWithMembers,
     categories: cats,
-    team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio })),
+    team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio, customInfo: m.customInfo })),
     questions,
     theme: resolveTheme(page?.theme),
     aboutHtml: biz.aboutHtml ? sanitizeRichText(biz.aboutHtml) : null,
