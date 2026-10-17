@@ -47,6 +47,17 @@ drizzle/              migrations SQL
 scripts/              seed, migration depuis MongoDB
 ```
 
+## Lancer en local (le plus simple)
+Seul prérequis : **Node.js** (version LTS, https://nodejs.org).
+
+- **Windows** : double-clic sur `demarrer-local.bat`
+- **Mac / Linux** : `npm install` puis `npm run local`
+
+La base PostgreSQL est fournie et stockée dans `.local/` (rien à installer). Au premier lancement : création de la base, migrations et données de démo. Puis ouvrir http://localhost:3000 :
+- `claire@cabinet-horizon.example` (propriétaire), `thomas@cabinet-horizon.example` (collaborateur), `admin@branshee.example` (super-admin, `/admin`)
+- mot de passe : `demo-branshee-2026`
+- les emails s'affichent dans le terminal au lieu de partir.
+
 ## Avancement
 **Fait — fondations**
 - Schéma complet (51 tables) couvrant toutes les données de l'ancien Branshee, chevauchements de RDV interdits par la base

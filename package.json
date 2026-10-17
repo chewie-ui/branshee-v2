@@ -9,13 +9,14 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate && psql \"$DATABASE_URL\" -f drizzle/custom/0001_constraints.sql",
+    "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "migrate:mongo": "tsx scripts/migrate-from-mongo.ts",
     "migrate:sample": "node test/fixtures/make-legacy-sample.mjs /tmp/legacy-sample && tsx scripts/migrate-from-mongo.ts --json /tmp/legacy-sample --dry-run --report /tmp/legacy-sample-report.json",
-    "admin:grant": "tsx scripts/make-superadmin.ts"
+    "admin:grant": "tsx scripts/make-superadmin.ts",
+    "local": "tsx scripts/local.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -42,6 +43,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "drizzle-kit": "^0.31.11",
+    "embedded-postgres": "16.13.0-beta.17",
     "eslint": "^9",
     "eslint-config-next": "^16.3.8",
     "tailwindcss": "^4",
