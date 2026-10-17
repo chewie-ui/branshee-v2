@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Branshee v2
 
-## Getting Started
+Refonte complète de Branshee : prise de rendez-vous en ligne pour indépendants et petites équipes,
+pensée comme une plateforme à modules.
 
-First, run the development server:
+**Stack** : Next.js 16 (App Router) · TypeScript strict · Tailwind CSS 4 · PostgreSQL + Drizzle ORM · Zod
 
+## Documentation
+- [`docs/FEATURES.md`](docs/FEATURES.md) — inventaire complet des fonctionnalités de l'ancien Branshee (cahier des charges)
+- [`docs/UI-ARCHITECTURE.md`](docs/UI-ARCHITECTURE.md) — organisation de l'interface : où va chaque option
+- [`docs/MIGRATION.md`](docs/MIGRATION.md) — correspondance MongoDB → PostgreSQL et plan de bascule
+
+## Démarrer en local
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local          # puis renseigner DATABASE_URL
+npm run db:migrate                  # crée les tables + contraintes
+npm run db:seed                     # établissement de démonstration (données fictives)
+npm run dev                         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | serveur de développement |
+| `npm run build` / `npm start` | build et serveur de production |
+| `npm run typecheck` | vérification TypeScript |
+| `npm run lint` | ESLint |
+| `npm run db:generate` | génère une migration après modification du schéma |
+| `npm run db:migrate` | applique les migrations |
+| `npm run db:seed` | recrée la démo |
+| `npm run db:studio` | explorateur de base Drizzle |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Organisation du code
+```
+src/
+  app/app/            espace pro (Aujourd'hui, Agenda, Clients, Prestations…)
+  components/ui/      composants de base (bouton, carte, champ, badge…)
+  components/app/     composants métier (barre latérale, formulaires…)
+  db/schema/          schéma PostgreSQL, un fichier par domaine
+  lib/                utilitaires (permissions, dates, navigation)
+  server/             accès aux données et actions serveur
+drizzle/              migrations SQL
+scripts/              seed, migration depuis MongoDB
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Avancement
+**Fait — fondations**
+- Schéma complet (51 tables) couvrant toutes les données de l'ancien Branshee, chevauchements de RDV interdits par la base
+- Système de permissions par grade (source unique : `src/lib/permissions.ts`)
+- Design system (tokens de couleur à contraste vérifié, composants), navigation responsive
+- Aujourd'hui (stats, demandes à valider avec confirmer/refuser, journée, lien de réservation)
+- Agenda semaine avec une colonne par membre, filtre par membre
+- Création d'un rendez-vous (client existant ou nouveau, détection de conflit)
+- Clients (recherche) et fiche client (coordonnées, à venir, historique, absences)
+- Prestations par catégorie
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Prochaines étapes**
+1. Comptes et connexion (sessions, mot de passe, Google, 2FA) — remplace le contexte de démo de `src/server/context.ts`
+2. Horaires et congés + moteur de calcul des créneaux disponibles
+3. Page publique et tunnel de réservation client
+4. Emails (confirmation, rappel, annulation) et tâches planifiées
+5. Équipe, grades, réglages
+6. Script de migration depuis MongoDB
+7. Paiements, SMS/WhatsApp, avis, site, super-admin
