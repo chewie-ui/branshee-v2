@@ -1,7 +1,9 @@
 import "server-only";
-import { and, eq, gt, inArray, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, members, notificationSettings, users } from "@/db/schema";
+import { appointments, bookingSettings, businesses, members, notificationSettings, users, waitlistEntries } from "@/db/schema";
+import { TZDate } from "@date-fns/tz";
+import { format } from "date-fns";
 import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { sendEmail } from "@/server/email/mailer";
@@ -70,6 +72,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
 }
 
 export function notifyRequestDecision(appointmentId: string, accepted: boolean, reason?: string | null) {
+  if (!accepted) void notifyWaitlist(appointmentId);
   return safely("décision", async () => {
     const row = await load(appointmentId);
     if (!row) return;
@@ -78,6 +81,7 @@ export function notifyRequestDecision(appointmentId: string, accepted: boolean, 
 }
 
 export function notifyCancelledByCustomer(appointmentId: string) {
+  void notifyWaitlist(appointmentId);
   return safely("annulation client", async () => {
     const row = await load(appointmentId);
     if (!row) return;
@@ -90,10 +94,36 @@ export function notifyCancelledByCustomer(appointmentId: string) {
 }
 
 export function notifyCancelledByBusiness(appointmentId: string) {
+  void notifyWaitlist(appointmentId);
   return safely("annulation établissement", async () => {
     const row = await load(appointmentId);
     if (!row) return;
     await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.info, row.bookingUrl, row.settings?.cancellationMessage));
+  });
+}
+
+/**
+ * Un créneau se libère (annulation) : on prévient les personnes en liste d'attente ce jour-là,
+ * pour cette prestation (ou sans prestation précise). Chacune n'est prévenue qu'une fois.
+ */
+export function notifyWaitlist(appointmentId: string) {
+  return safely("liste d'attente", async () => {
+    const row = await load(appointmentId);
+    if (!row || row.a.kind !== "appointment" || row.a.groupSessionId || row.a.startsAt < new Date()) return;
+    const [settings] = await db.select({ on: bookingSettings.waitlistEnabled }).from(bookingSettings).where(eq(bookingSettings.businessId, row.business.id));
+    if (!settings?.on) return;
+    const tz = row.business.timezone;
+    const day = format(new TZDate(row.a.startsAt, tz), "yyyy-MM-dd");
+    const claimed = await db
+      .update(waitlistEntries)
+      .set({ notifiedAt: new Date() })
+      .where(and(eq(waitlistEntries.businessId, row.business.id), eq(waitlistEntries.date, day), isNull(waitlistEntries.notifiedAt), row.a.serviceId ? or(isNull(waitlistEntries.serviceId), eq(waitlistEntries.serviceId, row.a.serviceId)) : isNull(waitlistEntries.serviceId), row.a.memberId ? or(isNull(waitlistEntries.memberId), eq(waitlistEntries.memberId, row.a.memberId)) : undefined))
+      .returning();
+    const label = formatDay(row.a.startsAt, tz, "EEEE d MMMM");
+    for (const w of claimed) {
+      const mail = emails.waitlistSpot({ name: w.name, businessName: row.business.name, day: label, serviceName: row.a.serviceName, bookingUrl: row.bookingUrl, businessPhone: row.business.phone });
+      await sendEmail({ ...mail, to: w.email, template: "waitlist_spot", replyTo: row.business.email, businessId: row.business.id, appointmentId: row.a.id });
+    }
   });
 }
 

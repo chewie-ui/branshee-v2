@@ -43,6 +43,13 @@
       "when": 1792253485221,
       "tag": "0005_group_session_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792254394572,
+      "tag": "0006_waitlist",
+      "breakpoints": true
     }
   ]
 }

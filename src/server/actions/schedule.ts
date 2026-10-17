@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, bookingSettings, members, scheduleExceptions, weeklyHours } from "@/db/schema";
@@ -83,7 +83,7 @@ export async function setScheduleMode(mode: "shared" | "per_member"): Promise<Ac
 
 const exceptionSchema = z
   .object({
-    memberId: z.union([z.uuid(), z.literal("")]),
+    memberIds: z.string().transform((x) => [...new Set(x.split(",").filter(Boolean))]).pipe(z.array(z.uuid()).max(50)),
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date de début invalide."),
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date de fin invalide."),
     type: z.enum(["closed", "hours"]),
@@ -99,9 +99,10 @@ export async function addException(input: Record<string, string>): Promise<Actio
   const parsed = exceptionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
-  const memberId = v.memberId || null;
+  // Liste vide = tout l'établissement.
+  const targets: (string | null)[] = v.memberIds.length ? v.memberIds : [null];
   try {
-    await assertCanEdit(ctx, memberId, memberId ? "timeOff" : "schedule");
+    for (const memberId of targets) await assertCanEdit(ctx, memberId, memberId ? "timeOff" : "schedule");
   } catch {
     return FORBIDDEN;
   }
@@ -113,22 +114,22 @@ export async function addException(input: Record<string, string>): Promise<Actio
   }
 
   await db.transaction(async (tx) => {
-    for (const date of days) {
+    for (const memberId of targets) {
       // Une seule exception par jour et par personne : la nouvelle remplace l'ancienne.
       await tx
         .delete(scheduleExceptions)
-        .where(and(eq(scheduleExceptions.businessId, ctx.business.id), eq(scheduleExceptions.date, date), memberId ? eq(scheduleExceptions.memberId, memberId) : isNull(scheduleExceptions.memberId)));
+        .where(and(eq(scheduleExceptions.businessId, ctx.business.id), inArray(scheduleExceptions.date, days), memberId ? eq(scheduleExceptions.memberId, memberId) : isNull(scheduleExceptions.memberId)));
+      await tx.insert(scheduleExceptions).values(
+        days.map((date) => ({
+          businessId: ctx.business.id,
+          memberId,
+          date,
+          isClosed: v.type === "closed",
+          hours: v.type === "hours" ? [{ start: v.start, end: v.end }] : [],
+          reason: v.reason || null,
+        })),
+      );
     }
-    await tx.insert(scheduleExceptions).values(
-      days.map((date) => ({
-        businessId: ctx.business.id,
-        memberId,
-        date,
-        isClosed: v.type === "closed",
-        hours: v.type === "hours" ? [{ start: v.start, end: v.end }] : [],
-        reason: v.reason || null,
-      })),
-    );
     await tx.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "schedule.exception", description: `${v.type === "closed" ? "Fermeture" : "Horaires spéciaux"} du ${v.from}${v.to !== v.from ? ` au ${v.to}` : ""}` });
   });
 

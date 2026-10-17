@@ -46,14 +46,15 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Migration : les inscriptions aux cours récurrents de l'ancien Branshee retrouvent leur séance
 - ⏳ Limites du forfait (5 prestations en gratuit…) → lot J
 
-## Lot D — Disponibilités et règles
+## Lot D — Disponibilités et règles ✅
 - ✅ Horaires communs / par membre, plusieurs plages, congés et horaires spéciaux, droit de poser ses congés
-- 🔶 Congés : pour tout le monde ✅ / un membre ✅ · ❌ plusieurs membres choisis, sélection de plusieurs jours au calendrier
-- ✅ Durée / intervalle, battements avant / après, délai minimum, horizon, confirmation auto, surréservation, téléphone obligatoire
-- ❌ **Regroupement intelligent** (fenêtre en heures, jours concernés) : mise en avant des créneaux proches d'un RDV existant
-- ❌ Liste d'attente (le réglage existait mais n'était pas branché dans l'ancien : à brancher pour de bon)
-- ❌ Durée par défaut des créneaux quand aucune prestation n'est choisie
-- ❌ Résumé : jours ouverts, heures / semaine, créneaux théoriques, aperçu « ce que verra votre client »
+- ✅ Congés pour tout l'établissement, un membre ou **plusieurs membres à la fois**, sur une période (du… au…)
+- ✅ Durée / intervalle, battements avant / après, délai minimum (liste ou **personnalisé en heures**), horizon (liste ou **personnalisé en jours**), confirmation auto, téléphone obligatoire
+- ✅ Surréservation : réglage dans Réglages › Réservation (RDV créés par le pro)
+- ✅ **Regroupement intelligent** (fenêtre 1–6 h, jours concernés) : créneaux proches d'un RDV mis en avant (étoile « créneau conseillé ») sur la page publique
+- ✅ Liste d'attente branchée pour de bon : jour complet → le client laisse son email ; annulation / refus → email `waitlist_spot`, chaque inscrit prévenu une seule fois
+- ✅ Durée sans prestation : la réservation en ligne passe toujours par une prestation ; un RDV manuel sans prestation prend la durée saisie
+- ✅ Résumé sur la page Horaires : jours ouverts, heures / semaine, créneaux théoriques + lien « Voir comme un client »
 
 ## Lot E — Page de réservation (personnalisation)
 - 🔶 Profil : nom ✅, métier ✅, description ✅ · photo / logo ❌, « À propos » en texte riche (gras, italique, souligné, taille) ❌

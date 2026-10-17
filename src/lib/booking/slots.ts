@@ -46,9 +46,14 @@ export type SlotInput = {
    * Un jour absent = prestation non proposée ce jour-là.
    */
   serviceWindows?: Record<number, TimeRange[]> | null;
+  /**
+   * Regroupement intelligent : met en avant les créneaux proches (≤ windowHours) d'un RDV déjà pris
+   * par le même membre ce jour-là. N'empêche jamais une réservation.
+   */
+  grouping?: { windowHours: number; weekdays: number[]; anchors: BusyInterval[] } | null;
 };
 
-export type Slot = { time: string; startsAt: Date; endsAt: Date; memberIds: string[] };
+export type Slot = { time: string; startsAt: Date; endsAt: Date; memberIds: string[]; /** Proche d'un RDV existant (regroupement). */ grouped?: boolean };
 
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number) as [number, number];
@@ -97,6 +102,8 @@ export function intersectRanges(a: TimeRange[], b: TimeRange[]): { start: number
   return out.sort((p, q) => p.start - q.start);
 }
 
+const sameDay = (a: number, b: number, tz: string) => new TZDate(a, tz).toDateString() === new TZDate(b, tz).toDateString();
+
 const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd;
 
 export function computeSlots(input: SlotInput): Record<string, Slot[]> {
@@ -117,8 +124,18 @@ export function computeSlots(input: SlotInput): Record<string, Slot[]> {
     busyByMember.set(b.memberId, list);
   }
 
+  const window = (input.grouping?.windowHours ?? 0) * 3600000;
+  const anchorsByMember = new Map<string, { start: number; end: number }[]>();
+  for (const a of input.grouping?.anchors ?? []) {
+    const list = anchorsByMember.get(a.memberId) ?? [];
+    list.push({ start: a.start.getTime(), end: a.end.getTime() });
+    anchorsByMember.set(a.memberId, list);
+  }
+
   for (const day of input.days) {
     const byStart = new Map<number, Slot>();
+    const wd = weekdayOf(day, timezone);
+    const groupingToday = !!input.grouping && window > 0 && (input.grouping.weekdays.length === 0 || input.grouping.weekdays.includes(wd));
 
     for (const member of input.members) {
       const busy = busyByMember.get(member.memberId) ?? [];
@@ -135,9 +152,12 @@ export function computeSlots(input: SlotInput): Record<string, Slot[]> {
           // Le temps de battement s'ajoute autour du nouveau RDV : il ne doit toucher aucun RDV existant.
           if (busy.some((b) => overlaps(s - before, endsAt.getTime() + after, b.start, b.end))) continue;
 
+          const near = groupingToday && (anchorsByMember.get(member.memberId) ?? []).some((a) => sameDay(a.start, s, timezone) && Math.min(Math.abs(s - a.end), Math.abs(a.start - endsAt.getTime())) <= window);
           const existing = byStart.get(s);
-          if (existing) existing.memberIds.push(member.memberId);
-          else byStart.set(s, { time: toHHMM(t), startsAt, endsAt, memberIds: [member.memberId] });
+          if (existing) {
+            existing.memberIds.push(member.memberId);
+            if (near) existing.grouped = true;
+          } else byStart.set(s, { time: toHHMM(t), startsAt, endsAt, memberIds: [member.memberId], ...(near ? { grouped: true } : {}) });
         }
       }
     }

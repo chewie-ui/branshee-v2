@@ -165,6 +165,20 @@ export const emails = {
     };
   },
 
+  waitlistSpot(p: { name: string; businessName: string; day: string; serviceName: string | null; bookingUrl: string; businessPhone: string | null }) {
+    return {
+      subject: `Une place s'est libérée — ${p.businessName}`,
+      ...render({
+        preheader: `${p.day} : une place est disponible`,
+        title: "Une place s'est libérée",
+        intro: `Bonjour ${firstName(p.name)}, vous aviez demandé à être prévenu(e) : une place vient de se libérer chez ${p.businessName} le ${p.day}${p.serviceName ? ` (${p.serviceName})` : ""}.`,
+        cta: { label: "Réserver ce créneau", url: p.bookingUrl },
+        note: "Premier arrivé, premier servi : la place peut être reprise par quelqu'un d'autre.",
+        footer: `${p.businessName}${p.businessPhone ? ` · ${p.businessPhone}` : ""} — rendez-vous géré avec Branshee`,
+      }),
+    };
+  },
+
   reminder(a: AppointmentInfo, customMessage?: string | null) {
     return {
       subject: `Rappel : rendez-vous ${a.when} — ${a.businessName}`,

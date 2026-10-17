@@ -195,3 +195,28 @@ export const reviewReports = pgTable(
   },
   (t) => [index("review_reports_status_idx").on(t.status)],
 );
+
+/**
+ * Liste d'attente : un client demande à être prévenu si une place se libère un jour donné
+ * (pour une prestation, éventuellement avec un praticien). Prévenu une seule fois.
+ */
+export const waitlistEntries = pgTable(
+  "waitlist_entries",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id").references(() => services.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    index("waitlist_lookup_idx").on(t.businessId, t.date),
+    uniqueIndex("waitlist_unique_uq").on(t.businessId, t.date, t.email, t.serviceId),
+  ],
+);

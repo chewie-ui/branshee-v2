@@ -90,6 +90,11 @@ const rulesSchema = z.object({
   fvQuestion: z.string().trim().min(3, "Question trop courte.").max(140),
   fvNew: z.string().trim().min(1).max(60),
   fvExisting: z.string().trim().min(1).max(60),
+  waitlistEnabled: z.boolean(),
+  allowOverbooking: z.boolean(),
+  sgEnabled: z.boolean(),
+  sgWindow: z.coerce.number().int().min(1).max(6),
+  sgWeekdays: z.array(z.number().int().min(0).max(6)),
 });
 
 export async function saveBookingRules(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
@@ -99,7 +104,8 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
     slotIntervalMin: str(fd, "slotIntervalMin"),
     bufferBeforeMin: str(fd, "bufferBeforeMin"),
     bufferAfterMin: str(fd, "bufferAfterMin"),
-    minLeadMin: str(fd, "minLeadMin"),
+    // Délai personnalisé saisi en heures (« 3,5 » → 210 min).
+    minLeadMin: fd.has("minLeadHours") ? String(Math.round(Number(str(fd, "minLeadHours").replace(",", ".")) * 60)) : str(fd, "minLeadMin"),
     horizonDays: str(fd, "horizonDays"),
     autoConfirm: fd.get("autoConfirm") === "on",
     phoneRequired: fd.get("phoneRequired") === "on",
@@ -107,6 +113,11 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
     fvQuestion: str(fd, "fvQuestion"),
     fvNew: str(fd, "fvNew"),
     fvExisting: str(fd, "fvExisting"),
+    waitlistEnabled: fd.get("waitlistEnabled") === "on",
+    allowOverbooking: fd.get("allowOverbooking") === "on",
+    sgEnabled: fd.get("sgEnabled") === "on",
+    sgWindow: str(fd, "sgWindow") || "3",
+    sgWeekdays: str(fd, "sgWeekdays").split(",").filter(Boolean).map(Number),
   });
   if (!parsed.success) return fail(parsed.error);
   const v = parsed.data;
@@ -122,6 +133,9 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
       autoConfirm: v.autoConfirm,
       phoneRequired: v.phoneRequired,
       firstVisitQuestion: { enabled: v.fvEnabled, question: v.fvQuestion, newLabel: v.fvNew, existingLabel: v.fvExisting },
+      waitlistEnabled: v.waitlistEnabled,
+      allowOverbooking: v.allowOverbooking,
+      smartGrouping: { enabled: v.sgEnabled, windowHours: v.sgWindow, weekdays: v.sgWeekdays },
     })
     .where(eq(bookingSettings.businessId, ctx.business.id));
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "settings.booking", description: "Règles de réservation modifiées" });

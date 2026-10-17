@@ -15,7 +15,11 @@ type R = {
   autoConfirm: boolean;
   phoneRequired: boolean;
   firstVisitQuestion: { enabled: boolean; question: string; newLabel: string; existingLabel: string };
+  allowOverbooking: boolean;
+  waitlistEnabled: boolean;
+  smartGrouping: { enabled: boolean; windowHours: number; weekdays: number[] };
 };
+const WEEKDAYS = [[1, "Lun"], [2, "Mar"], [3, "Mer"], [4, "Jeu"], [5, "Ven"], [6, "Sam"], [0, "Dim"]] as const;
 
 const LEADS = [
   { v: "none", l: "Aucun" },
@@ -42,7 +46,11 @@ const BUFFERS = [0, 5, 10, 15, 20, 30, 45, 60];
 export function RulesForm({ r }: { r: R }) {
   const [mode, setMode] = useState(r.slotMode);
   const [fv, setFv] = useState(r.firstVisitQuestion.enabled);
-  const pick = (list: { v: string }[], value: number | null) => (value == null ? "none" : list.some((x) => x.v === String(value)) ? String(value) : list[0]!.v);
+  const pick = (list: { v: string }[], value: number | null) => (value == null ? "none" : list.some((x) => x.v === String(value)) ? String(value) : "custom");
+  const [lead, setLead] = useState(pick(LEADS, r.minLeadMin));
+  const [horizon, setHorizon] = useState(pick(HORIZONS, r.horizonDays));
+  const [sg, setSg] = useState(r.smartGrouping.enabled);
+  const [sgDays, setSgDays] = useState<number[]>(r.smartGrouping.weekdays);
 
   return (
     <SettingsForm action={saveBookingRules}>
@@ -91,19 +99,68 @@ export function RulesForm({ r }: { r: R }) {
 
           <Section title="Quand peut-on réserver ?" description="S'applique uniquement aux réservations en ligne.">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Délai minimum avant un RDV" htmlFor="minLeadMin" error={err.minLeadMin}>
-                <Select id="minLeadMin" name="minLeadMin" defaultValue={pick(LEADS, r.minLeadMin)}>
-                  {LEADS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                </Select>
-              </Field>
-              <Field label="Réservable jusqu'à" htmlFor="horizonDays" error={err.horizonDays}>
-                <Select id="horizonDays" name="horizonDays" defaultValue={pick(HORIZONS, r.horizonDays)}>
-                  {HORIZONS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                </Select>
-              </Field>
+              <div className="space-y-2">
+                <Field label="Délai minimum avant un RDV" htmlFor="minLeadSel" error={err.minLeadMin} hint="Pour avoir le temps de vous préparer.">
+                  <Select id="minLeadSel" value={lead} onChange={(e) => setLead(e.target.value)}>
+                    {LEADS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    <option value="custom">Personnalisé…</option>
+                  </Select>
+                </Field>
+                {lead === "custom" ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Input name="minLeadHours" type="number" min={0} max={336} step={0.5} defaultValue={r.minLeadMin != null ? r.minLeadMin / 60 : 3} className="w-24" aria-label="Délai en heures" />
+                    heures avant le créneau
+                  </label>
+                ) : (
+                  <input type="hidden" name="minLeadMin" value={lead} />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Field label="Réservable jusqu'à" htmlFor="horizonSel" error={err.horizonDays}>
+                  <Select id="horizonSel" value={horizon} onChange={(e) => setHorizon(e.target.value)}>
+                    {HORIZONS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    <option value="custom">Personnalisé…</option>
+                  </Select>
+                </Field>
+                {horizon === "custom" ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Input name="horizonDays" type="number" min={1} max={730} defaultValue={r.horizonDays ?? 45} className="w-24" aria-label="Horizon en jours" />
+                    jours à l&apos;avance
+                  </label>
+                ) : (
+                  <input type="hidden" name="horizonDays" value={horizon} />
+                )}
+              </div>
             </div>
             <Toggle name="autoConfirm" defaultChecked={r.autoConfirm} label="Confirmer automatiquement les réservations" description="Décoché : chaque réservation arrive en « demande à valider »." />
             <Toggle name="phoneRequired" defaultChecked={r.phoneRequired} label="Téléphone obligatoire" description="Le client doit laisser un numéro pour réserver." />
+            <Toggle name="waitlistEnabled" defaultChecked={r.waitlistEnabled} label="Liste d'attente" description="Sur un jour complet, le client peut laisser son email : il est prévenu automatiquement si une place se libère." />
+            <Toggle name="allowOverbooking" defaultChecked={r.allowOverbooking} label="Autoriser la surréservation" description="Deux rendez-vous sur le même créneau pour un même membre, à vos risques. Vaut pour les RDV que vous créez vous-même." />
+          </Section>
+
+          <Section title="Regroupement des rendez-vous" description="Idéal quand vous démarrez avec peu de clients : les créneaux proches d'un rendez-vous déjà pris sont mis en avant, pour éviter les journées découpées. Les autres restent réservables.">
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" name="sgEnabled" checked={sg} onChange={(e) => setSg(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+              <span className="font-medium">Mettre en avant les créneaux regroupés</span>
+            </label>
+            <div className={sg ? "space-y-4" : "hidden"}>
+              <Field label="Fenêtre autour d'un rendez-vous" htmlFor="sgWindow">
+                <Select id="sgWindow" name="sgWindow" defaultValue={String(r.smartGrouping.windowHours)} className="sm:max-w-xs">
+                  {[1, 2, 3, 4, 5, 6].map((h) => <option key={h} value={h}>{h} heure{h > 1 ? "s" : ""}</option>)}
+                </Select>
+              </Field>
+              <div>
+                <p className="mb-2 text-sm font-medium">Uniquement ces jours <span className="font-normal text-muted">(aucun = tous les jours)</span></p>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAYS.map(([d, l]) => (
+                    <button key={d} type="button" aria-pressed={sgDays.includes(d)} onClick={() => setSgDays((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))} className={`h-9 w-12 rounded-lg border text-sm font-medium ${sgDays.includes(d) ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface text-muted hover:text-text"}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="sgWeekdays" value={sgDays.join(",")} />
+              </div>
+            </div>
           </Section>
 
           <Section title="Question « première visite ? »" description="Permet de proposer certaines prestations aux nouveaux clients seulement (ex. bilan initial).">

@@ -112,4 +112,21 @@ describe("computeSlots", () => {
       assert.deepEqual(times(r), ["14:00", "15:00"]);
     });
   });
+
+  describe("regroupement intelligent", () => {
+    const day = { memberId: "a", weekly: { 1: [{ start: "08:00", end: "18:00" }] }, exceptions: {} };
+    const anchor = { memberId: "a", start: new Date("2026-11-02T09:00:00Z"), end: new Date("2026-11-02T10:00:00Z") }; // 10:00–11:00 heure locale
+
+    it("met en avant les créneaux proches d'un RDV existant, sans retirer les autres", () => {
+      const r = computeSlots(base({ durationMin: 60, members: [day], busy: [anchor], grouping: { windowHours: 1, weekdays: [], anchors: [anchor] } }));
+      const grouped = r[MON]!.filter((s) => s.grouped).map((s) => s.time);
+      assert.deepEqual(grouped, ["08:00", "09:00", "11:00", "12:00"]);
+      assert.equal(r[MON]!.length, 9);
+    });
+
+    it("ne s'applique qu'aux jours choisis", () => {
+      const r = computeSlots(base({ durationMin: 60, members: [day], busy: [anchor], grouping: { windowHours: 1, weekdays: [2], anchors: [anchor] } }));
+      assert.equal(r[MON]!.some((s) => s.grouped), false);
+    });
+  });
 });

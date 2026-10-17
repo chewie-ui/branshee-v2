@@ -12,6 +12,10 @@ export type ExceptionRow = { id: string; date: string; label: string; who: strin
 
 export function ExceptionForm({ targets, today }: { targets: { value: string; label: string }[]; today: string }) {
   const [type, setType] = useState<"closed" | "hours">("closed");
+  // Plusieurs personnes à la fois (ex. formation de deux kinés) ; « Tout l'établissement » est exclusif.
+  const [who, setWho] = useState<string[]>([targets[0]?.value ?? ""]);
+  const toggleWho = (v: string) =>
+    setWho((cur) => (v === "" ? [""] : cur.includes(v) ? (cur.filter((x) => x !== v).length ? cur.filter((x) => x !== v) : cur) : [...cur.filter((x) => x !== ""), v]));
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [pending, start] = useTransition();
@@ -19,7 +23,8 @@ export function ExceptionForm({ targets, today }: { targets: { value: string; la
   function submit(formData: FormData) {
     setError(null);
     setOk(false);
-    const input = Object.fromEntries(["memberId", "from", "to", "type", "start", "end", "reason"].map((k) => [k, String(formData.get(k) ?? "")]));
+    const input = Object.fromEntries(["from", "to", "type", "start", "end", "reason"].map((k) => [k, String(formData.get(k) ?? "")]));
+    input.memberIds = who.join(",");
     if (!input.to) input.to = input.from!;
     start(async () => {
       const res = await addException(input);
@@ -31,15 +36,18 @@ export function ExceptionForm({ targets, today }: { targets: { value: string; la
   return (
     <form action={submit} className="space-y-4 p-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Pour qui" htmlFor="ex-member">
-          <Select id="ex-member" name="memberId" defaultValue={targets[0]?.value}>
-            {targets.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {targets.length > 1 ? (
+          <fieldset className="sm:col-span-2">
+            <legend className="mb-2 text-sm font-medium">Pour qui</legend>
+            <div className="flex flex-wrap gap-2">
+              {targets.map((t) => (
+                <button key={t.value || "all"} type="button" aria-pressed={who.includes(t.value)} onClick={() => toggleWho(t.value)} className={`rounded-full border px-3 py-1.5 text-sm font-medium ${who.includes(t.value) ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border bg-surface text-muted hover:text-text"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
         <Field label="Type" htmlFor="ex-type">
           <Select id="ex-type" name="type" value={type} onChange={(e) => setType(e.target.value as "closed" | "hours")}>
             <option value="closed">Fermé / congé</option>

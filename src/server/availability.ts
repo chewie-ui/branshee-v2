@@ -65,7 +65,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
   const windowEnd = new Date(sorted.at(-1)! + "T00:00:00Z");
   windowEnd.setUTCDate(windowEnd.getUTCDate() + 2);
   const busyRows = await db
-    .select({ memberId: appointments.memberId, start: appointments.startsAt, end: appointments.endsAt })
+    .select({ memberId: appointments.memberId, start: appointments.startsAt, end: appointments.endsAt, kind: appointments.kind, status: appointments.status })
     .from(appointments)
     .where(
       and(
@@ -80,8 +80,8 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
 
   // Cours collectifs qui bloquent les RDV individuels de leurs animateurs (séances enregistrées et récurrentes).
   const sessionRows = await groupBusy(businessId, ids, { from: windowStart, to: windowEnd }, biz.timezone);
-  busyRows.push(...sessionRows);
-  const busy = busyRows.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
+  const allBusy: { memberId: string | null; start: Date; end: Date }[] = [...busyRows, ...sessionRows];
+  const busy = allBusy.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
 
   // Plages propres à la prestation (aucune = toutes les heures d'ouverture).
   const windowRows = await db.select().from(serviceHours).where(eq(serviceHours.serviceId, serviceId));
@@ -91,8 +91,15 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     for (const w of windowRows) (serviceWindows[w.weekday] ??= []).push({ start: hhmm(w.startTime), end: hhmm(w.endTime) });
   }
 
+  const sg = settings.smartGrouping;
+  const grouping =
+    sg.enabled && !params.ignoreOnlineRules
+      ? { windowHours: sg.windowHours, weekdays: sg.weekdays, anchors: busyRows.filter((b): b is typeof b & { memberId: string } => !!b.memberId && b.kind === "appointment" && b.status === "confirmed").map((b) => ({ memberId: b.memberId, start: b.start, end: b.end })) }
+      : null;
+
   return computeSlots({
     serviceWindows,
+    grouping,
     timezone: biz.timezone,
     days: sorted,
     now: params.now ?? new Date(),

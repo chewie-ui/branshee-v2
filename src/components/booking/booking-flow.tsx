@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock, MapPin, UserRound, Users } from "lucide-react";
+import { ArrowLeft, BellRing, Check, ChevronLeft, ChevronRight, Clock, MapPin, Star, UserRound, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
-import { createPublicBooking, getPublicSlots, type PublicDay } from "@/server/actions/booking";
+import { createPublicBooking, getPublicSlots, joinWaitlist, type PublicDay } from "@/server/actions/booking";
 import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sessions";
 import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
@@ -67,6 +67,7 @@ export function BookingFlow({ data, today }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const tz = data.business.timezone;
   const style = data.categoryStyle;
+  const waitlistOn = !!settings?.waitlistEnabled;
   const [catFilter, setCatFilter] = useState("all");
 
   const service = services.find((s) => s.id === serviceId) ?? null;
@@ -413,7 +414,7 @@ export function BookingFlow({ data, today }: Props) {
                   <button
                     key={d.date}
                     type="button"
-                    disabled={!available || loadingSlots}
+                    disabled={(!available && !waitlistOn) || loadingSlots}
                     onClick={() => { setDay(d.date); setTime(null); }}
                     aria-pressed={selected}
                     aria-label={`${LONG.format(utc(d.date))}${available ? `, ${d.slots.length} créneaux` : ", complet"}`}
@@ -435,9 +436,14 @@ export function BookingFlow({ data, today }: Props) {
             {loadingSlots ? (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <span key={i} className="h-10 animate-pulse rounded-lg bg-surface-muted" />)}</div>
             ) : days && !day ? (
-              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucun créneau libre cette semaine. Essayez la semaine suivante.</p>
+              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucun créneau libre cette semaine. Essayez la semaine suivante{waitlistOn ? ", ou choisissez un jour pour être prévenu si une place se libère" : ""}.</p>
+            ) : day && slotsOfDay.length === 0 && waitlistOn && service ? (
+              <WaitlistForm slug={data.business.slug} serviceId={service.id} memberId={memberId} day={day} dayLabel={cap(LONG.format(utc(day)))} />
             ) : (
               <div className="space-y-4">
+                {slotsOfDay.some((x) => x.grouped) ? (
+                  <p className="flex items-center gap-1.5 text-sm text-muted"><Star className="size-4 fill-current text-warning" aria-hidden="true" />Créneaux conseillés</p>
+                ) : null}
                 {periods.map((p) => (
                   <div key={p.label}>
                     <p className="mb-2 text-sm font-medium text-muted">{p.label}</p>
@@ -447,9 +453,11 @@ export function BookingFlow({ data, today }: Props) {
                           key={s.time}
                           type="button"
                           onClick={() => { setTime(s.time); setError(null); setStep("details"); }}
-                          className={cn("h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
+                          className={cn("relative h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : s.grouped ? "border-warning/60 bg-warning-soft hover:border-accent hover:text-accent" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
+                          aria-label={s.grouped ? `${s.time}, créneau conseillé` : undefined}
                         >
                           {s.time}
+                          {s.grouped ? <Star className="absolute top-1 right-1 size-2.5 fill-current text-warning" aria-hidden="true" /> : null}
                         </button>
                       ))}
                     </div>
@@ -554,5 +562,36 @@ export function BookingFlow({ data, today }: Props) {
         </form>
       ) : null}
     </div>
+  );
+}
+
+/** Jour complet : « Me prévenir si une place se libère ». */
+function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: string; serviceId: string; memberId: string | null; day: string; dayLabel: string }) {
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  if (done) return <p className="rounded-lg bg-success-soft p-4 text-sm text-success" role="status">C&apos;est noté : vous recevrez un email si une place se libère le {dayLabel.toLowerCase()}.</p>;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        start(async () => {
+          const r = await joinWaitlist({ slug, serviceId, memberId, date: day, name: String(fd.get("wl-name") ?? ""), email: String(fd.get("wl-email") ?? ""), website: String(fd.get("website") ?? "") });
+          if (r.ok) setDone(true);
+          else setError(r.error);
+        });
+      }}
+      className="space-y-3 rounded-lg border border-border p-4"
+    >
+      <p className="flex items-start gap-2 text-sm"><BellRing className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>{dayLabel} est complet. Laissez votre email : nous vous prévenons si une place se libère.</span></p>
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Input name="wl-name" placeholder="Votre nom" aria-label="Votre nom" required autoComplete="name" />
+        <Input name="wl-email" type="email" placeholder="Votre email" aria-label="Votre email" required autoComplete="email" />
+      </div>
+      {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+      <Button type="submit" size="sm" loading={pending}>Me prévenir</Button>
+    </form>
   );
 }

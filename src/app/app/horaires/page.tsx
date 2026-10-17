@@ -24,7 +24,7 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
   const today = format(zoned(new Date(), tz), "yyyy-MM-dd");
 
   const [[settings], team] = await Promise.all([
-    db.select({ scheduleMode: bookingSettings.scheduleMode }).from(bookingSettings).where(eq(bookingSettings.businessId, bid)),
+    db.select({ scheduleMode: bookingSettings.scheduleMode, slotIntervalMin: bookingSettings.slotIntervalMin }).from(bookingSettings).where(eq(bookingSettings.businessId, bid)),
     db
       .select({ id: members.id, name: members.displayName, canManageOwnTimeOff: members.canManageOwnTimeOff })
       .from(members)
@@ -50,6 +50,14 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
     .orderBy(asc(weeklyHours.weekday), asc(weeklyHours.startTime));
   const week: Record<number, { start: string; end: string }[]> = {};
   for (const h of hours) (week[h.weekday] ??= []).push({ start: hhmm(h.startTime), end: hhmm(h.endTime) });
+
+  // Résumé de la semaine type : jours ouverts, heures, créneaux théoriques.
+  const minutesOf = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const weekMin = Object.values(week).flat().reduce((n, r) => n + Math.max(0, minutesOf(r.end) - minutesOf(r.start)), 0);
+  const openDays = Object.values(week).filter((r) => r.length).length;
+  const interval = settings?.slotIntervalMin ?? 30;
+  const slotsPerWeek = Object.values(week).flat().reduce((n, r) => n + Math.max(0, Math.floor((minutesOf(r.end) - minutesOf(r.start)) / interval)), 0);
+  const fmtH = (m: number) => `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, "0") : ""}`;
 
   // Congés et fermetures à venir, et à qui l'utilisateur peut en ajouter.
   const exRows = await db.select().from(scheduleExceptions).where(and(eq(scheduleExceptions.businessId, bid), gte(scheduleExceptions.date, today))).orderBy(asc(scheduleExceptions.date)).limit(200);
@@ -104,6 +112,12 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
               ))}
             </div>
           ) : null}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-surface-muted px-5 py-3 text-sm">
+            <span><strong className="tabular-nums">{openDays}</strong> jour{openDays > 1 ? "s" : ""} ouvert{openDays > 1 ? "s" : ""}</span>
+            <span><strong className="tabular-nums">{fmtH(weekMin)}</strong> par semaine</span>
+            <span title={`Départs possibles toutes les ${interval} min`}>≈ <strong className="tabular-nums">{slotsPerWeek}</strong> créneaux de {interval} min</span>
+            <Link href={`/${ctx.business.slug}`} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">Voir comme un client ↗</Link>
+          </div>
           <WeeklyHoursEditor key={`${mode}-${editingMemberId}`} memberId={editingMemberId} initial={week} canEdit={canEditWeek} />
         </Card>
 

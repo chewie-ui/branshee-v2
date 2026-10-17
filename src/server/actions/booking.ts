@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, appointments, customers } from "@/db/schema";
+import { activityLogs, appointments, customers, waitlistEntries } from "@/db/schema";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyBookingCreated } from "@/server/notifications";
@@ -28,7 +28,7 @@ function nextDays(from: string, count: number) {
   return out;
 }
 
-export type PublicDay = { date: string; slots: { time: string; memberIds: string[] }[] };
+export type PublicDay = { date: string; slots: { time: string; memberIds: string[]; grouped?: boolean }[] };
 
 /** Créneaux libres d'une prestation sur quelques jours (page publique, sans connexion). */
 export async function getPublicSlots(slug: string, serviceId: string, memberId: string | null, fromDay: string, count = 7): Promise<PublicDay[]> {
@@ -42,7 +42,7 @@ export async function getPublicSlots(slug: string, serviceId: string, memberId: 
 
   const days = nextDays(fromDay, count);
   const slots = await getAvailableSlots({ businessId: data.business.id, serviceId, memberId: memberId ?? undefined, days });
-  return days.map((date) => ({ date, slots: (slots[date] ?? []).map((s) => ({ time: s.time, memberIds: s.memberIds })) }));
+  return days.map((date) => ({ date, slots: (slots[date] ?? []).map((s) => ({ time: s.time, memberIds: s.memberIds, ...(s.grouped ? { grouped: true } : {}) })) }));
 }
 
 const bookingSchema = z.object({
@@ -153,3 +153,27 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
 }
 
 class BlockedError extends Error {}
+
+const waitlistSchema = z.object({
+  slug: z.string().min(1).max(80),
+  serviceId: z.uuid(),
+  memberId: z.uuid().nullable(),
+  date: isoDay,
+  name: z.string().trim().min(1, "Indiquez votre nom.").max(120),
+  email: z.email({ message: "Adresse email invalide." }).transform((e) => e.toLowerCase()),
+  website: z.string().max(0).optional(),
+});
+
+/** « Me prévenir si une place se libère » sur un jour complet. */
+export async function joinWaitlist(input: z.input<typeof waitlistSchema>): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!rateLimit(`waitlist:${await ip()}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de demandes. Réessayez plus tard." };
+  const parsed = waitlistSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+  const v = parsed.data;
+  const data = await getPublicBusiness(v.slug);
+  if (!data?.settings?.waitlistEnabled || data.business.pausedAt) return { ok: false, error: "La liste d'attente n'est pas disponible." };
+  const service = data.services.find((s) => s.id === v.serviceId);
+  if (!service) return { ok: false, error: "Prestation introuvable." };
+  await db.insert(waitlistEntries).values({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId && service.memberIds.includes(v.memberId) ? v.memberId : null, date: v.date, name: v.name, email: v.email }).onConflictDoNothing();
+  return { ok: true };
+}
