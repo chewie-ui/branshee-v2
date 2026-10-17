@@ -1,14 +1,15 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { members, users } from "@/db/schema";
+import { businesses, members, users } from "@/db/schema";
 import { BUSINESS_COOKIE } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
-import { requireUser } from "@/server/context";
+import { requireContext, requireUser } from "@/server/context";
 
 export type CreateBusinessState = { fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -41,4 +42,18 @@ export async function switchBusiness(businessId: string) {
   if (!m) return;
   (await cookies()).set(BUSINESS_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   redirect("/app");
+}
+
+/** Checklist « Bien démarrer » : le lien a été copié / partagé. */
+export async function markLinkShared() {
+  const ctx = await requireContext();
+  await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ linkSharedAt: new Date().toISOString() })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
+  revalidatePath("/app");
+}
+
+/** Masque la checklist « Bien démarrer ». */
+export async function dismissOnboarding() {
+  const ctx = await requireContext();
+  await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ dismissedAt: new Date().toISOString() })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
+  revalidatePath("/app");
 }

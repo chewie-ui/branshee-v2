@@ -66,7 +66,16 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
   const busyRows = await db
     .select({ memberId: appointments.memberId, start: appointments.startsAt, end: appointments.endsAt })
     .from(appointments)
-    .where(and(eq(appointments.businessId, businessId), inArray(appointments.memberId, ids), ne(appointments.status, "cancelled"), lt(appointments.startsAt, windowEnd), gte(appointments.endsAt, windowStart)));
+    .where(
+      and(
+        eq(appointments.businessId, businessId),
+        // Un blocage sans membre (« tout l'établissement ») bloque toute l'équipe.
+        or(inArray(appointments.memberId, ids), and(isNull(appointments.memberId), eq(appointments.kind, "block"))),
+        ne(appointments.status, "cancelled"),
+        lt(appointments.startsAt, windowEnd),
+        gte(appointments.endsAt, windowStart),
+      ),
+    );
 
   // Séances de cours collectifs animées par un membre : elles bloquent ses RDV individuels (option de la prestation).
   const sessionRows = await db
@@ -75,6 +84,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     .innerJoin(services, eq(services.id, groupSessions.serviceId))
     .where(and(eq(services.businessId, businessId), eq(services.blocksIndividual, true), inArray(groupSessions.memberId, ids), isNull(groupSessions.cancelledAt), lt(groupSessions.startsAt, windowEnd), gte(groupSessions.endsAt, windowStart)));
   busyRows.push(...sessionRows);
+  const busy = busyRows.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
 
   // Plages propres à la prestation (aucune = toutes les heures d'ouverture).
   const windowRows = await db.select().from(serviceHours).where(eq(serviceHours.serviceId, serviceId));
@@ -100,6 +110,6 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     },
     members: availability,
     businessExceptions: exceptionsFor(null),
-    busy: busyRows.filter((b): b is { memberId: string; start: Date; end: Date } => b.memberId !== null),
+    busy,
   });
 }

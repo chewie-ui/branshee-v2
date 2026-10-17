@@ -10,24 +10,18 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 
 ---
 
-## Lot A — Agenda et rendez-vous (pro)
-- ✅ Vue semaine, une colonne par membre, filtre par membre
-- ❌ Vue mois · densité confortable / compacte
-- ❌ Clic (ou glisser) sur la grille → « Rendez-vous » ou « Absence » pré-remplis à cette heure
-- ✅ Nouveau RDV : client existant ou nouveau, prestation, membre, créneaux libres
-- ❌ Nouveau RDV : plusieurs dates d'un coup (« Ajouter cette date »), membre « au hasard », heure de fin / durée libres, saisie rapide d'heure (« 9 » ou « 0930 »)
-- ❌ Bloquer un créneau : date, heures, membre ou tout l'établissement, commentaire (« dentiste, pause ») ; modifier / supprimer un blocage
-- ❌ Modifier un RDV : date, heure de début / fin, durée, membre, avec détection de conflits ; **« mot au client »** joint à l'email de déplacement
-- ❌ Supprimer / restaurer un RDV
-- ❌ Envoyer un rappel manuel
-- ✅ Changer le membre, note interne, absence justifiée / non justifiée
-- 🔶 Absence non justifiée : encaisser la pénalité (dépend des paiements, lot H)
-- 🔶 Demandes : confirmer ✅ · refuser **avec motif envoyé au client** ❌ · demandes expirées « libérer le créneau » ❌
-- ❌ Historique : filtres statut (confirmé, terminé, annulé, absent), période (7 / 30 / 90 j / tout), membre, recherche, pagination, sélection multiple + suppression
-- ❌ Paiement d'un RDV modifiable à la main (mode, statut)
-- ❌ Compte client lié affiché sur le RDV
-- 🔶 Tableau de bord : RDV du jour ✅, demandes ✅ · prochains RDV, dernières réservations, activité récente, stats avec évolution, checklist « Bien démarrer » ❌
-- ❌ Événements Google Agenda affichés comme indisponibles (lot L)
+## Lot A — Agenda et rendez-vous ✅
+- ✅ Vue semaine (une colonne par membre, filtre par membre) · vue mois · densité confortable / compacte
+- ✅ Clic sur la grille → « Rendez-vous » ou « Bloquer ce créneau » pré-remplis (heure au quart d'heure, membre de la colonne)
+- ✅ Nouveau RDV : recherche du client, nouveau client (prénom / nom), prestation facultative, membre « le premier disponible », durée libre, saisie rapide d'heure (« 9 », « 0930 », « 14h30 »), plusieurs dates d'un coup
+- ✅ Bloquer un créneau : membre ou tout l'établissement, commentaire ; modifier / supprimer
+- ✅ Modifier un RDV : date, heure, durée, membre, conflits détectés, **mot au client** dans l'email « rendez-vous déplacé »
+- ✅ Annuler / restaurer, rappel manuel, paiement noté à la main, compte client lié affiché
+- ✅ Demandes : refus avec motif envoyé au client, demandes expirées à libérer (une par une ou toutes), page « Demandes » dans le menu dès qu'il y en a
+- ✅ Historique : recherche, statut, période, membre, pagination, sélection multiple + suppression
+- ✅ Tableau de bord : stats avec évolution, prochains RDV, dernières réservations, activité récente, checklist « Bien démarrer »
+- ✅ Vocabulaire « patients » pour les métiers de santé (menu, tableau de bord, formulaires)
+- ⏳ Encaisser la pénalité d'une absence non excusée → lot H (paiements) · événements Google Agenda → lot L
 
 ## Lot B — Clients (CRM)
 - 🔶 Liste : recherche ✅ · filtres période (à venir, 7/30/90 j) et statut, colonnes (téléphone, praticien, nb RDV, dernier RDV, statut), sélection multiple + suppression ❌

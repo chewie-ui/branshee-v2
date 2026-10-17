@@ -1,41 +1,51 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, Mail, MessageSquare, Phone, UserRound } from "lucide-react";
-import { and, eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import { ArrowLeft, BadgeCheck, Clock, Mail, MessageSquare, Phone, UserRound } from "lucide-react";
+import { and, asc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { z } from "zod";
 import { db } from "@/db";
-import { appointmentPayments, appointments, members } from "@/db/schema";
+import { appointmentPayments, appointments, customers, members, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl } from "@/components/app/appointment-actions";
+import { PaymentForm, ReminderButton, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import { clientWord } from "@/lib/terminology";
 import { formatDay, formatPrice, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 
 export const metadata: Metadata = { title: "Rendez-vous" };
 
 const PAY_METHOD: Record<string, string> = { online: "En ligne", on_site: "Sur place", bank_transfer: "Virement", paypal: "PayPal", cash: "Espèces", none: "—" };
-const PAY_STATUS: Record<string, string> = { none: "—", authorized: "Autorisé", paid: "Payé", refunded: "Remboursé", partial: "Partiel", penalty: "Pénalité", failed: "Échec" };
+const PAY_STATUS: Record<string, string> = { none: "Non payé", authorized: "Autorisé", paid: "Payé", refunded: "Remboursé", partial: "Payé en partie", penalty: "Pénalité", failed: "Échec" };
 
 export default async function AppointmentPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext("appointments.view");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
   const [row] = await db
-    .select({ a: appointments, memberName: members.displayName, pay: appointmentPayments })
+    .select({ a: appointments, memberName: members.displayName, pay: appointmentPayments, account: { email: users.email, name: users.fullName } })
     .from(appointments)
     .leftJoin(members, eq(members.id, appointments.memberId))
     .leftJoin(appointmentPayments, eq(appointmentPayments.appointmentId, appointments.id))
+    .leftJoin(customers, eq(customers.id, appointments.customerId))
+    .leftJoin(users, eq(users.id, customers.userId))
     .where(and(eq(appointments.id, id.data), eq(appointments.businessId, ctx.business.id)));
   if (!row) notFound();
-  const { a, memberName, pay } = row;
+  const { a, memberName, pay, account } = row;
+  if (a.kind === "block") redirect(`/app/agenda/bloquer?id=${a.id}`);
+
   const tz = ctx.business.timezone;
-  const past = a.endsAt <= new Date();
-  const isBlock = a.kind === "block";
+  const now = new Date();
+  const past = a.endsAt <= now;
   const week = format(zoned(a.startsAt, tz), "yyyy-MM-dd");
+  const term = clientWord(ctx.business.businessType);
+  const canManage = ctx.can("appointments.manage");
+  const team = canManage ? await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"))).orderBy(asc(members.createdAt)) : [];
+  const durationMin = Math.round((a.endsAt.getTime() - a.startsAt.getTime()) / 60000);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -46,8 +56,9 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
 
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{isBlock ? (a.internalNote || "Créneau bloqué") : (a.contactName ?? "Rendez-vous")}</h1>
-          {isBlock ? <Badge>Bloqué</Badge> : <StatusBadge status={a.status} />}
+          <h1 className="text-2xl font-semibold tracking-tight">{a.contactName ?? "Rendez-vous"}</h1>
+          {past && a.status === "confirmed" ? <Badge>Terminé</Badge> : <StatusBadge status={a.status} />}
+          {a.noShow ? <Badge tone="warning">Absent{a.noShowReason === "justified" ? " (excusé)" : ""}</Badge> : null}
           {a.overbooked ? <Badge tone="warning">Surréservation</Badge> : null}
         </div>
         <p className="mt-1 flex items-center gap-2 text-sm text-muted">
@@ -57,52 +68,74 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="space-y-6">
-        {a.status === "pending" && ctx.can("appointments.manage") ? (
+        {a.status === "pending" && canManage ? (
           <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium">Cette demande attend votre réponse.</p>
-            <RequestActions id={a.id} />
+            <p className="text-sm font-medium">{a.startsAt < now ? "Cette demande a expiré : sa date est passée." : "Cette demande attend votre réponse."}</p>
+            <RequestActions id={a.id} expired={a.startsAt < now} />
           </Card>
         ) : null}
 
-        {!isBlock ? (
-          <Card>
-            <CardHeader title="Détails" />
-            <dl className="space-y-3 p-5 text-sm">
-              <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Prestation</dt><dd className="font-medium">{a.serviceName ?? "—"}</dd></div>
-              <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Avec</dt><dd>{memberName ?? "—"}</dd></div>
-              <div className="flex gap-3">
-                <dt className="w-28 shrink-0 text-muted">Client</dt>
-                <dd className="space-y-1">
-                  {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName}</Link> : <p>{a.contactName}</p>}
-                  {a.contactPhone ? <a href={`tel:${a.contactPhone}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Phone className="size-4" aria-hidden="true" />{a.contactPhone}</a> : null}
-                  {a.contactEmail ? <a href={`mailto:${a.contactEmail}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Mail className="size-4" aria-hidden="true" />{a.contactEmail}</a> : null}
-                </dd>
-              </div>
-              {pay ? (
-                <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Paiement</dt><dd>{formatPrice(pay.amountCents)} · {PAY_METHOD[pay.method]} · {PAY_STATUS[pay.status]}</dd></div>
-              ) : null}
-            </dl>
-            {a.customerMessage || a.formAnswers.length ? (
-              <div className="space-y-3 border-t border-border p-5 text-sm">
-                {a.customerMessage ? (
-                  <p className="flex gap-2"><MessageSquare className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" /><span className="whitespace-pre-line">{a.customerMessage}</span></p>
-                ) : null}
-                {a.formAnswers.map((f, i) => (
-                  <div key={i}><p className="text-muted">{f.question}</p><p className="font-medium">{f.answer}</p></div>
-                ))}
-              </div>
+        <Card>
+          <CardHeader title="Détails" />
+          <dl className="space-y-3 p-5 text-sm">
+            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Prestation</dt><dd className="font-medium">{a.serviceName ?? "Aucune prestation"}</dd></div>
+            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Avec</dt><dd>{memberName ?? "Non assigné"}</dd></div>
+            <div className="flex gap-3">
+              <dt className="w-28 shrink-0 text-muted first-letter:uppercase">{term}</dt>
+              <dd className="min-w-0 space-y-1">
+                {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName}</Link> : <p>{a.contactName}</p>}
+                {a.contactPhone ? <a href={`tel:${a.contactPhone}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Phone className="size-4" aria-hidden="true" />{a.contactPhone}</a> : null}
+                {a.contactEmail ? <a href={`mailto:${a.contactEmail}`} className="flex items-center gap-1.5 break-all text-accent hover:text-accent-hover"><Mail className="size-4 shrink-0" aria-hidden="true" />{a.contactEmail}</a> : null}
+                {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte Branshee : {account.email}</p> : null}
+              </dd>
+            </div>
+            {pay && pay.method !== "none" ? (
+              <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Paiement</dt><dd>{formatPrice(pay.amountCents)} · {PAY_METHOD[pay.method]} · {PAY_STATUS[pay.status]}{pay.penaltyCents ? ` · frais ${formatPrice(pay.penaltyCents)}` : ""}</dd></div>
             ) : null}
+          </dl>
+          {a.customerMessage || a.formAnswers.length ? (
+            <div className="space-y-3 border-t border-border p-5 text-sm">
+              {a.customerMessage ? (
+                <p className="flex gap-2"><MessageSquare className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" /><span className="whitespace-pre-line">{a.customerMessage}</span></p>
+              ) : null}
+              {a.formAnswers.map((f, i) => (
+                <div key={i}><p className="text-muted">{f.question}</p><p className="font-medium">{f.answer}</p></div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
+
+        {canManage && a.status !== "cancelled" && !a.groupSessionId ? (
+          <Card className="space-y-4 p-5">
+            <RescheduleForm
+              id={a.id}
+              initial={{ date: week, start: formatTime(a.startsAt, tz), durationMin, memberId: a.memberId ?? "" }}
+              members={team}
+              hasEmail={!!a.contactEmail}
+              clientTerm={term}
+            />
+            {!past && a.status === "confirmed" && a.contactEmail ? <ReminderButton id={a.id} sentAt={a.manualReminderSentAt ? `${formatDay(a.manualReminderSentAt, tz, "d MMM")} à ${formatTime(a.manualReminderSentAt, tz)}` : null} /> : null}
           </Card>
         ) : null}
 
-        {ctx.can("appointments.manage") ? (
+        {canManage ? (
           <Card className="space-y-5 p-5">
-            {!isBlock && past && a.status === "confirmed" ? <NoShowControl id={a.id} noShow={a.noShow} reason={a.noShowReason} /> : null}
-            <InternalNote id={a.id} initial={isBlock ? "" : (a.internalNote ?? "")} />
+            {past && a.status === "confirmed" ? <NoShowControl id={a.id} noShow={a.noShow} reason={a.noShowReason} /> : null}
+            <InternalNote id={a.id} initial={a.internalNote ?? ""} />
           </Card>
         ) : null}
 
-        {a.status !== "cancelled" && !past && ctx.can("appointments.cancel") ? <CancelAppointmentButton id={a.id} isBlock={isBlock} /> : null}
+        {canManage ? (
+          <Card>
+            <CardHeader title="Paiement" description="À noter à la main pour un paiement sur place, un virement reçu…" />
+            <div className="p-5">
+              <PaymentForm id={a.id} initial={{ method: pay?.method ?? "none", status: pay?.status ?? "none", amount: pay?.amountCents ? (pay.amountCents / 100).toString().replace(".", ",") : "" }} />
+            </div>
+          </Card>
+        ) : null}
+
+        {a.status === "cancelled" && canManage ? <RestoreButton id={a.id} /> : null}
+        {a.status !== "cancelled" && !past && ctx.can("appointments.cancel") ? <CancelAppointmentButton id={a.id} isBlock={false} /> : null}
       </div>
     </div>
   );

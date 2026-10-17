@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { addDays, format, startOfDay, startOfWeek } from "date-fns";
+import { addDays, endOfMonth, endOfWeek, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 
 /** Toutes les dates affichées sont dans le fuseau de l'établissement. */
@@ -15,6 +15,14 @@ export function dayBounds(day: Date, timezone: string) {
 export function weekBounds(day: Date, timezone: string) {
   const start = startOfWeek(new TZDate(day, timezone), { weekStartsOn: 1 });
   return { start: new Date(start), end: new Date(addDays(start, 7)) };
+}
+
+/** Grille d'un mois : du lundi précédant le 1er au dimanche suivant le dernier jour. */
+export function monthGridBounds(day: Date, timezone: string) {
+  const z = new TZDate(day, timezone);
+  const start = startOfWeek(startOfMonth(z), { weekStartsOn: 1 });
+  const end = addDays(endOfWeek(endOfMonth(z), { weekStartsOn: 1 }), 1);
+  return { start: new Date(start), end: new Date(startOfDay(end)), monthStart: new Date(startOfMonth(z)) };
 }
 
 export function formatTime(date: Date, timezone: string) {

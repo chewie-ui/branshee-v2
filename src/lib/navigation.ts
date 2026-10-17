@@ -3,7 +3,7 @@ import type { PermissionKey } from "@/lib/permissions";
 export type NavItem = {
   href: string;
   label: string;
-  icon: "today" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help";
+  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help";
   /** Permission requise pour voir l'entrée (absente = visible par tous les membres). */
   permission?: PermissionKey;
 };
@@ -13,7 +13,9 @@ export const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
     label: "Quotidien",
     items: [
       { href: "/app", label: "Aujourd'hui", icon: "today" },
+      { href: "/app/demandes", label: "Demandes", icon: "inbox", permission: "appointments.manage" },
       { href: "/app/agenda", label: "Agenda", icon: "calendar", permission: "appointments.view" },
+      { href: "/app/historique", label: "Historique", icon: "history", permission: "appointments.view" },
       { href: "/app/clients", label: "Clients", icon: "users", permission: "customers.view" },
     ],
   },

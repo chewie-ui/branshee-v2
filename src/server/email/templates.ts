@@ -120,7 +120,7 @@ export const emails = {
     };
   },
 
-  requestRefused(a: AppointmentInfo, bookingUrl: string) {
+  requestRefused(a: AppointmentInfo, bookingUrl: string, reason?: string | null) {
     return {
       subject: `Rendez-vous non disponible — ${a.businessName}`,
       ...render({
@@ -129,6 +129,7 @@ export const emails = {
         intro: `Bonjour ${firstName(a.customerName)}, ${a.businessName} n'a malheureusement pas pu accepter votre demande pour ce créneau.`,
         details: apptDetails(a),
         cta: { label: "Choisir un autre créneau", url: bookingUrl },
+        note: reason ? `Message de ${a.businessName} : « ${reason} »` : undefined,
         footer: clientFooter(a),
       }),
     };
@@ -144,6 +145,21 @@ export const emails = {
         details: apptDetails(a),
         cta: { label: "Reprendre rendez-vous", url: bookingUrl },
         note: customMessage ?? undefined,
+        footer: clientFooter(a),
+      }),
+    };
+  },
+
+  rescheduled(a: AppointmentInfo, previousWhen: string, message?: string | null) {
+    return {
+      subject: `Rendez-vous déplacé — ${a.businessName}`,
+      ...render({
+        preheader: `Nouveau créneau : ${a.when}`,
+        title: "Votre rendez-vous a été déplacé",
+        intro: `Bonjour ${firstName(a.customerName)}, ${a.businessName} a déplacé votre rendez-vous initialement prévu ${previousWhen.charAt(0).toLowerCase() + previousWhen.slice(1)}.`,
+        details: apptDetails(a),
+        cta: { label: "Voir ou annuler le rendez-vous", url: a.manageUrl },
+        note: message ? `Message de ${a.businessName} : « ${message} »` : "Ce nouveau créneau ne vous convient pas ? Annulez depuis le lien ci-dessus.",
         footer: clientFooter(a),
       }),
     };

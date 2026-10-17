@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Blocks, CalendarDays, Check, ChevronsUpDown, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
+  Blocks, CalendarDays, Check, History, Inbox, ChevronsUpDown, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
 } from "lucide-react";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -14,6 +14,8 @@ import { Avatar } from "@/components/ui/avatar";
 
 const ICONS: Record<NavItem["icon"], typeof Sun> = {
   today: Sun,
+  inbox: Inbox,
+  history: History,
   calendar: CalendarDays,
   users: UserRound,
   scissors: Scissors,
@@ -121,7 +123,7 @@ function SidebarContent({ groups, footer, business, businesses, user, pendingCou
             <ul className="space-y-0.5">
               {group.items.map((item) => (
                 <li key={item.href}>
-                  <NavLink item={item} pathname={pathname} badge={item.href === "/app" ? pendingCount : undefined} />
+                  <NavLink item={item} pathname={pathname} badge={item.href === "/app/demandes" ? pendingCount : undefined} />
                 </li>
               ))}
             </ul>

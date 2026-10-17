@@ -69,11 +69,11 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
   });
 }
 
-export function notifyRequestDecision(appointmentId: string, accepted: boolean) {
+export function notifyRequestDecision(appointmentId: string, accepted: boolean, reason?: string | null) {
   return safely("décision", async () => {
     const row = await load(appointmentId);
     if (!row) return;
-    await toClient(row, accepted ? "request_accepted" : "request_refused", accepted ? emails.requestAccepted(row.info, row.settings?.confirmationMessage) : emails.requestRefused(row.info, row.bookingUrl));
+    await toClient(row, accepted ? "request_accepted" : "request_refused", accepted ? emails.requestAccepted(row.info, row.settings?.confirmationMessage) : emails.requestRefused(row.info, row.bookingUrl, reason));
   });
 }
 
@@ -95,6 +95,26 @@ export function notifyCancelledByBusiness(appointmentId: string) {
     if (!row) return;
     await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.info, row.bookingUrl, row.settings?.cancellationMessage));
   });
+}
+
+/** RDV déplacé par le pro : le client reçoit le nouveau créneau, et le mot du pro s'il y en a un. */
+export function notifyRescheduled(appointmentId: string, previousStart: Date, message?: string | null) {
+  return safely("déplacement", async () => {
+    const row = await load(appointmentId);
+    if (!row) return;
+    const tz = row.business.timezone;
+    const before = `le ${formatDay(previousStart, tz, "EEEE d MMMM")} à ${formatTime(previousStart, tz)}`;
+    await toClient(row, "rescheduled", emails.rescheduled(row.info, before, message));
+  });
+}
+
+/** Rappel envoyé à la main par le pro (bouton « Envoyer un rappel »). Renvoie false si le client n'a pas d'email. */
+export async function sendManualReminder(appointmentId: string) {
+  const row = await load(appointmentId);
+  if (!row || !row.a.contactEmail) return false;
+  const ok = await toClient(row, "reminder_manual", emails.reminder(row.info, row.settings?.reminderMessage));
+  if (ok) await db.update(appointments).set({ manualReminderSentAt: new Date() }).where(eq(appointments.id, appointmentId));
+  return ok;
 }
 
 /**

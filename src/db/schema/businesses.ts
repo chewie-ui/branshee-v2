@@ -54,6 +54,8 @@ export const businesses = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Position dans l'annuaire public (mise en avant décidée par le super-admin). */
     boostPosition: integer("boost_position").notNull().default(0),
+    /** Checklist « Bien démarrer » : lien partagé, checklist masquée. */
+    onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string }>().notNull().default({}),
 
     legacyId: legacyId(),
     ...timestamps,

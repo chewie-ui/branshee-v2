@@ -3,14 +3,23 @@ import { Sidebar } from "@/components/app/sidebar";
 import { NAV_FOOTER, NAV_GROUPS } from "@/lib/navigation";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
+import { clientWord } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireContext();
   const visible = (item: { permission?: Parameters<typeof ctx.can>[0] }) => !item.permission || ctx.can(item.permission);
-  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length > 0);
-  const pending = ctx.can("appointments.view") ? (await listPendingRequests(ctx.business.id, new Date())).length : 0;
+  const pending = ctx.can("appointments.manage") ? (await listPendingRequests(ctx.business.id)).length : 0;
+  const clients = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
+  const groups = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items
+      .filter(visible)
+      // « Demandes » n'apparaît que lorsqu'il y en a ; « Clients » devient « Patients » pour les métiers de santé.
+      .filter((i) => i.href !== "/app/demandes" || pending > 0)
+      .map((i) => (i.href === "/app/clients" ? { ...i, label: clients } : i)),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-dvh">

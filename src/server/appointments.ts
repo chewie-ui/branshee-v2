@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, eq, gte, isNull, lt, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, customers, groupSessions, members, services } from "@/db/schema";
 
@@ -26,7 +26,8 @@ export async function listAppointments(businessId: string, start: Date, end: Dat
   // Les participants d'un cours collectif ne sont pas listés un par un : la séance apparaît une seule fois.
   const where = [eq(appointments.businessId, businessId), gte(appointments.startsAt, start), lt(appointments.startsAt, end), isNull(appointments.groupSessionId)];
   if (!opts.includeCancelled) where.push(ne(appointments.status, "cancelled"));
-  if (opts.memberId) where.push(eq(appointments.memberId, opts.memberId));
+  // Filtre par membre : ses RDV, plus les blocages de tout l'établissement.
+  if (opts.memberId) where.push(or(eq(appointments.memberId, opts.memberId), and(isNull(appointments.memberId), eq(appointments.kind, "block")))!);
 
   const rows = await db
     .select({
@@ -54,7 +55,7 @@ export async function listAppointments(businessId: string, start: Date, end: Dat
     customerId: a.customerId,
     phone: a.contactPhone,
     internalNote: a.internalNote,
-    href: `/app/agenda/rdv/${a.id}`,
+    href: a.kind === "block" ? `/app/agenda/bloquer?id=${a.id}` : `/app/agenda/rdv/${a.id}`,
   }));
   const sessions = await listGroupSessionItems(businessId, start, end, opts);
   return [...items, ...sessions].sort((x, y) => x.startsAt.getTime() - y.startsAt.getTime());
@@ -99,8 +100,32 @@ async function listGroupSessionItems(businessId: string, start: Date, end: Date,
   });
 }
 
-export async function listPendingRequests(businessId: string, from: Date) {
-  return (await listAppointments(businessId, from, new Date(from.getTime() + 365 * 86400000))).filter((a) => a.status === "pending" && a.kind === "appointment");
+/** Demandes en attente (y compris celles dont la date est passée, à libérer). */
+export async function listPendingRequests(businessId: string) {
+  const rows = await db
+    .select({ a: appointments, memberName: members.displayName })
+    .from(appointments)
+    .leftJoin(members, eq(members.id, appointments.memberId))
+    .where(and(eq(appointments.businessId, businessId), eq(appointments.status, "pending"), eq(appointments.kind, "appointment")))
+    .orderBy(asc(appointments.startsAt));
+  return rows.map(({ a, memberName }) => ({
+    id: a.id,
+    startsAt: a.startsAt,
+    endsAt: a.endsAt,
+    title: a.contactName ?? "Client",
+    serviceName: a.serviceName,
+    color: a.serviceColor,
+    memberName,
+    email: a.contactEmail,
+    phone: a.contactPhone,
+    message: a.customerMessage,
+    customerId: a.customerId,
+  }));
+}
+
+export async function countPendingRequests(businessId: string) {
+  const [row] = await db.select({ n: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.status, "pending"), eq(appointments.kind, "appointment"), gte(appointments.startsAt, new Date())));
+  return row?.n ?? 0;
 }
 
 export async function countAppointments(businessId: string, start: Date, end: Date) {

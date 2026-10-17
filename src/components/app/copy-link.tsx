@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { markLinkShared } from "@/server/actions/business";
 
-export function CopyLink({ url }: { url: string }) {
+export function CopyLink({ url, trackShare = false }: { url: string; trackShare?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      if (trackShare) void markLinkShared();
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);

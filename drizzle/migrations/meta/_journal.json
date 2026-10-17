@@ -29,6 +29,13 @@
       "when": 1792250457886,
       "tag": "0003_service_hours",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792252152712,
+      "tag": "0004_business_onboarding",
+      "breakpoints": true
     }
   ]
 }
