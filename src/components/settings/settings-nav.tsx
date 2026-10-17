@@ -8,7 +8,7 @@ export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/etablissement", label: "Établissement", ready: true },
   { href: "/app/reglages/reservation", label: "Règles de réservation", ready: true },
   { href: "/app/reglages/notifications", label: "Notifications", ready: true },
-  { href: "/app/reglages/paiements", label: "Paiements", ready: false },
+  { href: "/app/reglages/paiements", label: "Paiements", ready: true },
   { href: "/app/reglages/integrations", label: "Intégrations", ready: false },
   { href: "/app/reglages/abonnement", label: "Abonnement", ready: false },
   { href: "/app/reglages/journal", label: "Journal d'activité", ready: true },

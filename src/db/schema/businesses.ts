@@ -133,6 +133,8 @@ export const paymentSettings = pgTable("payment_settings", {
       paypal: { enabled: false },
       qrCode: { enabled: false },
     }),
+  /** Reversement des paiements encaissés par Branshee quand le pro n'a pas de compte Stripe Connect. */
+  payout: jsonb("payout").$type<{ method?: "bank_transfer" | "paypal" | "cash" | "other"; iban?: string; bic?: string; paypalEmail?: string; other?: string }>().notNull().default({}),
   ...timestamps,
 });
 

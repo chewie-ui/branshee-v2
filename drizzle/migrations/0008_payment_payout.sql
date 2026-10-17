@@ -1,0 +1,1 @@
+ALTER TABLE "payment_settings" ADD COLUMN "payout" jsonb DEFAULT '{}'::jsonb NOT NULL;

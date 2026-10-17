@@ -8,6 +8,7 @@ import { activityLogs, appointments } from "@/db/schema";
 import { getAppointmentByToken } from "@/server/manage";
 import { notifyCancelledByCustomer, notifyRescheduledByCustomer } from "@/server/notifications";
 import { getAvailableSlots } from "@/server/availability";
+import { applyCustomerCancellation } from "@/server/payments";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { headers } from "next/headers";
 import { services } from "@/db/schema";
@@ -26,7 +27,10 @@ export async function cancelByToken(token: string): Promise<{ ok: boolean; error
   if (updated.length) {
     await db.insert(activityLogs).values({ businessId: row.a.businessId, actorName: row.a.contactName ?? "Client", action: "appointment.cancel_by_customer", description: `Annulé par le client : ${row.a.serviceName ?? "rendez-vous"}` });
     const id = row.a.id;
-    after(() => notifyCancelledByCustomer(id));
+    after(async () => {
+      await applyCustomerCancellation(id);
+      await notifyCancelledByCustomer(id);
+    });
   }
   revalidatePath(`/r/${token}`);
   return { ok: true };

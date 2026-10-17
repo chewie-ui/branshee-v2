@@ -5,7 +5,8 @@ import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, appointments, customers, waitlistEntries } from "@/db/schema";
+import { activityLogs, appointmentPayments, appointments, customers, paymentSettings, waitlistEntries } from "@/db/schema";
+import { stripe } from "@/server/payments";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyBookingCreated } from "@/server/notifications";
@@ -62,6 +63,9 @@ const bookingSchema = z.object({
   intake: z.record(z.string(), z.string().max(64)).optional(),
   /** Champ piège invisible : rempli uniquement par les robots. */
   website: z.string().max(0).optional(),
+  paymentMethod: z.enum(["online", "on_site", "bank_transfer", "paypal", "none"]).optional(),
+  paymentIntentId: z.string().regex(/^pi_\w+$/).optional(),
+  setupIntentId: z.string().regex(/^seti_\w+$/).optional(),
 });
 
 export type BookingResult = { ok: true; token: string } | { ok: false; error: string; fieldErrors?: Record<string, string>; slotTaken?: boolean };
@@ -99,10 +103,43 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
     if (a) answers.push({ question: q.label, answer: a });
   }
 
+  // ── Paiement : vérifié auprès de Stripe, jamais d'après ce qu'envoie le navigateur ──
+  const method = v.paymentMethod ?? "none";
+  const price = service.priceCents ?? 0;
+  const pay = data.payment;
+  let payment: (Partial<typeof appointmentPayments.$inferInsert> & { method: typeof method }) | null = price > 0 && method !== "none" ? { method, amountCents: price, status: "none" } : null;
+  if (pay.required && price > 0 && method !== "online") return { ok: false, error: "Le paiement en ligne est obligatoire pour cette prestation." };
+  if (method === "online") {
+    if (!pay.online || price <= 0 || !v.paymentIntentId) return { ok: false, error: "Paiement en ligne indisponible." };
+    const pi = await stripe()?.paymentIntents.retrieve(v.paymentIntentId).catch(() => null);
+    if (!pi || pi.status !== "succeeded" || (pi.amount_received ?? 0) < price || pi.metadata.businessId !== data.business.id) {
+      return { ok: false, error: "Le paiement n'a pas pu être vérifié. Réessayez ou contactez l'établissement." };
+    }
+    // Un paiement ne sert qu'à une seule réservation.
+    const [used] = await db.select({ id: appointmentPayments.appointmentId }).from(appointmentPayments).where(eq(appointmentPayments.stripePaymentIntentId, pi.id));
+    if (used) return { ok: false, error: "Ce paiement a déjà servi pour une réservation." };
+    const pm = typeof pi.payment_method === "string" ? await stripe()!.paymentMethods.retrieve(pi.payment_method).catch(() => null) : null;
+    payment = { method, status: "paid", amountCents: pi.amount_received, stripePaymentIntentId: pi.id, cardBrand: pm?.card?.brand ?? null, cardLast4: pm?.card?.last4 ?? null, paidAt: new Date() };
+  } else if (pay.guarantee && price > 0) {
+    if (!v.setupIntentId) return { ok: false, error: "Une carte en garantie est demandée pour ce rendez-vous." };
+    const si = await stripe()?.setupIntents.retrieve(v.setupIntentId).catch(() => null);
+    if (!si || si.status !== "succeeded" || si.metadata?.businessId !== data.business.id || typeof si.payment_method !== "string") return { ok: false, error: "La carte n'a pas pu être vérifiée. Réessayez." };
+    const [used] = await db.select({ id: appointmentPayments.appointmentId }).from(appointmentPayments).where(eq(appointmentPayments.stripeSetupIntentId, si.id));
+    if (used) return { ok: false, error: "Cette carte a déjà servi pour une réservation : recommencez l'étape de paiement." };
+    const pm = await stripe()!.paymentMethods.retrieve(si.payment_method).catch(() => null);
+    payment = { method: method === "none" ? "on_site" : method, status: "authorized", amountCents: price, stripeSetupIntentId: si.id, stripeCustomerId: typeof si.customer === "string" ? si.customer : null, stripePaymentMethodId: si.payment_method, cardBrand: pm?.card?.brand ?? null, cardLast4: pm?.card?.last4 ?? null };
+  }
+  const refundIfPaid = async () => {
+    if (payment?.status === "paid" && payment.stripePaymentIntentId) await stripe()?.refunds.create({ payment_intent: payment.stripePaymentIntentId }).catch((e) => console.error("[paiement] remboursement après échec :", e));
+  };
+
   // Revérification côté serveur : le créneau doit toujours être libre selon le moteur.
   const slots = await getAvailableSlots({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId ?? undefined, days: [v.date] });
   const slot = (slots[v.date] ?? []).find((s) => s.time === v.time);
-  if (!slot) return { ok: false, error: "Ce créneau n'est plus disponible. Choisissez-en un autre.", slotTaken: true };
+  if (!slot) {
+    await refundIfPaid();
+    return { ok: false, error: `Ce créneau n'est plus disponible. Choisissez-en un autre.${payment?.status === "paid" ? " Votre paiement a été remboursé." : ""}`, slotTaken: true };
+  }
   const memberId = v.memberId ?? slot.memberIds[0]!;
 
   const fullName = `${v.firstName} ${v.lastName}`;
@@ -146,12 +183,14 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
         })
         .returning({ id: appointments.id, token: appointments.manageToken });
 
+      if (payment) await tx.insert(appointmentPayments).values({ appointmentId: appt!.id, ...payment });
       await tx.insert(activityLogs).values({ businessId: data.business.id, actorName: fullName, action: "appointment.online", description: `Réservation en ligne : ${service.name}, ${v.date} ${v.time}` });
       return appt!;
     });
     after(() => notifyBookingCreated(created.id, "online"));
     return { ok: true, token: created.token };
   } catch (error) {
+    await refundIfPaid();
     if (error instanceof BlockedError) return { ok: false, error: "La réservation en ligne n'est pas disponible. Contactez directement l'établissement." };
     const e = error as { code?: string; cause?: { code?: string } };
     if (e.code === "23P01" || e.cause?.code === "23P01") return { ok: false, error: "Ce créneau vient d'être réservé par quelqu'un d'autre. Choisissez-en un autre.", slotTaken: true };
@@ -183,4 +222,43 @@ export async function joinWaitlist(input: z.input<typeof waitlistSchema>): Promi
   if (!service) return { ok: false, error: "Prestation introuvable." };
   await db.insert(waitlistEntries).values({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId && service.memberIds.includes(v.memberId) ? v.memberId : null, date: v.date, name: v.name, email: v.email }).onConflictDoNothing();
   return { ok: true };
+}
+
+/**
+ * Prépare le paiement côté Stripe : paiement immédiat (PaymentIntent) ou carte en garantie (SetupIntent, 0 € prélevé).
+ * Le montant vient toujours de la base. Avec un compte Stripe Connect actif, l'argent va directement au pro.
+ */
+export async function startPayment(input: { slug: string; serviceId: string; email: string; name: string; mode: "pay" | "guarantee" }): Promise<{ ok: true; clientSecret: string } | { ok: false; error: string }> {
+  if (!rateLimit(`pay:${await ip()}`, 20, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
+  const s = stripe();
+  const data = await getPublicBusiness(String(input.slug));
+  const email = z.email().safeParse(String(input.email ?? "").trim().toLowerCase());
+  if (!s || !data || data.business.pausedAt || !email.success) return { ok: false, error: "Paiement indisponible." };
+  const service = data.services.find((x) => x.id === input.serviceId);
+  if (!service?.priceCents) return { ok: false, error: "Cette prestation n'a pas de prix." };
+  const [ps] = await db.select({ acct: paymentSettings.stripeAccountId, status: paymentSettings.stripeStatus }).from(paymentSettings).where(eq(paymentSettings.businessId, data.business.id));
+  const destination = ps?.status === "active" && ps.acct ? ps.acct : null;
+  const metadata = { businessId: data.business.id, serviceId: service.id };
+  try {
+    if (input.mode === "pay") {
+      if (!data.payment.online) return { ok: false, error: "Paiement en ligne indisponible." };
+      const pi = await s.paymentIntents.create({
+        amount: service.priceCents,
+        currency: "eur",
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+        description: `Réservation — ${service.name} (${data.business.name})`,
+        receipt_email: email.data,
+        metadata,
+        ...(destination ? { transfer_data: { destination } } : {}),
+      });
+      return { ok: true, clientSecret: pi.client_secret! };
+    }
+    if (!data.payment.guarantee) return { ok: false, error: "Aucune garantie demandée." };
+    const customer = await s.customers.create({ email: email.data, name: String(input.name ?? "").slice(0, 120) || undefined, metadata });
+    const si = await s.setupIntents.create({ customer: customer.id, payment_method_types: ["card"], usage: "off_session", metadata });
+    return { ok: true, clientSecret: si.client_secret! };
+  } catch (e) {
+    console.error("[paiement] préparation :", e);
+    return { ok: false, error: "Le paiement n'a pas pu être préparé. Réessayez." };
+  }
 }

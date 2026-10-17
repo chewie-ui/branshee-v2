@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
-import { cancelAppointment, saveInternalNote, setNoShow } from "@/server/actions/appointments";
+import { cancelAppointment, decidePenalty, saveInternalNote, setNoShow } from "@/server/actions/appointments";
 
 export function CancelAppointmentButton({ id, isBlock }: { id: string; isBlock: boolean }) {
   const [confirm, setConfirm] = useState(false);
@@ -31,7 +31,12 @@ export function CancelAppointmentButton({ id, isBlock }: { id: string; isBlock: 
 
 export function NoShowControl({ id, noShow, reason }: { id: string; noShow: boolean; reason: "justified" | "unjustified" | null }) {
   const [pending, start] = useTransition();
-  const set = (v: boolean, r: "justified" | "unjustified" | null) => start(async () => void (await setNoShow(id, v, r)));
+  const [msg, setMsg] = useState<string | null>(null);
+  const set = (v: boolean, r: "justified" | "unjustified" | null) =>
+    start(async () => {
+      const res = await setNoShow(id, v, r);
+      setMsg(res.error ?? res.message ?? null);
+    });
   return (
     <fieldset disabled={pending} className="space-y-2">
       <legend className="text-sm font-medium">Présence</legend>
@@ -46,7 +51,26 @@ export function NoShowControl({ id, noShow, reason }: { id: string; noShow: bool
           </button>
         ))}
       </div>
+      {msg ? <p className="text-sm text-muted" role="status">{msg}</p> : null}
     </fieldset>
+  );
+}
+
+/** Frais d'annulation prélevés automatiquement : le pro décide de rembourser ou de garder. */
+export function PenaltyReview({ id, amount }: { id: string; amount: string }) {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  if (msg?.ok) return <p className="text-sm text-success" role="status">{msg.text}</p>;
+  return (
+    <div className="space-y-2 rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm">
+      <p className="font-medium">{amount} de frais d&apos;annulation ont été prélevés automatiquement.</p>
+      <p className="text-muted">Le client avait une raison valable (urgence, hôpital…) ? Remboursez-le.</p>
+      <div className="flex gap-2">
+        <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { const r = await decidePenalty(id, "refunded"); setMsg(r.ok ? { ok: true, text: "Frais remboursés." } : { ok: false, text: r.error ?? "Erreur." }); })}>Rembourser</Button>
+        <Button size="sm" variant="ghost" loading={pending} onClick={() => start(async () => { const r = await decidePenalty(id, "kept"); setMsg(r.ok ? { ok: true, text: "Frais conservés." } : { ok: false, text: r.error ?? "Erreur." }); })}>Garder les frais</Button>
+      </div>
+      {msg && !msg.ok ? <p className="text-danger" role="alert">{msg.text}</p> : null}
+    </div>
   );
 }
 

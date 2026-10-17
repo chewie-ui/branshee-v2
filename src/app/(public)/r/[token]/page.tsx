@@ -8,6 +8,10 @@ import { CancelButton } from "@/components/booking/cancel-button";
 import { RescheduleWidget } from "@/components/booking/reschedule-widget";
 import { zoned } from "@/lib/time";
 import { getSessionUser } from "@/server/auth/session";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { appointmentPayments, paymentSettings } from "@/db/schema";
+import { cancellationQuote } from "@/server/payments";
 import { Brand } from "@/components/brand";
 import { ButtonLink } from "@/components/ui/button";
 import { formatDay, formatTime } from "@/lib/time";
@@ -28,6 +32,13 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
   const past = a.startsAt <= new Date();
   const address = b.locationMode === "online" ? "En ligne" : [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const today = format(zoned(new Date(), tz), "yyyy-MM-dd");
+  const [[pay], [ps], quote] = await Promise.all([
+    db.select().from(appointmentPayments).where(eq(appointmentPayments.appointmentId, a.id)),
+    db.select({ accepted: paymentSettings.accepted }).from(paymentSettings).where(eq(paymentSettings.businessId, b.id)),
+    a.status !== "cancelled" && !past ? cancellationQuote(a.id) : Promise.resolve(null),
+  ]);
+  const euros = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
+  const acc = ps?.accepted;
   const canMove = a.status !== "cancelled" && !past && !a.groupSessionId && !!a.serviceId && !!a.memberId;
 
   const state =
@@ -72,6 +83,39 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
               </div>
             ) : null}
           </dl>
+
+          {pay && a.status !== "cancelled" ? (
+            <div className="mt-4 space-y-2 rounded-lg border border-border p-4 text-sm">
+              <p className="font-medium">Paiement</p>
+              {pay.status === "paid" ? <p className="text-success">Payé en ligne : {euros(pay.amountCents)}{pay.cardLast4 ? ` (carte •••• ${pay.cardLast4})` : ""}</p> : null}
+              {pay.status === "authorized" ? <p className="text-muted">Carte •••• {pay.cardLast4} enregistrée en garantie. À régler sur place : {euros(pay.amountCents)}.</p> : null}
+              {pay.status === "none" && pay.method === "bank_transfer" && acc?.bankTransfer.iban ? (
+                <div className="text-muted">
+                  <p>À régler par virement : <span className="font-medium text-text">{euros(pay.amountCents)}</span></p>
+                  <p>IBAN : <span className="font-mono text-text">{acc.bankTransfer.iban}</span>{acc.bankTransfer.bic ? ` · BIC ${acc.bankTransfer.bic}` : ""}</p>
+                  {acc.bankTransfer.bankName ? <p>Banque : {acc.bankTransfer.bankName}</p> : null}
+                  {acc.bankTransfer.note ? <p>Communication : {acc.bankTransfer.note}</p> : null}
+                </div>
+              ) : null}
+              {pay.status === "none" && pay.method === "paypal" && acc?.paypal.paypalMe ? (
+                <a href={`https://paypal.me/${acc.paypal.paypalMe}/${(pay.amountCents / 100).toFixed(2)}EUR`} target="_blank" rel="noopener noreferrer" className="inline-flex font-medium text-accent hover:text-accent-hover">Payer {euros(pay.amountCents)} avec PayPal</a>
+              ) : null}
+              {pay.status === "none" && pay.method === "on_site" ? <p className="text-muted">À régler sur place : {euros(pay.amountCents)}.</p> : null}
+              {acc?.qrCode.enabled && acc.qrCode.imageUrl && pay.status !== "paid" ? (
+                <div className="flex items-center gap-3 pt-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={acc.qrCode.imageUrl} alt="QR code de paiement" className="size-24 rounded-lg border border-border bg-white object-contain" />
+                  {acc.qrCode.note ? <p className="text-muted">{acc.qrCode.note}</p> : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {quote && quote.feeCents > 0 ? (
+            <p className="mt-4 rounded-lg bg-warning-soft p-3 text-sm text-warning">
+              Annuler maintenant entraîne {euros(quote.feeCents)} de frais{quote.paid ? ` (vous seriez remboursé de ${euros(quote.totalCents - quote.feeCents)})` : " prélevés sur votre carte"}, selon la politique d&apos;annulation de l&apos;établissement.
+            </p>
+          ) : null}
 
           {a.status !== "cancelled" && !past ? (
             <div className="mt-6 space-y-3">

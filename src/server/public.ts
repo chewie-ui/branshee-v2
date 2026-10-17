@@ -4,7 +4,7 @@ import { and, asc, avg, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { serviceMatches } from "@/lib/intake";
 import { listIntake } from "@/server/intake";
-import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, reviews, scheduleExceptions, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, paymentSettings, reviews, scheduleExceptions, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
 import { format } from "date-fns";
 import { zoned } from "@/lib/time";
 import { resolveTheme } from "@/lib/booking-theme";
@@ -45,6 +45,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
 
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
   const [page] = await db.select().from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
+  const [pay] = await db.select().from(paymentSettings).where(eq(paymentSettings.businessId, biz.id));
   const sections = page?.sections ?? ["about", "location", "hours"];
 
   const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
@@ -106,6 +107,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     galleryLayout: page?.galleryLayout ?? "grid",
     embed: page?.embed ?? {},
     todayException: todayException ?? null,
+    payment: paymentSummary(pay ?? null),
     reviews: { count: reviewStats[0]?.n ?? 0, average: reviewStats[0]?.avg ? Number(reviewStats[0].avg) : null, items: reviewList },
     faq: page?.faq ?? [],
     categoryStyle: page?.categoryStyle ?? "pills",
@@ -113,6 +115,25 @@ export const getPublicBusiness = cache(async (slug: string) => {
     hours: settings?.scheduleMode === "shared" ? hours.map((h) => ({ weekday: h.weekday, start: h.start.slice(0, 5), end: h.end.slice(0, 5) })) : [],
   };
 });
+
+/**
+ * Ce que le client peut choisir pour payer. Le paiement en ligne n'est proposé que si Stripe est
+ * configuré ET que le pro peut être payé (compte Stripe connecté, ou moyen de reversement renseigné).
+ */
+function paymentSummary(p: typeof paymentSettings.$inferSelect | null) {
+  const stripeOk = !!process.env.STRIPE_SECRET_KEY && !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const payable = p?.stripeStatus === "active" || !!p?.payout.method;
+  const online = stripeOk && !!p?.prepaymentEnabled && payable;
+  const a = p?.accepted;
+  return {
+    online,
+    required: online && !!p?.prepaymentRequired,
+    rule: (p?.cancellationRule ?? "free") as "free" | "half_24h" | "full_12h",
+    /** Carte en garantie pour ceux qui paient sur place, quand la politique prévoit des frais. */
+    guarantee: stripeOk && p?.cancellationRule !== undefined && p.cancellationRule !== "free",
+    onSite: { cash: !!a?.cash, card: !!a?.cardOnSite, bankTransfer: !!a?.bankTransfer.enabled, paypal: !!a?.paypal.enabled, qr: !!a?.qrCode.enabled },
+  };
+}
 
 export type PublicBusiness = NonNullable<Awaited<ReturnType<typeof getPublicBusiness>>>;
 

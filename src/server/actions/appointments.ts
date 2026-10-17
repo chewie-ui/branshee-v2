@@ -11,6 +11,7 @@ import { activityLogs, appointmentPayments, appointments, bookingSettings, custo
 import { parseQuickTime } from "@/lib/time-input";
 import { getAvailableSlots } from "@/server/availability";
 import { requireContext, type AppContext } from "@/server/context";
+import { applyBusinessCancellation, applyNoShow, reviewPenalty } from "@/server/payments";
 import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision, notifyRescheduled, sendManualReminder } from "@/server/notifications";
 
 const idSchema = z.uuid();
@@ -78,6 +79,7 @@ export async function refuseRequest(rawId: string, reason = "", silent = false) 
     .returning({ contactName: appointments.contactName });
   if (updated.length === 0) return { ok: false as const, error: "Cette demande a déjà été traitée." };
   await log(ctx, "appointment.refuse", `${silent ? "Demande expirée libérée" : "Demande refusée"} : ${updated[0]!.contactName ?? "client"}${motive ? ` (motif : ${motive})` : ""}`);
+  after(() => applyBusinessCancellation(id));
   if (!silent) after(() => notifyRequestDecision(id, false, motive || null));
   revalidatePath("/app", "layout");
   return { ok: true as const };
@@ -349,6 +351,7 @@ export async function cancelAppointment(id: string): Promise<{ ok: boolean; erro
     .returning({ kind: appointments.kind, name: appointments.contactName, startsAt: appointments.startsAt });
   if (!updated.length) return { ok: false, error: "Rendez-vous introuvable ou déjà annulé." };
   await log(ctx, "appointment.cancel", updated[0]!.kind === "block" ? "Blocage supprimé" : `Rendez-vous annulé : ${updated[0]!.name ?? "client"}`);
+  if (updated[0]!.kind === "appointment") after(() => applyBusinessCancellation(apptId));
   if (updated[0]!.kind === "appointment" && updated[0]!.startsAt > new Date()) after(() => notifyCancelledByBusiness(apptId));
   revalidatePath("/app", "layout");
   return { ok: true };
@@ -413,14 +416,33 @@ export async function sendReminderNow(rawId: string): Promise<{ ok: boolean; err
 
 /* ───────────────────────────── Détails ───────────────────────────── */
 
-export async function setNoShow(id: string, noShow: boolean, reason: "justified" | "unjustified" | null): Promise<{ ok: boolean }> {
+export async function setNoShow(id: string, noShow: boolean, reason: "justified" | "unjustified" | null): Promise<{ ok: boolean; message?: string; error?: string }> {
   const ctx = await requireContext("appointments.manage");
-  await db
+  const updated = await db
     .update(appointments)
     .set({ noShow, noShowReason: noShow ? reason : null })
-    .where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)));
+    .where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)))
+    .returning({ id: appointments.id });
+  if (!updated.length) return { ok: false, error: "Rendez-vous introuvable." };
   revalidatePath("/app", "layout");
+  // Paiement en garantie : absence non justifiée → prélèvement ; justifiée → rien n'est dû.
+  if (noShow && reason) {
+    const r = await applyNoShow(updated[0]!.id, reason === "justified");
+    if (r.error) return { ok: true, error: `Absence notée, mais le prélèvement a échoué : ${r.error}` };
+    if (r.charged && r.cents) return { ok: true, message: `Absence notée : ${(r.cents / 100).toFixed(2).replace(".", ",")} € prélevés.` };
+  }
   return { ok: true };
+}
+
+/** Frais d'annulation prélevés automatiquement : rembourser (raison valable) ou garder. */
+export async function decidePenalty(id: string, decision: "refunded" | "kept") {
+  const ctx = await requireContext("appointments.manage");
+  const [appt] = await db.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)));
+  if (!appt) return { ok: false, error: "Rendez-vous introuvable." };
+  const r = await reviewPenalty(appt.id, decision === "refunded" ? "refunded" : "kept");
+  if (r.ok) await log(ctx, "payment.penalty_review", decision === "refunded" ? "Frais d'annulation remboursés" : "Frais d'annulation conservés");
+  revalidatePath("/app", "layout");
+  return r;
 }
 
 export async function saveInternalNote(id: string, note: string): Promise<{ ok: boolean }> {

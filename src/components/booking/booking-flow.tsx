@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
-import { createPublicBooking, getPublicSlots, joinWaitlist, type PublicDay } from "@/server/actions/booking";
+import { createPublicBooking, getPublicSlots, joinWaitlist, startPayment, type PublicDay } from "@/server/actions/booking";
+import { PaymentStep } from "@/components/booking/payment-step";
 import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sessions";
 import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
@@ -150,6 +151,9 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
     { label: "Soir", items: slotsOfDay.filter((s) => s.time >= "17:00") },
   ].filter((p) => p.items.length);
 
+  const [pendingPay, setPendingPay] = useState<{ mode: "pay" | "guarantee"; clientSecret: string; payload: Parameters<typeof createPublicBooking>[0] } | null>(null);
+  const ruleText = data.payment.rule === "half_24h" ? "En cas d'annulation moins de 24 h avant, 50 % du prix sera prélevé. Une absence non excusée peut être facturée." : data.payment.rule === "full_12h" ? "Annulation moins de 24 h avant : 50 % du prix ; moins de 12 h avant : 100 %. Une absence non excusée peut être facturée." : null;
+
   function submit(formData: FormData) {
     if (!service) return;
     setError(null);
@@ -185,26 +189,36 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       return;
     }
     if (!day || !time) return;
-    startSubmit(async () => {
-      const res = await createPublicBooking({
-        slug: data.business.slug,
-        serviceId: service.id,
-        memberId,
-        date: day,
-        time,
-        firstName: String(formData.get("firstName") ?? ""),
-        lastName: String(formData.get("lastName") ?? ""),
-        email: String(formData.get("email") ?? ""),
-        phone: String(formData.get("phone") ?? ""),
-        message: String(formData.get("message") ?? ""),
-        answers,
-        intake: intakeAnswers,
-        website: String(formData.get("website") ?? ""),
+    const payload = {
+      slug: data.business.slug,
+      serviceId: service.id,
+      memberId,
+      date: day,
+      time,
+      ...contact,
+      paymentMethod: (String(formData.get("paymentMethod") ?? "") || "none") as "online" | "on_site" | "bank_transfer" | "paypal" | "none",
+    };
+    const price = service.priceCents ?? 0;
+    const mode = payload.paymentMethod === "online" ? "pay" : data.payment.guarantee && price > 0 ? "guarantee" : null;
+    if (mode) {
+      startSubmit(async () => {
+        const r = await startPayment({ slug: data.business.slug, serviceId: service.id, email: contact.email, name: `${contact.firstName} ${contact.lastName}`, mode });
+        if (r.ok) setPendingPay({ mode, clientSecret: r.clientSecret, payload });
+        else setError(r.error);
       });
+      return;
+    }
+    book(payload);
+  }
+
+  function book(payload: Parameters<typeof createPublicBooking>[0]) {
+    startSubmit(async () => {
+      const res = await createPublicBooking(payload);
       if (res.ok) {
         router.push(`/r/${res.token}?nouveau=1`);
         return;
       }
+      setPendingPay(null);
       setError(res.error);
       setFieldErrors(res.fieldErrors ?? {});
       if (res.slotTaken) {
@@ -520,7 +534,23 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
         </div>
       ) : null}
 
-      {step === "details" && service && ((day && time) || chosenSession) ? (
+      {step === "details" && service && pendingPay ? (
+        <div className="space-y-5">
+          <h2 className="text-lg font-semibold">{pendingPay.mode === "pay" ? "Paiement" : "Carte en garantie"}</h2>
+          {summary}
+          <PaymentStep
+            clientSecret={pendingPay.clientSecret}
+            mode={pendingPay.mode}
+            amountLabel={formatPrice(service.priceCents)}
+            ruleText={ruleText}
+            onBack={() => setPendingPay(null)}
+            onDone={(intentId) => book({ ...pendingPay.payload, ...(pendingPay.mode === "pay" ? { paymentIntentId: intentId } : { setupIntentId: intentId }) })}
+          />
+          {submitting ? <p className="text-center text-sm text-muted">Enregistrement du rendez-vous…</p> : null}
+        </div>
+      ) : null}
+
+      {step === "details" && service && !pendingPay && ((day && time) || chosenSession) ? (
         <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="space-y-5" noValidate>
           <h2 className="text-lg font-semibold">Vos coordonnées</h2>
           {summary}
@@ -569,6 +599,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
           <Field label="Message (facultatif)" htmlFor="message">
             <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder="Une précision pour le praticien ?" />
           </Field>
+          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} /> : null}
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
             {service.kind === "group" ? "Confirmer l'inscription" : settings?.autoConfirm ? "Confirmer le rendez-vous" : "Envoyer la demande"}
           </Button>
@@ -607,5 +638,40 @@ function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: stri
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <Button type="submit" size="sm" loading={pending}>Me prévenir</Button>
     </form>
+  );
+}
+
+/** Choix du mode de paiement (affiché seulement s'il y a un vrai choix). */
+function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
+  const site = [pay.onSite.cash && "espèces", pay.onSite.card && "carte", pay.onSite.qr && "QR code"].filter(Boolean).join(", ");
+  const options = [
+    pay.online ? { v: "online", t: "Payer en ligne maintenant", d: "Carte bancaire, Apple Pay, Google Pay…" } : null,
+    !pay.required ? { v: "on_site", t: "Payer sur place", d: site ? `Accepté : ${site}.` : "Le jour du rendez-vous." } : null,
+    !pay.required && pay.onSite.bankTransfer ? { v: "bank_transfer", t: "Virement bancaire", d: "Les coordonnées vous seront données après la réservation." } : null,
+    !pay.required && pay.onSite.paypal ? { v: "paypal", t: "PayPal", d: "Le lien PayPal vous sera donné après la réservation." } : null,
+  ].filter((o): o is { v: string; t: string; d: string } => !!o);
+  const [value, setValue] = useState(options[0]?.v ?? "none");
+  if (options.length === 0) return null;
+  if (options.length === 1)
+    return (
+      <>
+        <input type="hidden" name="paymentMethod" value={options[0]!.v} />
+        {pay.guarantee && options[0]!.v !== "online" ? <p className="text-sm text-muted">Une carte vous sera demandée en garantie (rien n&apos;est prélevé maintenant).</p> : null}
+      </>
+    );
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-2 text-sm font-medium">Paiement</legend>
+      {options.map((o) => (
+        <label key={o.v} className={cn("flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm", value === o.v ? "border-accent bg-accent-soft" : "border-border-strong")}>
+          <input type="radio" name="paymentMethod" value={o.v} checked={value === o.v} onChange={() => setValue(o.v)} className="mt-0.5 accent-[var(--accent)]" />
+          <span>
+            <span className="block font-medium">{o.t}</span>
+            <span className="block text-muted">{o.d}</span>
+          </span>
+        </label>
+      ))}
+      {pay.guarantee && value !== "online" ? <p className="text-sm text-muted">Une carte vous sera demandée en garantie (rien n&apos;est prélevé maintenant).</p> : null}
+    </fieldset>
   );
 }

@@ -449,6 +449,9 @@ async function main() {
           stripeAccountId: text(c.stripeConnect?.accountId),
           stripeStatus: ["not_connected", "pending", "active"].includes(c.stripeConnect?.status) ? c.stripeConnect.status : "not_connected",
           stripeAccountEmail: text(c.stripeConnect?.accountEmail),
+          payout: ["bank_transfer", "paypal", "cash", "other"].includes(c.payoutInfo?.method)
+            ? { method: c.payoutInfo.method, iban: text(c.payoutInfo.iban) ?? undefined, bic: text(c.payoutInfo.bic) ?? undefined, paypalEmail: text(c.payoutInfo.paypalEmail) ?? undefined, other: text(c.payoutInfo.other) ?? undefined }
+            : {},
           accepted: {
             cash: !!ap.cash,
             cardOnSite: !!ap.cardOnSite,

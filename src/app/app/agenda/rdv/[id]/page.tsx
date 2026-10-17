@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { z } from "zod";
 import { db } from "@/db";
 import { appointmentPayments, appointments, customers, members, users } from "@/db/schema";
-import { CancelAppointmentButton, InternalNote, NoShowControl } from "@/components/app/appointment-actions";
+import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";
 import { PaymentForm, ReminderButton, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
 import { StatusBadge } from "@/components/app/status-badge";
@@ -128,7 +128,16 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
         {canManage ? (
           <Card>
             <CardHeader title="Paiement" description="À noter à la main pour un paiement sur place, un virement reçu…" />
-            <div className="p-5">
+            <div className="space-y-4 p-5">
+              {pay?.stripePaymentIntentId || pay?.stripeSetupIntentId ? (
+                <p className="text-sm">
+                  {pay.status === "paid" ? "Payé en ligne" : pay.status === "authorized" ? "Carte enregistrée en garantie" : pay.status === "penalty" ? "Frais prélevés" : pay.status === "refunded" ? "Remboursé" : pay.status === "partial" ? "Remboursé en partie" : pay.status === "failed" ? "Prélèvement échoué" : "Paiement Stripe"}
+                  {pay.cardBrand ? ` · ${pay.cardBrand.toUpperCase()} •••• ${pay.cardLast4}` : ""}
+                  {pay.amountCents ? ` · ${(pay.amountCents / 100).toFixed(2).replace(".", ",")} €` : ""}
+                  {pay.keptCents ? ` · ${(pay.keptCents / 100).toFixed(2).replace(".", ",")} € retenus` : ""}
+                </p>
+              ) : null}
+              {pay?.status === "penalty" && !pay.cancellationDecision ? <PenaltyReview id={a.id} amount={`${(pay.penaltyCents / 100).toFixed(2).replace(".", ",")} €`} /> : null}
               <PaymentForm id={a.id} initial={{ method: pay?.method ?? "none", status: pay?.status ?? "none", amount: pay?.amountCents ? (pay.amountCents / 100).toString().replace(".", ",") : "" }} />
             </div>
           </Card>

@@ -93,10 +93,12 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Sécurité : changer le mot de passe (déconnecte les autres appareils), double authentification TOTP (QR code, secrets de l'ancien Branshee repris et chiffrés)
 - ✅ Langue (enregistrée ; traduction de l'interface au Lot R), notification « nouvelle réservation » dans Réglages
 - ✅ Supprimer son compte avec code (établissements fermés, compte anonymisé s'il en possédait) · 🔶 pause / suppression d'un établissement : Lot I
-- ❌ **Stripe Connect** (connexion du compte, retour, rafraîchissement, saisie manuelle, déconnexion)
-- ❌ Prépaiement, politique d'annulation (gratuite / 50 % sous 24 h / 100 % sous 12 h), décision rembourser / garder, pénalité d'absence
-- ❌ Modes acceptés sur place : espèces, carte, virement (IBAN, BIC, banque, note), PayPal.me, QR code (image + note)
-- ❌ Moyen de reversement (virement, PayPal, espèces, autre)
+- ✅ **Stripe Connect** Express (connexion, retour vérifié sur Stripe, lien expiré → nouveau lien, compte existant saisi à la main et vérifié, déconnexion) — Réglages › Paiements
+- ✅ Prépaiement (au choix ou obligatoire), paiement Stripe Elements (carte, Apple / Google Pay), montant toujours lu en base, paiement vérifié côté serveur, un paiement = une réservation, remboursement automatique si le créneau est pris entre-temps
+- ✅ Politique d'annulation (gratuite / 50 % sous 24 h / 50 % sous 24 h + 100 % sous 12 h), frais propres à la prestation, carte en garantie (0 € prélevé) pour ceux qui paient sur place, frais affichés avant d'annuler, prélèvement ou remboursement partiel automatique, décision rembourser / garder par le pro, absence non excusée facturable, annulation par le pro = remboursement complet
+- ✅ Modes acceptés sur place : espèces, carte, virement (IBAN, BIC, banque, note), PayPal.me (lien avec le montant), QR code (image + note) — affichés au client après la réservation
+- ✅ Moyen de reversement (virement, PayPal, espèces, autre) quand Branshee encaisse pour le pro
+- ℹ️ Sans clés Stripe sur le serveur, le paiement en ligne est simplement masqué (testé) ; le parcours Stripe réel est à tester avec les clés de test sur le VPS
 
 ## Lot I — Établissements et équipe
 - ✅ Plusieurs établissements, sélecteur, membres, invitations par email, grades, profil public des membres

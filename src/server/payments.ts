@@ -1,0 +1,161 @@
+import "server-only";
+import Stripe from "stripe";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { appointmentPayments, appointments, paymentSettings, services } from "@/db/schema";
+
+/**
+ * Paiements des clients aux pros (Stripe).
+ * - Compte Stripe Connect actif → paiement « destination » : l'argent va directement au pro.
+ * - Sinon → encaissé par Branshee, reversé au pro selon son moyen de reversement (comme l'ancien).
+ * Politique d'annulation : gratuite / 50 % sous 24 h / 50 % sous 24 h et 100 % sous 12 h,
+ * remplacée par les frais propres à la prestation quand il y en a.
+ */
+
+let client: Stripe | null | undefined;
+export function stripe(): Stripe | null {
+  if (client !== undefined) return client;
+  const key = process.env.STRIPE_SECRET_KEY;
+  client = key ? new Stripe(key) : null;
+  return client;
+}
+export const stripeEnabled = () => !!process.env.STRIPE_SECRET_KEY && !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+export type CancellationRule = "free" | "half_24h" | "full_12h";
+
+export function penaltyRate(rule: CancellationRule, hoursBefore: number) {
+  if (hoursBefore < 0) return 0;
+  if (rule === "half_24h") return hoursBefore < 24 ? 0.5 : 0;
+  if (rule === "full_12h") return hoursBefore < 12 ? 1 : hoursBefore < 24 ? 0.5 : 0;
+  return 0;
+}
+
+/** Montant retenu : frais de la prestation s'ils existent (seulement quand la politique en prélève), sinon le % de la politique. */
+export function feeCents(totalCents: number, rate: number, serviceFee: { type: "amount" | "percent" | null; value: number | null } | null) {
+  const fallback = Math.round(totalCents * rate);
+  if (fallback <= 0) return 0;
+  if (!serviceFee?.type || serviceFee.value == null) return fallback;
+  return serviceFee.type === "amount" ? Math.min(totalCents, serviceFee.value) : Math.round(totalCents * (Math.min(100, serviceFee.value) / 100));
+}
+
+async function context(appointmentId: string) {
+  const [row] = await db
+    .select({ a: appointments, p: appointmentPayments, rule: paymentSettings.cancellationRule, acct: paymentSettings.stripeAccountId, acctStatus: paymentSettings.stripeStatus, feeType: services.cancellationFeeType, feeValue: services.cancellationFeeValue })
+    .from(appointments)
+    .innerJoin(appointmentPayments, eq(appointmentPayments.appointmentId, appointments.id))
+    .leftJoin(paymentSettings, eq(paymentSettings.businessId, appointments.businessId))
+    .leftJoin(services, eq(services.id, appointments.serviceId))
+    .where(eq(appointments.id, appointmentId));
+  return row ?? null;
+}
+
+/** Ce que coûterait une annulation maintenant (affiché au client avant qu'il confirme). */
+export async function cancellationQuote(appointmentId: string) {
+  const row = await context(appointmentId);
+  if (!row || !["authorized", "paid"].includes(row.p.status) || row.p.amountCents <= 0) return null;
+  const hrs = (row.a.startsAt.getTime() - Date.now()) / 3_600_000;
+  const fee = feeCents(row.p.amountCents, penaltyRate((row.rule ?? "free") as CancellationRule, hrs), row.feeType ? { type: row.feeType, value: row.feeValue } : null);
+  return { feeCents: fee, totalCents: row.p.amountCents, paid: row.p.status === "paid" };
+}
+
+const set = (appointmentId: string, values: Partial<typeof appointmentPayments.$inferInsert>) => db.update(appointmentPayments).set(values).where(eq(appointmentPayments.appointmentId, appointmentId));
+
+async function chargeCard(row: NonNullable<Awaited<ReturnType<typeof context>>>, cents: number, description: string) {
+  const s = stripe();
+  const p = row.p;
+  if (!s || !p.stripeCustomerId || !p.stripePaymentMethodId) throw new Error("Carte enregistrée introuvable.");
+  const destination = row.acctStatus === "active" && row.acct ? row.acct : null;
+  return s.paymentIntents.create({ amount: cents, currency: p.currency, customer: p.stripeCustomerId, payment_method: p.stripePaymentMethodId, off_session: true, confirm: true, description, metadata: { businessId: row.a.businessId, appointmentId: row.a.id }, ...(destination ? { transfer_data: { destination } } : {}) });
+}
+
+/**
+ * Annulation par le client : carte enregistrée → frais prélevés selon la politique ;
+ * déjà payé → remboursement de la part non retenue. Jamais bloquant pour l'annulation elle-même.
+ */
+export async function applyCustomerCancellation(appointmentId: string) {
+  const row = await context(appointmentId);
+  if (!row || !["authorized", "paid"].includes(row.p.status)) return;
+  const s = stripe();
+  const hrs = (row.a.startsAt.getTime() - Date.now()) / 3_600_000;
+  const fee = feeCents(row.p.amountCents, penaltyRate((row.rule ?? "free") as CancellationRule, hrs), row.feeType ? { type: row.feeType, value: row.feeValue } : null);
+  try {
+    if (row.p.status === "authorized") {
+      if (fee >= 50 && s) {
+        const pi = await chargeCard(row, fee, `Frais d'annulation — ${row.a.serviceName ?? "rendez-vous"}`);
+        await set(appointmentId, { status: "penalty", penaltyCents: fee, stripePaymentIntentId: pi.id, paidAt: new Date() });
+      } else await set(appointmentId, { status: "none" });
+      return;
+    }
+    if (!s || !row.p.stripePaymentIntentId) return;
+    const refund = row.p.amountCents - fee;
+    if (fee <= 0 || refund < 50) {
+      if (fee <= 0 || refund > 0) {
+        await s.refunds.create({ payment_intent: row.p.stripePaymentIntentId, reason: "requested_by_customer" });
+        await set(appointmentId, { status: "refunded", keptCents: 0 });
+      } else await set(appointmentId, { keptCents: fee });
+    } else {
+      await s.refunds.create({ payment_intent: row.p.stripePaymentIntentId, amount: refund, reason: "requested_by_customer" });
+      await set(appointmentId, { status: "partial", keptCents: fee });
+    }
+  } catch (e) {
+    console.error("[paiements] annulation client :", e);
+    if (row.p.status === "authorized") await set(appointmentId, { status: "failed" });
+  }
+}
+
+/** Annulation par l'établissement : tout est rendu au client. */
+export async function applyBusinessCancellation(appointmentId: string) {
+  const row = await context(appointmentId);
+  if (!row) return;
+  try {
+    if (row.p.status === "authorized") await set(appointmentId, { status: "none" });
+    else if (row.p.status === "paid" && row.p.stripePaymentIntentId && stripe()) {
+      await stripe()!.refunds.create({ payment_intent: row.p.stripePaymentIntentId, reason: "requested_by_customer" });
+      await set(appointmentId, { status: "refunded", keptCents: 0 });
+    }
+  } catch (e) {
+    console.error("[paiements] annulation établissement :", e);
+  }
+}
+
+/** Absence : justifiée → rien n'est dû (remboursement) ; non justifiée → 100 % (ou frais de la prestation). */
+export async function applyNoShow(appointmentId: string, justified: boolean): Promise<{ charged: boolean; cents?: number; error?: string }> {
+  const row = await context(appointmentId);
+  if (!row || !["authorized", "paid"].includes(row.p.status)) return { charged: false };
+  const s = stripe();
+  try {
+    if (justified) {
+      if (row.p.status === "authorized") await set(appointmentId, { status: "none" });
+      else if (s && row.p.stripePaymentIntentId) {
+        await s.refunds.create({ payment_intent: row.p.stripePaymentIntentId, reason: "requested_by_customer" });
+        await set(appointmentId, { status: "refunded" });
+      }
+      return { charged: false };
+    }
+    if (row.p.status === "paid") return { charged: true, cents: row.p.amountCents };
+    const fee = feeCents(row.p.amountCents, 1, row.feeType ? { type: row.feeType, value: row.feeValue } : null);
+    if (fee < 50) return { charged: false, error: "Montant trop faible pour être prélevé." };
+    const pi = await chargeCard(row, fee, `Absence non excusée — ${row.a.serviceName ?? "rendez-vous"}`);
+    await set(appointmentId, { status: "penalty", penaltyCents: fee, stripePaymentIntentId: pi.id, paidAt: new Date() });
+    return { charged: true, cents: fee };
+  } catch (e) {
+    await set(appointmentId, { status: "failed" });
+    return { charged: false, error: e instanceof Error ? e.message : "Échec du prélèvement." };
+  }
+}
+
+/** Le pro revoit des frais prélevés : rembourser (raison valable) ou garder. */
+export async function reviewPenalty(appointmentId: string, decision: "refunded" | "kept"): Promise<{ ok: boolean; error?: string }> {
+  const row = await context(appointmentId);
+  if (!row || row.p.status !== "penalty") return { ok: false, error: "Aucun frais à revoir." };
+  if (decision === "refunded") {
+    if (!stripe() || !row.p.stripePaymentIntentId) return { ok: false, error: "Paiement Stripe introuvable." };
+    try {
+      await stripe()!.refunds.create({ payment_intent: row.p.stripePaymentIntentId, reason: "requested_by_customer" });
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Échec du remboursement." };
+    }
+    await set(appointmentId, { status: "refunded", cancellationDecision: "refunded", cancellationReviewedAt: new Date() });
+  } else await set(appointmentId, { cancellationDecision: "kept", cancellationReviewedAt: new Date() });
+  return { ok: true };
+}
