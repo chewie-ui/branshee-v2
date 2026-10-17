@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { createAppointment, type CreateAppointmentState } from "@/server/actions/appointments";
+import { createAppointment, fetchFreeSlots, type CreateAppointmentState } from "@/server/actions/appointments";
+import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
 
 type Props = {
@@ -19,6 +20,19 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
   const [state, action, pending] = useActionState<CreateAppointmentState, FormData>(createAppointment, undefined);
   const [mode, setMode] = useState<"existing" | "new">(customers.length ? "existing" : "new");
   const err = state?.fieldErrors ?? {};
+
+  // Sélection courante : sert à proposer les créneaux libres du membre ce jour-là.
+  const [sel, setSel] = useState({ serviceId: "", memberId: members.length === 1 ? members[0]!.id : "", date: defaultDate });
+  const [time, setTime] = useState("09:00");
+  const [slots, setSlots] = useState<string[] | null>(null);
+  const [loadingSlots, startSlots] = useTransition();
+
+  function update(patch: Partial<typeof sel>) {
+    const next = { ...sel, ...patch };
+    setSel(next);
+    if (!next.serviceId || !next.memberId || !next.date) return setSlots(null);
+    startSlots(async () => setSlots(await fetchFreeSlots(next.serviceId, next.memberId, next.date)));
+  }
 
   return (
     <form action={action} className="space-y-6" noValidate>
@@ -80,7 +94,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
         <h2 className="text-base font-semibold">Rendez-vous</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Prestation" htmlFor="serviceId" error={err.serviceId}>
-            <Select id="serviceId" name="serviceId" defaultValue="" aria-invalid={!!err.serviceId || undefined}>
+            <Select id="serviceId" name="serviceId" value={sel.serviceId} onChange={(e) => update({ serviceId: e.target.value })} aria-invalid={!!err.serviceId || undefined}>
               <option value="" disabled>
                 Choisir une prestation…
               </option>
@@ -93,7 +107,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
             </Select>
           </Field>
           <Field label="Avec" htmlFor="memberId" error={err.memberId}>
-            <Select id="memberId" name="memberId" defaultValue={members.length === 1 ? members[0]!.id : ""} aria-invalid={!!err.memberId || undefined}>
+            <Select id="memberId" name="memberId" value={sel.memberId} onChange={(e) => update({ memberId: e.target.value })} aria-invalid={!!err.memberId || undefined}>
               <option value="" disabled>
                 Choisir…
               </option>
@@ -105,12 +119,38 @@ export function NewAppointmentForm({ services, members, customers, defaultDate }
             </Select>
           </Field>
           <Field label="Date" htmlFor="date" error={err.date}>
-            <Input id="date" name="date" type="date" defaultValue={defaultDate} aria-invalid={!!err.date || undefined} />
+            <Input id="date" name="date" type="date" value={sel.date} onChange={(e) => update({ date: e.target.value })} aria-invalid={!!err.date || undefined} />
           </Field>
           <Field label="Heure" htmlFor="time" error={err.time}>
-            <Input id="time" name="time" type="time" step={300} defaultValue="09:00" aria-invalid={!!err.time || undefined} />
+            <Input id="time" name="time" type="time" step={300} value={time} onChange={(e) => setTime(e.target.value)} aria-invalid={!!err.time || undefined} />
           </Field>
         </div>
+        {sel.serviceId && sel.memberId && sel.date ? (
+          <div aria-live="polite">
+            <p className="mb-2 text-sm font-medium">Créneaux libres ce jour-là</p>
+            {loadingSlots ? (
+              <div className="flex gap-2" aria-label="Chargement des créneaux">
+                {[0, 1, 2, 3, 4].map((i) => <span key={i} className="h-8 w-16 animate-pulse rounded-lg bg-surface-muted" />)}
+              </div>
+            ) : slots && slots.length ? (
+              <div className="flex flex-wrap gap-2">
+                {slots.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTime(t)}
+                    aria-pressed={time === t}
+                    className={cn("h-8 rounded-lg border px-3 text-sm font-medium tabular-nums transition-colors", time === t ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Aucun créneau libre selon les horaires. Vous pouvez quand même saisir une heure.</p>
+            )}
+          </div>
+        ) : null}
         <Field label="Note interne" htmlFor="note" hint="Visible uniquement par votre équipe.">
           <Textarea id="note" name="note" rows={3} />
         </Field>

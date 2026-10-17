@@ -16,6 +16,7 @@ npm install
 cp .env.example .env.local          # puis renseigner DATABASE_URL
 npm run db:migrate                  # crée les tables + contraintes
 npm run db:seed                     # établissement de démonstration (données fictives)
+                                    # connexion : claire@cabinet-horizon.example / demo-branshee-2026
 npm run dev                         # http://localhost:3000
 ```
 
@@ -26,6 +27,7 @@ npm run dev                         # http://localhost:3000
 | `npm run build` / `npm start` | build et serveur de production |
 | `npm run typecheck` | vérification TypeScript |
 | `npm run lint` | ESLint |
+| `npm test` | tests unitaires (moteur de créneaux…) |
 | `npm run db:generate` | génère une migration après modification du schéma |
 | `npm run db:migrate` | applique les migrations |
 | `npm run db:seed` | recrée la démo |
@@ -54,12 +56,15 @@ scripts/              seed, migration depuis MongoDB
 - Création d'un rendez-vous (client existant ou nouveau, détection de conflit)
 - Clients (recherche) et fiche client (coordonnées, à venir, historique, absences)
 - Prestations par catégorie
+- Comptes et connexion : inscription, connexion, sessions sécurisées, création d'établissement, sélecteur d'établissement
+- Horaires : grille hebdomadaire (commune ou par membre), congés et fermetures, permissions respectées
+- Moteur de calcul des créneaux libres (`src/lib/booking/slots.ts`), testé (`npm test`) — y compris les changements d'heure
+- Créneaux libres proposés dans le formulaire de création de RDV
 
 **Prochaines étapes**
-1. Comptes et connexion (sessions, mot de passe, Google, 2FA) — remplace le contexte de démo de `src/server/context.ts`
-2. Horaires et congés + moteur de calcul des créneaux disponibles
-3. Page publique et tunnel de réservation client
-4. Emails (confirmation, rappel, annulation) et tâches planifiées
-5. Équipe, grades, réglages
-6. Script de migration depuis MongoDB
-7. Paiements, SMS/WhatsApp, avis, site, super-admin
+1. Page publique et tunnel de réservation client (branché sur le moteur de créneaux)
+2. Mot de passe oublié, connexion Google, double authentification (nécessitent l'envoi d'emails)
+3. Emails (confirmation, rappel, annulation) et tâches planifiées
+4. Équipe, grades, réglages
+5. Script de migration depuis MongoDB
+6. Paiements, SMS/WhatsApp, avis, site, super-admin

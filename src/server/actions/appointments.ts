@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, appointments, customers, members, services } from "@/db/schema";
+import { getAvailableSlots } from "@/server/availability";
 import { requireContext } from "@/server/context";
 
 const idSchema = z.uuid();
@@ -142,4 +143,14 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
 
   revalidatePath("/app", "layout");
   redirect(`/app/agenda?semaine=${v.date}`);
+}
+
+/** Créneaux libres pour aider à choisir l'heure dans le formulaire de création. */
+export async function fetchFreeSlots(serviceId: string, memberId: string, date: string): Promise<string[]> {
+  const ctx = await requireContext("appointments.manage");
+  const parsed = z.object({ serviceId: z.uuid(), memberId: z.uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse({ serviceId, memberId, date });
+  if (!parsed.success) return [];
+  // Côté pro, on ignore le délai minimum et l'horizon : ils ne concernent que la réservation en ligne.
+  const slots = await getAvailableSlots({ businessId: ctx.business.id, serviceId, memberId, days: [date], ignoreOnlineRules: true });
+  return (slots[date] ?? []).map((s) => s.time);
 }
