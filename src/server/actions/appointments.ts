@@ -11,6 +11,9 @@ import { requireContext } from "@/server/context";
 
 const idSchema = z.uuid();
 
+/** Erreur prévue, dont le message peut être montré tel quel à l'utilisateur. */
+class UserError extends Error {}
+
 async function setStatus(rawId: string, status: "confirmed" | "cancelled", action: string, label: string) {
   const ctx = await requireContext(status === "cancelled" ? "appointments.cancel" : "appointments.manage");
   const id = idSchema.parse(rawId);
@@ -88,49 +91,55 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
   const startsAt = new Date(new TZDate(y, mo - 1, d, h, mi, 0, ctx.business.timezone).getTime());
   const endsAt = new Date(startsAt.getTime() + service.durationMin * 60000);
 
-  let customerId = v.customerId || null;
-  let contact = { name: v.newName, email: v.newEmail || null, phone: v.newPhone || null };
-  if (customerId) {
-    const [c] = await db.select().from(customers).where(and(eq(customers.id, customerId), eq(customers.businessId, ctx.business.id)));
-    if (!c) return { error: "Client introuvable." };
-    contact = { name: c.fullName, email: c.email, phone: c.phone };
-  } else {
-    const [c] = await db
-      .insert(customers)
-      .values({ businessId: ctx.business.id, fullName: v.newName, email: v.newEmail || null, phone: v.newPhone || null, createdManually: true })
-      .onConflictDoNothing()
-      .returning({ id: customers.id });
-    if (c) customerId = c.id;
-    else if (v.newEmail) {
-      const [existing] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, ctx.business.id), sql`lower(${customers.email}) = lower(${v.newEmail})`));
-      customerId = existing?.id ?? null;
-    }
-  }
-
+  // Client + rendez-vous dans une seule transaction : si le créneau est pris, rien n'est créé.
   try {
-    await db.insert(appointments).values({
-      businessId: ctx.business.id,
-      status: "confirmed",
-      startsAt,
-      endsAt,
-      memberId: member.id,
-      serviceId: service.id,
-      customerId,
-      serviceName: service.name,
-      serviceColor: service.color,
-      contactName: contact.name,
-      contactEmail: contact.email,
-      contactPhone: contact.phone,
-      internalNote: v.note || null,
-      createdById: ctx.user.id,
+    await db.transaction(async (tx) => {
+      let customerId = v.customerId || null;
+      let contact = { name: v.newName, email: v.newEmail || null, phone: v.newPhone || null };
+      if (customerId) {
+        const [c] = await tx.select().from(customers).where(and(eq(customers.id, customerId), eq(customers.businessId, ctx.business.id)));
+        if (!c) throw new UserError("Client introuvable.");
+        contact = { name: c.fullName, email: c.email, phone: c.phone };
+      } else {
+        const [c] = await tx
+          .insert(customers)
+          .values({ businessId: ctx.business.id, fullName: v.newName, email: v.newEmail || null, phone: v.newPhone || null, createdManually: true })
+          .onConflictDoNothing()
+          .returning({ id: customers.id });
+        if (c) customerId = c.id;
+        else if (v.newEmail) {
+          // Un client avec cet email existe déjà : on le réutilise.
+          const [existing] = await tx.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, ctx.business.id), sql`lower(${customers.email}) = lower(${v.newEmail})`));
+          customerId = existing?.id ?? null;
+        }
+      }
+
+      await tx.insert(appointments).values({
+        businessId: ctx.business.id,
+        status: "confirmed",
+        startsAt,
+        endsAt,
+        memberId: member.id,
+        serviceId: service.id,
+        customerId,
+        serviceName: service.name,
+        serviceColor: service.color,
+        contactName: contact.name,
+        contactEmail: contact.email,
+        contactPhone: contact.phone,
+        internalNote: v.note || null,
+        createdById: ctx.user.id,
+      });
+
+      await tx.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "appointment.create", description: `Rendez-vous créé : ${contact.name}, ${v.date} ${v.time}` });
     });
   } catch (error) {
+    if (error instanceof UserError) return { error: error.message };
     const e = error as { code?: string; cause?: { code?: string } };
     if (e.code === "23P01" || e.cause?.code === "23P01") return { fieldErrors: { time: `${member.displayName} a déjà un rendez-vous sur ce créneau.` } };
     throw error;
   }
 
-  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "appointment.create", description: `Rendez-vous créé : ${contact.name}, ${v.date} ${v.time}` });
   revalidatePath("/app", "layout");
   redirect(`/app/agenda?semaine=${v.date}`);
 }
