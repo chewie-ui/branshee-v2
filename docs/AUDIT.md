@@ -23,19 +23,15 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Vocabulaire « patients » pour les métiers de santé (menu, tableau de bord, formulaires)
 - ⏳ Encaisser la pénalité d'une absence non excusée → lot H (paiements) · événements Google Agenda → lot L
 
-## Lot B — Clients (CRM)
-- 🔶 Liste : recherche ✅ · filtres période (à venir, 7/30/90 j) et statut, colonnes (téléphone, praticien, nb RDV, dernier RDV, statut), sélection multiple + suppression ❌
-- ❌ Ajouter un client à la main (le nom suffit)
-- 🔶 Fiche : coordonnées ✅, historique ✅, absences ✅ · onglets Aperçu / Rendez-vous / Dossier, résumé (total, confirmés, annulés, absences), paiements ❌
-- ❌ Contacts alternatifs (autre nom, autre email, autre téléphone)
-- ❌ Notes générales (en plus du dossier)
-- ✅ Dossier : notes datées chiffrées (titre, constat, à faire) · ❌ **pièce jointe PDF** (envoi, ouverture, téléchargement), recherche dans les notes
-- ❌ Liste des RDV du client avec recherche, filtres (date, prestation, praticien), détail et modification en place
-- ❌ Rattacher un RDV à un autre client
-- ❌ Fusionner deux fiches
-- ✅ Bloquer · ❌ supprimer un client
-- ❌ Contacter le client (appel / email en un clic depuis la fiche) — partiel
-- ❌ Vocabulaire « patients » / « clients » selon le métier (kiné, psy, dentiste… → patients)
+## Lot B — Clients (CRM) ✅
+- ✅ Liste : recherche (y compris contacts alternatifs), filtres période (RDV à venir, venus ces 7 / 30 / 90 jours) et statut (dernier RDV confirmé / annulé, absences, bloqués), colonnes téléphone, praticien, nombre de RDV, dernier RDV, statut ; sélection multiple + suppression
+- ✅ Ajouter une fiche à la main (le nom suffit)
+- ✅ Fiche à onglets Aperçu / Rendez-vous / Dossier ; résumé (terminés, annulés, absences, encaissé), prochain RDV, appeler / SMS / email / nouveau RDV en un clic
+- ✅ Coordonnées (prénom, nom, email, téléphone), contacts alternatifs (autre nom, email, téléphone), notes générales chiffrées
+- ✅ Dossier : notes datées chiffrées, **PDF joint** (chiffré sur le disque, ouvrir / télécharger, réservé à l'équipe), recherche dans les notes ; les PDF de l'ancien Branshee restent lisibles
+- ✅ Onglet Rendez-vous : recherche, filtres année / prestation / praticien, rattacher un RDV à une autre fiche
+- ✅ Fusionner deux fiches (RDV, notes, coordonnées, notes générales), bloquer / débloquer, supprimer (avec dossier et RDV)
+- ✅ Vocabulaire « patients » / « clients » selon le métier
 
 ## Lot C — Prestations et cours collectifs
 - ✅ Nom, description, prix, durée, couleur, catégorie, membres, actif, public selon « première visite »

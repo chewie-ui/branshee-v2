@@ -61,6 +61,12 @@ npm run migrate:mongo -- --force                # rejouer : remplace la migratio
 ## Étapes de la bascule
 1. `pg_dump` vide de la v2 + `mongodump` de sécurité de l'ancienne base.
 2. Lancer `npm run migrate:mongo -- --dry-run` → lire le rapport (comptes par table, anomalies).
-3. Lancer pour de vrai, puis vérifier dans l'app quelques agendas et dossiers clients ; copier le dossier `public/uploads` de l'ancien serveur (photos, pièces jointes).
+3. Lancer pour de vrai, puis vérifier dans l'app quelques agendas et dossiers clients. Copier les fichiers de l'ancien serveur :
+   ```bash
+   mkdir -p "$STORAGE_DIR"
+   cp -r /chemin/ancien-branshee/public/uploads/.  "$STORAGE_DIR/legacy-public/"    # photos, logos (servis sur /uploads/… comme avant)
+   cp -r /chemin/ancien-branshee/private_uploads/. "$STORAGE_DIR/legacy-private/"   # PDF des dossiers clients
+   ```
+   Les PDF envoyés depuis la v2 sont chiffrés ; ceux de l'ancien Branshee restent lisibles tels quels.
 4. Mettre l'ancien site en lecture seule, dernière passe incrémentale, puis bascule DNS.
 5. Ancienne version gardée prête à être rallumée pendant 2 semaines.

@@ -43,3 +43,6 @@ next-env.d.ts
 
 # base locale (npm run local)
 /.local/
+
+# fichiers envoyés (dossiers chiffrés, images)
+/storage/
