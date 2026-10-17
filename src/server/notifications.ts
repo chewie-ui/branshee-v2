@@ -89,6 +89,14 @@ export function notifyCancelledByCustomer(appointmentId: string) {
   });
 }
 
+export function notifyCancelledByBusiness(appointmentId: string) {
+  return safely("annulation établissement", async () => {
+    const row = await load(appointmentId);
+    if (!row) return;
+    await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.info, row.bookingUrl, row.settings?.cancellationMessage));
+  });
+}
+
 /**
  * Rappels : RDV confirmés dans la fenêtre « délai de rappel » de leur établissement, pas encore rappelés.
  * Idempotent : chaque RDV est marqué AVANT l'envoi, donc deux exécutions simultanées n'envoient pas deux fois.

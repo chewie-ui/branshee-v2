@@ -5,7 +5,11 @@ import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { appointments, customers, members } from "@/db/schema";
+import { appointments, customerNotes, customers, members } from "@/db/schema";
+import { CustomerDetailsForm, DossierNotes, type NoteView } from "@/components/customers/dossier";
+import { decrypt } from "@/lib/field-crypto";
+import { format } from "date-fns";
+import { zoned } from "@/lib/time";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +38,35 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     .orderBy(desc(appointments.startsAt))
     .limit(100);
 
+  const canManage = ctx.can("customers.manage");
+  // Déchiffrement côté serveur ; si la clé manque, on l'indique au lieu de planter la page.
+  const failures: string[] = [];
+  const read = (v: string | null) => {
+    try {
+      return decrypt(v) ?? "";
+    } catch {
+      failures.push("x");
+      return "";
+    }
+  };
+  const noteRows = await db
+    .select({ n: customerNotes, author: members.displayName })
+    .from(customerNotes)
+    .leftJoin(members, eq(members.id, customerNotes.authorMemberId))
+    .where(eq(customerNotes.customerId, customer.id))
+    .orderBy(desc(customerNotes.date), desc(customerNotes.createdAt));
+  const notes: NoteView[] = noteRows.map(({ n, author }) => ({
+    id: n.id,
+    date: n.date,
+    dateLabel: formatDay(new Date(n.date + "T12:00:00Z"), tz, "d MMMM yyyy"),
+    title: n.title ?? "",
+    note: read(n.noteEnc),
+    todo: read(n.todoEnc),
+    author,
+  }));
+  const generalInfo = read(customer.generalInfoEnc);
+  const cryptoError = failures.length > 0;
+
   const now = new Date();
   const upcoming = history.filter((h) => h.a.startsAt > now && h.a.status !== "cancelled").reverse();
   const past = history.filter((h) => h.a.startsAt <= now || h.a.status === "cancelled");
@@ -47,7 +80,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         <p className="text-muted tabular-nums">{formatTime(h.a.startsAt, tz)}</p>
       </div>
       <div className="min-w-0 flex-1 text-sm">
-        <p className="truncate font-medium">{h.a.serviceName ?? "Rendez-vous"}</p>
+        <Link href={`/app/agenda/rdv/${h.a.id}`} className="block truncate font-medium hover:underline">{h.a.serviceName ?? "Rendez-vous"}</Link>
         {h.memberName ? <p className="truncate text-muted">avec {h.memberName}</p> : null}
       </div>
       {h.a.noShow ? <Badge tone="danger">Absent</Badge> : <StatusBadge status={h.a.status} />}
@@ -74,7 +107,13 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6">
-          <Card>
+          {canManage ? (
+            <CustomerDetailsForm
+              customerId={customer.id}
+              c={{ fullName: customer.fullName, email: customer.email ?? "", phone: customer.phone ?? "", altName: customer.altName ?? "", altPhone: customer.altPhone ?? "", generalInfo, blocked: !!customer.blockedAt, blockedReason: customer.blockedReason ?? "" }}
+            />
+          ) : (
+            <Card>
             <CardHeader title="Coordonnées" />
             <ul className="space-y-3 p-5 text-sm">
               <li className="flex items-center gap-3">
@@ -87,6 +126,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
               </li>
             </ul>
           </Card>
+          )}
           <Card className="grid grid-cols-2 divide-x divide-border">
             <div className="p-4">
               <p className="text-sm text-muted">Visites</p>
@@ -100,6 +140,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="min-w-0 space-y-6 lg:col-span-2">
+          {cryptoError ? (
+            <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
+              Une partie du dossier est illisible : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l&apos;enregistrement.
+            </p>
+          ) : null}
+          <DossierNotes customerId={customer.id} notes={notes} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
           <Card>
             <CardHeader title="À venir" />
             {upcoming.length ? <ul className="divide-y divide-border">{upcoming.map((h) => <Row key={h.a.id} h={h} />)}</ul> : <p className="px-5 py-4 text-sm text-muted">Aucun rendez-vous prévu.</p>}

@@ -10,7 +10,7 @@ import { db } from "@/db";
 import { activityLogs, appointments, customers, members, services } from "@/db/schema";
 import { getAvailableSlots } from "@/server/availability";
 import { requireContext } from "@/server/context";
-import { notifyBookingCreated, notifyRequestDecision } from "@/server/notifications";
+import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision } from "@/server/notifications";
 
 const idSchema = z.uuid();
 
@@ -163,4 +163,40 @@ export async function fetchFreeSlots(serviceId: string, memberId: string, date: 
   // Côté pro, on ignore le délai minimum et l'horizon : ils ne concernent que la réservation en ligne.
   const slots = await getAvailableSlots({ businessId: ctx.business.id, serviceId, memberId, days: [date], ignoreOnlineRules: true });
   return (slots[date] ?? []).map((s) => s.time);
+}
+
+/** Annulation par l'équipe (le client est prévenu par email s'il en a un). */
+export async function cancelAppointment(id: string): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await requireContext("appointments.cancel");
+  const apptId = idSchema.parse(id);
+  const updated = await db
+    .update(appointments)
+    .set({ status: "cancelled", cancelledAt: new Date() })
+    .where(and(eq(appointments.id, apptId), eq(appointments.businessId, ctx.business.id), sql`${appointments.status} <> 'cancelled'`))
+    .returning({ kind: appointments.kind, name: appointments.contactName, startsAt: appointments.startsAt });
+  if (!updated.length) return { ok: false, error: "Rendez-vous introuvable ou déjà annulé." };
+  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "appointment.cancel", description: `${updated[0]!.kind === "block" ? "Blocage supprimé" : `Rendez-vous annulé : ${updated[0]!.name ?? "client"}`}` });
+  if (updated[0]!.kind === "appointment" && updated[0]!.startsAt > new Date()) after(() => notifyCancelledByBusiness(apptId));
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function setNoShow(id: string, noShow: boolean, reason: "justified" | "unjustified" | null): Promise<{ ok: boolean }> {
+  const ctx = await requireContext("appointments.manage");
+  await db
+    .update(appointments)
+    .set({ noShow, noShowReason: noShow ? reason : null })
+    .where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)));
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+export async function saveInternalNote(id: string, note: string): Promise<{ ok: boolean }> {
+  const ctx = await requireContext("appointments.manage");
+  await db
+    .update(appointments)
+    .set({ internalNote: note.trim().slice(0, 2000) || null })
+    .where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)));
+  revalidatePath("/app", "layout");
+  return { ok: true };
 }

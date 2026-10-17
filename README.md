@@ -67,11 +67,15 @@ scripts/              seed, migration depuis MongoDB
 - Mot de passe oublié (code à 6 chiffres par email, sessions fermées après changement)
 - Prestations : création, modification, catégories, couleur, praticiens, masquer, supprimer
 - Réglages : établissement (dont lien public), règles de réservation (créneaux, battements, délais, confirmation, question « première visite »), notifications
+- Dossier client : fiche modifiable, informations générales et notes de suivi chiffrées (AES-256-GCM), blocage
+- Détail d'un RDV : réponses au formulaire, message, paiement, présence/absence, note interne, annulation (client prévenu)
+- Page de réservation : lien et code d'intégration, questions posées avant réservation, FAQ, couleur principale
+- Journal d'activité filtrable
+- Script de migration MongoDB → PostgreSQL (`npm run migrate:mongo`, voir docs/MIGRATION.md)
 - Équipe : ajout de membres (avec invitation par email, reliée automatiquement à l'inscription), profil, grade, désactivation, retrait ; grades personnalisés avec grille de permissions
 
 **Prochaines étapes**
 1. Connexion Google, double authentification
 2. Réservation des cours collectifs, reprogrammation par le client
-4. Page de réservation (apparence, galerie, FAQ, formulaire de questions), journal d'activité
-5. Script de migration depuis MongoDB
-6. Paiements, SMS/WhatsApp, avis, site, super-admin
+4. Super-admin
+5. Paiements (Stripe Connect), abonnements Stripe, SMS/WhatsApp, avis, créateur de site

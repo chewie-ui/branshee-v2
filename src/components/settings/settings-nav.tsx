@@ -11,7 +11,7 @@ export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/paiements", label: "Paiements", ready: false },
   { href: "/app/reglages/integrations", label: "Intégrations", ready: false },
   { href: "/app/reglages/abonnement", label: "Abonnement", ready: false },
-  { href: "/app/reglages/journal", label: "Journal d'activité", ready: false },
+  { href: "/app/reglages/journal", label: "Journal d'activité", ready: true },
 ];
 
 export function SettingsNav() {

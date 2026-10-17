@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { bookingSettings, businesses, formQuestions, members, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
 
 /**
  * Données publiques d'un établissement, pour sa page de réservation.
@@ -31,6 +31,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
   if (!biz) return null;
 
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
+  const [page] = await db.select({ theme: bookingPageSettings.theme, faq: bookingPageSettings.faq }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
 
   const [svc, cats, links, team, questions, hours] = await Promise.all([
     db
@@ -65,6 +66,8 @@ export const getPublicBusiness = cache(async (slug: string) => {
     categories: cats,
     team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio })),
     questions,
+    accentColor: page?.theme.accentColor ?? null,
+    faq: page?.faq ?? [],
     /** Horaires communs (affichés seulement en mode « partagé »). */
     hours: settings?.scheduleMode === "shared" ? hours.map((h) => ({ weekday: h.weekday, start: h.start.slice(0, 5), end: h.end.slice(0, 5) })) : [],
   };

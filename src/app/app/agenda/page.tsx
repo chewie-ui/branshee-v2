@@ -161,14 +161,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
                       const lane = laneOf(a.memberId);
                       const width = 100 / lanes.length;
                       const style = { top, height, left: `calc(${lane * width}% + 2px)`, width: `calc(${width}% - 4px)`, borderLeftColor: color, background: a.kind === "block" ? undefined : `${color}1f` };
-                      return a.customerId ? (
-                        <Link key={a.id} href={`/app/clients/${a.customerId}`} className={cn(className, "hover:brightness-95")} style={style} title={`${a.title} — ${formatTime(a.startsAt, tz)}`}>
+                      return (
+                        <Link key={a.id} href={`/app/agenda/rdv/${a.id}`} className={cn(className, "hover:brightness-95")} style={style} title={`${a.title} — ${formatTime(a.startsAt, tz)}`}>
                           {content}
                         </Link>
-                      ) : (
-                        <div key={a.id} className={className} style={style} title={a.title}>
-                          {content}
-                        </div>
                       );
                     })}
                   </div>

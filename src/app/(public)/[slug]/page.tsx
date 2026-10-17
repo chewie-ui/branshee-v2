@@ -34,12 +34,15 @@ const DAYS = [
 export default async function PublicBusinessPage({ params }: { params: Params }) {
   const data = await getPublicBusiness((await params).slug);
   if (!data) notFound();
-  const { business: b, team, hours } = data;
+  const { business: b, team, hours, faq } = data;
+  // Couleur de l'établissement : remplace l'accent du thème sur toute la page.
+  const accent = data.accentColor && /^#[0-9a-f]{6}$/i.test(data.accentColor) ? data.accentColor : null;
+  const themeStyle = accent ? ({ "--accent": accent, "--accent-hover": accent, "--accent-soft": `${accent}14`, "--accent-soft-foreground": accent } as React.CSSProperties) : undefined;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   const address = [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh" style={themeStyle}>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-6 sm:px-6">
           <Avatar name={b.name} src={b.photoUrl} size="lg" className="size-14 text-base" />
@@ -117,6 +120,20 @@ export default async function PublicBusinessPage({ params }: { params: Params })
                   );
                 })}
               </dl>
+            </div>
+          ) : null}
+
+          {faq.length ? (
+            <div className="rounded-xl border border-border bg-surface p-5">
+              <h2 className="mb-3 font-semibold">Questions fréquentes</h2>
+              <div className="divide-y divide-border">
+                {faq.map((f, i) => (
+                  <details key={i} className="group py-2.5 text-sm">
+                    <summary className="cursor-pointer list-none font-medium [&::-webkit-details-marker]:hidden">{f.question}</summary>
+                    <p className="mt-1.5 whitespace-pre-line text-muted">{f.answer}</p>
+                  </details>
+                ))}
+              </div>
             </div>
           ) : null}
 

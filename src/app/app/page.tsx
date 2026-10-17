@@ -83,7 +83,7 @@ export default async function TodayPage() {
                 {pending.map((a) => (
                   <li key={a.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <p className="font-medium">{a.title}</p>
+                      <Link href={`/app/agenda/rdv/${a.id}`} className="font-medium hover:underline">{a.title}</Link>
                       <p className="text-sm text-muted">
                         {formatDay(a.startsAt, tz, "EEE d MMM")} à {formatTime(a.startsAt, tz)} · {a.serviceName ?? "Rendez-vous"}
                         {a.memberName ? ` · ${a.memberName}` : ""}
@@ -118,7 +118,7 @@ export default async function TodayPage() {
                       <span className="h-10 w-1 shrink-0 rounded-full" style={{ background: a.kind === "block" ? "var(--border-strong)" : (a.color ?? "var(--accent)") }} aria-hidden="true" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">
-                          {a.customerId ? <Link href={`/app/clients/${a.customerId}`} className="hover:underline">{a.title}</Link> : a.title}
+                          <Link href={`/app/agenda/rdv/${a.id}`} className="hover:underline">{a.title}</Link>
                         </p>
                         <p className="truncate text-sm text-muted">
                           {a.kind === "block" ? "Indisponible" : a.serviceName}
