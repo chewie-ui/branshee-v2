@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { completeCheckout, syncSubscription } from "@/server/billing";
 import { stripe } from "@/server/payments";
+import { completeSmsTopup } from "@/server/sms";
 
 /**
  * Webhook Stripe (abonnements) : renouvellements, résiliations, échecs de paiement, changements faits
@@ -20,7 +21,8 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await completeCheckout(event.data.object);
+        if (event.data.object.mode === "payment") await completeSmsTopup(event.data.object);
+        else await completeCheckout(event.data.object);
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":

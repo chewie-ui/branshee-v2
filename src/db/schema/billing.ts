@@ -176,3 +176,12 @@ export const referralCredits = pgTable("referral_credits", {
   monthsClaimed: integer("months_claimed").notNull().default(0),
   ...timestamps,
 });
+
+/** Paiements Stripe déjà traités (recharges SMS…) : évite de créditer deux fois (retour + webhook). */
+export const processedPayments = pgTable("processed_payments", {
+  id: text("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  kind: text("kind").notNull(),
+  amountCents: integer("amount_cents").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

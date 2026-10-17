@@ -7,7 +7,8 @@ import { format } from "date-fns";
 import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { sendEmail } from "@/server/email/mailer";
-import { businessHas } from "@/server/plan";
+import { businessHas, effectivePlan } from "@/server/plan";
+import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, whatsappConfigured } from "@/server/sms";
 
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
@@ -52,6 +53,40 @@ function toClient(row: Loaded, template: string, mail: { subject: string; html: 
   return sendEmail({ ...mail, to: row.a.contactEmail, template, replyTo: row.business.email, businessId: row.business.id, appointmentId: row.a.id });
 }
 
+/**
+ * Rappel / confirmation par WhatsApp puis SMS, selon les réglages et le forfait (payant uniquement).
+ * Renvoie true si un message est parti sur le téléphone.
+ */
+async function toPhone(row: Loaded, kind: "reminder" | "confirmation") {
+  const phone = row.a.contactPhone;
+  const st = row.settings;
+  if (!phone || !st) return false;
+  const wantWa = kind === "reminder" ? st.whatsappReminders : st.whatsappConfirmations;
+  const wantSms = kind === "reminder" ? st.smsReminders : st.smsConfirmations;
+  if (!wantWa && !wantSms) return false;
+  const plan = (await effectivePlan(row.business.id)).plan;
+  if (plan === "free") return false;
+  const owner = row.business.ownerId;
+  const tz = row.business.timezone;
+  const date = formatDay(row.a.startsAt, tz, "EEEE d MMMM");
+  const time = formatTime(row.a.startsAt, tz);
+  if (wantWa && whatsappConfigured()) {
+    const params = [(row.a.contactName ?? "").split(" ")[0] ?? "", row.business.name, date, time];
+    const r = await chargeAndSend(owner, plan, st.smsAllowOverage, WHATSAPP_PRICE_CENTS, () => sendWhatsapp(phone, kind, params));
+    if (r.sent) return true;
+  }
+  if (wantSms && (await smsFeatureOn())) {
+    const where = row.info.address ? `\nLieu : ${row.info.address}` : "";
+    const body =
+      kind === "reminder"
+        ? `Rappel : votre rendez-vous chez ${row.business.name} est ${date} à ${time}.${where}\nGérer : ${row.info.manageUrl}`
+        : `Rendez-vous confirmé chez ${row.business.name} : ${date} à ${time}.${where}\nGérer : ${row.info.manageUrl}`;
+    const r = await chargeAndSend(owner, plan, st.smsAllowOverage, SMS_PRICE_CENTS, () => sendSms(phone, body));
+    if (r.sent) return true;
+  }
+  return false;
+}
+
 /** Les notifications ne doivent jamais faire échouer l'action qui les déclenche. */
 async function safely(label: string, fn: () => Promise<unknown>) {
   try {
@@ -67,6 +102,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
     if (!row) return;
     const pending = row.a.status === "pending";
     await toClient(row, pending ? "booking_requested" : "booking_confirmed", pending ? emails.bookingRequested(row.info) : emails.bookingConfirmed(row.info, row.settings?.confirmationMessage));
+    if (!pending) await toPhone(row, "confirmation");
 
     if (source === "online" && (row.settings?.emailOwnerOnNewBooking ?? true)) {
       const mail = emails.proNewBooking({ ...row.info, pending, customerEmail: row.a.contactEmail, customerPhone: row.a.contactPhone }, `${appUrl()}/app`);
@@ -187,7 +223,13 @@ export async function sendDueReminders(now = new Date()) {
       .returning({ id: appointments.id });
     if (!claimed.length) continue;
     const row = await load(c.id);
-    if (row && (await toClient(row, "reminder", reminderMail(row)))) sent++;
+    if (!row) continue;
+    // WhatsApp, puis SMS ; l'email ne part que si aucun des deux n'a pu partir (comme l'ancien).
+    if (await toPhone(row, "reminder")) {
+      sent++;
+      continue;
+    }
+    if (await toClient(row, "reminder", reminderMail(row))) sent++;
   }
   return { checked: candidates.length, sent };
 }

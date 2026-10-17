@@ -120,9 +120,13 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Accès offert par le super-admin, désormais par établissement
 - ℹ️ Sans clés Stripe, les forfaits s'affichent mais le paiement est désactivé (testé) ; à tester avec les clés de test sur le VPS
 
-## Lot K — SMS et WhatsApp
-- ❌ Rappel et confirmation par SMS, quota inclus par forfait, solde prépayé, recharge, recharge automatique, compteur mensuel, repli email
-- ❌ WhatsApp (rappel, confirmation), repli SMS puis email
+## Lot K — SMS et WhatsApp ✅
+- ✅ Rappel (remplace l'email) et confirmation (en plus de l'email) par SMS — Spryng, comme l'ancien
+- ✅ Quota inclus par forfait (Pro 10, Pro+ 30 / mois), réservé de façon atomique ; au-delà : solde prépayé si « continuer au-delà du forfait » est activé (SMS 0,30 €, WhatsApp 0,05 €), remboursé si l'envoi échoue ; sinon repli email
+- ✅ Recharge du solde (10 / 20 / 50 €, Stripe Checkout, crédité une seule fois même si retour + webhook), recharge automatique sous un seuil (carte enregistrée), alerte « solde bas » puis « épuisé » dans l'espace pro, compteur mensuel
+- ✅ WhatsApp (modèles Meta « rdv_rappel » et « rdv_confirmation ») prioritaire, repli SMS puis email ; même quota et même solde
+- ✅ Interrupteur global `sms_notifications` (super-admin)
+- ℹ️ Sans jetons Spryng / Meta, rien ne part et l'email prend le relais (testé, facturation testée en base)
 
 ## Lot L — Intégrations
 - ❌ Synchronisation Google Agenda (connexion, envoi des RDV, événements Google bloquants)
