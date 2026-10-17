@@ -50,6 +50,13 @@
       "when": 1792254394572,
       "tag": "0006_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792255019237,
+      "tag": "0007_business_location",
+      "breakpoints": true
     }
   ]
 }

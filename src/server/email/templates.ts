@@ -72,6 +72,9 @@ function apptDetails(a: AppointmentInfo): Detail[] {
   ];
 }
 
+/** Modes de paiement rappelés dans l'email de rappel (mêmes codes que l'ancien Branshee). */
+export const PAYMENT_LABELS: Record<string, string> = { carte: "Carte bancaire", especes: "Espèces", qr_code: "QR code (Payconiq…)", virement: "Virement" };
+
 const clientFooter = (a: AppointmentInfo) => `${a.businessName}${a.businessPhone ? ` · ${a.businessPhone}` : ""} — rendez-vous géré avec Branshee`;
 const firstName = (n: string) => n.split(" ")[0] ?? n;
 
@@ -179,14 +182,16 @@ export const emails = {
     };
   },
 
-  reminder(a: AppointmentInfo, customMessage?: string | null) {
+  reminder(a: AppointmentInfo, customMessage?: string | null, payment?: { methods: string[]; note?: string | null }) {
+    const methods = (payment?.methods ?? []).map((m) => PAYMENT_LABELS[m]).filter(Boolean);
+    const pay = [methods.join(", "), payment?.note?.trim()].filter(Boolean).join(" — ");
     return {
       subject: `Rappel : rendez-vous ${a.when} — ${a.businessName}`,
       ...render({
         preheader: `${a.serviceName} chez ${a.businessName}`,
         title: "Rappel de votre rendez-vous",
         intro: `Bonjour ${firstName(a.customerName)}, petit rappel de votre rendez-vous chez ${a.businessName}.`,
-        details: apptDetails(a),
+        details: [...apptDetails(a), ...(pay ? [{ label: "Paiement sur place", value: pay }] : [])],
         cta: { label: "Voir ou annuler", url: a.manageUrl },
         note: customMessage || "Un empêchement ? Merci d'annuler dès que possible pour libérer le créneau.",
         footer: clientFooter(a),

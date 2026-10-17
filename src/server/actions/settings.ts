@@ -1,13 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, bookingSettings, businesses, notificationSettings } from "@/db/schema";
-import { slugify } from "@/lib/slug";
 import { requireContext } from "@/server/context";
-import { RESERVED_SLUGS } from "@/server/business";
 
 export type SettingsState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -18,7 +16,6 @@ function fail(error: z.ZodError): SettingsState {
 }
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
-const optionalUrl = z.union([z.literal(""), z.url({ message: "Adresse web invalide (commencez par https://)." })]);
 
 const businessSchema = z.object({
   name: z.string().min(2, "Indiquez le nom.").max(80),
@@ -26,11 +23,6 @@ const businessSchema = z.object({
   description: z.string().max(1000),
   email: z.union([z.literal(""), z.email({ message: "Email invalide." })]),
   phone: z.string().max(40),
-  website: optionalUrl,
-  address: z.string().max(120),
-  postalCode: z.string().max(12),
-  city: z.string().max(80),
-  slug: z.string().min(3, "3 caractères minimum.").max(60).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Lettres minuscules, chiffres et tirets uniquement."),
 });
 
 export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
@@ -41,18 +33,9 @@ export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Prom
     description: str(fd, "description"),
     email: str(fd, "email").toLowerCase(),
     phone: str(fd, "phone"),
-    website: str(fd, "website"),
-    address: str(fd, "address"),
-    postalCode: str(fd, "postalCode"),
-    city: str(fd, "city"),
-    slug: slugify(str(fd, "slug")),
   });
   if (!parsed.success) return fail(parsed.error);
   const v = parsed.data;
-
-  if (RESERVED_SLUGS.has(v.slug)) return { error: "Vérifiez les champs indiqués.", fieldErrors: { slug: "Cette adresse est réservée, choisissez-en une autre." } };
-  const [taken] = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, v.slug), ne(businesses.id, ctx.business.id)));
-  if (taken) return { error: "Vérifiez les champs indiqués.", fieldErrors: { slug: "Cette adresse est déjà prise." } };
 
   await db
     .update(businesses)
@@ -62,11 +45,6 @@ export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Prom
       description: v.description || null,
       email: v.email || null,
       phone: v.phone || null,
-      website: v.website || null,
-      address: v.address || null,
-      postalCode: v.postalCode || null,
-      city: v.city || null,
-      slug: v.slug,
     })
     .where(eq(businesses.id, ctx.business.id));
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "settings.business", description: "Infos de l'établissement modifiées" });
@@ -150,6 +128,8 @@ const notifSchema = z.object({
   cancellationMessage: z.string().trim().max(500),
   emailOwnerOnNewBooking: z.boolean(),
   emailOwnerOnCancellation: z.boolean(),
+  reminderPaymentMethods: z.array(z.enum(["carte", "especes", "qr_code", "virement"])).max(4),
+  reminderPaymentNote: z.string().trim().max(300),
 });
 
 export async function saveNotifications(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
@@ -161,6 +141,8 @@ export async function saveNotifications(_prev: SettingsState, fd: FormData): Pro
     cancellationMessage: str(fd, "cancellationMessage"),
     emailOwnerOnNewBooking: fd.get("emailOwnerOnNewBooking") === "on",
     emailOwnerOnCancellation: fd.get("emailOwnerOnCancellation") === "on",
+    reminderPaymentMethods: fd.getAll("reminderPaymentMethods").map(String),
+    reminderPaymentNote: str(fd, "reminderPaymentNote"),
   });
   if (!parsed.success) return fail(parsed.error);
   const v = parsed.data;
@@ -168,6 +150,8 @@ export async function saveNotifications(_prev: SettingsState, fd: FormData): Pro
     .update(notificationSettings)
     .set({
       reminderDelayHours: v.reminderDelayHours,
+      reminderPaymentMethods: v.reminderPaymentMethods,
+      reminderPaymentNote: v.reminderPaymentNote || null,
       confirmationMessage: v.confirmationMessage || null,
       reminderMessage: v.reminderMessage || null,
       cancellationMessage: v.cancellationMessage || null,

@@ -23,6 +23,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { isNotNull, sql } from "drizzle-orm";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
+import { resolveTheme } from "../src/lib/booking-theme";
 import { encrypt } from "../src/lib/field-crypto";
 import { BUILT_IN_GRADES, NO_PERMISSIONS, type Permissions } from "../src/lib/permissions";
 import { slugify } from "../src/lib/slug";
@@ -114,6 +115,17 @@ const date = (v: any): Date | null => {
 };
 const DEFAULT_AVATAR = /no-user\.webp$/;
 const image = (v: any) => (text(v) && !DEFAULT_AVATAR.test(v) ? text(v) : null);
+/** Carte Google Maps : l'ancien champ contenait l'URL ou tout le code <iframe>. On ne garde qu'une URL d'intégration Google. */
+const mapSrc = (v: string | null): string | null => {
+  if (!v) return null;
+  const src = (v.match(/src\s*=\s*["']([^"']+)["']/i)?.[1] ?? v).replace(/&amp;/g, "&");
+  try {
+    const u = new URL(src);
+    return u.protocol === "https:" && /^(www\.)?google\.[a-z.]+$/.test(u.hostname) && u.pathname.startsWith("/maps/embed") ? u.toString() : null;
+  } catch {
+    return null;
+  }
+};
 const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const hhmm = (v: any): string | null => {
   const m = typeof v === "string" ? v.trim().match(HHMM) : null;
@@ -390,10 +402,12 @@ async function main() {
           address: text(loc.address),
           postalCode: text(loc.zip),
           city: text(loc.city),
-          country: text(loc.country),
+          country: text(loc.country) ?? text(loc.onlineCountry),
           latitude: Number(loc.lat) || null,
           longitude: Number(loc.lon) || null,
-          mapEmbedUrl: text(loc.iframeUrl),
+          mapEmbedUrl: mapSrc(text(loc.iframeUrl) ?? text(loc.iframeEmbedCode)),
+          mapsUrl: /^https:\/\//.test(text(loc.gmapUrl) ?? "") ? text(loc.gmapUrl) : null,
+          languages: (Array.isArray(loc.onlineLangs) ? loc.onlineLangs : []).filter((l: unknown) => typeof l === "string" && /^[a-z]{2}$/.test(l)),
           timezone: TZ,
           pausedAt: c.isPaused ? (date(c.updatedAt) ?? new Date()) : null,
           boostPosition: Number(c.boostPosition) || 0,
@@ -464,7 +478,30 @@ async function main() {
           ({ about: cal.showSectionAbout !== false, location: cal.showSectionMap !== false, hours: cal.showSectionHours !== false, gallery: !!cal.showSectionGallery, reviews: !!cal.showSectionReviews, services: !!cal.showSectionServices, team: !!cal.showSectionTeam, amenities: !!cal.showSectionAmenities, faq: !!cal.showSectionFaq })[k] ?? false;
         await tx.insert(s.bookingPageSettings).values({
           businessId: bizId,
-          theme: { accentColor: text(cal.accentColor) ?? "#4f46e5", accentText: text(cal.accentText) ?? "#ffffff", pageBg: text(cal.pageBg) ?? "#f7f7f8", pageBgImage: text(cal.pageBgImage) ?? undefined, font: text(cal.font) ?? "Inter", customFontUrl: text(cal.customFontUrl) ?? undefined, radius: ["none", "sm", "md", "lg"].includes(cal.borderRadius) ? cal.borderRadius : "md", layout: cal.layoutStyle === "split" ? "split" : "classic" },
+          // Thème complet de l'ancien éditeur ; `resolveTheme` écarte les valeurs invalides champ par champ.
+          theme: resolveTheme({
+            accentColor: text(cal.accentColor) ?? "#22c55e",
+            accentText: text(cal.accentText) ?? "#ffffff",
+            pageBg: text(cal.pageBg) ?? "#f3f4f6",
+            pageBgImage: cal.pageBgType === "image" ? (image(cal.pageBgImage) ?? undefined) : undefined,
+            calBg: text(cal.calBg) ?? undefined,
+            dayBg: text(cal.dayBg) ?? undefined,
+            daySelectedBg: text(cal.daySelectedBg) ?? undefined,
+            daySelectedText: text(cal.daySelectedText) ?? undefined,
+            dayHoverBg: text(cal.dayHoverBg) ?? undefined,
+            btnHoverBg: text(cal.btnHoverBg) ?? undefined,
+            dayAvailableColor: text(cal.dayAvailableColor) ?? undefined,
+            dayBusyColor: text(cal.dayBusyColor) ?? undefined,
+            dayFullColor: text(cal.dayFullColor) ?? undefined,
+            font: text(cal.font) ?? "Inter",
+            customFontUrl: text(cal.customFontUrl) ?? undefined,
+            customFontFamily: text(cal.customFontFamily) ?? undefined,
+            radius: ["none", "sm", "md", "lg"].includes(cal.borderRadius) ? cal.borderRadius : "md",
+            borderStyle: ["none", "subtle", "medium", "strong"].includes(cal.borderStyle) ? cal.borderStyle : "subtle",
+            shadowStyle: ["none", "subtle", "medium", "strong"].includes(cal.shadowStyle) ? cal.shadowStyle : "subtle",
+            layout: cal.layoutStyle === "split" ? "split" : "classic",
+            texts: { calendarHelp: text(cal.textCalendarHelp) ?? "", slotHeading: text(cal.textSlotHeading) ?? "", timezone: text(cal.textTimezone) ?? "" },
+          }),
           sections: [...new Set([...order, "services", "team", "amenities", "faq"])].filter((k) => sectionMap[k] && enabled(k)).map((k) => sectionMap[k]!),
           showContact: { email: cal.showEmailPro !== false, phone: cal.showPhonePro !== false, instagram: cal.showInstagram !== false, facebook: cal.showFacebook !== false, whatsapp: cal.showWhatsapp !== false, website: cal.showWebsite !== false },
           gallery: Array.isArray(cal.gallery) ? cal.gallery.filter((x: any) => typeof x === "string") : [],

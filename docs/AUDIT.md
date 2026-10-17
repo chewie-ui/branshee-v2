@@ -56,29 +56,32 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Durée sans prestation : la réservation en ligne passe toujours par une prestation ; un RDV manuel sans prestation prend la durée saisie
 - ✅ Résumé sur la page Horaires : jours ouverts, heures / semaine, créneaux théoriques + lien « Voir comme un client »
 
-## Lot E — Page de réservation (personnalisation)
-- 🔶 Profil : nom ✅, métier ✅, description ✅ · photo / logo ❌, « À propos » en texte riche (gras, italique, souligné, taille) ❌
-- ❌ Localisation : sur place / à domicile / en ligne, adresse, pays, langues parlées, carte (intégration Google Maps), afficher / masquer la carte et les horaires
-- ❌ Galerie photos (12 max, grille / mosaïque / carrousel, réordonner)
-- ❌ Ordre des sections (à propos, localisation, horaires, galerie) + visibilité de chacune
-- ❌ Réseaux sociaux (Instagram, Facebook, WhatsApp, site) avec visibilité par réseau
-- 🔶 Lien public ✅ · URL personnalisée payante (option 5 €/mois) ❌
-- 🔶 Emails : message de confirmation ✅, d'annulation ✅ · délai du rappel (6 / 12 / 24 / 48 / 72 h) 🔶, message du rappel ❌, modes de paiement indiqués dans le rappel + note ❌, aperçu de l'email ❌
-- ❌ Design : couleurs (accent, fond, texte, boutons, survol…), texte d'aide au-dessus du calendrier, titre de l'étape créneau, fuseau affiché, police (liste + police personnalisée), arrondis, bordures, ombres, annuler / rétablir, aperçu en direct, réinitialiser — 🔶 seule la couleur d'accent existe
-- 🔶 Intégration : lien ✅, code iframe ✅ · QR code téléchargeable ❌, formats bouton / bulle flottante ❌, instructions par plateforme (WordPress, Wix…) ❌, choix des sections affichées ❌, titre / police / taille ❌
+## Lot E — Page de réservation (personnalisation) ✅
+Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Partager et intégrer**.
+- ✅ Profil : photo / logo, « À propos » en texte riche (gras, italique, souligné, listes, 3 tailles) — HTML nettoyé par liste blanche à l'enregistrement et à l'affichage (les anciens textes importés aussi)
+- ✅ Localisation : sur place / en ligne / carte personnalisée, adresse, pays, lien « Ouvrir dans Maps », code de carte Google Maps (seule une URL `google.com/maps/embed` est gardée), langues parlées, carte automatique depuis l'adresse
+- ✅ Galerie photos (12 max, grille / mosaïque / carrousel, réordonner, retirer)
+- ✅ Ordre et visibilité des sections : à propos, localisation, horaires, galerie, avis, équipe, FAQ
+- ✅ Contact et réseaux (site, Instagram, Facebook, WhatsApp, TikTok, LinkedIn, YouTube) avec visibilité par réseau, email et téléphone compris
+- 🔶 URL personnalisée : modifiable ✅ · le verrou payant (option 5 €/mois ou formule Business) arrive avec le Lot J (formules)
+- ✅ Emails : délai du rappel, message du rappel, modes de paiement + précision rappelés dans l'email, aperçu (Réglages › Notifications)
+- ✅ Apparence : 7 thèmes prêts à l'emploi, 13 couleurs (accent, fond, cartes, texte, jours, sélection, survols, pastilles de disponibilité), image de fond, textes (aide au-dessus du calendrier, titre de l'étape créneau, fuseau affiché), 10 polices + police importée, arrondis, bordures, ombres, disposition, annuler / rétablir (Ctrl+Z / Ctrl+Y), réinitialiser, **aperçu en direct** ordinateur / mobile
+- ✅ Partager et intégrer : lien, adresse personnalisée, QR code téléchargeable, 4 formats (calendrier dans la page, bouton, bulle flottante, lien), consignes pour 8 plateformes, hauteur fixe sans JavaScript, sections affichées, titre / police / dimensions
+- ✅ Compatibilité : `/js/embed.js`, `?sections=` et le message `branshee-resize` de l'ancien Branshee sont repris tels quels — les codes déjà collés sur les sites des pros continuent de fonctionner
+- ✅ Sécurité : l'espace pro, l'admin et la connexion refusent d'être affichés dans le cadre d'un autre site (anti-clickjacking) ; la page publique reste intégrable
 - ✅ Questions avant réservation, FAQ
 
 ## Lot F — Réservation en ligne (client)
 - ✅ Tunnel prestation → praticien → jour / créneau → coordonnées, revérification serveur, anti-robots
 - ✅ Questionnaire, première visite, cours collectifs
-- ❌ Styles de catégories (pastilles / accordéon / grille)
-- ❌ Mise en avant des créneaux regroupés
+- ✅ Styles de catégories (pastilles / accordéon / grille) — Lot C
+- ✅ Mise en avant des créneaux regroupés — Lot D
 - ❌ Paiement : en ligne (Stripe), prépaiement obligatoire ou au choix, empreinte de carte pour la politique d'annulation, infos virement (IBAN) / PayPal / QR code
 - ❌ Connexion / inscription client dans le tunnel, incitation à créer un compte
 - ✅ Ajout à l'agenda (.ics) · ❌ boutons Google / Apple / Outlook
 - ❌ **Reprogrammer** son RDV soi-même (choix d'un nouveau créneau) — annulation ✅
 - ❌ Avis : laisser un avis (note + commentaire), moyenne, signaler un avis (motifs)
-- 🔶 Page établissement : infos ✅, horaires ✅, équipe ✅, FAQ ✅ · « ouvert aujourd'hui », copier email / téléphone, carte, galerie avec visionneuse, « voir plus », réseaux ❌
+- 🔶 Page établissement : infos ✅, horaires ✅, équipe ✅, FAQ ✅, carte ✅, galerie ✅, réseaux ✅, avis (lecture) ✅ (Lot E) · « ouvert aujourd'hui », copier email / téléphone, visionneuse de la galerie, « voir plus » ❌
 - ❌ Page « établissement en pause » dédiée, installation comme application (PWA)
 
 ## Lot G — Espace client

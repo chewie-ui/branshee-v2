@@ -1,10 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { serviceMatches } from "@/lib/intake";
 import { listIntake } from "@/server/intake";
-import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { bookingPageSettings, bookingSettings, businesses, formQuestions, members, reviews, serviceCategories, serviceMembers, services, weeklyHours } from "@/db/schema";
+import { resolveTheme } from "@/lib/booking-theme";
+import { sanitizeRichText } from "@/server/rich-text";
 
 /**
  * Données publiques d'un établissement, pour sa page de réservation.
@@ -25,6 +27,13 @@ export const getPublicBusiness = cache(async (slug: string) => {
       address: businesses.address,
       postalCode: businesses.postalCode,
       city: businesses.city,
+      country: businesses.country,
+      aboutHtml: businesses.aboutHtml,
+      locationMode: businesses.locationMode,
+      mapsUrl: businesses.mapsUrl,
+      mapEmbedUrl: businesses.mapEmbedUrl,
+      languages: businesses.languages,
+      social: businesses.social,
       timezone: businesses.timezone,
       pausedAt: businesses.pausedAt,
     })
@@ -33,7 +42,8 @@ export const getPublicBusiness = cache(async (slug: string) => {
   if (!biz) return null;
 
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, biz.id));
-  const [page] = await db.select({ theme: bookingPageSettings.theme, faq: bookingPageSettings.faq, categoryStyle: bookingPageSettings.categoryStyle }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
+  const [page] = await db.select().from(bookingPageSettings).where(eq(bookingPageSettings.businessId, biz.id));
+  const sections = page?.sections ?? ["about", "location", "hours"];
 
   const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
     db
@@ -52,6 +62,12 @@ export const getPublicBusiness = cache(async (slug: string) => {
     db.select({ weekday: weeklyHours.weekday, start: weeklyHours.startTime, end: weeklyHours.endTime }).from(weeklyHours).where(and(eq(weeklyHours.businessId, biz.id), isNull(weeklyHours.memberId))).orderBy(asc(weeklyHours.startTime)),
     listIntake(biz.id),
   ]);
+  const [reviewStats, reviewList] = sections.includes("reviews")
+    ? await Promise.all([
+        db.select({ n: count(), avg: avg(reviews.rating) }).from(reviews).where(eq(reviews.businessId, biz.id)),
+        db.select({ id: reviews.id, author: reviews.authorName, rating: reviews.rating, comment: reviews.comment, createdAt: reviews.createdAt }).from(reviews).where(eq(reviews.businessId, biz.id)).orderBy(desc(reviews.createdAt)).limit(10),
+      ])
+    : [[{ n: 0, avg: null }], []];
 
   const teamIds = new Set(team.map((m) => m.id));
   // Cours collectifs : on réserve une séance planifiée, pas un praticien → pas de filtre sur l'équipe.
@@ -77,7 +93,14 @@ export const getPublicBusiness = cache(async (slug: string) => {
     categories: cats,
     team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio })),
     questions,
-    accentColor: page?.theme.accentColor ?? null,
+    theme: resolveTheme(page?.theme),
+    aboutHtml: biz.aboutHtml ? sanitizeRichText(biz.aboutHtml) : null,
+    sections,
+    showContact: page?.showContact ?? { email: true, phone: true, instagram: true, facebook: true, whatsapp: true, website: true },
+    gallery: page?.gallery ?? [],
+    galleryLayout: page?.galleryLayout ?? "grid",
+    embed: page?.embed ?? {},
+    reviews: { count: reviewStats[0]?.n ?? 0, average: reviewStats[0]?.avg ? Number(reviewStats[0].avg) : null, items: reviewList },
     faq: page?.faq ?? [],
     categoryStyle: page?.categoryStyle ?? "pills",
     /** Horaires communs (affichés seulement en mode « partagé »). */

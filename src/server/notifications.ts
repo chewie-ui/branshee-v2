@@ -26,7 +26,7 @@ async function load(appointmentId: string) {
     serviceName: a.serviceName ?? "Rendez-vous",
     when: when.charAt(0).toUpperCase() + when.slice(1),
     memberName: row.memberName,
-    address: [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null,
+    address: b.locationMode === "online" ? "En ligne" : [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null,
     customerName: a.contactName ?? "Client",
     manageUrl: `${appUrl()}/r/${a.manageToken}`,
     businessPhone: b.phone,
@@ -35,6 +35,8 @@ async function load(appointmentId: string) {
 }
 
 type Loaded = NonNullable<Awaited<ReturnType<typeof load>>>;
+
+const reminderMail = (row: Loaded) => emails.reminder(row.info, row.settings?.reminderMessage, { methods: row.settings?.reminderPaymentMethods ?? [], note: row.settings?.reminderPaymentNote });
 
 /** Destinataires côté pro : le propriétaire et le praticien concerné (sans doublon). */
 async function proRecipients(row: Loaded) {
@@ -142,7 +144,7 @@ export function notifyRescheduled(appointmentId: string, previousStart: Date, me
 export async function sendManualReminder(appointmentId: string) {
   const row = await load(appointmentId);
   if (!row || !row.a.contactEmail) return false;
-  const ok = await toClient(row, "reminder_manual", emails.reminder(row.info, row.settings?.reminderMessage));
+  const ok = await toClient(row, "reminder_manual", reminderMail(row));
   if (ok) await db.update(appointments).set({ manualReminderSentAt: new Date() }).where(eq(appointments.id, appointmentId));
   return ok;
 }
@@ -179,7 +181,7 @@ export async function sendDueReminders(now = new Date()) {
       .returning({ id: appointments.id });
     if (!claimed.length) continue;
     const row = await load(c.id);
-    if (row && (await toClient(row, "reminder", emails.reminder(row.info, row.settings?.reminderMessage)))) sent++;
+    if (row && (await toClient(row, "reminder", reminderMail(row)))) sent++;
   }
   return { checked: candidates.length, sent };
 }

@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
-import { saveBookingPage, saveFormQuestions } from "@/server/actions/booking-page";
+import { saveFaq, saveFormQuestions } from "@/server/actions/booking-page";
 
 type Q = { key: string; label: string; type: "text" | "choice" | "yes_no"; isRequired: boolean; options: string[] };
 let seq = 0;
 const key = () => `q${++seq}`;
 
-function SaveBar({ dirty, pending, status, onSave, onReset }: { dirty: boolean; pending: boolean; status: { ok: boolean; msg: string } | null; onSave: () => void; onReset: () => void }) {
+export function SaveBar({ dirty, pending, status, onSave, onReset }: { dirty: boolean; pending: boolean; status: { ok: boolean; msg: string } | null; onSave: () => void; onReset: () => void }) {
   return (
     <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-3 sm:flex-row sm:items-center sm:justify-end">
       {status ? <p className={cn("text-sm sm:mr-auto", status.ok ? "text-success" : "text-danger")} role={status.ok ? "status" : "alert"}>{status.msg}</p> : null}
@@ -107,53 +107,39 @@ export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) 
   );
 }
 
-const ACCENTS = ["#4f46e5", "#2563eb", "#0891b2", "#0d9488", "#15803d", "#b45309", "#b91c1c", "#be185d", "#7c3aed", "#18181b"];
-
-export function PageContentEditor({ initial }: { initial: { accentColor: string; faq: { question: string; answer: string }[] } }) {
+export function FaqEditor({ initial }: { initial: { question: string; answer: string }[] }) {
   const [saved, setSaved] = useState(initial);
-  const [accent, setAccent] = useState(initial.accentColor);
-  const [faq, setFaq] = useState(initial.faq);
+  const [faq, setFaq] = useState(initial);
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
-  const dirty = accent !== saved.accentColor || JSON.stringify(faq) !== JSON.stringify(saved.faq);
+  const dirty = JSON.stringify(faq) !== JSON.stringify(saved);
 
   return (
     <Card>
-      <CardHeader title="Apparence et questions fréquentes" />
-      <div className="space-y-6 p-5">
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium">Couleur principale (boutons, créneaux sélectionnés)</legend>
-          <div className="flex flex-wrap gap-2">
-            {ACCENTS.map((c) => (
-              <button key={c} type="button" onClick={() => { setAccent(c); setStatus(null); }} aria-label={`Couleur ${c}`} aria-pressed={accent === c} className={cn("size-8 rounded-full ring-offset-2", accent === c ? "ring-2 ring-text" : "hover:ring-2 hover:ring-border-strong")} style={{ background: c }} />
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-muted">Couleurs choisies pour rester lisibles avec un texte blanc.</p>
-        </fieldset>
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Questions fréquentes</p>
-          {faq.map((f, i) => (
-            <div key={i} className="space-y-2 rounded-lg border border-border p-4">
-              <div className="flex gap-2">
-                <Input value={f.question} onChange={(e) => setFaq((l) => l.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))} placeholder="Y a-t-il un parking ?" aria-label={`Question ${i + 1}`} maxLength={200} />
-                <button type="button" onClick={() => setFaq((l) => l.filter((_, j) => j !== i))} className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label={`Supprimer la question ${i + 1}`}><Trash2 className="size-4" aria-hidden="true" /></button>
-              </div>
-              <Textarea value={f.answer} onChange={(e) => setFaq((l) => l.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)))} placeholder="Réponse" aria-label={`Réponse ${i + 1}`} rows={2} maxLength={1500} />
+      <CardHeader title="Questions fréquentes" description="Parking, accès, ce qu'il faut apporter… Affichées sur votre page si la section « FAQ » est visible." />
+      <div className="space-y-3 p-5">
+        {faq.length === 0 ? <p className="text-sm text-muted">Aucune question fréquente pour l&apos;instant.</p> : null}
+        {faq.map((f, i) => (
+          <div key={i} className="space-y-2 rounded-lg border border-border p-4">
+            <div className="flex gap-2">
+              <Input value={f.question} onChange={(e) => { setStatus(null); setFaq((l) => l.map((x, j) => (j === i ? { ...x, question: e.target.value } : x))); }} placeholder="Y a-t-il un parking ?" aria-label={`Question ${i + 1}`} maxLength={200} />
+              <button type="button" onClick={() => setFaq((l) => l.filter((_, j) => j !== i))} className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label={`Supprimer la question ${i + 1}`}><Trash2 className="size-4" aria-hidden="true" /></button>
             </div>
-          ))}
-          <Button variant="secondary" size="sm" icon={<Plus className="size-4" aria-hidden="true" />} disabled={faq.length >= 20} onClick={() => setFaq((l) => [...l, { question: "", answer: "" }])}>Ajouter une question fréquente</Button>
-        </div>
+            <Textarea value={f.answer} onChange={(e) => { setStatus(null); setFaq((l) => l.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x))); }} placeholder="Réponse" aria-label={`Réponse ${i + 1}`} rows={2} maxLength={1500} />
+          </div>
+        ))}
+        <Button variant="secondary" size="sm" icon={<Plus className="size-4" aria-hidden="true" />} disabled={faq.length >= 20} onClick={() => setFaq((l) => [...l, { question: "", answer: "" }])}>Ajouter une question fréquente</Button>
       </div>
       <SaveBar
         dirty={dirty}
         pending={pending}
         status={status}
-        onReset={() => { setAccent(saved.accentColor); setFaq(saved.faq); setStatus(null); }}
+        onReset={() => { setFaq(saved); setStatus(null); }}
         onSave={() =>
           start(async () => {
             const clean = faq.filter((f) => f.question.trim() || f.answer.trim());
-            const res = await saveBookingPage({ accentColor: accent, faq: clean });
-            if (res.ok) { setFaq(clean); setSaved({ accentColor: accent, faq: clean }); setStatus({ ok: true, msg: "Page mise à jour." }); }
+            const res = await saveFaq(clean);
+            if (res.ok) { setFaq(clean); setSaved(clean); setStatus({ ok: true, msg: "Questions fréquentes enregistrées." }); }
             else setStatus({ ok: false, msg: res.error });
           })
         }

@@ -12,7 +12,7 @@ export default async function NotificationsPage() {
   const [n] = await db.select().from(notificationSettings).where(eq(notificationSettings.businessId, ctx.business.id));
   return (
     <NotificationsForm
-      n={{ reminderDelayHours: n!.reminderDelayHours, confirmationMessage: n!.confirmationMessage ?? "", reminderMessage: n!.reminderMessage ?? "", cancellationMessage: n!.cancellationMessage ?? "", emailOwnerOnNewBooking: n!.emailOwnerOnNewBooking, emailOwnerOnCancellation: n!.emailOwnerOnCancellation }}
+      n={{ reminderDelayHours: n!.reminderDelayHours, confirmationMessage: n!.confirmationMessage ?? "", reminderMessage: n!.reminderMessage ?? "", cancellationMessage: n!.cancellationMessage ?? "", emailOwnerOnNewBooking: n!.emailOwnerOnNewBooking, emailOwnerOnCancellation: n!.emailOwnerOnCancellation, reminderPaymentMethods: n!.reminderPaymentMethods, reminderPaymentNote: n!.reminderPaymentNote ?? "" }}
     />
   );
 }

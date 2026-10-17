@@ -48,6 +48,10 @@ export const businesses = pgTable(
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     mapEmbedUrl: text("map_embed_url"),
+    /** Lien « Ouvrir dans Maps » choisi par le pro (sinon calculé depuis l'adresse). */
+    mapsUrl: text("maps_url"),
+    /** Langues parlées (codes ISO 639-1), surtout utile pour les consultations en ligne. */
+    languages: text("languages").array().notNull().default([]),
     timezone: text("timezone").notNull().default("Europe/Brussels"),
 
     pausedAt: timestamp("paused_at", { withTimezone: true }),
@@ -153,6 +157,37 @@ export const notificationSettings = pgTable("notification_settings", {
   ...timestamps,
 });
 
+/**
+ * Apparence de la page de réservation. Les champs facultatifs absents = valeur par défaut
+ * (voir `src/lib/booking-theme.ts`, qui les complète et les valide).
+ */
+export type BookingTheme = {
+  accentColor: string;
+  accentText: string;
+  pageBg: string;
+  pageBgImage?: string;
+  /** Fond des cartes (calendrier, infos). */
+  calBg?: string;
+  textColor?: string;
+  dayBg?: string;
+  daySelectedBg?: string;
+  daySelectedText?: string;
+  dayHoverBg?: string;
+  btnHoverBg?: string;
+  dayAvailableColor?: string;
+  dayBusyColor?: string;
+  dayFullColor?: string;
+  font: string;
+  customFontUrl?: string;
+  customFontFamily?: string;
+  radius: "none" | "sm" | "md" | "lg";
+  borderStyle?: "none" | "subtle" | "medium" | "strong";
+  shadowStyle?: "none" | "subtle" | "medium" | "strong";
+  layout: "classic" | "split";
+  /** Textes personnalisés du parcours de réservation. */
+  texts?: { calendarHelp?: string; slotHeading?: string; timezone?: string };
+};
+
 export type PageSection = "about" | "services" | "team" | "reviews" | "amenities" | "faq" | "gallery" | "location" | "hours";
 
 /** Apparence de la page publique de réservation (ex-`calendarSettings`). */
@@ -160,19 +195,7 @@ export const bookingPageSettings = pgTable("booking_page_settings", {
   businessId: uuid("business_id")
     .primaryKey()
     .references(() => businesses.id, { onDelete: "cascade" }),
-  theme: jsonb("theme")
-    .$type<{
-      accentColor: string;
-      accentText: string;
-      pageBg: string;
-      pageBgImage?: string;
-      font: string;
-      customFontUrl?: string;
-      radius: "none" | "sm" | "md" | "lg";
-      layout: "classic" | "split";
-    }>()
-    .notNull()
-    .default({ accentColor: "#4f46e5", accentText: "#ffffff", pageBg: "#f7f7f8", font: "Inter", radius: "md", layout: "classic" }),
+  theme: jsonb("theme").$type<BookingTheme>().notNull().default({ accentColor: "#4f46e5", accentText: "#ffffff", pageBg: "#f7f7f8", font: "Inter", radius: "md", layout: "classic" }),
   /** Sections affichées, dans l'ordre. */
   sections: jsonb("sections").$type<PageSection[]>().notNull().default(["about", "services", "location", "hours"]),
   showContact: jsonb("show_contact")
@@ -180,7 +203,7 @@ export const bookingPageSettings = pgTable("booking_page_settings", {
     .notNull()
     .default({ email: true, phone: true, instagram: true, facebook: true, whatsapp: true, website: true }),
   gallery: text("gallery").array().notNull().default([]),
-  galleryLayout: text("gallery_layout", { enum: ["grid", "carousel"] }).notNull().default("grid"),
+  galleryLayout: text("gallery_layout", { enum: ["grid", "mosaic", "carousel"] }).notNull().default("grid"),
   equipment: text("equipment").array().notNull().default([]),
   amenities: jsonb("amenities")
     .$type<{ cleanliness: string[]; comfort: string[]; practical: string[] }>()

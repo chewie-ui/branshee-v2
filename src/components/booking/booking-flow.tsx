@@ -143,6 +143,7 @@ export function BookingFlow({ data, today }: Props) {
   }
 
   const slotsOfDay = days?.find((d) => d.date === day)?.slots ?? [];
+  const maxDaySlots = Math.max(0, ...(days ?? []).map((d) => d.slots.length));
   const periods = [
     { label: "Matin", items: slotsOfDay.filter((s) => s.time < "12:00") },
     { label: "Après-midi", items: slotsOfDay.filter((s) => s.time >= "12:00" && s.time < "17:00") },
@@ -392,8 +393,9 @@ export function BookingFlow({ data, today }: Props) {
 
       {step === "time" && service ? (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold">Choisissez un créneau</h2>
+          <h2 className="text-lg font-semibold" data-theme-text="slotHeading">{data.theme.texts.slotHeading || "Choisissez un créneau"}</h2>
           {summary}
+          <p className="text-sm text-muted" data-theme-text="calendarHelp" hidden={!data.theme.texts.calendarHelp}>{data.theme.texts.calendarHelp}</p>
           <div>
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium">{cap(MONTH.format(utc(weekStart)))}</p>
@@ -410,6 +412,8 @@ export function BookingFlow({ data, today }: Props) {
               {(days ?? Array.from({ length: 7 }, (_, i) => ({ date: addDays(weekStart, i), slots: [] }))).map((d) => {
                 const available = d.slots.length > 0;
                 const selected = d.date === day;
+                // Pastille : vert = places libres, orange = moins de la moitié des créneaux du jour le plus libre, rouge = complet.
+                const busy = available && d.slots.length < maxDaySlots / 2;
                 return (
                   <button
                     key={d.date}
@@ -420,12 +424,13 @@ export function BookingFlow({ data, today }: Props) {
                     aria-label={`${LONG.format(utc(d.date))}${available ? `, ${d.slots.length} créneaux` : ", complet"}`}
                     className={cn(
                       "flex min-h-16 flex-col items-center justify-center rounded-lg border text-sm transition-colors disabled:cursor-not-allowed",
-                      selected ? "border-accent bg-accent text-accent-foreground" : available ? "border-border-strong bg-surface hover:border-accent" : "border-transparent bg-surface-muted text-muted",
+                      selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))]" : "border-transparent bg-surface-muted text-muted",
                       loadingSlots && "animate-pulse",
                     )}
                   >
                     <span className="text-xs capitalize">{WEEKDAY.format(utc(d.date)).replace(".", "")}</span>
                     <span className="text-base font-semibold">{DAYNUM.format(utc(d.date))}</span>
+                    {days ? <span className="mt-1 size-1.5 rounded-full" style={{ background: !available ? "var(--day-full, #ef4444)" : busy ? "var(--day-busy, #ea580c)" : "var(--day-available, #16a34a)" }} aria-hidden="true" /> : null}
                   </button>
                 );
               })}
@@ -466,6 +471,7 @@ export function BookingFlow({ data, today }: Props) {
               </div>
             )}
           </div>
+          <p className="text-xs text-muted" data-theme-text="timezone" hidden={!data.theme.texts.timezone}>{data.theme.texts.timezone}</p>
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
         </div>
       ) : null}

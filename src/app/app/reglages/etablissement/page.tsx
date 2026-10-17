@@ -12,8 +12,7 @@ export default async function BusinessSettingsPage() {
   const [b] = await db.select().from(businesses).where(eq(businesses.id, ctx.business.id));
   return (
     <BusinessForm
-      appUrl={process.env.APP_URL ?? "https://branshee.com"}
-      b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "", website: b!.website ?? "", address: b!.address ?? "", postalCode: b!.postalCode ?? "", city: b!.city ?? "", slug: b!.slug }}
+      b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "" }}
     />
   );
 }
