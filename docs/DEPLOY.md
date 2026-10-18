@@ -68,3 +68,10 @@ Dans Google Cloud › Identifiants, sur le client OAuth existant : ajouter l'URI
 `https://<domaine>/auth/google/retour` (une seule adresse pour la connexion et l'agenda), puis renseigner
 `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Les connexions Google Agenda de l'ancien Branshee sont reprises
 par la migration (jetons chiffrés). Les flux iCal gardent la même adresse (`/ical/<jeton>`).
+
+## Domaines personnalisés (« Mon site », Pro+)
+Le pro saisit son domaine dans Mon site › Réglages et crée chez son registraire un CNAME vers le domaine de l'app.
+Le serveur web doit ensuite accepter ce domaine et obtenir un certificat :
+- **Caddy** (le plus simple) : `on_demand_tls` avec une route `ask` qui vérifie le domaine, puis un bloc `https:// { reverse_proxy 127.0.0.1:3000 }`.
+- **Nginx + certbot** : ajouter le domaine au `server_name`, puis `certbot --nginx -d www.domaine-du-pro.be`.
+L'app reconnaît le domaine via l'en-tête `Host` (transmettre `proxy_set_header Host $host;`) et affiche le site à « / ».

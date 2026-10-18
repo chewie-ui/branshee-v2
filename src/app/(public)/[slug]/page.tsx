@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
+import { MiniSite } from "@/components/site/mini-site";
+import type { SiteSection } from "@/lib/site-templates";
+import { countSiteVisit, publishedSiteFor, siteContent } from "@/server/site-builder";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { featureStatus } from "@/server/features";
 import { notFound } from "next/navigation";
@@ -26,12 +30,15 @@ import { richTextToPlain } from "@/server/rich-text";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type Search = Promise<{ sections?: string; apercu?: string }>;
+type Search = Promise<{ sections?: string; apercu?: string; reserver?: string }>;
 
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Search }): Promise<Metadata> {
   const data = await getPublicBusiness((await params).slug);
   if (!data) return { title: "Établissement introuvable" };
   const { business: b } = data;
+  const sp = await searchParams;
+  const site = typeof sp.sections !== "string" && !sp.reserver ? await publishedSiteFor(b.id) : null;
+  if (site) return { title: { absolute: site.seo.title || b.name }, description: site.seo.description || b.description || undefined, openGraph: b.photoUrl ? { images: [b.photoUrl] } : undefined, alternates: { canonical: `/${b.slug}` } };
   const about = b.description ?? (data.aboutHtml ? richTextToPlain(data.aboutHtml).slice(0, 160) : null);
   return {
     title: `${b.name} — Prendre rendez-vous`,
@@ -99,6 +106,14 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const { business: b, theme } = data;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   if (b.pausedAt) return <PausedPage data={data} />;
+  // Forfait Pro+ avec un site publié : le site remplace la page à cette adresse (la réservation y est intégrée).
+  if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver) {
+    const site = await publishedSiteFor(b.id);
+    if (site) {
+      after(() => countSiteVisit(site.id));
+      return <MiniSite site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: b.id, name: b.name, slug: b.slug, noBranding: data.features.noBranding }} content={await siteContent(b.id)} />;
+    }
+  }
   const session = await getSessionUser();
   const review: ReviewCtx = !data.sections.includes("reviews")
     ? { state: "hidden" }

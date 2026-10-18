@@ -426,4 +426,18 @@ export const emails = {
       }),
     };
   },
+
+  siteContact(p: { businessName: string; name: string; email: string; message: string }) {
+    return {
+      subject: `Message depuis votre site — ${p.businessName}`,
+      ...render({
+        preheader: p.message.slice(0, 90),
+        title: "Nouveau message depuis votre site",
+        intro: `${p.name} (${p.email}) vous a écrit depuis le formulaire de contact de votre site :`,
+        details: [{ label: "Message", value: p.message }],
+        note: "Répondez directement à cet email pour lui écrire.",
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
 };

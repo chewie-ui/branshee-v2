@@ -167,8 +167,15 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Page 404 soignée, pages en maintenance (interrupteurs accueil / annuaire), message « compte désactivé », `metadataBase` et Open Graph
 - ✅ Redirections des anciennes adresses (/login, /register, /search, /subscription, /panel, /appointment, /pro, /cgu…)
 
-## Lot P — Mon site (créateur de site)
-- ❌ Sections, modèles, thème, SEO, logo, réseaux, publication, aperçu, images, formulaire de contact, compteur de visites, domaine
+## Lot P — Mon site (créateur de site, Pro+) ✅
+- ✅ Éditeur `/app/site` : sections (en-tête, prestations, réservation intégrée, à propos, galerie, avis, FAQ, chiffres, appel à l'action, contact) à ajouter, masquer, réordonner, supprimer et remplir ; aperçu en direct ; annuler / enregistrer
+- ✅ 3 modèles de l'ancien (Atelier, Sérénité, Studio), thème (couleurs, polices texte / titres, coins), logo, réseaux sociaux, référencement (titre, description), compteur de visites
+- ✅ Publication : le site remplace la page de réservation à la même adresse (`?reserver=1` garde l'accès direct), retrait en un clic, inscrit au journal ; ancienne adresse `/s/<slug>` redirigée
+- ✅ Formulaire de contact du site (email au pro, anti-robots, limitation), images téléversées, texte riche nettoyé
+- ✅ Domaine personnalisé : saisi par le pro, reconnu par l'app (en-tête Host) ; mise en service HTTPS côté serveur (voir DEPLOY.md)
+- ✅ Avis : uniquement les vrais avis de la page par défaut (les modèles ne contiennent plus de témoignages inventés) ; avis recopiés à la main possibles avec avertissement ; section « chiffres » désactivée par défaut dans les modèles
+- ✅ Contraste : texte des boutons noir ou blanc selon la couleur choisie
+- ✅ Migration : ordre des sections et coins « pilule » repris
 
 ## Lot Q — Emails et tâches planifiées ✅
 - ✅ Confirmation, demande reçue, acceptée, refusée, annulation (client / pro), nouvelle réservation pour le pro, rappels (email / SMS / WhatsApp), mot de passe oublié, RDV déplacé (avec mot du pro), codes de vérification, liste d'attente, invitations, support
