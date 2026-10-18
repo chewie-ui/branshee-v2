@@ -41,11 +41,13 @@ type Props = {
   categories: { id: string; name: string }[];
   team: { id: string; name: string }[];
   showAudience: boolean;
+  /** Cours collectifs autorisés (interrupteur du super-admin). */
+  allowGroup?: boolean;
 };
 
 const fmt = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m / 60} h`);
 
-export function ServiceForm({ initial, categories, team, showAudience }: Props) {
+export function ServiceForm({ initial, categories, team, showAudience, allowGroup = true }: Props) {
   const [state, action, pending] = useActionState<ServiceFormState, FormData>(saveService.bind(null, initial.id), undefined);
   const [category, setCategory] = useState(initial.categoryId);
   const [color, setColor] = useState(initial.color);
@@ -81,7 +83,7 @@ export function ServiceForm({ initial, categories, team, showAudience }: Props) 
         <Field label="Nom" htmlFor="name" error={err.name}>
           <Input id="name" name="name" defaultValue={initial.name} placeholder="Séance de kinésithérapie" maxLength={80} aria-invalid={!!err.name || undefined} />
         </Field>
-        <fieldset>
+        <fieldset hidden={!allowGroup && initial.kind !== "group"}>
           <legend className="mb-2 text-sm font-medium">Type</legend>
           <div className="grid gap-3 sm:grid-cols-2">
             {([["individual", "Rendez-vous individuel", "Un client à la fois."], ["group", "Cours collectif", "Plusieurs clients sur une même séance planifiée."]] as const).map(([v, t, d]) => (

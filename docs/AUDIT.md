@@ -145,13 +145,16 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ➡️ Côté équipe (répondre, clôturer, éditer l'aide, écrire aux pros) : lot N
 
 ## Lot N — Super-admin
-- ✅ Tableau de bord, établissements (recherche, fiche, pause, forfait offert), utilisateurs (désactivation)
-- ❌ Export CSV (établissements, utilisateurs), suppression, essai, forfait par établissement
-- ❌ Se connecter « en tant que » avec demande de supervision acceptée par le pro
-- ❌ Journal global, acquisition (UTM, pages vues), parrainages, métiers proposés (valider / bloquer), mise en avant (boost)
-- ❌ Codes promo, campagnes, liens d'accès
-- ❌ Interrupteurs de fonctionnalités (maintenance…), masquage d'éléments du menu
-- ❌ Chat de support, signalements d'avis, messages aux pros, éditeur du centre d'aide, éditeur de blog
+- ✅ Navigation en barre latérale groupée, badges (support non lu, avis signalés, métiers à trancher)
+- ✅ Établissements : recherche, fiche, pause, forfait offert / essai par établissement, correction des infos (nom, adresse, métier, coordonnées), suppression (confirmation par saisie du nom), export CSV
+- ✅ Utilisateurs : fiche (établissements, parrainage, support), désactivation, suppression (confirmation par l'email), export CSV
+- ✅ Supervision : demande → le pro accepte/refuse dans son espace → session de 2 h au plus, bandeau des deux côtés, inscrite au journal, le pro peut y mettre fin ; réglages de sécurité du compte bloqués pendant la session
+- ⚠️ Mode « connexion discrète » de l'ancien (sans accord du pro) volontairement non repris : données de santé (RGPD)
+- ✅ Journal global (recherche, pagination), acquisition (visiteurs, sources UTM, campagnes, pages, inscriptions — la collecte des vues arrive au lot O), parrainages, métiers (demandés + utilisés hors liste ; valider / bloquer), mise en avant (position)
+- ✅ Codes promo (%, montant, essai ; limites, expiration, forfait), « offre affichée » sur la page Abonnement, campagne à compte à rebours, liens d'accès (copie, activation, suppression)
+- ✅ Interrupteurs : pages en maintenance / erreur / désactivées (connexion, inscription, pages de réservation, espace pro, abonnement ; accueil et annuaire au lot O), cours collectifs, temps de battement, SMS (éteint par défaut comme l'ancien), masquage des liens du menu
+- ✅ Support (conversations, réponse + email au pro, clôture → note, suppression, satisfaction moyenne), messages aux pros (tous ou liste d'emails), avis signalés (supprimer / conserver), éditeur du centre d'aide (sections, vidéos, FAQ en texte riche, ordre), blog (éditeur riche, images, couverture, brouillon / programmé / publié, SEO, duplication)
+- ✅ Liste officielle des 144 métiers reprise (`lib/professions.ts`)
 
 ## Lot O — Site public Branshee (marketing)
 - ❌ Accueil, page pro, tarifs, contact (formulaire), confidentialité, CGU

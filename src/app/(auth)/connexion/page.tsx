@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { FeatureStatusPage } from "@/components/feature-status";
+import { featureStatus } from "@/server/features";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
@@ -14,6 +16,8 @@ export const dynamic = "force-dynamic";
 const internal = (s?: string) => (s && s.startsWith("/") && !s.startsWith("//") ? s : undefined);
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ suite?: string; google?: string }> }) {
+  const gate = await featureStatus("login");
+  if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const { suite, google } = await searchParams;
   const s = await getSessionUser();
   if (s) redirect(internal(suite) ?? ((await isPro(s.user.id)) ? "/app" : "/espace-client"));

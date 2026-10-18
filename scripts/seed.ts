@@ -63,6 +63,7 @@ async function main() {
   await db.insert(s.bookingPageSettings).values({ businessId: bid });
   // Démo : forfait Pro+ offert, pour voir toutes les fonctionnalités en local.
   await db.insert(s.businessPlans).values({ businessId: bid, plan: "pro_plus", status: "active" });
+  await db.insert(s.featureFlags).values({ key: "sms_notifications", label: "Notifications SMS / WhatsApp", status: "active" }).onConflictDoNothing();
 
   const gradeRows = await db.insert(s.grades).values(BUILT_IN_GRADES.map((g) => ({ businessId: bid, name: g.name, isBuiltIn: true, permissions: g.permissions }))).returning();
   const collabGrade = gradeRows.find((g) => g.name === "Collaborateur")!;

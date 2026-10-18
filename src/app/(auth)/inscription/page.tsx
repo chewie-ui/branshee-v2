@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { FeatureStatusPage } from "@/components/feature-status";
+import { featureStatus } from "@/server/features";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
@@ -11,6 +13,8 @@ export const metadata: Metadata = { title: "Créer un compte" };
 export const dynamic = "force-dynamic";
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ client?: string; suite?: string; email?: string; nom?: string; ref?: string }> }) {
+  const gate = await featureStatus("register");
+  if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const sp = await searchParams;
   const client = sp.client === "1";
   if (await getSessionUser()) redirect(client ? "/espace-client" : "/app");

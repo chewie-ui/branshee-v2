@@ -43,7 +43,7 @@ const HORIZONS = [
 ];
 const BUFFERS = [0, 5, 10, 15, 20, 30, 45, 60];
 
-export function RulesForm({ r }: { r: R }) {
+export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boolean }) {
   const [mode, setMode] = useState(r.slotMode);
   const [fv, setFv] = useState(r.firstVisitQuestion.enabled);
   const pick = (list: { v: string }[], value: number | null) => (value == null ? "none" : list.some((x) => x.v === String(value)) ? String(value) : "custom");
@@ -83,7 +83,7 @@ export function RulesForm({ r }: { r: R }) {
             ) : (
               <input type="hidden" name="slotIntervalMin" value={r.slotIntervalMin} />
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2" hidden={!showBuffers}>
               <Field label="Temps de battement avant" htmlFor="bufferBeforeMin" hint="Préparation avant chaque RDV.">
                 <Select id="bufferBeforeMin" name="bufferBeforeMin" defaultValue={String(r.bufferBeforeMin)}>
                   {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : "Aucun"}</option>)}

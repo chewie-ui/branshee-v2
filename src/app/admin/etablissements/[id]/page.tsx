@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, appointments, businesses, members, services, subscriptions, users } from "@/db/schema";
 import { GrantPlanForm, PauseToggle } from "@/components/admin/admin-actions";
+import { BusinessInfoForm, TypeToDelete } from "@/components/admin/platform";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -86,7 +87,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
         <Card>
           <CardHeader title="Propriétaire" />
           <div className="space-y-1 p-5 text-sm">
-            <p className="font-medium">{owner.name}</p>
+            <Link href={`/admin/utilisateurs/${owner.id}`} className="font-medium hover:underline">{owner.name}</Link>
             <p className="text-muted">{owner.email}</p>
             <p className="text-muted">Dernière connexion : {owner.lastLoginAt ? `${formatDay(owner.lastLoginAt, tz, "d MMM yyyy")} à ${formatTime(owner.lastLoginAt, tz)}` : "jamais"}</p>
           </div>
@@ -120,6 +121,13 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
           </ul>
         </Card>
 
+        {!b.deletedAt ? (
+          <Card>
+            <CardHeader title="Informations" description="Corriger le nom, l'adresse de la page, le métier ou les coordonnées." />
+            <BusinessInfoForm id={b.id} initial={{ name: b.name, businessType: b.businessType ?? "", city: b.city ?? "", email: b.email ?? "", phone: b.phone ?? "", slug: b.slug }} />
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Activité récente" />
           {logs.length === 0 ? (
@@ -135,6 +143,12 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
             </ul>
           )}
         </Card>
+
+        {!b.deletedAt ? (
+          <Card className="p-5">
+            <TypeToDelete kind="business" id={b.id} expected={b.name} />
+          </Card>
+        ) : null}
       </div>
     </div>
   );

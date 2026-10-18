@@ -1,4 +1,5 @@
 import "server-only";
+import { featureOn } from "@/server/features";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { bookingSettings, members, serviceCategories } from "@/db/schema";
@@ -10,5 +11,5 @@ export async function serviceFormData(businessId: string) {
     db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, businessId), eq(members.status, "active"), eq(members.isBookable, true))).orderBy(asc(members.createdAt)),
     db.select({ q: bookingSettings.firstVisitQuestion }).from(bookingSettings).where(eq(bookingSettings.businessId, businessId)),
   ]);
-  return { categories, team, showAudience: settings?.q.enabled ?? false };
+  return { categories, team, showAudience: settings?.q.enabled ?? false, allowGroup: await featureOn("group_sessions") };
 }

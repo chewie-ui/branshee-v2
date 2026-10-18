@@ -5,7 +5,7 @@ import { SupportChat } from "@/components/help/support-chat";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
-import { richTextToPlain, sanitizeRichText } from "@/server/rich-text";
+import { richTextToPlain, sanitizeArticleHtml } from "@/server/rich-text";
 import { DEFAULT_HELP, getSupportThread, listHelpSections } from "@/server/support";
 
 export const metadata: Metadata = { title: "Aide et support" };
@@ -19,7 +19,7 @@ export default async function HelpPage() {
     id: s.id,
     title: s.title,
     videos: s.videos,
-    faqs: s.faqs.map((f) => ({ id: f.id, question: f.question, answerHtml: sanitizeRichText(f.answer), answerText: richTextToPlain(f.answer) })),
+    faqs: s.faqs.map((f) => ({ id: f.id, question: f.question, answerHtml: sanitizeArticleHtml(f.answer), answerText: richTextToPlain(f.answer) })),
   }));
   const supportEmail = process.env.SUPPORT_EMAIL || "support@branshee.com";
   const whatsapp = (process.env.SUPPORT_WHATSAPP || "32477443988").replace(/\D/g, "");

@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 
@@ -34,7 +34,7 @@ export async function getSessionUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const [row] = await db
-    .select({ user: users, sessionId: sessions.id })
+    .select({ user: users, sessionId: sessions.id, impersonatedById: sessions.impersonatedById })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.tokenHash, sha256(token)), gt(sessions.expiresAt, new Date())))
@@ -91,4 +91,40 @@ export async function destroyAllSessions(userId: string, keepCurrent = false) {
   const all = await db.select({ id: sessions.id, tokenHash: sessions.tokenHash }).from(sessions).where(eq(sessions.userId, userId));
   const keep = token ? sha256(token) : null;
   for (const s of all) if (s.tokenHash !== keep) await db.delete(sessions).where(eq(sessions.id, s.id));
+}
+
+/* ── Supervision : le super-admin ouvre une session au nom d'un pro qui l'a accepté ── */
+
+export const ADMIN_BACKUP_COOKIE = "bs_admin";
+const SUPERVISION_HOURS = 2;
+
+/** Ouvre une session « supervisée » (2 h max) et met de côté la session du super-admin. */
+export async function startImpersonation(userId: string, adminId: string) {
+  const jar = await cookies();
+  const adminToken = jar.get(SESSION_COOKIE)?.value;
+  if (!adminToken) throw new Error("Session administrateur absente.");
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SUPERVISION_HOURS * 3600000);
+  await db.insert(sessions).values({ userId, tokenHash: sha256(token), expiresAt, impersonatedById: adminId });
+  const opts = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", expires: expiresAt };
+  jar.set(ADMIN_BACKUP_COOKIE, adminToken, opts);
+  jar.set(SESSION_COOKIE, token, opts);
+  jar.delete(BUSINESS_COOKIE);
+}
+
+/** Fin de supervision : la session du pro est supprimée, celle du super-admin restaurée. */
+export async function stopImpersonation() {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  const backup = jar.get(ADMIN_BACKUP_COOKIE)?.value;
+  if (token) await db.delete(sessions).where(and(eq(sessions.tokenHash, sha256(token)), isNotNull(sessions.impersonatedById)));
+  jar.delete(ADMIN_BACKUP_COOKIE);
+  jar.delete(BUSINESS_COOKIE);
+  if (backup) jar.set(SESSION_COOKIE, backup, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_DAYS * 86400 });
+  else jar.delete(SESSION_COOKIE);
+}
+
+/** Le pro met fin à la supervision : toutes les sessions supervisées de son compte sont fermées. */
+export async function endImpersonationsFor(userId: string) {
+  await db.delete(sessions).where(and(eq(sessions.userId, userId), isNotNull(sessions.impersonatedById)));
 }

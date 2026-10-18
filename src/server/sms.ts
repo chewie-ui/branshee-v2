@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { adminMessages, featureFlags, processedPayments, smsWallets, subscriptions } from "@/db/schema";
+import { adminMessages, processedPayments, smsWallets, subscriptions } from "@/db/schema";
+import { hiddenFeatureOn } from "@/server/features";
 import { LIMITS, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 
@@ -26,10 +27,9 @@ export function normalizeMsisdn(phone: string, defaultCc = process.env.SPRYNG_DE
 export const smsConfigured = () => !!process.env.SPRYNG_API_TOKEN;
 export const whatsappConfigured = () => !!process.env.WHATSAPP_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-/** Interrupteur global (super-admin) : « sms_notifications » en maintenance = plus aucun SMS. */
+/** Interrupteur global (super-admin) : éteint tant qu'il n'a pas été allumé, comme dans l'ancien Branshee. */
 export async function smsFeatureOn() {
-  const [f] = await db.select({ status: featureFlags.status }).from(featureFlags).where(eq(featureFlags.key, "sms_notifications"));
-  return !f || f.status === "active";
+  return hiddenFeatureOn("sms_notifications");
 }
 
 async function post(url: string, headers: Record<string, string>, body: unknown) {

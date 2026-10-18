@@ -36,3 +36,28 @@ export function richTextToPlain(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/**
+ * Articles du blog et réponses du centre d'aide (rédigés par l'équipe Branshee) :
+ * titres, liens, images, citations, tableaux simples. Aucun script, style ni gestionnaire d'événement.
+ */
+export function sanitizeArticleHtml(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: ["p", "br", "b", "strong", "i", "em", "u", "s", "ul", "ol", "li", "h2", "h3", "h4", "a", "img", "blockquote", "figure", "figcaption", "hr", "code", "pre", "table", "thead", "tbody", "tr", "th", "td"],
+    allowedAttributes: { a: ["href", "target", "rel"], img: ["src", "alt", "width", "height", "loading"] },
+    allowedSchemes: ["https", "http", "mailto", "tel"],
+    allowedSchemesByTag: { img: ["https"] },
+    allowProtocolRelative: false,
+    transformTags: {
+      div: "p",
+      h1: "h2",
+      a: (_tag, attrs) => {
+        const external = /^https?:/i.test(attrs.href ?? "");
+        return { tagName: "a", attribs: { href: attrs.href ?? "#", ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) } };
+      },
+      img: (_tag, attrs) => ({ tagName: "img", attribs: { src: attrs.src ?? "", alt: attrs.alt ?? "", loading: "lazy" } }),
+    },
+    // Images hébergées par Branshee (/media/…) acceptées en plus des URL https.
+    exclusiveFilter: (frame) => frame.tag === "img" && !frame.attribs.src,
+  }).trim();
+}

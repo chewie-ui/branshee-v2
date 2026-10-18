@@ -39,7 +39,14 @@ export default async function AdminBusinesses({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="Établissements" description={q ? `${rows.length} résultat${rows.length > 1 ? "s" : ""} pour « ${q} »` : "Les 100 plus récents"} />
+      <PageHeader
+        title="Établissements"
+        description={q ? `${rows.length} résultat${rows.length > 1 ? "s" : ""} pour « ${q} »` : "Les 100 plus récents"}
+        action={
+          // Téléchargement (route serveur) : lien classique.
+          // eslint-disable-next-line @next/next/no-html-link-for-pages
+          <a href="/admin/etablissements/export" className="inline-flex h-10 items-center rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Exporter (CSV)</a>}
+      />
       <form className="relative mb-4 max-w-md" role="search">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input name="q" defaultValue={q} placeholder="Nom, lien, ville ou email du propriétaire" className="pl-9" aria-label="Rechercher un établissement" />

@@ -29,9 +29,22 @@ const FEATURES: { label: string; free: string | boolean; pro: string | boolean; 
 
 const fmtDate = (iso: string | null) => (iso ? new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso)) : "");
 
-export function BillingPanel({ current, enabled, campaign, canManage }: { current: Current; enabled: boolean; campaign: { endsAt: string | null; firstPeriodCents: number; plan: Plan } | null; canManage: boolean }) {
+export function BillingPanel({
+  current,
+  enabled,
+  campaign,
+  canManage,
+  offer = null,
+}: {
+  current: Current;
+  enabled: boolean;
+  campaign: { endsAt: string | null; firstPeriodCents: number; plan: Plan } | null;
+  canManage: boolean;
+  /** Code promo mis en avant par l'équipe (pré-rempli). */
+  offer?: { code: string; label: string } | null;
+}) {
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
-  const [promo, setPromo] = useState("");
+  const [promo, setPromo] = useState(offer?.code ?? "");
   const [promoInfo, setPromoInfo] = useState<{ ok: boolean; text: string } | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -82,6 +95,11 @@ export function BillingPanel({ current, enabled, campaign, canManage }: { curren
       </Card>
 
       {campaign && !paid ? <Countdown campaign={campaign} /> : null}
+      {offer && !campaign && !paid ? (
+        <p className="rounded-xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm" role="status">
+          <span className="font-semibold text-accent-soft-foreground">Offre en cours : {offer.label}</span> avec le code <span className="font-mono font-semibold">{offer.code}</span> (déjà saisi ci-dessous).
+        </p>
+      ) : null}
 
       <Card>
         <CardHeader title="Changer de forfait" description="Sans engagement. Un changement en cours de mois est calculé au prorata." />

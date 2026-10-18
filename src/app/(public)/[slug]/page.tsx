@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { FeatureStatusPage } from "@/components/feature-status";
+import { featureStatus } from "@/server/features";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Clock, Facebook, Globe, Instagram, Languages, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Video, Youtube } from "lucide-react";
@@ -89,6 +91,8 @@ function socialHref(kind: string, v: string) {
 }
 
 export default async function PublicBusinessPage({ params, searchParams }: { params: Params; searchParams: Search }) {
+  const gate = await featureStatus("booking_page");
+  if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const data = await getPublicBusiness((await params).slug);
   if (!data) notFound();
   const sp = await searchParams;

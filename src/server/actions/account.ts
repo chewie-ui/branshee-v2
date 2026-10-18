@@ -6,7 +6,7 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import QRCode from "qrcode";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, businesses, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";
 import { generateSecret, otpauthUrl, verifyTotp } from "@/lib/totp";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -15,6 +15,8 @@ import { destroyAllSessions, destroySession, getSessionUser } from "@/server/aut
 import { linkCustomerRecords } from "@/server/client-account";
 import { consumeCode, issueCode } from "@/server/codes";
 import { deletePublicImage, savePublicImage } from "@/server/storage";
+import { isImpersonating } from "@/server/context";
+import { deleteUserAccount } from "@/server/account-deletion";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -120,6 +122,7 @@ export async function setLocale(locale: string): Promise<Result> {
 /* ───────────── Email ───────────── */
 
 export async function requestEmailChange(input: { email: string; password: string }): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   const email = z.email({ message: "Adresse email invalide." }).safeParse(String(input.email ?? "").trim().toLowerCase());
   if (!email.success) return { ok: false, error: email.error.issues[0]!.message };
@@ -133,6 +136,7 @@ export async function requestEmailChange(input: { email: string; password: strin
 }
 
 export async function confirmEmailChange(code: string): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   const res = await consumeCode(u.id, "email_change", code);
   if (!res.ok) return res;
@@ -148,6 +152,7 @@ export async function confirmEmailChange(code: string): Promise<Result> {
 /* ───────────── Mot de passe ───────────── */
 
 export async function changePassword(input: { current: string; next: string }): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   if (!rateLimit(`pwd:${u.id}`, 6, 15 * 60 * 1000).ok) return { ok: false, error: "Trop d'essais. Réessayez plus tard." };
   if (u.passwordHash && !(await verifyPassword(String(input.current ?? ""), u.passwordHash))) return { ok: false, error: "Mot de passe actuel incorrect." };
@@ -163,6 +168,7 @@ export async function changePassword(input: { current: string; next: string }): 
 /* ───────────── Double authentification ───────────── */
 
 export async function startTwoFactor(): Promise<{ ok: true; secret: string; qr: string } | { ok: false; error: string }> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   if (u.twoFactorSecret) return { ok: false, error: "La double authentification est déjà activée." };
   const secret = generateSecret();
@@ -171,6 +177,7 @@ export async function startTwoFactor(): Promise<{ ok: true; secret: string; qr: 
 }
 
 export async function enableTwoFactor(input: { secret: string; code: string }): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   if (!/^[A-Z2-7]{32}$/.test(input.secret ?? "")) return { ok: false, error: "Configuration invalide. Recommencez." };
   if (!verifyTotp(input.secret, String(input.code ?? ""))) return { ok: false, error: "Code incorrect. Vérifiez votre application." };
@@ -179,6 +186,7 @@ export async function enableTwoFactor(input: { secret: string; code: string }): 
 }
 
 export async function disableTwoFactor(code: string): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   if (!u.twoFactorSecret) return { ok: true };
   if (!rateLimit(`2fa-off:${u.id}`, 6, 15 * 60 * 1000).ok) return { ok: false, error: "Trop d'essais." };
@@ -191,6 +199,7 @@ export async function disableTwoFactor(code: string): Promise<Result> {
 /* ───────────── Suppression du compte ───────────── */
 
 export async function requestAccountDeletion(password: string): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   if (!rateLimit(`del:${u.id}`, 4, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de demandes." };
   if (u.passwordHash && !(await verifyPassword(String(password ?? ""), u.passwordHash))) return { ok: false, error: "Mot de passe incorrect." };
@@ -203,27 +212,11 @@ export async function requestAccountDeletion(password: string): Promise<Result> 
  * des patients reste consultable par le support le temps légal), le compte est effacé.
  */
 export async function confirmAccountDeletion(code: string): Promise<Result> {
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const u = await me();
   const res = await consumeCode(u.id, "account_deletion", code);
   if (!res.ok) return res;
-  const all = await db.select({ id: businesses.id, deletedAt: businesses.deletedAt }).from(businesses).where(eq(businesses.ownerId, u.id));
-  const owned = all.filter((b) => !b.deletedAt);
-  await db.transaction(async (tx) => {
-    for (const b of owned) {
-      await tx.update(businesses).set({ deletedAt: new Date(), pausedAt: new Date() }).where(eq(businesses.id, b.id));
-      await tx.insert(activityLogs).values({ businessId: b.id, userId: u.id, actorName: u.fullName, action: "business.deleted", description: "Établissement supprimé avec le compte du propriétaire" });
-    }
-    // Les établissements supprimés gardent leur propriétaire (contrainte) : on anonymise le compte au lieu de l'effacer s'il en possède.
-    if (all.length) {
-      await tx
-        .update(users)
-        .set({ email: `supprime-${u.id}@branshee.invalid`, fullName: "Compte supprimé", passwordHash: null, googleId: null, appleId: null, avatarUrl: null, phone: null, birthDate: null, gender: null, address: null, postalCode: null, city: null, twoFactorSecret: null, disabledAt: new Date() })
-        .where(eq(users.id, u.id));
-    } else {
-      await tx.delete(users).where(eq(users.id, u.id));
-    }
-  });
-  await deletePublicImage(u.avatarUrl);
+  await deleteUserAccount(u.id, { id: u.id, name: u.fullName });
   await destroySession();
   redirect("/?compte=supprime");
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { featureOn } from "@/server/features";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { bookingSettings } from "@/db/schema";
@@ -16,7 +17,7 @@ export default async function BookingRulesPage() {
   return (
     <div className="space-y-4">
       {!advanced ? <UpgradeNotice feature="Battements et durée des créneaux" required="pro">Avec le forfait Amateur, l&apos;intervalle des créneaux et les battements restent ceux d&apos;origine ; le reste se règle librement.</UpgradeNotice> : null}
-      <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} />
+      <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} showBuffers={await featureOn("buffer_time")} />
     </div>
   );
 }

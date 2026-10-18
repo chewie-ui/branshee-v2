@@ -16,6 +16,8 @@ export type AppContext = {
   businesses: { id: string; name: string; businessType: string | null }[];
   permissions: Permissions | null;
   can: (key: PermissionKey) => boolean;
+  /** Session ouverte par l'équipe Branshee (supervision acceptée par le pro). */
+  impersonating: boolean;
 };
 
 type Resolved = { kind: "anonymous" } | { kind: "no-business"; user: AppContext["user"] } | { kind: "ok"; ctx: AppContext };
@@ -54,6 +56,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
       businesses: rows.map((r) => ({ id: r.business.id, name: r.business.name, businessType: r.business.businessType })),
       permissions,
       can: (key) => can(permissions, key, isOwner),
+      impersonating: !!session.impersonatedById,
     },
   };
 });
@@ -77,4 +80,10 @@ export async function requireContext(permission?: PermissionKey): Promise<AppCon
   if (r.kind === "no-business") redirect("/bienvenue");
   if (permission && !r.ctx.can(permission)) redirect("/app/acces-refuse");
   return r.ctx;
+}
+
+/** Les réglages de sécurité du compte (mot de passe, email, 2FA, suppression) sont interdits en supervision. */
+export async function isImpersonating() {
+  const s = await getSessionUser();
+  return !!s?.impersonatedById;
 }

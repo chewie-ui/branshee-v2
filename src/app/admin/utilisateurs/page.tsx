@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { desc, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -37,7 +38,14 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader title="Utilisateurs" description={q ? `${rows.length} résultat${rows.length > 1 ? "s" : ""} pour « ${q} »` : "Les 100 comptes les plus récents"} />
+      <PageHeader
+        title="Utilisateurs"
+        description={q ? `${rows.length} résultat${rows.length > 1 ? "s" : ""} pour « ${q} »` : "Les 100 comptes les plus récents"}
+        action={
+          // Téléchargement (route serveur) : lien classique.
+          // eslint-disable-next-line @next/next/no-html-link-for-pages
+          <a href="/admin/utilisateurs/export" className="inline-flex h-10 items-center rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Exporter (CSV)</a>}
+      />
       <form className="relative mb-4 max-w-md" role="search">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input name="q" defaultValue={q} placeholder="Nom ou email" className="pl-9" aria-label="Rechercher un utilisateur" />
@@ -51,7 +59,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
               <li key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
                 <div className="min-w-0 flex-1 basis-60">
                   <p className="flex flex-wrap items-center gap-2">
-                    <span className="truncate font-medium">{u.name}</span>
+                    <Link href={`/admin/utilisateurs/${u.id}`} className="truncate font-medium hover:underline">{u.name}</Link>
                     {u.isSuperadmin ? <Badge tone="accent">Super-admin</Badge> : null}
                     {u.disabledAt ? <Badge tone="danger">Désactivé</Badge> : null}
                   </p>
