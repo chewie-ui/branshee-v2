@@ -1,10 +1,13 @@
 import "server-only";
+import { createT, getMessages, type T } from "@/i18n";
+import type { Locale } from "@/i18n/config";
 
 /** Échappement HTML : tout ce qui vient d'un utilisateur passe par ici. */
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 type Detail = { label: string; value: string };
 type Layout = {
+  lang?: string;
   preheader: string;
   title: string;
   intro: string;
@@ -29,7 +32,7 @@ function render(l: Layout): { html: string; text: string } {
       </td></tr></table>`
     : "";
 
-  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(l.title)}</title></head>
+  const html = `<!doctype html><html lang="${l.lang ?? "fr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(l.title)}</title></head>
 <body style="margin:0;padding:0;background:#f6f6f7;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   <span style="display:none;max-height:0;overflow:hidden">${esc(l.preheader)}</span>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f7;padding:24px 12px">
@@ -63,140 +66,166 @@ export type AppointmentInfo = {
   businessPhone: string | null;
   /** Forfait Pro+ : pas de mention Branshee dans les emails aux clients. */
   noBranding?: boolean;
+  /** Langue du client (emails clients uniquement ; les emails au pro restent en français). */
+  locale?: Locale | null;
 };
 
-function apptDetails(a: AppointmentInfo): Detail[] {
+function apptDetails(a: AppointmentInfo, t: T = tFor("fr")): Detail[] {
   return [
-    { label: "Prestation", value: a.serviceName },
-    { label: "Date", value: a.when },
-    ...(a.memberName ? [{ label: "Avec", value: a.memberName }] : []),
-    ...(a.address ? [{ label: "Adresse", value: a.address }] : []),
+    { label: t("email.service"), value: a.serviceName },
+    { label: t("email.date"), value: a.when },
+    ...(a.memberName ? [{ label: t("email.with"), value: a.memberName }] : []),
+    ...(a.address ? [{ label: t("email.address"), value: a.address }] : []),
   ];
 }
 
 /** Modes de paiement rappelés dans l'email de rappel (mêmes codes que l'ancien Branshee). */
 export const PAYMENT_LABELS: Record<string, string> = { carte: "Carte bancaire", especes: "Espèces", qr_code: "QR code (Payconiq…)", virement: "Virement" };
 
-const clientFooter = (a: AppointmentInfo) => `${a.businessName}${a.businessPhone ? ` · ${a.businessPhone}` : ""}${a.noBranding ? "" : " — rendez-vous géré avec Branshee"}`;
+const tFor = (locale?: Locale | null) => createT(getMessages(locale ?? "fr"));
+const footerFor = (t: T, business: string, phone: string | null, noBranding?: boolean) => t(noBranding ? "email.footerNoBrand" : "email.footer", { business, phone: phone ? ` · ${phone}` : "" });
+const clientFooter = (a: AppointmentInfo) => footerFor(tFor(a.locale), a.businessName, a.businessPhone, a.noBranding);
 const firstName = (n: string) => n.split(" ")[0] ?? n;
+/** Gabarit d'un email client, dans la langue choisie à la réservation. */
+const customer = (a: AppointmentInfo) => {
+  const t = tFor(a.locale);
+  return { t, lang: a.locale ?? "fr", name: firstName(a.customerName), business: a.businessName, details: apptDetails(a, t), footer: clientFooter(a) };
+};
 
 export const emails = {
   bookingConfirmed(a: AppointmentInfo, customMessage?: string | null) {
+    const c = customer(a);
     return {
-      subject: `Rendez-vous confirmé — ${a.businessName}`,
+      subject: c.t("email.confirmedSubject", { business: c.business }),
       ...render({
+        lang: c.lang,
         preheader: `${a.serviceName}, ${a.when}`,
-        title: "Votre rendez-vous est confirmé",
-        intro: `Bonjour ${firstName(a.customerName)}, votre rendez-vous chez ${a.businessName} est bien enregistré.`,
-        details: apptDetails(a),
-        cta: { label: "Voir ou annuler le rendez-vous", url: a.manageUrl },
-        note: customMessage || "Un empêchement ? Annulez depuis le lien ci-dessus pour libérer le créneau.",
-        footer: clientFooter(a),
+        title: c.t("email.confirmedTitle"),
+        intro: c.t("email.confirmedIntro", { name: c.name, business: c.business }),
+        details: c.details,
+        cta: { label: c.t("email.seeOrCancel"), url: a.manageUrl },
+        note: customMessage || c.t("email.confirmedNote"),
+        footer: c.footer,
       }),
     };
   },
 
   bookingRequested(a: AppointmentInfo) {
+    const c = customer(a);
     return {
-      subject: `Demande de rendez-vous envoyée — ${a.businessName}`,
+      subject: c.t("email.requestedSubject", { business: c.business }),
       ...render({
-        preheader: `En attente de confirmation par ${a.businessName}`,
-        title: "Demande bien reçue",
-        intro: `Bonjour ${firstName(a.customerName)}, ${a.businessName} doit encore confirmer votre rendez-vous. Vous recevrez un email dès que c'est fait.`,
-        details: apptDetails(a),
-        cta: { label: "Suivre ma demande", url: a.manageUrl },
-        footer: clientFooter(a),
+        lang: c.lang,
+        preheader: c.t("email.requestedPre", { business: c.business }),
+        title: c.t("email.requestedTitle"),
+        intro: c.t("email.requestedIntro", { name: c.name, business: c.business }),
+        details: c.details,
+        cta: { label: c.t("email.followRequest"), url: a.manageUrl },
+        footer: c.footer,
       }),
     };
   },
 
   requestAccepted(a: AppointmentInfo, customMessage?: string | null) {
+    const c = customer(a);
     return {
-      subject: `Rendez-vous confirmé — ${a.businessName}`,
+      subject: c.t("email.confirmedSubject", { business: c.business }),
       ...render({
-        preheader: `${a.businessName} a confirmé votre rendez-vous`,
-        title: "Votre demande est acceptée",
-        intro: `Bonne nouvelle ${firstName(a.customerName)} : ${a.businessName} a confirmé votre rendez-vous.`,
-        details: apptDetails(a),
-        cta: { label: "Voir le rendez-vous", url: a.manageUrl },
+        lang: c.lang,
+        preheader: c.t("email.acceptedPre", { business: c.business }),
+        title: c.t("email.acceptedTitle"),
+        intro: c.t("email.acceptedIntro", { name: c.name, business: c.business }),
+        details: c.details,
+        cta: { label: c.t("email.seeAppointment"), url: a.manageUrl },
         note: customMessage ?? undefined,
-        footer: clientFooter(a),
+        footer: c.footer,
       }),
     };
   },
 
   requestRefused(a: AppointmentInfo, bookingUrl: string, reason?: string | null) {
+    const c = customer(a);
     return {
-      subject: `Rendez-vous non disponible — ${a.businessName}`,
+      subject: c.t("email.refusedSubject", { business: c.business }),
       ...render({
-        preheader: "Votre demande n'a pas pu être acceptée",
-        title: "Demande non acceptée",
-        intro: `Bonjour ${firstName(a.customerName)}, ${a.businessName} n'a malheureusement pas pu accepter votre demande pour ce créneau.`,
-        details: apptDetails(a),
-        cta: { label: "Choisir un autre créneau", url: bookingUrl },
-        note: reason ? `Message de ${a.businessName} : « ${reason} »` : undefined,
-        footer: clientFooter(a),
+        lang: c.lang,
+        preheader: c.t("email.refusedPre"),
+        title: c.t("email.refusedTitle"),
+        intro: c.t("email.refusedIntro", { name: c.name, business: c.business }),
+        details: c.details,
+        cta: { label: c.t("email.otherSlot"), url: bookingUrl },
+        note: reason ? c.t("email.messageFrom", { business: c.business, message: reason }) : undefined,
+        footer: c.footer,
       }),
     };
   },
 
   cancelledForCustomer(a: AppointmentInfo, bookingUrl: string, customMessage?: string | null) {
+    const c = customer(a);
     return {
-      subject: `Rendez-vous annulé — ${a.businessName}`,
+      subject: c.t("email.cancelledSubject", { business: c.business }),
       ...render({
+        lang: c.lang,
         preheader: `${a.serviceName}, ${a.when}`,
-        title: "Rendez-vous annulé",
-        intro: `Bonjour ${firstName(a.customerName)}, votre rendez-vous chez ${a.businessName} est annulé.`,
-        details: apptDetails(a),
-        cta: { label: "Reprendre rendez-vous", url: bookingUrl },
+        title: c.t("email.cancelledTitle"),
+        intro: c.t("email.cancelledIntro", { name: c.name, business: c.business }),
+        details: c.details,
+        cta: { label: c.t("email.rebook"), url: bookingUrl },
         note: customMessage ?? undefined,
-        footer: clientFooter(a),
+        footer: c.footer,
       }),
     };
   },
 
   rescheduled(a: AppointmentInfo, previousWhen: string, message?: string | null) {
+    const c = customer(a);
     return {
-      subject: `Rendez-vous déplacé — ${a.businessName}`,
+      subject: c.t("email.rescheduledSubject", { business: c.business }),
       ...render({
-        preheader: `Nouveau créneau : ${a.when}`,
-        title: "Votre rendez-vous a été déplacé",
-        intro: `Bonjour ${firstName(a.customerName)}, ${a.businessName} a déplacé votre rendez-vous initialement prévu ${previousWhen.charAt(0).toLowerCase() + previousWhen.slice(1)}.`,
-        details: apptDetails(a),
-        cta: { label: "Voir ou annuler le rendez-vous", url: a.manageUrl },
-        note: message ? `Message de ${a.businessName} : « ${message} »` : "Ce nouveau créneau ne vous convient pas ? Annulez depuis le lien ci-dessus.",
-        footer: clientFooter(a),
+        lang: c.lang,
+        preheader: c.t("email.rescheduledPre", { when: a.when }),
+        title: c.t("email.rescheduledTitle"),
+        intro: c.t("email.rescheduledIntro", { name: c.name, business: c.business, previous: previousWhen }),
+        details: c.details,
+        cta: { label: c.t("email.seeOrCancel"), url: a.manageUrl },
+        note: message ? c.t("email.messageFrom", { business: c.business, message }) : c.t("email.rescheduledNote"),
+        footer: c.footer,
       }),
     };
   },
 
-  waitlistSpot(p: { name: string; businessName: string; day: string; serviceName: string | null; bookingUrl: string; businessPhone: string | null }) {
+  waitlistSpot(p: { name: string; businessName: string; day: string; serviceName: string | null; bookingUrl: string; businessPhone: string | null; locale?: Locale | null }) {
+    const t = tFor(p.locale);
     return {
-      subject: `Une place s'est libérée — ${p.businessName}`,
+      subject: t("email.waitlistSubject", { business: p.businessName }),
       ...render({
-        preheader: `${p.day} : une place est disponible`,
-        title: "Une place s'est libérée",
-        intro: `Bonjour ${firstName(p.name)}, vous aviez demandé à être prévenu(e) : une place vient de se libérer chez ${p.businessName} le ${p.day}${p.serviceName ? ` (${p.serviceName})` : ""}.`,
-        cta: { label: "Réserver ce créneau", url: p.bookingUrl },
-        note: "Premier arrivé, premier servi : la place peut être reprise par quelqu'un d'autre.",
-        footer: `${p.businessName}${p.businessPhone ? ` · ${p.businessPhone}` : ""} — rendez-vous géré avec Branshee`,
+        lang: p.locale ?? "fr",
+        preheader: t("email.waitlistPre", { day: p.day.charAt(0).toUpperCase() + p.day.slice(1) }),
+        title: t("email.waitlistTitle"),
+        intro: t("email.waitlistIntro", { name: firstName(p.name), business: p.businessName, day: p.day, service: p.serviceName ? ` (${p.serviceName})` : "" }),
+        cta: { label: t("email.waitlistCta"), url: p.bookingUrl },
+        note: t("email.waitlistNote"),
+        footer: footerFor(t, p.businessName, p.businessPhone),
       }),
     };
   },
 
   reminder(a: AppointmentInfo, customMessage?: string | null, payment?: { methods: string[]; note?: string | null }) {
-    const methods = (payment?.methods ?? []).map((m) => PAYMENT_LABELS[m]).filter(Boolean);
+    const c = customer(a);
+    const labels = getMessages(a.locale ?? "fr").email.payLabels as Record<string, string>;
+    const methods = (payment?.methods ?? []).map((m) => labels[m]).filter(Boolean);
     const pay = [methods.join(", "), payment?.note?.trim()].filter(Boolean).join(" — ");
     return {
-      subject: `Rappel : rendez-vous ${a.when} — ${a.businessName}`,
+      subject: c.t("email.reminderSubject", { when: a.when, business: c.business }),
       ...render({
-        preheader: `${a.serviceName} chez ${a.businessName}`,
-        title: "Rappel de votre rendez-vous",
-        intro: `Bonjour ${firstName(a.customerName)}, petit rappel de votre rendez-vous chez ${a.businessName}.`,
-        details: [...apptDetails(a), ...(pay ? [{ label: "Paiement sur place", value: pay }] : [])],
-        cta: { label: "Voir ou annuler", url: a.manageUrl },
-        note: customMessage || "Un empêchement ? Merci d'annuler dès que possible pour libérer le créneau.",
-        footer: clientFooter(a),
+        lang: c.lang,
+        preheader: c.t("email.reminderPre", { service: a.serviceName, business: c.business }),
+        title: c.t("email.reminderTitle"),
+        intro: c.t("email.reminderIntro", { name: c.name, business: c.business }),
+        details: [...c.details, ...(pay ? [{ label: c.t("email.payOnSite"), value: pay }] : [])],
+        cta: { label: c.t("email.seeOrCancelShort"), url: a.manageUrl },
+        note: customMessage || c.t("email.reminderNote"),
+        footer: c.footer,
       }),
     };
   },

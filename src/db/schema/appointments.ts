@@ -96,6 +96,8 @@ export const appointments = pgTable(
     serviceColor: text("service_color"),
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
+    /** Langue du client à la réservation (emails envoyés dans cette langue). */
+    locale: text("locale").notNull().default("fr"),
     contactPhone: text("contact_phone"),
     customerMessage: text("customer_message"),
     formAnswers: jsonb("form_answers").$type<{ question: string; answer: string }[]>().notNull().default([]),
@@ -212,6 +214,7 @@ export const waitlistEntries = pgTable(
     date: date("date").notNull(),
     name: text("name").notNull(),
     email: text("email").notNull(),
+    locale: text("locale").notNull().default("fr"),
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
     createdAt: timestamps.createdAt,
   },

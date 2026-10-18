@@ -6,11 +6,21 @@ import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
+import { createT, getMessages, intlLocale } from "@/i18n";
+import { isLocale, type Locale } from "@/i18n/config";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, effectivePlan } from "@/server/plan";
 import { LIMITS } from "@/lib/plans";
 import { syncAppointmentToGoogle } from "@/server/google";
 import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, whatsappConfigured } from "@/server/sms";
+
+/** « lundi 3 mars à 10:00 » dans la langue du client (sans majuscule imposée). */
+function dayAndTime(d: Date, tz: string, locale: Locale) {
+  const day = new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long", timeZone: tz }).format(d);
+  return createT(getMessages(locale))("email.atTime", { day, time: formatTime(d, tz) });
+}
+const dayOnly = (d: Date, tz: string, locale: Locale) => new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long", timeZone: tz }).format(d);
+const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
@@ -36,12 +46,18 @@ async function load(appointmentId: string) {
     businessPhone: b.phone,
     noBranding: await businessHas(b.id, "noBranding"),
   };
-  return { ...row, info, bookingUrl: `${appUrl()}/${b.slug}` };
+  // Version envoyée au client, dans la langue choisie à la réservation (les emails au pro restent en français).
+  const locale: Locale = isLocale(a.locale) ? a.locale : "fr";
+  const clientInfo: AppointmentInfo =
+    locale === "fr"
+      ? info
+      : { ...info, locale, when: capFirst(dayAndTime(a.startsAt, b.timezone, locale)), serviceName: a.serviceName ?? getMessages(locale).manage.appointment, address: b.locationMode === "online" ? getMessages(locale).common.online : info.address, customerName: info.customerName };
+  return { ...row, info, clientInfo, locale, bookingUrl: `${appUrl()}/${b.slug}` };
 }
 
 type Loaded = NonNullable<Awaited<ReturnType<typeof load>>>;
 
-const reminderMail = (row: Loaded) => emails.reminder(row.info, row.settings?.reminderMessage, { methods: row.settings?.reminderPaymentMethods ?? [], note: row.settings?.reminderPaymentNote });
+const reminderMail = (row: Loaded) => emails.reminder(row.clientInfo, row.settings?.reminderMessage, { methods: row.settings?.reminderPaymentMethods ?? [], note: row.settings?.reminderPaymentNote });
 
 /** Destinataires côté pro : le propriétaire et le praticien concerné (sans doublon). */
 async function proRecipients(row: Loaded) {
@@ -104,7 +120,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
     const row = await load(appointmentId);
     if (!row) return;
     const pending = row.a.status === "pending";
-    await toClient(row, pending ? "booking_requested" : "booking_confirmed", pending ? emails.bookingRequested(row.info) : emails.bookingConfirmed(row.info, row.settings?.confirmationMessage));
+    await toClient(row, pending ? "booking_requested" : "booking_confirmed", pending ? emails.bookingRequested(row.clientInfo) : emails.bookingConfirmed(row.clientInfo, row.settings?.confirmationMessage));
     if (!pending) await toPhone(row, "confirmation");
 
     if (source === "online" && (row.settings?.emailOwnerOnNewBooking ?? true)) {
@@ -120,7 +136,7 @@ export function notifyRequestDecision(appointmentId: string, accepted: boolean, 
   return safely("décision", async () => {
     const row = await load(appointmentId);
     if (!row) return;
-    await toClient(row, accepted ? "request_accepted" : "request_refused", accepted ? emails.requestAccepted(row.info, row.settings?.confirmationMessage) : emails.requestRefused(row.info, row.bookingUrl, reason));
+    await toClient(row, accepted ? "request_accepted" : "request_refused", accepted ? emails.requestAccepted(row.clientInfo, row.settings?.confirmationMessage) : emails.requestRefused(row.clientInfo, row.bookingUrl, reason));
   });
 }
 
@@ -130,7 +146,7 @@ export function notifyCancelledByCustomer(appointmentId: string) {
   return safely("annulation client", async () => {
     const row = await load(appointmentId);
     if (!row) return;
-    await toClient(row, "cancelled_customer", emails.cancelledForCustomer(row.info, row.bookingUrl, row.settings?.cancellationMessage));
+    await toClient(row, "cancelled_customer", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage));
     if (row.settings?.emailOwnerOnCancellation ?? true) {
       const mail = emails.proCancelled(row.info, `${appUrl()}/app/agenda`);
       for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_cancelled", businessId: row.business.id, appointmentId: row.a.id });
@@ -144,7 +160,7 @@ export function notifyCancelledByBusiness(appointmentId: string) {
   return safely("annulation établissement", async () => {
     const row = await load(appointmentId);
     if (!row) return;
-    await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.info, row.bookingUrl, row.settings?.cancellationMessage));
+    await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage));
   });
 }
 
@@ -165,9 +181,9 @@ export function notifyWaitlist(appointmentId: string) {
       .set({ notifiedAt: new Date() })
       .where(and(eq(waitlistEntries.businessId, row.business.id), eq(waitlistEntries.date, day), isNull(waitlistEntries.notifiedAt), row.a.serviceId ? or(isNull(waitlistEntries.serviceId), eq(waitlistEntries.serviceId, row.a.serviceId)) : isNull(waitlistEntries.serviceId), row.a.memberId ? or(isNull(waitlistEntries.memberId), eq(waitlistEntries.memberId, row.a.memberId)) : undefined))
       .returning();
-    const label = formatDay(row.a.startsAt, tz, "EEEE d MMMM");
     for (const w of claimed) {
-      const mail = emails.waitlistSpot({ name: w.name, businessName: row.business.name, day: label, serviceName: row.a.serviceName, bookingUrl: row.bookingUrl, businessPhone: row.business.phone });
+      const wl: Locale = isLocale(w.locale) ? w.locale : "fr";
+      const mail = emails.waitlistSpot({ name: w.name, businessName: row.business.name, day: dayOnly(row.a.startsAt, tz, wl), serviceName: row.a.serviceName, bookingUrl: row.bookingUrl, businessPhone: row.business.phone, locale: wl });
       await sendEmail({ ...mail, to: w.email, template: "waitlist_spot", replyTo: row.business.email, businessId: row.business.id, appointmentId: row.a.id });
     }
   });
@@ -180,8 +196,8 @@ export function notifyRescheduled(appointmentId: string, previousStart: Date, me
     const row = await load(appointmentId);
     if (!row) return;
     const tz = row.business.timezone;
-    const before = `le ${formatDay(previousStart, tz, "EEEE d MMMM")} à ${formatTime(previousStart, tz)}`;
-    await toClient(row, "rescheduled", emails.rescheduled(row.info, before, message));
+    const before = dayAndTime(previousStart, tz, row.locale);
+    await toClient(row, "rescheduled", emails.rescheduled(row.clientInfo, row.locale === "fr" ? `le ${before}` : before, message));
   });
 }
 
@@ -250,7 +266,7 @@ export function notifyRescheduledByCustomer(appointmentId: string, previousStart
     const tz = row.business.timezone;
     const before = `${formatDay(previousStart, tz, "EEEE d MMMM")} à ${formatTime(previousStart, tz)}`;
     const prev = before.charAt(0).toUpperCase() + before.slice(1);
-    await toClient(row, "rescheduled_by_customer", emails.bookingConfirmed(row.info, row.settings?.confirmationMessage));
+    await toClient(row, "rescheduled_by_customer", emails.bookingConfirmed(row.clientInfo, row.settings?.confirmationMessage));
     const mail = emails.proRescheduledByCustomer(row.info, prev, `${appUrl()}/app/agenda/rdv/${row.a.id}`);
     for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_rescheduled", businessId: row.business.id, appointmentId: row.a.id });
   });

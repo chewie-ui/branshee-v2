@@ -92,6 +92,13 @@
       "when": 1792324247601,
       "tag": "0012_nudges_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792326787167,
+      "tag": "0013_customer_locale",
+      "breakpoints": true
     }
   ]
 }

@@ -5,9 +5,11 @@ import { Flag, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useI18n } from "@/i18n/client";
 import { reportReview, requestReviewRemoval, submitReview } from "@/server/actions/reviews";
 
 export function ReviewForm({ slug }: { slug: string }) {
+  const { t, tr } = useI18n();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
@@ -21,34 +23,29 @@ export function ReviewForm({ slug }: { slug: string }) {
         e.preventDefault();
         start(async () => {
           const r = await submitReview(slug, { rating, comment });
-          setStatus(r.ok ? { ok: true, msg: r.message ?? "Merci !" } : { ok: false, msg: r.error });
+          setStatus(r.ok ? { ok: true, msg: r.message ? tr(r.message) : t("reviews.thanks") } : { ok: false, msg: tr(r.error) });
         });
       }}
     >
-      <p className="text-sm font-medium">Votre avis</p>
-      <div className="flex gap-1" role="radiogroup" aria-label="Note" onMouseLeave={() => setHover(0)}>
+      <p className="text-sm font-medium">{t("reviews.yourReview")}</p>
+      <div className="flex gap-1" role="radiogroup" aria-label={t("reviews.rating")} onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={`${n} étoile${n > 1 ? "s" : ""}`} onMouseEnter={() => setHover(n)} onClick={() => setRating(n)} className="p-0.5 text-warning">
+          <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={t("reviews.stars", { n })} onMouseEnter={() => setHover(n)} onClick={() => setRating(n)} className="p-0.5 text-warning">
             <Star className={cn("size-6", n <= (hover || rating) ? "fill-current" : "opacity-30")} aria-hidden="true" />
           </button>
         ))}
       </div>
-      <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} maxLength={800} placeholder="Racontez votre expérience (facultatif)" aria-label="Commentaire" />
+      <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} maxLength={800} placeholder={t("reviews.placeholder")} aria-label={t("reviews.comment")} />
       {status && !status.ok ? <p className="text-sm text-danger" role="alert">{status.msg}</p> : null}
-      <Button type="submit" size="sm" loading={pending} disabled={!rating}>Publier mon avis</Button>
+      <Button type="submit" size="sm" loading={pending} disabled={!rating}>{t("reviews.publish")}</Button>
     </form>
   );
 }
 
-const REASONS = [
-  { v: "insulting", l: "Propos insultants ou haineux" },
-  { v: "false", l: "Faux avis / jamais venu" },
-  { v: "spam", l: "Publicité, hors sujet" },
-  { v: "personal", l: "Données personnelles divulguées" },
-  { v: "other", l: "Autre" },
-];
+const REASONS = ["insulting", "false", "spam", "personal", "other"] as const;
 
 export function ReportReviewButton({ reviewId, action = "report" }: { reviewId: string; action?: "report" | "owner" }) {
+  const { t, tr } = useI18n();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
@@ -59,7 +56,7 @@ export function ReportReviewButton({ reviewId, action = "report" }: { reviewId: 
     return (
       <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-muted hover:text-danger">
         <Flag className="size-3" aria-hidden="true" />
-        {action === "owner" ? "Demander la suppression" : "Signaler"}
+        {action === "owner" ? t("reviews.askRemoval") : t("reviews.report")}
       </button>
     );
   return (
@@ -69,19 +66,19 @@ export function ReportReviewButton({ reviewId, action = "report" }: { reviewId: 
         e.preventDefault();
         start(async () => {
           const r = action === "owner" ? await requestReviewRemoval(reviewId, { reason, message }) : await reportReview(reviewId, { reason, message });
-          setStatus(r.ok ? { ok: true, msg: r.message ?? "Envoyé." } : { ok: false, msg: r.error });
+          setStatus(r.ok ? { ok: true, msg: r.message ? tr(r.message) : t("reviews.sent") } : { ok: false, msg: tr(r.error) });
         });
       }}
     >
-      <Select value={reason} onChange={(e) => setReason(e.target.value)} required aria-label="Motif">
-        <option value="">Motif…</option>
-        {REASONS.map((r) => <option key={r.v} value={r.v}>{r.l}</option>)}
+      <Select value={reason} onChange={(e) => setReason(e.target.value)} required aria-label={t("reviews.reason")}>
+        <option value="">{t("reviews.reasonPlaceholder")}</option>
+        {REASONS.map((r) => <option key={r} value={r}>{t(`reviews.reasons.${r}`)}</option>)}
       </Select>
-      <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} maxLength={1000} placeholder="Précisions (facultatif)" aria-label="Précisions" />
+      <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} maxLength={1000} placeholder={t("reviews.details")} aria-label={t("reviews.details")} />
       {status && !status.ok ? <p className="text-xs text-danger" role="alert">{status.msg}</p> : null}
       <div className="flex gap-2">
-        <Button type="submit" size="sm" variant="secondary" loading={pending}>Envoyer</Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+        <Button type="submit" size="sm" variant="secondary" loading={pending}>{t("common.send")}</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
       </div>
     </form>
   );

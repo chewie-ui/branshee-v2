@@ -1,5 +1,7 @@
 "use server";
 
+import { LOCALES } from "@/i18n/config";
+
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
@@ -64,6 +66,7 @@ const bookingSchema = z.object({
   intake: z.record(z.string(), z.string().max(64)).optional(),
   /** Champ piège invisible : rempli uniquement par les robots. */
   website: z.string().max(0).optional(),
+  locale: z.enum(LOCALES).optional(),
   paymentMethod: z.enum(["online", "on_site", "bank_transfer", "paypal", "none"]).optional(),
   paymentIntentId: z.string().regex(/^pi_\w+$/).optional(),
   setupIntentId: z.string().regex(/^seti_\w+$/).optional(),
@@ -181,6 +184,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
           serviceColor: service.color,
           contactName: fullName,
           contactEmail: v.email,
+          locale: v.locale ?? "fr",
           contactPhone: v.phone || null,
           customerMessage: v.message || null,
           formAnswers: answers,
@@ -212,6 +216,7 @@ const waitlistSchema = z.object({
   name: z.string().trim().min(1, "Indiquez votre nom.").max(120),
   email: z.email({ message: "Adresse email invalide." }).transform((e) => e.toLowerCase()),
   website: z.string().max(0).optional(),
+  locale: z.enum(LOCALES).optional(),
 });
 
 /** « Me prévenir si une place se libère » sur un jour complet. */
@@ -224,7 +229,7 @@ export async function joinWaitlist(input: z.input<typeof waitlistSchema>): Promi
   if (!data?.settings?.waitlistEnabled || data.business.pausedAt) return { ok: false, error: "La liste d'attente n'est pas disponible." };
   const service = data.services.find((s) => s.id === v.serviceId);
   if (!service) return { ok: false, error: "Prestation introuvable." };
-  await db.insert(waitlistEntries).values({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId && service.memberIds.includes(v.memberId) ? v.memberId : null, date: v.date, name: v.name, email: v.email }).onConflictDoNothing();
+  await db.insert(waitlistEntries).values({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId && service.memberIds.includes(v.memberId) ? v.memberId : null, date: v.date, name: v.name, email: v.email, locale: v.locale ?? "fr" }).onConflictDoNothing();
   return { ok: true };
 }
 

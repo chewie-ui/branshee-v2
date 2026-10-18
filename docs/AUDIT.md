@@ -187,7 +187,12 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ℹ️ Script « mise en pause des fiches vides » de l'ancien non repris (action manuelle possible depuis le super-admin)
 
 ## Lot R — Langues
-- ❌ Interface en 6 langues (fr, en, nl, de, es, it) — l'ancien a 2 039 textes traduits par langue
+- ✅ Côté client en 6 langues (fr, en, nl, de, es, it) : page de réservation, paiement, liste d'attente, avis, page « Votre rendez-vous » (déplacer, annuler, agenda), messages d'erreur du serveur
+- ✅ Choix de la langue : `?lang=xx` (utile pour le calendrier intégré), sélecteur sur la page (cookie `bs_lang`, l'ancien cookie `user_lang` est relu), sinon langue du navigateur, sinon français
+- ✅ Langue mémorisée sur le rendez-vous et la liste d'attente : confirmation, demande, acceptation/refus, annulation, déplacement, rappel et « place libérée » partent dans la langue du client ; les emails au pro restent en français
+- ✅ Dates, prix et noms de langues parlées formatés selon la langue (Intl)
+- ℹ️ Les textes saisis par le pro (prestations, questions, à propos) restent dans la langue où il les a écrits
+- ⏳ Espace pro, site vitrine et SMS restent en français pour l'instant (les textes de l'ancien sont à reprendre si des pros non francophones arrivent)
 
 ## Lot S — Applications
 - ❌ API pour l'application mobile (connexion, agenda, clients, dossier, prestations, horaires, congés, équipe, notifications push…)

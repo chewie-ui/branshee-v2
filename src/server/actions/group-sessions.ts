@@ -1,5 +1,7 @@
 "use server";
 
+import { LOCALES } from "@/i18n/config";
+
 import { TZDate } from "@date-fns/tz";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -173,6 +175,7 @@ const bookingSchema = z.object({
   /** Réponses au questionnaire d'orientation : id de question → id de réponse. */
   intake: z.record(z.string(), z.string().max(64)).optional(),
   website: z.string().max(0).optional(),
+  locale: z.enum(LOCALES).optional(),
 });
 
 export type GroupBookingResult = { ok: true; token: string } | { ok: false; error: string; fieldErrors?: Record<string, string>; full?: boolean };
@@ -272,6 +275,7 @@ export async function bookGroupSession(input: z.input<typeof bookingSchema>): Pr
           serviceColor: session.service.color,
           contactName: fullName,
           contactEmail: v.email,
+          locale: v.locale ?? "fr",
           contactPhone: v.phone || null,
           customerMessage: v.message || null,
           formAnswers: answers,

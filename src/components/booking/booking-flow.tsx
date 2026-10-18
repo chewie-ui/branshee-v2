@@ -14,14 +14,23 @@ import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sess
 import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
 import { questionMatters, serviceMatches } from "@/lib/intake";
+import { useI18n } from "@/i18n/client";
+import { intlLocale } from "@/i18n";
+import type { Locale } from "@/i18n/config";
 
 type Step = "visit" | "service" | "member" | "time" | "session" | "details";
 type Props = { data: PublicBusiness; today: string; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
 
-const WEEKDAY = new Intl.DateTimeFormat("fr-BE", { weekday: "short", timeZone: "UTC" });
-const DAYNUM = new Intl.DateTimeFormat("fr-BE", { day: "numeric", timeZone: "UTC" });
-const LONG = new Intl.DateTimeFormat("fr-BE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-const MONTH = new Intl.DateTimeFormat("fr-BE", { month: "long", year: "numeric", timeZone: "UTC" });
+/** Formats de date dans la langue de la page. */
+function fmts(locale: Locale) {
+  const l = intlLocale(locale);
+  return {
+    WEEKDAY: new Intl.DateTimeFormat(l, { weekday: "short", timeZone: "UTC" }),
+    DAYNUM: new Intl.DateTimeFormat(l, { day: "numeric", timeZone: "UTC" }),
+    LONG: new Intl.DateTimeFormat(l, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }),
+    MONTH: new Intl.DateTimeFormat(l, { month: "long", year: "numeric", timeZone: "UTC" }),
+  };
+}
 const utc = (d: string) => new Date(d + "T12:00:00Z");
 const addDays = (d: string, n: number) => {
   const x = utc(d);
@@ -33,12 +42,15 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const sessionParts = (iso: string, timeZone: string) => {
   const d = new Date(iso);
   const day = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-  const time = new Intl.DateTimeFormat("fr-BE", { timeZone, hour: "2-digit", minute: "2-digit" }).format(d);
+  const time = new Intl.DateTimeFormat("fr-BE", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
   return { day, time };
 };
 
 export function BookingFlow({ data, today, viewer = null }: Props) {
   const router = useRouter();
+  const { locale, t, tr } = useI18n();
+  const { WEEKDAY, DAYNUM, LONG, MONTH } = useMemo(() => fmts(locale), [locale]);
+  const at = (day: string, time: string) => t("common.at", { day: cap(LONG.format(utc(day))), time });
   const { categories, team, questions, settings } = data;
   const fv = settings?.firstVisitQuestion;
   const [visit, setVisit] = useState<"new" | "existing" | null>(null);
@@ -118,8 +130,8 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
   const grouped = useMemo(() => {
     const byCat = categories.map((c) => ({ key: c.id, name: `${c.icon ? `${c.icon} ` : ""}${c.name}`, items: services.filter((s) => s.categoryId === c.id) }));
     const rest = services.filter((s) => !s.categoryId || !categories.some((c) => c.id === s.categoryId));
-    return [...byCat, ...(rest.length ? [{ key: "rest", name: categories.length ? "Autres prestations" : "", items: rest }] : [])].filter((g) => g.items.length);
-  }, [services, categories]);
+    return [...byCat, ...(rest.length ? [{ key: "rest", name: categories.length ? t("booking.otherServices") : "", items: rest }] : [])].filter((g) => g.items.length);
+  }, [services, categories, t]);
 
   function pickService(id: string) {
     setServiceId(id);
@@ -146,13 +158,13 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
   const slotsOfDay = days?.find((d) => d.date === day)?.slots ?? [];
   const maxDaySlots = Math.max(0, ...(days ?? []).map((d) => d.slots.length));
   const periods = [
-    { label: "Matin", items: slotsOfDay.filter((s) => s.time < "12:00") },
-    { label: "Après-midi", items: slotsOfDay.filter((s) => s.time >= "12:00" && s.time < "17:00") },
-    { label: "Soir", items: slotsOfDay.filter((s) => s.time >= "17:00") },
+    { label: t("booking.morning"), items: slotsOfDay.filter((s) => s.time < "12:00") },
+    { label: t("booking.afternoon"), items: slotsOfDay.filter((s) => s.time >= "12:00" && s.time < "17:00") },
+    { label: t("booking.evening"), items: slotsOfDay.filter((s) => s.time >= "17:00") },
   ].filter((p) => p.items.length);
 
   const [pendingPay, setPendingPay] = useState<{ mode: "pay" | "guarantee"; clientSecret: string; payload: Parameters<typeof createPublicBooking>[0] } | null>(null);
-  const ruleText = data.payment.rule === "half_24h" ? "En cas d'annulation moins de 24 h avant, 50 % du prix sera prélevé. Une absence non excusée peut être facturée." : data.payment.rule === "full_12h" ? "Annulation moins de 24 h avant : 50 % du prix ; moins de 12 h avant : 100 %. Une absence non excusée peut être facturée." : null;
+  const ruleText = data.payment.rule === "half_24h" ? t("booking.ruleHalf") : data.payment.rule === "full_12h" ? t("booking.ruleFull") : null;
 
   function submit(formData: FormData) {
     if (!service) return;
@@ -173,13 +185,13 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
     if (service.kind === "group") {
       if (!sessionId) return;
       startSubmit(async () => {
-        const res = await bookGroupSession({ slug: data.business.slug, sessionId, ...contact });
+        const res = await bookGroupSession({ slug: data.business.slug, sessionId, ...contact, locale });
         if (res.ok) {
           router.push(`/r/${res.token}?nouveau=1`);
           return;
         }
-        setError(res.error);
-        setFieldErrors(res.fieldErrors ?? {});
+        setError(tr(res.error));
+        setFieldErrors(Object.fromEntries(Object.entries(res.fieldErrors ?? {}).map(([k, v]) => [k, tr(v)])));
         if (res.full) {
           setSessionId(null);
           setSessions(null);
@@ -196,6 +208,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       date: day,
       time,
       ...contact,
+      locale,
       paymentMethod: (String(formData.get("paymentMethod") ?? "") || "none") as "online" | "on_site" | "bank_transfer" | "paypal" | "none",
     };
     const price = service.priceCents ?? 0;
@@ -204,7 +217,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       startSubmit(async () => {
         const r = await startPayment({ slug: data.business.slug, serviceId: service.id, email: contact.email, name: `${contact.firstName} ${contact.lastName}`, mode });
         if (r.ok) setPendingPay({ mode, clientSecret: r.clientSecret, payload });
-        else setError(r.error);
+        else setError(tr(r.error));
       });
       return;
     }
@@ -219,8 +232,8 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
         return;
       }
       setPendingPay(null);
-      setError(res.error);
-      setFieldErrors(res.fieldErrors ?? {});
+      setError(tr(res.error));
+      setFieldErrors(Object.fromEntries(Object.entries(res.fieldErrors ?? {}).map(([k, v]) => [k, tr(v)])));
       if (res.slotTaken) {
         setTime(null);
         setStep("time");
@@ -242,26 +255,26 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       {candidates.length > 1 ? (
         <p className="flex items-center gap-2 text-muted">
           <UserRound className="size-4" aria-hidden="true" />
-          {member ? `Avec ${member.name}` : "Sans préférence de praticien"}
+          {member ? t("common.with", { name: member.name }) : t("booking.noPreferenceSummary")}
         </p>
       ) : null}
       {chosenSession ? (
         <p className="flex items-center gap-2 text-muted">
           <Clock className="size-4" aria-hidden="true" />
-          {cap(LONG.format(utc(sessionParts(chosenSession.startsAt, tz).day)))} à {sessionParts(chosenSession.startsAt, tz).time}
+          {at(sessionParts(chosenSession.startsAt, tz).day, sessionParts(chosenSession.startsAt, tz).time)}
         </p>
       ) : null}
       {day && time ? (
         <p className="flex items-center gap-2 text-muted">
           <Clock className="size-4" aria-hidden="true" />
-          {cap(LONG.format(utc(day)))} à {time}
+          {at(day, time)}
         </p>
       ) : null}
     </div>
   );
 
   if (data.services.length === 0) {
-    return <p className="p-6 text-sm text-muted">Aucune prestation n&apos;est réservable en ligne pour le moment.</p>;
+    return <p className="p-6 text-sm text-muted">{t("booking.noServices")}</p>;
   }
 
   return (
@@ -276,7 +289,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Retour
+          {t("common.back")}
         </button>
       ) : null}
 
@@ -307,16 +320,16 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       ) : null}
 
       {step === "service" && !nextQuestion && services.length === 0 ? (
-        <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucune prestation ne correspond à vos réponses pour la réservation en ligne. Contactez directement l&apos;établissement.</p>
+        <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">{t("booking.noMatch")}</p>
       ) : null}
 
       {step === "service" && !nextQuestion && services.length > 0 ? (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold">Choisissez une prestation</h2>
+          <h2 className="text-lg font-semibold">{t("booking.chooseService")}</h2>
           {/* Pastilles : un filtre par catégorie au-dessus de la liste. */}
           {style === "pills" && grouped.length > 1 ? (
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Catégories">
-              {[{ key: "all", name: "Tout" }, ...grouped].map((g) => (
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t("booking.categories")}>
+              {[{ key: "all", name: t("booking.all") }, ...grouped].map((g) => (
                 <button key={g.key} type="button" aria-pressed={catFilter === g.key} onClick={() => setCatFilter(g.key)} className={cn("rounded-full border px-3 py-1.5 text-sm font-medium", catFilter === g.key ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface text-muted hover:text-text")}>
                   {g.name}
                 </button>
@@ -341,7 +354,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
                           {s.kind === "group" ? (
                             <span className="inline-flex items-center gap-1 font-medium text-accent">
                               <Users className="size-3.5" aria-hidden="true" />
-                              Cours collectif
+                              {t("booking.groupClass")}
                             </span>
                           ) : null}
                           {s.location ? <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" aria-hidden="true" />{s.location}</span> : null}
@@ -377,7 +390,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
 
       {step === "member" && service ? (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Avec qui ?</h2>
+          <h2 className="text-lg font-semibold">{t("booking.withWhom")}</h2>
           <ul className="grid gap-3 sm:grid-cols-2">
             <li>
               <button type="button" onClick={() => { setMemberId(null); setStep("time"); }} className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent">
@@ -385,8 +398,8 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
                   <UserRound className="size-5" />
                 </span>
                 <span>
-                  <span className="block font-medium">Sans préférence</span>
-                  <span className="block text-sm text-muted">Le premier disponible</span>
+                  <span className="block font-medium">{t("booking.noPreference")}</span>
+                  <span className="block text-sm text-muted">{t("booking.firstAvailable")}</span>
                 </span>
               </button>
             </li>
@@ -407,22 +420,22 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
 
       {step === "time" && service ? (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold" data-theme-text="slotHeading">{data.theme.texts.slotHeading || "Choisissez un créneau"}</h2>
+          <h2 className="text-lg font-semibold" data-theme-text="slotHeading">{data.theme.texts.slotHeading || t("booking.chooseSlot")}</h2>
           {summary}
           <p className="text-sm text-muted" data-theme-text="calendarHelp" hidden={!data.theme.texts.calendarHelp}>{data.theme.texts.calendarHelp}</p>
           <div>
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium">{cap(MONTH.format(utc(weekStart)))}</p>
               <div className="flex gap-1">
-                <button type="button" disabled={weekStart <= today || loadingSlots} onClick={() => setWeekStart(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Semaine précédente">
+                <button type="button" disabled={weekStart <= today || loadingSlots} onClick={() => setWeekStart(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.previousWeek")}>
                   <ChevronLeft className="size-4" aria-hidden="true" />
                 </button>
-                <button type="button" disabled={loadingSlots || (settings?.horizonDays != null && addDays(weekStart, 7) > addDays(today, settings.horizonDays))} onClick={() => setWeekStart(addDays(weekStart, 7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Semaine suivante">
+                <button type="button" disabled={loadingSlots || (settings?.horizonDays != null && addDays(weekStart, 7) > addDays(today, settings.horizonDays))} onClick={() => setWeekStart(addDays(weekStart, 7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.nextWeek")}>
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Choisir un jour">
+            <div className="grid grid-cols-7 gap-1.5" role="group" aria-label={t("common.chooseDay")}>
               {(days ?? Array.from({ length: 7 }, (_, i) => ({ date: addDays(weekStart, i), slots: [] }))).map((d) => {
                 const available = d.slots.length > 0;
                 const selected = d.date === day;
@@ -435,7 +448,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
                     disabled={(!available && !waitlistOn) || loadingSlots}
                     onClick={() => { setDay(d.date); setTime(null); }}
                     aria-pressed={selected}
-                    aria-label={`${LONG.format(utc(d.date))}${available ? `, ${d.slots.length} créneaux` : ", complet"}`}
+                    aria-label={`${LONG.format(utc(d.date))}, ${available ? t("booking.slotsCount", { n: d.slots.length }) : t("booking.full")}`}
                     className={cn(
                       "flex min-h-16 flex-col items-center justify-center rounded-lg border text-sm transition-colors disabled:cursor-not-allowed",
                       selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))]" : "border-transparent bg-surface-muted text-muted",
@@ -455,13 +468,13 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
             {loadingSlots ? (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <span key={i} className="h-10 animate-pulse rounded-lg bg-surface-muted" />)}</div>
             ) : days && !day ? (
-              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucun créneau libre cette semaine. Essayez la semaine suivante{waitlistOn ? ", ou choisissez un jour pour être prévenu si une place se libère" : ""}.</p>
+              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">{waitlistOn ? t("booking.noSlotsWeekWaitlist") : t("booking.noSlotsWeek")}</p>
             ) : day && slotsOfDay.length === 0 && waitlistOn && service ? (
               <WaitlistForm slug={data.business.slug} serviceId={service.id} memberId={memberId} day={day} dayLabel={cap(LONG.format(utc(day)))} />
             ) : (
               <div className="space-y-4">
                 {slotsOfDay.some((x) => x.grouped) ? (
-                  <p className="flex items-center gap-1.5 text-sm text-muted"><Star className="size-4 fill-current text-warning" aria-hidden="true" />Créneaux conseillés</p>
+                  <p className="flex items-center gap-1.5 text-sm text-muted"><Star className="size-4 fill-current text-warning" aria-hidden="true" />{t("booking.recommended")}</p>
                 ) : null}
                 {periods.map((p) => (
                   <div key={p.label}>
@@ -473,7 +486,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
                           type="button"
                           onClick={() => { setTime(s.time); setError(null); setStep("details"); }}
                           className={cn("relative h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : s.grouped ? "border-warning/60 bg-warning-soft hover:border-accent hover:text-accent" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
-                          aria-label={s.grouped ? `${s.time}, créneau conseillé` : undefined}
+                          aria-label={s.grouped ? t("booking.recommendedSlot", { time: s.time }) : undefined}
                         >
                           {s.time}
                           {s.grouped ? <Star className="absolute top-1 right-1 size-2.5 fill-current text-warning" aria-hidden="true" /> : null}
@@ -492,13 +505,13 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
 
       {step === "session" && service ? (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold">Choisissez une séance</h2>
+          <h2 className="text-lg font-semibold">{t("booking.chooseSession")}</h2>
           {summary}
           <div aria-live="polite">
             {loadingSlots || !sessions ? (
               <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <span key={i} className="block h-14 animate-pulse rounded-lg bg-surface-muted" />)}</div>
             ) : sessions.length === 0 ? (
-              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">Aucune séance planifiée pour le moment. Revenez bientôt ou contactez l&apos;établissement.</p>
+              <p className="rounded-lg bg-surface-muted p-4 text-sm text-muted">{t("booking.noSessions")}</p>
             ) : (
               <div className="space-y-5">
                 {sessionsByDay.map((g) => (
@@ -516,9 +529,9 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
                               className="flex w-full items-center gap-4 rounded-xl border border-border-strong bg-surface px-4 py-3 text-left transition-colors hover:border-accent disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted"
                             >
                               <span className="text-base font-semibold tabular-nums">{s.time}</span>
-                              <span className="min-w-0 flex-1 truncate text-sm text-muted">{s.memberName ? `Avec ${s.memberName}` : ""}</span>
+                              <span className="min-w-0 flex-1 truncate text-sm text-muted">{s.memberName ? t("common.with", { name: s.memberName }) : ""}</span>
                               <span className={cn("shrink-0 text-sm font-medium", full ? "text-muted" : s.remaining != null && s.remaining <= 3 ? "text-warning" : "text-success")}>
-                                {full ? "Complet" : s.remaining == null ? "Places libres" : `${s.remaining} place${s.remaining > 1 ? "s" : ""}`}
+                                {full ? t("booking.sessionFull") : s.remaining == null ? t("booking.placesFree") : t("booking.places", { n: s.remaining })}
                               </span>
                             </button>
                           </li>
@@ -536,7 +549,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
 
       {step === "details" && service && pendingPay ? (
         <div className="space-y-5">
-          <h2 className="text-lg font-semibold">{pendingPay.mode === "pay" ? "Paiement" : "Carte en garantie"}</h2>
+          <h2 className="text-lg font-semibold">{pendingPay.mode === "pay" ? t("booking.payment") : t("booking.guaranteeCard")}</h2>
           {summary}
           <PaymentStep
             clientSecret={pendingPay.clientSecret}
@@ -546,64 +559,65 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
             onBack={() => setPendingPay(null)}
             onDone={(intentId) => book({ ...pendingPay.payload, ...(pendingPay.mode === "pay" ? { paymentIntentId: intentId } : { setupIntentId: intentId }) })}
           />
-          {submitting ? <p className="text-center text-sm text-muted">Enregistrement du rendez-vous…</p> : null}
+          {submitting ? <p className="text-center text-sm text-muted">{t("booking.saving")}</p> : null}
         </div>
       ) : null}
 
       {step === "details" && service && !pendingPay && ((day && time) || chosenSession) ? (
         <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="space-y-5" noValidate>
-          <h2 className="text-lg font-semibold">Vos coordonnées</h2>
+          <h2 className="text-lg font-semibold">{t("booking.yourDetails")}</h2>
           {summary}
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
           {viewer ? (
-            <p className="text-sm text-muted">Connecté en tant que <span className="font-medium text-text">{viewer.email}</span> : vos coordonnées sont pré-remplies.</p>
+            <p className="text-sm text-muted">{t("booking.loggedAs", { email: viewer.email })}</p>
           ) : (
             <p className="text-sm text-muted">
-              Déjà un compte ?{" "}
-              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} className="font-medium text-accent hover:text-accent-hover">Connectez-vous</a> pour pré-remplir vos coordonnées et retrouver vos rendez-vous.
+              {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[0]}
+              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} className="font-medium text-accent hover:text-accent-hover">{t("booking.login")}</a>
+              {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[1]}
             </p>
           )}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Prénom" htmlFor="firstName" error={fieldErrors.firstName}>
+            <Field label={t("booking.firstName")} htmlFor="firstName" error={fieldErrors.firstName}>
               <Input id="firstName" name="firstName" autoComplete="given-name" defaultValue={viewer?.firstName} required aria-invalid={!!fieldErrors.firstName || undefined} />
             </Field>
-            <Field label="Nom" htmlFor="lastName" error={fieldErrors.lastName}>
+            <Field label={t("booking.lastName")} htmlFor="lastName" error={fieldErrors.lastName}>
               <Input id="lastName" name="lastName" autoComplete="family-name" defaultValue={viewer?.lastName} required aria-invalid={!!fieldErrors.lastName || undefined} />
             </Field>
-            <Field label="Email" htmlFor="email" error={fieldErrors.email}>
+            <Field label={t("booking.email")} htmlFor="email" error={fieldErrors.email}>
               <Input id="email" name="email" type="email" autoComplete="email" defaultValue={viewer?.email} required aria-invalid={!!fieldErrors.email || undefined} />
             </Field>
-            <Field label={settings?.phoneRequired ? "Téléphone" : "Téléphone (facultatif)"} htmlFor="phone" error={fieldErrors.phone}>
+            <Field label={settings?.phoneRequired ? t("booking.phone") : t("common.optional", { label: t("booking.phone") })} htmlFor="phone" error={fieldErrors.phone}>
               <Input id="phone" name="phone" type="tel" autoComplete="tel" defaultValue={viewer?.phone} required={settings?.phoneRequired} aria-invalid={!!fieldErrors.phone || undefined} />
             </Field>
           </div>
           {questions.map((q) => {
             const key = `q_${q.id}`;
-            const label = q.isRequired ? q.label : `${q.label} (facultatif)`;
+            const label = q.isRequired ? q.label : t("common.optional", { label: q.label });
             return (
               <Field key={q.id} label={label} htmlFor={key} error={fieldErrors[key]}>
                 {q.type === "text" ? (
                   <Input id={key} name={key} required={q.isRequired} />
                 ) : (
                   <Select id={key} name={key} defaultValue="" required={q.isRequired}>
-                    <option value="">Choisir…</option>
+                    <option value="">{t("common.choose")}</option>
                     {(q.type === "yes_no" ? ["Oui", "Non"] : q.options).map((o) => (
-                      <option key={o} value={o}>{o}</option>
+                      <option key={o} value={o}>{q.type === "yes_no" ? (o === "Oui" ? t("common.yes") : t("common.no")) : o}</option>
                     ))}
                   </Select>
                 )}
               </Field>
             );
           })}
-          <Field label="Message (facultatif)" htmlFor="message">
-            <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder="Une précision pour le praticien ?" />
+          <Field label={t("common.optional", { label: t("booking.message") })} htmlFor="message">
+            <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder={t("booking.messagePlaceholder")} />
           </Field>
           {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} /> : null}
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
-            {service.kind === "group" ? "Confirmer l'inscription" : settings?.autoConfirm ? "Confirmer le rendez-vous" : "Envoyer la demande"}
+            {service.kind === "group" ? t("booking.confirmGroup") : settings?.autoConfirm ? t("booking.confirm") : t("booking.request")}
           </Button>
-          {!settings?.autoConfirm && service.kind !== "group" ? <p className="text-center text-sm text-muted">L&apos;établissement confirmera votre rendez-vous.</p> : null}
+          {!settings?.autoConfirm && service.kind !== "group" ? <p className="text-center text-sm text-muted">{t("booking.willConfirm")}</p> : null}
         </form>
       ) : null}
     </div>
@@ -612,43 +626,45 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
 
 /** Jour complet : « Me prévenir si une place se libère ». */
 function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: string; serviceId: string; memberId: string | null; day: string; dayLabel: string }) {
+  const { locale, t, tr } = useI18n();
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  if (done) return <p className="rounded-lg bg-success-soft p-4 text-sm text-success" role="status">C&apos;est noté : vous recevrez un email si une place se libère le {dayLabel.toLowerCase()}.</p>;
+  if (done) return <p className="rounded-lg bg-success-soft p-4 text-sm text-success" role="status">{t("booking.waitlistDone", { day: dayLabel.toLowerCase() })}</p>;
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         start(async () => {
-          const r = await joinWaitlist({ slug, serviceId, memberId, date: day, name: String(fd.get("wl-name") ?? ""), email: String(fd.get("wl-email") ?? ""), website: String(fd.get("website") ?? "") });
+          const r = await joinWaitlist({ slug, serviceId, memberId, date: day, name: String(fd.get("wl-name") ?? ""), email: String(fd.get("wl-email") ?? ""), website: String(fd.get("website") ?? ""), locale });
           if (r.ok) setDone(true);
-          else setError(r.error);
+          else setError(tr(r.error));
         });
       }}
       className="space-y-3 rounded-lg border border-border p-4"
     >
-      <p className="flex items-start gap-2 text-sm"><BellRing className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>{dayLabel} est complet. Laissez votre email : nous vous prévenons si une place se libère.</span></p>
+      <p className="flex items-start gap-2 text-sm"><BellRing className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>{t("booking.waitlistIntro", { day: dayLabel })}</span></p>
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input name="wl-name" placeholder="Votre nom" aria-label="Votre nom" required autoComplete="name" />
-        <Input name="wl-email" type="email" placeholder="Votre email" aria-label="Votre email" required autoComplete="email" />
+        <Input name="wl-name" placeholder={t("booking.waitlistName")} aria-label={t("booking.waitlistName")} required autoComplete="name" />
+        <Input name="wl-email" type="email" placeholder={t("booking.waitlistEmail")} aria-label={t("booking.waitlistEmail")} required autoComplete="email" />
       </div>
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
-      <Button type="submit" size="sm" loading={pending}>Me prévenir</Button>
+      <Button type="submit" size="sm" loading={pending}>{t("booking.waitlistSubmit")}</Button>
     </form>
   );
 }
 
 /** Choix du mode de paiement (affiché seulement s'il y a un vrai choix). */
 function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
-  const site = [pay.onSite.cash && "espèces", pay.onSite.card && "carte", pay.onSite.qr && "QR code"].filter(Boolean).join(", ");
+  const { t: tt } = useI18n();
+  const site = [pay.onSite.cash && tt("booking.cash"), pay.onSite.card && tt("booking.card"), pay.onSite.qr && tt("booking.qr")].filter(Boolean).join(", ");
   const options = [
-    pay.online ? { v: "online", t: "Payer en ligne maintenant", d: "Carte bancaire, Apple Pay, Google Pay…" } : null,
-    !pay.required ? { v: "on_site", t: "Payer sur place", d: site ? `Accepté : ${site}.` : "Le jour du rendez-vous." } : null,
-    !pay.required && pay.onSite.bankTransfer ? { v: "bank_transfer", t: "Virement bancaire", d: "Les coordonnées vous seront données après la réservation." } : null,
-    !pay.required && pay.onSite.paypal ? { v: "paypal", t: "PayPal", d: "Le lien PayPal vous sera donné après la réservation." } : null,
+    pay.online ? { v: "online", t: tt("booking.payOnline"), d: tt("booking.payOnlineHint") } : null,
+    !pay.required ? { v: "on_site", t: tt("booking.payOnSite"), d: site ? tt("booking.acceptedOnSite", { list: site }) : tt("booking.onTheDay") } : null,
+    !pay.required && pay.onSite.bankTransfer ? { v: "bank_transfer", t: tt("booking.bankTransfer"), d: tt("booking.bankTransferHint") } : null,
+    !pay.required && pay.onSite.paypal ? { v: "paypal", t: "PayPal", d: tt("booking.paypalHint") } : null,
   ].filter((o): o is { v: string; t: string; d: string } => !!o);
   const [value, setValue] = useState(options[0]?.v ?? "none");
   if (options.length === 0) return null;
@@ -656,12 +672,12 @@ function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
     return (
       <>
         <input type="hidden" name="paymentMethod" value={options[0]!.v} />
-        {pay.guarantee && options[0]!.v !== "online" ? <p className="text-sm text-muted">Une carte vous sera demandée en garantie (rien n&apos;est prélevé maintenant).</p> : null}
+        {pay.guarantee && options[0]!.v !== "online" ? <p className="text-sm text-muted">{tt("booking.guaranteeNote")}</p> : null}
       </>
     );
   return (
     <fieldset className="space-y-2">
-      <legend className="mb-2 text-sm font-medium">Paiement</legend>
+      <legend className="mb-2 text-sm font-medium">{tt("booking.payment")}</legend>
       {options.map((o) => (
         <label key={o.v} className={cn("flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm", value === o.v ? "border-accent bg-accent-soft" : "border-border-strong")}>
           <input type="radio" name="paymentMethod" value={o.v} checked={value === o.v} onChange={() => setValue(o.v)} className="mt-0.5 accent-[var(--accent)]" />
@@ -671,7 +687,7 @@ function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
           </span>
         </label>
       ))}
-      {pay.guarantee && value !== "online" ? <p className="text-sm text-muted">Une carte vous sera demandée en garantie (rien n&apos;est prélevé maintenant).</p> : null}
+      {pay.guarantee && value !== "online" ? <p className="text-sm text-muted">{tt("booking.guaranteeNote")}</p> : null}
     </fieldset>
   );
 }

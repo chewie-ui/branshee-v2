@@ -26,11 +26,16 @@ import { zoned } from "@/lib/time";
 import { Brand } from "@/components/brand";
 import { getPublicBusiness, type PublicBusiness } from "@/server/public";
 import { richTextToPlain } from "@/server/rich-text";
+import { createT, getMessages, intlLocale, type T } from "@/i18n";
+import type { Locale } from "@/i18n/config";
+import { I18nProvider } from "@/i18n/client";
+import { resolvePublicLocale } from "@/i18n/server";
+import { LanguageSwitcher } from "@/components/public/language-switcher";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type Search = Promise<{ sections?: string; apercu?: string; reserver?: string }>;
+type Search = Promise<{ sections?: string; apercu?: string; reserver?: string; lang?: string }>;
 
 export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Search }): Promise<Metadata> {
   const data = await getPublicBusiness((await params).slug);
@@ -47,38 +52,31 @@ export async function generateMetadata({ params, searchParams }: { params: Param
   };
 }
 
-const DAYS = [
-  { wd: 1, label: "Lundi" },
-  { wd: 2, label: "Mardi" },
-  { wd: 3, label: "Mercredi" },
-  { wd: 4, label: "Jeudi" },
-  { wd: 5, label: "Vendredi" },
-  { wd: 6, label: "Samedi" },
-  { wd: 0, label: "Dimanche" },
-];
+/** Semaine affichée du lundi au dimanche (0 = dimanche, comme `weekday` en base). */
+const WEEK = [1, 2, 3, 4, 5, 6, 0];
 
 const CARD = "rounded-xl border border-border bg-surface shadow-[var(--card-shadow)]";
 
 type ReviewCtx = { state: "hidden" } | { state: "anon" | "unverified" | "can" | "own" | "done"; slug: string };
 
 /** « Ouvert aujourd'hui » à partir des horaires communs et d'une éventuelle fermeture exceptionnelle. */
-function todayStatus(data: PublicBusiness): { open: boolean; label: string } | null {
+function todayStatus(data: PublicBusiness, t: T): { open: boolean; label: string } | null {
   if (!data.hours.length) return null;
   const wd = Number(format(zoned(new Date(), data.business.timezone), "i")) % 7;
   const ex = data.todayException;
   const ranges = ex ? (ex.isClosed ? [] : ex.hours) : data.hours.filter((h) => h.weekday === wd);
-  if (!ranges.length) return { open: false, label: "Fermé aujourd'hui" };
-  return { open: true, label: `Ouvert aujourd'hui · ${ranges.map((r) => `${r.start}–${r.end}`).join(", ")}` };
+  if (!ranges.length) return { open: false, label: t("page.closedToday") };
+  return { open: true, label: t("page.openToday", { hours: ranges.map((r) => `${r.start}–${r.end}`).join(", ") }) };
 }
 
 /** Établissement en pause : page dédiée, avec les coordonnées pour joindre le pro. */
-function PausedPage({ data }: { data: PublicBusiness }) {
+function PausedPage({ data, t }: { data: PublicBusiness; t: T }) {
   const b = data.business;
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 text-center">
       <Avatar name={b.name} src={b.photoUrl} size="lg" className="size-16 text-lg" />
       <h1 className="mt-4 text-2xl font-semibold">{b.name}</h1>
-      <p className="mt-2 max-w-md text-muted">La réservation en ligne est momentanément suspendue. Contactez directement l&apos;établissement pour prendre rendez-vous.</p>
+      <p className="mt-2 max-w-md text-muted">{t("page.pausedText")}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
         {b.phone ? <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Phone className="size-4" aria-hidden="true" />{b.phone}</a> : null}
         {b.email ? <a href={`mailto:${b.email}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Mail className="size-4" aria-hidden="true" />{b.email}</a> : null}
@@ -105,7 +103,9 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const sp = await searchParams;
   const { business: b, theme } = data;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
-  if (b.pausedAt) return <PausedPage data={data} />;
+  const locale = await resolvePublicLocale(sp.lang);
+  const t = createT(getMessages(locale));
+  if (b.pausedAt) return <PausedPage data={data} t={t} />;
   // Forfait Pro+ avec un site publié : le site remplace la page à cette adresse (la réservation y est intégrée).
   if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver) {
     const site = await publishedSiteFor(b.id);
@@ -132,10 +132,12 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const vars = themeVars(theme);
   if (embedded && data.embed.fontUrl && data.embed.fontFamily) vars["--font-sans"] = `"${data.embed.fontFamily}", ui-sans-serif, system-ui, sans-serif`;
 
-  const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} review={review} />);
+  const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} review={review} t={t} locale={locale} />);
 
   return (
+    <I18nProvider locale={locale}>
     <div
+      lang={locale}
       id="bp-root"
       data-layout={theme.layout}
       className="group min-h-dvh bg-cover bg-fixed bg-center text-text"
@@ -143,10 +145,10 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
     >
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
 
-      {showProfile ? <ProfileHeader data={data} /> : null}
+      {showProfile ? <ProfileHeader data={data} t={t} /> : null}
 
       <main className={cn("mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
-        <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label="Réservation">
+        <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label={t("page.bookingLabel")}>
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
           <BookingFlow data={data} today={today} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
         </section>
@@ -156,16 +158,17 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
 
       {!embedded && !data.features.noBranding ? (
         <footer className="pb-8 text-center text-xs text-muted">
-          Réservation en ligne propulsée par <span className="font-medium text-text">Branshee</span>
+          {t("common.poweredBy")} <span className="font-medium text-text">Branshee</span>
         </footer>
       ) : null}
       <EmbedResize />
       {sp.apercu === "1" ? <ThemePreview /> : null}
     </div>
+    </I18nProvider>
   );
 }
 
-function ProfileHeader({ data }: { data: PublicBusiness }) {
+function ProfileHeader({ data, t }: { data: PublicBusiness; t: T }) {
   const { business: b, showContact: show } = data;
   const links: { key: string; href: string; label: string; icon: ReactNode }[] = [];
   if (b.phone && show.phone) links.push({ key: "phone", href: `tel:${b.phone.replace(/\s/g, "")}`, label: b.phone, icon: <Phone className="size-4" aria-hidden="true" /> });
@@ -187,17 +190,20 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
         <div className="flex items-center gap-4">
           <Avatar name={b.name} src={b.photoUrl} size="lg" className="size-16 text-lg" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{b.name}</h1>
-            <p className="text-sm text-muted">{[b.businessType, b.locationMode === "online" ? "En ligne" : b.city].filter(Boolean).join(" · ")}</p>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{b.name}</h1>
+              <LanguageSwitcher className="shrink-0" />
+            </div>
+            <p className="text-sm text-muted">{[b.businessType, b.locationMode === "online" ? t("common.online") : b.city].filter(Boolean).join(" · ")}</p>
             {(() => {
-              const t = todayStatus(data);
-              return t ? <p className={cn("mt-0.5 text-sm font-medium", t.open ? "text-success" : "text-muted")}>{t.label}</p> : null;
+              const st = todayStatus(data, t);
+              return st ? <p className={cn("mt-0.5 text-sm font-medium", st.open ? "text-success" : "text-muted")}>{st.label}</p> : null;
             })()}
             {data.reviews.count > 0 && data.reviews.average != null ? (
               <p className="mt-0.5 flex items-center gap-1 text-sm">
                 <Star className="size-4 fill-current text-warning" aria-hidden="true" />
                 <span className="font-medium">{data.reviews.average.toFixed(1).replace(".", ",")}</span>
-                <span className="text-muted">({data.reviews.count} avis)</span>
+                <span className="text-muted">{t("page.reviewsCount", { n: data.reviews.count })}</span>
               </p>
             ) : null}
           </div>
@@ -210,7 +216,7 @@ function ProfileHeader({ data }: { data: PublicBusiness }) {
                   {l.icon}
                   <span className="truncate">{l.label}</span>
                 </a>
-                {l.key !== "website" ? <CopyButton value={l.label} label={l.key === "phone" ? "le numéro" : "l'email"} /> : null}
+                {l.key !== "website" ? <CopyButton value={l.label} label={l.key === "phone" ? t("common.thePhone") : t("common.theEmail")} /> : null}
               </span>
             ))}
             {socials
@@ -249,17 +255,21 @@ function hasContent(kind: string, data: PublicBusiness) {
   }
 }
 
-function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusiness; review: ReviewCtx }) {
+function SectionBlock({ kind, data, review, t, locale }: { kind: string; data: PublicBusiness; review: ReviewCtx; t: T; locale: Locale }) {
   const b = data.business;
   if (!hasContent(kind, data)) return null;
   const address = [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-  const langs = b.languages.map((c) => LANGUAGE_NAMES[c] ?? c);
+  const names = locale === "fr" ? null : new Intl.DisplayNames([intlLocale(locale)], { type: "language" });
+  const langs = b.languages.map((c) => {
+    const n = names?.of(c) ?? LANGUAGE_NAMES[c] ?? c;
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  });
 
   switch (kind) {
     case "about":
       return (
         <div className={cn(CARD, "p-5")}>
-          <h2 className="mb-2 font-semibold">À propos</h2>
+          <h2 className="mb-2 font-semibold">{t("page.about")}</h2>
           <ReadMore long={(data.aboutHtml ? richTextToPlain(data.aboutHtml) : (b.description ?? "")).length > 420}>
             {data.aboutHtml ? (
               // HTML nettoyé côté serveur (liste blanche de balises de mise en forme).
@@ -273,11 +283,11 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
     case "location":
       return (
         <div className={cn(CARD, "space-y-3 p-5 text-sm")}>
-          <h2 className="font-semibold">{b.locationMode === "online" ? "Consultation en ligne" : "Adresse"}</h2>
+          <h2 className="font-semibold">{b.locationMode === "online" ? t("page.onlineConsultation") : t("page.address")}</h2>
           {b.locationMode === "online" ? (
             <p className="flex gap-3 text-muted">
               <Video className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              Rendez-vous à distance{b.country ? ` · ${b.country}` : ""}
+              {t("page.remote")}{b.country ? ` · ${b.country}` : ""}
             </p>
           ) : address ? (
             <p className="flex gap-3">
@@ -295,9 +305,9 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
             </p>
           ) : null}
           {b.locationMode === "embed" && b.mapEmbedUrl ? (
-            <iframe title={`Carte — ${b.name}`} src={b.mapEmbedUrl} className="h-52 w-full rounded-lg border border-border" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+            <iframe title={t("page.map", { name: b.name })} src={b.mapEmbedUrl} className="h-52 w-full rounded-lg border border-border" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
           ) : b.locationMode === "on_site" && address ? (
-            <iframe title={`Carte — ${b.name}`} src={`https://www.google.com/maps?q=${encodeURIComponent([address, b.country].filter(Boolean).join(", "))}&output=embed`} className="h-52 w-full rounded-lg border border-border" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+            <iframe title={t("page.map", { name: b.name })} src={`https://www.google.com/maps?q=${encodeURIComponent([address, b.country].filter(Boolean).join(", "))}&output=embed`} className="h-52 w-full rounded-lg border border-border" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
           ) : null}
         </div>
       );
@@ -306,15 +316,15 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
         <div className={cn(CARD, "p-5 text-sm")}>
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             <Clock className="size-4 text-muted" aria-hidden="true" />
-            Horaires
+            {t("page.hours")}
           </h2>
           <dl className="space-y-1.5">
-            {DAYS.map((d) => {
-              const ranges = data.hours.filter((h) => h.weekday === d.wd);
+            {WEEK.map((wd) => {
+              const ranges = data.hours.filter((h) => h.weekday === wd);
               return (
-                <div key={d.wd} className="flex justify-between gap-4">
-                  <dt className="text-muted">{d.label}</dt>
-                  <dd className="text-right tabular-nums">{ranges.length ? ranges.map((r) => `${r.start}–${r.end}`).join(", ") : "Fermé"}</dd>
+                <div key={wd} className="flex justify-between gap-4">
+                  <dt className="text-muted">{getMessages(locale).page.days[wd]}</dt>
+                  <dd className="text-right tabular-nums">{ranges.length ? ranges.map((r) => `${r.start}–${r.end}`).join(", ") : t("common.closed")}</dd>
                 </div>
               );
             })}
@@ -324,7 +334,7 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
     case "gallery":
       return (
         <div className={cn(CARD, "p-5")}>
-          <h2 className="mb-3 font-semibold">Galerie</h2>
+          <h2 className="mb-3 font-semibold">{t("page.gallery")}</h2>
           <Gallery images={data.gallery} layout={data.galleryLayout} name={b.name} />
         </div>
       );
@@ -332,7 +342,7 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
       return (
         <div id="avis" className={cn(CARD, "scroll-mt-6 p-5")}>
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            Avis clients
+            {t("page.reviews")}
             {data.reviews.average != null ? (
               <span className="flex items-center gap-1 text-sm font-normal text-muted">
                 <Star className="size-4 fill-current text-warning" aria-hidden="true" />
@@ -346,7 +356,7 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
                 <li key={r.id} className="text-sm">
                   <p className="flex items-center gap-2">
                     <span className="font-medium">{r.author}</span>
-                    <span className="flex text-warning" aria-label={`${r.rating} sur 5`}>
+                    <span className="flex text-warning" aria-label={t("reviews.outOf5", { n: r.rating })}>
                       {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-current" : "opacity-30")} aria-hidden="true" />)}
                     </span>
                   </p>
@@ -356,28 +366,28 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted">Pas encore d&apos;avis. Soyez le premier !</p>
+            <p className="text-sm text-muted">{t("page.noReviews")}</p>
           )}
           <div className="mt-4">
             {review.state === "can" ? <ReviewForm slug={review.slug} /> : null}
             {review.state === "anon" ? (
               <p className="text-sm text-muted">
-                <Link href={`/connexion?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">Connectez-vous</Link> pour laisser un avis.
+                <Link href={`/connexion?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.login")}</Link>{t("page.loginToReview", { link: "" })}
               </p>
             ) : null}
             {review.state === "unverified" ? (
               <p className="text-sm text-muted">
-                <Link href={`/verifier-email?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">Confirmez votre email</Link> pour laisser un avis.
+                <Link href={`/verifier-email?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.confirmEmail")}</Link>{t("page.confirmEmailToReview", { link: "" })}
               </p>
             ) : null}
-            {review.state === "done" ? <p className="text-sm text-muted">Merci, vous avez déjà donné votre avis.</p> : null}
+            {review.state === "done" ? <p className="text-sm text-muted">{t("page.alreadyReviewed")}</p> : null}
           </div>
         </div>
       );
     case "team":
       return (
         <div className={cn(CARD, "p-5")}>
-          <h2 className="mb-3 font-semibold">L&apos;équipe</h2>
+          <h2 className="mb-3 font-semibold">{t("page.team")}</h2>
           <ul className="space-y-3">
             {data.team.map((m) => (
               <li key={m.id} className="flex items-start gap-3">
@@ -400,7 +410,7 @@ function SectionBlock({ kind, data, review }: { kind: string; data: PublicBusine
     case "faq":
       return (
         <div className={cn(CARD, "p-5")}>
-          <h2 className="mb-3 font-semibold">Questions fréquentes</h2>
+          <h2 className="mb-3 font-semibold">{t("page.faq")}</h2>
           <div className="divide-y divide-border">
             {data.faq.map((f, i) => (
               <details key={i} className="group py-2.5 text-sm">
