@@ -10,7 +10,7 @@ import { stripe } from "@/server/payments";
 import { autoConfirmAllowed } from "@/server/plan";
 import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
-import { notifyBookingCreated } from "@/server/notifications";
+import { notifyAutoConfirmLimit, notifyBookingCreated } from "@/server/notifications";
 import { checkIntake, getPublicBusiness } from "@/server/public";
 import { getSessionUser } from "@/server/auth/session";
 
@@ -148,7 +148,9 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const session = await getSessionUser();
   const linkUserId = session?.user.emailVerifiedAt && session.user.email.toLowerCase() === v.email ? session.user.id : null;
   // Forfait gratuit : confirmation automatique jusqu'à 20 RDV en ligne par mois, ensuite « à confirmer » (rien n'est bloqué).
-  const status = data.settings.autoConfirm && (await autoConfirmAllowed(data.business.id, data.business.timezone)) ? "confirmed" : "pending";
+  const allowed = data.settings.autoConfirm ? await autoConfirmAllowed(data.business.id, data.business.timezone) : false;
+  const status = data.settings.autoConfirm && allowed ? "confirmed" : "pending";
+  if (data.settings.autoConfirm && !allowed) after(() => notifyAutoConfirmLimit(data.business.id, data.business.timezone));
 
   try {
     const created = await db.transaction(async (tx) => {

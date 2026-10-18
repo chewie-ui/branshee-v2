@@ -1,6 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { after } from "next/server";
+import { notifyWelcomePro } from "@/server/notifications";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
@@ -32,7 +34,9 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   const can = await canUserCreateBusiness(user.id);
   if (!can.ok) return { error: "Vous avez déjà un établissement au forfait Amateur. Passez-le au forfait Pro pour en créer un autre (chaque établissement Pro+ ouvre droit à un établissement gratuit de plus).", values };
   const [owner] = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(eq(users.id, user.id));
+  const firstBusiness = (await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, user.id)).limit(1)).length === 0;
   const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null });
+  if (firstBusiness) after(() => notifyWelcomePro(user.id, business.name));
   (await cookies()).set(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   redirect("/app?bienvenue=1");
 }

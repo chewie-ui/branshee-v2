@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, bookingSettings, businesses, members, notificationSettings, users, waitlistEntries } from "@/db/schema";
 import { TZDate } from "@date-fns/tz";
@@ -8,6 +8,7 @@ import { formatDay, formatTime } from "@/lib/time";
 import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, effectivePlan } from "@/server/plan";
+import { LIMITS } from "@/lib/plans";
 import { syncAppointmentToGoogle } from "@/server/google";
 import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, whatsappConfigured } from "@/server/sms";
 
@@ -252,5 +253,31 @@ export function notifyRescheduledByCustomer(appointmentId: string, previousStart
     await toClient(row, "rescheduled_by_customer", emails.bookingConfirmed(row.info, row.settings?.confirmationMessage));
     const mail = emails.proRescheduledByCustomer(row.info, prev, `${appUrl()}/app/agenda/rdv/${row.a.id}`);
     for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_rescheduled", businessId: row.business.id, appointmentId: row.a.id });
+  });
+}
+
+/** Limite mensuelle de confirmations automatiques atteinte (forfait gratuit) : le propriétaire est prévenu une fois par mois. */
+export function notifyAutoConfirmLimit(businessId: string, timezone: string) {
+  return safely("limite mensuelle", async () => {
+    const month = format(new TZDate(new Date(), timezone), "yyyy-MM");
+    const [b] = await db
+      .update(businesses)
+      .set({ limitNoticeMonth: month })
+      .where(and(eq(businesses.id, businessId), or(isNull(businesses.limitNoticeMonth), sql`${businesses.limitNoticeMonth} <> ${month}`)))
+      .returning({ name: businesses.name, ownerId: businesses.ownerId });
+    if (!b) return;
+    const [owner] = await db.select({ email: users.email }).from(users).where(eq(users.id, b.ownerId));
+    if (!owner) return;
+    const mail = emails.autoConfirmLimit({ businessName: b.name, max: LIMITS.autoConfirmUpTo.free, url: `${appUrl()}/app/reglages/abonnement` });
+    await sendEmail({ to: owner.email, ...mail, template: "auto_confirm_limit", businessId });
+  });
+}
+
+/** Bienvenue au pro qui crée son premier établissement. */
+export function notifyWelcomePro(userId: string, businessName: string) {
+  return safely("bienvenue", async () => {
+    const [u] = await db.select({ email: users.email, name: users.fullName }).from(users).where(eq(users.id, userId));
+    if (!u) return;
+    await sendEmail({ to: u.email, ...emails.welcomePro({ name: u.name.trim().split(/\s+/)[0] ?? u.name, businessName, url: `${appUrl()}/app` }), template: "welcome_pro" });
   });
 }

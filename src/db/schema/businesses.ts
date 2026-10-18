@@ -58,6 +58,8 @@ export const businesses = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Position dans l'annuaire public (mise en avant décidée par le super-admin). */
     boostPosition: integer("boost_position").notNull().default(0),
+    /** Mois (AAAA-MM) où le pro a été prévenu que la limite de confirmations automatiques est atteinte. */
+    limitNoticeMonth: text("limit_notice_month"),
     /** Checklist « Bien démarrer » : lien partagé, checklist masquée. */
     onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string }>().notNull().default({}),
 

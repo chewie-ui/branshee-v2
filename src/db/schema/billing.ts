@@ -60,6 +60,8 @@ export const businessPlans = pgTable("business_plans", {
   grantedUntil: timestamp("granted_until", { withTimezone: true }),
   extraSeats: integer("extra_seats").notNull().default(0),
   customUrlAddon: boolean("custom_url_addon").notNull().default(false),
+  /** Relance avant la fin d'un accès offert : échéance couverte et palier (1 = J-7, 2 = J-1). */
+  grantReminder: jsonb("grant_reminder").$type<{ sentFor?: string; stage?: number }>().notNull().default({}),
   ...timestamps,
 });
 

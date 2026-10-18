@@ -253,6 +253,9 @@ async function main() {
           disabledAt: u.isDisabled ? (date(u.updatedAt) ?? new Date()) : null,
           lastLoginAt: date(u.lastLoginAt),
           referralCode: text(u.referralCode),
+          signupIntent: u.accountIntent === "client" ? "client" : u.accountIntent === "pro" ? "pro" : null,
+          // Relances déjà envoyées par l'ancien Branshee : on ne les renvoie pas.
+          nudges: { ...(Number(u.onboarding?.nudgeStage) > 0 ? { onboardingStage: Math.min(2, Number(u.onboarding.nudgeStage)) } : {}), ...(u.onboarding?.createEstabNudged ? { createBusinessAt: (date(u.updatedAt) ?? new Date()).toISOString() } : {}) },
           acquisition: u.acquisition && Object.values(u.acquisition).some(Boolean) ? { ...u.acquisition, capturedAt: date(u.acquisition.capturedAt)?.toISOString() } : null,
           // Double authentification : même secret base32 (Google Authenticator), désormais chiffré en base.
           twoFactorSecret: u.twoFA?.enabled && /^[A-Z2-7]{16,}=*$/.test(String(u.twoFA.secret ?? "")) ? encrypt(String(u.twoFA.secret)) : null,

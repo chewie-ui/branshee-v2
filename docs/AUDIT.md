@@ -106,7 +106,7 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Rejoindre un établissement (recherche par nom ou ville + demande, email au propriétaire), accepter / refuser les demandes (page Équipe), invitations reçues à accepter / refuser (email d'invitation, visible sur Bienvenue et Mes établissements)
 - ✅ Propriétaire réservable ou non (case « Réservable par les clients » sur sa fiche)
 - ✅ Infos complémentaires (libellé / valeur) et présentation sur le profil public d'un membre
-- ❌ Sièges collaborateurs supplémentaires (10 €/mois)
+- ✅ Sièges collaborateurs supplémentaires (10 €/mois) : fait au lot J
 
 ## Lot J — Abonnements (Branshee → pro) ✅
 - ✅ Forfaits **par établissement** : Amateur (gratuit), Pro (19 € ou 15 €/mois à l'année), Pro+ (49 € ou 39 €) — l'ancien abonnement « compte » reste lu tant qu'il existe
@@ -166,10 +166,14 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 ## Lot P — Mon site (créateur de site)
 - ❌ Sections, modèles, thème, SEO, logo, réseaux, publication, aperçu, images, formulaire de contact, compteur de visites, domaine
 
-## Lot Q — Emails et tâches planifiées
-- ✅ Confirmation, demande reçue, acceptée, refusée, annulation (client / pro), nouvelle réservation pour le pro, rappels, mot de passe oublié
-- ❌ RDV déplacé (avec mot du pro), bienvenue pro, code de vérification, établissement mis en pause, limite mensuelle atteinte, tentative de réservation bloquée, rappel avant fin d'accès offert (J-7, J-1), relances
-- ❌ Nettoyage de l'historique des comptes gratuits, publication programmée du blog
+## Lot Q — Emails et tâches planifiées ✅
+- ✅ Confirmation, demande reçue, acceptée, refusée, annulation (client / pro), nouvelle réservation pour le pro, rappels (email / SMS / WhatsApp), mot de passe oublié, RDV déplacé (avec mot du pro), codes de vérification, liste d'attente, invitations, support
+- ✅ Bienvenue au pro (premier établissement), relances « Bien démarrer » J+1 et J+3 (étapes restantes, s'arrêtent dès que c'est configuré), « créez votre établissement » (une fois, jamais aux comptes inscrits comme clients), fin d'accès offert J-7 et J-1 (avec le nombre de RDV du mois), limite mensuelle de confirmations automatiques atteinte (une fois par mois)
+- ✅ Publication programmée du blog (toutes les 15 min)
+- ✅ Crontab : `/api/cron/reminders` (15 min) et `/api/cron/daily` (10 h), protégées par `CRON_SECRET`, idempotentes ; relances déjà envoyées par l'ancien Branshee reprises à la migration
+- ℹ️ « Tentative de réservation bloquée » : l'ancien bloquait les réservations au-delà de la limite ; la v2 ne bloque jamais (elles passent « à confirmer »), l'email « limite atteinte » le remplace
+- ℹ️ Purge de l'historique des comptes gratuits volontairement abandonnée (perte de données patients) : l'historique est seulement masqué au-delà de 7 jours
+- ℹ️ Script « mise en pause des fiches vides » de l'ancien non repris (action manuelle possible depuis le super-admin)
 
 ## Lot R — Langues
 - ❌ Interface en 6 langues (fr, en, nl, de, es, it) — l'ancien a 2 039 textes traduits par langue

@@ -335,4 +335,81 @@ export const emails = {
       }),
     };
   },
+
+  welcomePro(p: { name: string; businessName: string; url: string }) {
+    return {
+      subject: "Bienvenue sur Branshee — configurez votre agenda",
+      ...render({
+        preheader: "Votre agenda en ligne est prêt à être configuré",
+        title: `Bienvenue, ${p.name} !`,
+        intro: `${p.businessName} est créé. En quelques minutes, vos clients pourront réserver en ligne 24 h/24 :`,
+        details: [
+          { label: "1. Vos horaires", value: "Les jours et heures où l'on peut réserver" },
+          { label: "2. Vos prestations", value: "Ce que vos clients réservent, avec durée et prix" },
+          { label: "3. Votre lien", value: "À partager sur Google, Instagram, WhatsApp…" },
+        ],
+        cta: { label: "Configurer mon agenda", url: p.url },
+        note: "Une question ? Répondez simplement à cet email ou écrivez-nous depuis « Aide et support » : un humain vous répond.",
+        footer: "Branshee",
+      }),
+    };
+  },
+
+  onboardingNudge(p: { name: string; steps: { title: string; desc: string }[]; stage: 1 | 2; url: string }) {
+    const one = p.steps.length === 1;
+    return {
+      subject: one ? "Il ne reste qu'une étape pour lancer votre agenda Branshee" : "Votre agenda Branshee est presque prêt",
+      ...render({
+        preheader: "Encore un petit effort et vos clients pourront réserver en ligne",
+        title: p.stage === 2 ? `${p.name}, on vous aide à finir ?` : `Encore un petit effort, ${p.name}`,
+        intro: `Vous avez créé votre compte Branshee, bravo ! Il vous reste ${one ? "une étape" : `${p.steps.length} étapes`} pour que vos clients puissent réserver en ligne :`,
+        details: p.steps.map((s) => ({ label: s.title, value: s.desc })),
+        cta: { label: "Terminer la configuration", url: p.url },
+        note: "Besoin d'un coup de main ? Une visite guidée vous montre où cliquer, depuis « Aide et support ».",
+        footer: "Branshee",
+      }),
+    };
+  },
+
+  createBusinessNudge(p: { name: string; url: string }) {
+    return {
+      subject: "Créez votre page de réservation Branshee en 1 minute",
+      ...render({
+        preheader: "Votre compte est prêt, il ne manque que votre établissement",
+        title: `Bonjour ${p.name},`,
+        intro: "Votre compte Branshee est prêt, mais vous n'avez pas encore créé votre établissement. Une minute suffit : nom, métier, ville, et votre page de réservation est en ligne.",
+        cta: { label: "Créer mon établissement", url: p.url },
+        note: "Vous utilisez Branshee seulement pour réserver chez un professionnel ? Ignorez cet email, il n'y en aura pas d'autre.",
+        footer: "Branshee",
+      }),
+    };
+  },
+
+  grantExpiry(p: { name: string; businessName: string; daysLeft: number; until: string; bookings30: number; url: string }) {
+    return {
+      subject: p.daysLeft <= 1 ? "Votre accès complet Branshee se termine demain" : `Votre accès complet Branshee se termine dans ${p.daysLeft} jours`,
+      ...render({
+        preheader: `Fin de l'accès offert le ${p.until}`,
+        title: `Bonjour ${p.name},`,
+        intro: `L'accès complet offert à ${p.businessName} se termine le ${p.until}. Ensuite, l'établissement passe au forfait gratuit : rappels automatiques coupés, confirmation automatique limitée à 20 réservations par mois, personnalisation réduite. Rien n'est supprimé.`,
+        details: [{ label: "Réservations ces 30 derniers jours", value: String(p.bookings30) }],
+        cta: { label: "Choisir mon forfait", url: p.url },
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
+  autoConfirmLimit(p: { businessName: string; max: number; url: string }) {
+    return {
+      subject: "Limite mensuelle atteinte : les réservations passent en demande",
+      ...render({
+        preheader: "Vos prochaines réservations en ligne seront à confirmer",
+        title: "Limite mensuelle atteinte",
+        intro: `${p.businessName} a reçu ${p.max} réservations confirmées automatiquement ce mois-ci, le maximum du forfait gratuit. Vos clients peuvent toujours réserver : les prochaines demandes arrivent « à confirmer » dans votre espace jusqu'au début du mois prochain.`,
+        cta: { label: "Passer au forfait Pro", url: p.url },
+        note: "Avec le forfait Pro, toutes les réservations sont confirmées automatiquement et les rappels partent tout seuls.",
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
 };

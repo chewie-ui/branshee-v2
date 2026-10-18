@@ -66,7 +66,8 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   // Parrainage : code du parrain dans le lien d'inscription (?ref=).
   const refCode = String(formData.get("ref") ?? "").trim().toUpperCase().slice(0, 40);
   const [referrer] = refCode ? await db.select({ id: users.id }).from(users).where(eq(users.referralCode, refCode)) : [];
-  const [user] = await db.insert(users).values({ fullName, email, passwordHash: await hashPassword(password), referredById: referrer?.id ?? null }).returning({ id: users.id });
+  const intent = formData.get("kind") === "client" ? "client" : "pro";
+  const [user] = await db.insert(users).values({ fullName, email, passwordHash: await hashPassword(password), referredById: referrer?.id ?? null, signupIntent: intent }).returning({ id: users.id });
   await createSession(user!.id, meta);
   await db.insert(loginEvents).values({ userId: user!.id, method: "password", ip: meta.ip });
   // Invité par un établissement ? Il arrive directement dans son espace, sans créer d'établissement.

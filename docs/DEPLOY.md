@@ -24,10 +24,13 @@ npm start                   # à lancer via systemd ou pm2, derrière Nginx
 
 ## Tâches planifiées (crontab de l'utilisateur qui fait tourner l'app)
 ```cron
-# Rappels de rendez-vous, toutes les 15 minutes
+# Rappels de rendez-vous + articles de blog programmés, toutes les 15 minutes
 */15 * * * * curl -fsS -X POST -H "Authorization: Bearer <CRON_SECRET>" https://branshee.com/api/cron/reminders > /dev/null
+# Relances (bien démarrer J+1/J+3, créez votre établissement) et fin d'accès offert (J-7/J-1), chaque jour à 10 h
+0 10 * * * curl -fsS -X POST -H "Authorization: Bearer <CRON_SECRET>" https://branshee.com/api/cron/daily > /dev/null
 ```
-L'envoi est idempotent : un RDV n'est rappelé qu'une fois, même si deux exécutions se chevauchent.
+Tout est idempotent : un RDV n'est rappelé qu'une fois et chaque relance n'est envoyée qu'une fois, même si deux exécutions se chevauchent.
+Les relances respectent la case « Recevoir les emails d'information » du compte ; les comptes inscrits comme clients n'en reçoivent pas.
 
 ## Sauvegardes
 ```cron

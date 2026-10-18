@@ -45,6 +45,10 @@ export const users = pgTable(
     referredById: uuid("referred_by_id"),
     /** Premier paiement d'un filleul : il compte alors pour son parrain (une seule fois). */
     referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }),
+    /** Intention déclarée à l'inscription (« client » = venu réserver : pas de relances pro). */
+    signupIntent: text("signup_intent", { enum: ["pro", "client"] }),
+    /** Relances déjà envoyées : palier « bien démarrer » (J+1 = 1, J+3 = 2) et « créez votre établissement ». */
+    nudges: jsonb("nudges").$type<{ onboardingStage?: number; createBusinessAt?: string }>().notNull().default({}),
 
     /** Origine de l'inscription (UTM, gclid, page d'atterrissage…). */
     acquisition: jsonb("acquisition").$type<{
