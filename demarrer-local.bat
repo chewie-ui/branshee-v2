@@ -8,11 +8,9 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if not exist node_modules (
-  echo Installation des dependances, premiere fois uniquement...
-  call npm install
-  if errorlevel 1 ( pause & exit /b 1 )
-)
+echo Mise a jour des dependances...
+call npm install --no-audit --no-fund
+if errorlevel 1 ( pause & exit /b 1 )
 start "" cmd /c "timeout /t 25 >nul & start http://localhost:3000"
 call npm run local
 pause
