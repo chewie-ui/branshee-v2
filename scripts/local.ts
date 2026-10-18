@@ -5,6 +5,9 @@
  * - La base vit dans le dossier `.local/` (ignoré par git) et est conservée entre deux lancements.
  * - Au premier lancement : création de la base, migrations, données de démo.
  * - Les emails ne partent pas : ils s'affichent dans ce terminal.
+ * - `npm run local -- --rapide` (ou demarrer-local-rapide.bat) : version de production, construite une fois
+ *   (2 à 3 minutes) puis toutes les pages s'ouvrent instantanément. Sans l'option : mode développement,
+ *   chaque page est compilée à sa première ouverture (plus lent, mais les modifications du code apparaissent tout de suite).
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -79,7 +82,13 @@ async function main() {
 ────────────────────────────────────────────────────────
 `);
 
-  const app = run("npx", ["next", "dev", "-p", String(APP_PORT)], env);
+  const fast = process.argv.includes("--rapide");
+  if (fast) {
+    console.log("▶ Construction de la version rapide (2 à 3 minutes, une seule fois par mise à jour)…");
+    const built = await new Promise<number>((ok) => run("npx", ["next", "build"], { ...env, NODE_ENV: "production" }).on("exit", (c) => ok(c ?? 1)));
+    if (built !== 0) throw new Error("La construction a échoué (voir les messages ci-dessus).");
+  }
+  const app = run("npx", fast ? ["next", "start", "-p", String(APP_PORT)] : ["next", "dev", "-p", String(APP_PORT)], env);
   let stopping = false;
   const stop = async () => {
     if (stopping) return;
