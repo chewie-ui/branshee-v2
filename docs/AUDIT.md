@@ -21,7 +21,7 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Historique : recherche, statut, période, membre, pagination, sélection multiple + suppression
 - ✅ Tableau de bord : stats avec évolution, prochains RDV, dernières réservations, activité récente, checklist « Bien démarrer »
 - ✅ Vocabulaire « patients » pour les métiers de santé (menu, tableau de bord, formulaires)
-- ⏳ Encaisser la pénalité d'une absence non excusée → lot H (paiements) · événements Google Agenda → lot L
+- ✅ Pénalité d'une absence non excusée prélevée sur la carte en garantie (lot H) · événements Google Agenda (lot L)
 
 ## Lot B — Clients (CRM) ✅
 - ✅ Liste : recherche (y compris contacts alternatifs), filtres période (RDV à venir, venus ces 7 / 30 / 90 jours) et statut (dernier RDV confirmé / annulé, absences, bloqués), colonnes téléphone, praticien, nombre de RDV, dernier RDV, statut ; sélection multiple + suppression
@@ -44,7 +44,7 @@ Les lots sont traités dans l'ordre ; chaque lot fini = un commit sur GitHub.
 - ✅ Questionnaire d'orientation (➕ jours et heures par prestation)
 - ✅ Cours collectifs : **cours récurrent sans fin** (jours + heure, séances calculées à la volée et enregistrées à la première inscription), dates ponctuelles avec heure de fin libre (répétables N semaines), annuler / rétablir une séance (récurrente comprise), animateur par séance ou membres assignés au cours, « bloque tout le monde » si personne n'est assigné
 - ✅ Migration : les inscriptions aux cours récurrents de l'ancien Branshee retrouvent leur séance
-- ⏳ Limites du forfait (5 prestations en gratuit…) → lot J
+- ✅ Limites du forfait (5 prestations actives en Amateur…) (lot J)
 
 ## Lot D — Disponibilités et règles ✅
 - ✅ Horaires communs / par membre, plusieurs plages, congés et horaires spéciaux, droit de poser ses congés
@@ -63,7 +63,7 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Galerie photos (12 max, grille / mosaïque / carrousel, réordonner, retirer)
 - ✅ Ordre et visibilité des sections : à propos, localisation, horaires, galerie, avis, équipe, FAQ
 - ✅ Contact et réseaux (site, Instagram, Facebook, WhatsApp, TikTok, LinkedIn, YouTube) avec visibilité par réseau, email et téléphone compris
-- 🔶 URL personnalisée : modifiable ✅ · le verrou payant (option 5 €/mois ou formule Business) arrive avec le Lot J (formules)
+- ✅ URL personnalisée : modifiable, réservée à l'option 5 €/mois ou au forfait Pro+ (lot J)
 - ✅ Emails : délai du rappel, message du rappel, modes de paiement + précision rappelés dans l'email, aperçu (Réglages › Notifications)
 - ✅ Apparence : 7 thèmes prêts à l'emploi, 13 couleurs (accent, fond, cartes, texte, jours, sélection, survols, pastilles de disponibilité), image de fond, textes (aide au-dessus du calendrier, titre de l'étape créneau, fuseau affiché), 10 polices + police importée, arrondis, bordures, ombres, disposition, annuler / rétablir (Ctrl+Z / Ctrl+Y), réinitialiser, **aperçu en direct** ordinateur / mobile
 - ✅ Partager et intégrer : lien, adresse personnalisée, QR code téléchargeable, 4 formats (calendrier dans la page, bouton, bulle flottante, lien), consignes pour 8 plateformes, hauteur fixe sans JavaScript, sections affichées, titre / police / dimensions
@@ -74,7 +74,7 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 ## Lot F — Réservation en ligne (client) ✅ (sauf paiement → Lot H)
 - ✅ Tunnel prestation → praticien → jour / créneau → coordonnées, revérification serveur, anti-robots
 - ✅ Questionnaire, première visite, cours collectifs, styles de catégories, créneaux regroupés
-- 🔶 Paiement en ligne (Stripe), prépaiement, empreinte de carte : avec Stripe Connect (Lot H)
+- ✅ Paiement en ligne (Stripe), prépaiement, carte en garantie, avec Stripe Connect (lot H)
 - ✅ Connexion dans le tunnel (coordonnées pré-remplies, fiche rattachée au compte), incitation à créer un compte après la réservation
 - ✅ Ajout à l'agenda : Google, Apple (.ics), Outlook, autre
 - ✅ **Déplacer** son RDV soi-même (même prestation et praticien, règles en ligne, revérifié à la validation, l'ancien créneau n'est jamais libéré entre-temps) + email au client et au pro
@@ -92,7 +92,7 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Profil : nom, photo, téléphone avec indicatif, changement d'email avec code (Mon compte)
 - ✅ Sécurité : changer le mot de passe (déconnecte les autres appareils), double authentification TOTP (QR code, secrets de l'ancien Branshee repris et chiffrés)
 - ✅ Langue (enregistrée ; traduction de l'interface au Lot R), notification « nouvelle réservation » dans Réglages
-- ✅ Supprimer son compte avec code (établissements fermés, compte anonymisé s'il en possédait) · 🔶 pause / suppression d'un établissement : Lot I
+- ✅ Supprimer son compte avec code (établissements fermés, compte anonymisé s'il en possédait) · ✅ pause / suppression d'un établissement (lot I)
 - ✅ **Stripe Connect** Express (connexion, retour vérifié sur Stripe, lien expiré → nouveau lien, compte existant saisi à la main et vérifié, déconnexion) — Réglages › Paiements
 - ✅ Prépaiement (au choix ou obligatoire), paiement Stripe Elements (carte, Apple / Google Pay), montant toujours lu en base, paiement vérifié côté serveur, un paiement = une réservation, remboursement automatique si le créneau est pris entre-temps
 - ✅ Politique d'annulation (gratuite / 50 % sous 24 h / 50 % sous 24 h + 100 % sous 12 h), frais propres à la prestation, carte en garantie (0 € prélevé) pour ceux qui paient sur place, frais affichés avant d'annuler, prélèvement ou remboursement partiel automatique, décision rembourser / garder par le pro, absence non excusée facturable, annulation par le pro = remboursement complet
