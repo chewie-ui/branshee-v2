@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { and, eq, gt, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
+import { apiAuth } from "@/server/api/als";
 
 export const SESSION_COOKIE = "bs_session";
 export const BUSINESS_COOKIE = "bs_business";
@@ -30,14 +31,20 @@ export async function createSession(userId: string, meta: { userAgent?: string |
 }
 
 /** Utilisateur de la session courante, ou null. */
-export async function getSessionUser() {
+export async function getSessionUser(): Promise<{ user: typeof users.$inferSelect; sessionId: string; impersonatedById: string | null } | null> {
+  // Requête de l'application (jeton Bearer déjà vérifié par l'API) : pas de cookie.
+  const api = apiAuth.getStore();
+  if (api) {
+    const [user] = await db.select().from(users).where(eq(users.id, api.userId)).limit(1);
+    return user && !user.disabledAt ? { user, sessionId: api.sessionId, impersonatedById: null } : null;
+  }
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const [row] = await db
     .select({ user: users, sessionId: sessions.id, impersonatedById: sessions.impersonatedById })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.tokenHash, sha256(token)), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.tokenHash, sha256(token)), eq(sessions.kind, "web"), gt(sessions.expiresAt, new Date())))
     .limit(1);
   if (!row || row.user.disabledAt) return null;
   return row;

@@ -195,5 +195,10 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ⏳ Espace pro, site vitrine et SMS restent en français pour l'instant (les textes de l'ancien sont à reprendre si des pros non francophones arrivent)
 
 ## Lot S — Applications
-- ❌ API pour l'application mobile (connexion, agenda, clients, dossier, prestations, horaires, congés, équipe, notifications push…)
-- ❌ Application de bureau (Electron)
+- ✅ API `/api/v1` au même contrat que l'ancien (vérifié contre `branshee-app/src/api/endpoints.ts` et `types.ts`) : connexion (mot de passe, double authentification, Google, Apple), inscription, mot de passe oublié, jetons d'accès 15 min + rafraîchissement 60 jours renouvelé à chaque usage, déconnexion à distance (changement de mot de passe)
+- ✅ Tableau de bord, agenda jour / semaine, créneaux libres (avec ou sans prestation), création, déplacement, blocage, annulation, absence ; clients, fiche, contacts alternatifs, infos générales, blocage, dossier de suivi (notes chiffrées, PDF téléchargeable avec le jeton) ; prestations, équipe, horaires, congés, formulaire, cours collectifs, collaborateurs, invitations et demandes, grades, abonnement, SMS, parrainage, journal, compte, photo, langue, notifications, suppression du compte, intégrations, établissements (créer, chercher, rejoindre, réglages, photo)
+- ✅ Les actions de l'app passent par les mêmes actions que le site : droits du grade, limites du forfait, journal d'activité et emails identiques
+- ✅ Notifications push (Expo) au propriétaire et au praticien : nouvelle réservation en ligne, annulation et déplacement par le client
+- ✅ Application de bureau (`desktop/`, Electron) : fenêtre native autour de l'espace pro complet, session conservée, une seule instance, liens externes ouverts dans le navigateur, page hors connexion, installateurs Windows / macOS / Linux
+- ℹ️ Formulaire « désactivé » dans l'app = aucune question posée (la v2 n'a pas d'interrupteur séparé)
+- ℹ️ Les jetons de l'ancien serveur ne sont pas repris : chaque appareil se reconnecte une fois après la bascule

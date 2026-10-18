@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { businesses, grades, members } from "@/db/schema";
 import { can, type PermissionKey, type Permissions } from "@/lib/permissions";
 import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
+import { apiAuth } from "@/server/api/als";
 
 export type AppContext = {
   user: { id: string; name: string; email: string; avatarUrl: string | null };
@@ -42,7 +43,8 @@ const resolveContext = cache(async (): Promise<Resolved> => {
 
   if (rows.length === 0) return { kind: "no-business", user };
 
-  const wanted = (await cookies()).get(BUSINESS_COOKIE)?.value;
+  const api = apiAuth.getStore();
+  const wanted = api ? api.businessId : (await cookies()).get(BUSINESS_COOKIE)?.value;
   const row = rows.find((r) => r.business.id === wanted) ?? rows[0]!;
   const isOwner = row.member.isOwner;
   const permissions = row.permissions ?? null;
@@ -86,4 +88,10 @@ export async function requireContext(permission?: PermissionKey): Promise<AppCon
 export async function isImpersonating() {
   const s = await getSessionUser();
   return !!s?.impersonatedById;
+}
+
+/** Contexte sans redirection (API de l'application) : null si pas connecté ou sans établissement. */
+export async function currentContext(): Promise<AppContext | null> {
+  const r = await resolveContext();
+  return r.kind === "ok" ? r.ctx : null;
 }

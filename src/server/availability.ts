@@ -12,17 +12,18 @@ const hhmm = (t: string) => t.slice(0, 5);
  * Charge tout ce qu'il faut depuis la base puis délègue au moteur pur `computeSlots`.
  * `days` : jours "YYYY-MM-DD" dans le fuseau de l'établissement.
  */
-export async function getAvailableSlots(params: { businessId: string; serviceId: string; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean; excludeAppointmentId?: string }) {
+export async function getAvailableSlots(params: { businessId: string; serviceId?: string | null; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean; excludeAppointmentId?: string; /** Durée libre (RDV sans prestation, créé par le pro). */ durationMin?: number }) {
   const { businessId, serviceId, days } = params;
   if (days.length === 0) return {};
 
   const [biz] = await db.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId));
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, businessId));
-  const [service] = await db.select().from(services).where(and(eq(services.id, serviceId), eq(services.businessId, businessId), eq(services.isActive, true)));
-  if (!biz || !settings || !service || service.kind !== "individual") return {};
+  const [service] = serviceId ? await db.select().from(services).where(and(eq(services.id, serviceId), eq(services.businessId, businessId), eq(services.isActive, true))) : [null];
+  if (!biz || !settings) return {};
+  if (serviceId ? !service || service.kind !== "individual" : !params.durationMin) return {};
 
   // Membres qui réalisent la prestation (aucune restriction = toute l'équipe réservable).
-  const restricted = (await db.select({ id: serviceMembers.memberId }).from(serviceMembers).where(eq(serviceMembers.serviceId, serviceId))).map((r) => r.id);
+  const restricted = service ? (await db.select({ id: serviceMembers.memberId }).from(serviceMembers).where(eq(serviceMembers.serviceId, service.id))).map((r) => r.id) : [];
   let team = await db
     .select({ id: members.id })
     .from(members)
@@ -89,7 +90,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
   const busy = allBusy.flatMap((b) => (b.memberId ? [{ ...b, memberId: b.memberId }] : ids.map((id) => ({ ...b, memberId: id }))));
 
   // Plages propres à la prestation (aucune = toutes les heures d'ouverture).
-  const windowRows = await db.select().from(serviceHours).where(eq(serviceHours.serviceId, serviceId));
+  const windowRows = service ? await db.select().from(serviceHours).where(eq(serviceHours.serviceId, service.id)) : [];
   let serviceWindows: Record<number, { start: string; end: string }[]> | null = null;
   if (windowRows.length) {
     serviceWindows = {};
@@ -109,7 +110,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId:
     days: sorted,
     now: params.now ?? new Date(),
     // Durée variable (« 30 à 45 min ») : on bloque toujours la durée maximale pour ne jamais déborder.
-    durationMin: service.durationMaxMin ?? service.durationMin,
+    durationMin: params.durationMin ?? service!.durationMaxMin ?? service!.durationMin,
     rules: {
       slotMode: settings.slotMode,
       slotIntervalMin: settings.slotIntervalMin,

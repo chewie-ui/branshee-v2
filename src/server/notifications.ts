@@ -9,6 +9,7 @@ import { emails, type AppointmentInfo } from "@/server/email/templates";
 import { createT, getMessages, intlLocale } from "@/i18n";
 import { isLocale, type Locale } from "@/i18n/config";
 import { sendEmail } from "@/server/email/mailer";
+import { sendPush } from "@/server/push";
 import { businessHas, effectivePlan } from "@/server/plan";
 import { LIMITS } from "@/lib/plans";
 import { syncAppointmentToGoogle } from "@/server/google";
@@ -58,6 +59,12 @@ async function load(appointmentId: string) {
 type Loaded = NonNullable<Awaited<ReturnType<typeof load>>>;
 
 const reminderMail = (row: Loaded) => emails.reminder(row.clientInfo, row.settings?.reminderMessage, { methods: row.settings?.reminderPaymentMethods ?? [], note: row.settings?.reminderPaymentNote });
+
+/** Notification sur l'application du propriétaire et du praticien concerné (n'empêche jamais le reste). */
+function pushToPros(row: Loaded, title: string, body: string, type: string) {
+  const ids = [row.business.ownerId, row.memberUserId].filter((x): x is string => !!x);
+  return sendPush(ids, { title, body, data: { type, bookingId: row.a.id, companyId: row.business.id } });
+}
 
 /** Destinataires côté pro : le propriétaire et le praticien concerné (sans doublon). */
 async function proRecipients(row: Loaded) {
@@ -123,6 +130,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
     await toClient(row, pending ? "booking_requested" : "booking_confirmed", pending ? emails.bookingRequested(row.clientInfo) : emails.bookingConfirmed(row.clientInfo, row.settings?.confirmationMessage));
     if (!pending) await toPhone(row, "confirmation");
 
+    if (source === "online") await pushToPros(row, pending ? "Nouvelle demande de rendez-vous" : "Nouveau rendez-vous", `${row.a.contactName ?? "Client"} · ${row.info.serviceName} · ${row.info.when}`, "booking");
     if (source === "online" && (row.settings?.emailOwnerOnNewBooking ?? true)) {
       const mail = emails.proNewBooking({ ...row.info, pending, customerEmail: row.a.contactEmail, customerPhone: row.a.contactPhone }, `${appUrl()}/app`);
       for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_new_booking", businessId: row.business.id, appointmentId: row.a.id });
@@ -147,6 +155,7 @@ export function notifyCancelledByCustomer(appointmentId: string) {
     const row = await load(appointmentId);
     if (!row) return;
     await toClient(row, "cancelled_customer", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage));
+    await pushToPros(row, "Rendez-vous annulé", `${row.a.contactName ?? "Client"} · ${row.info.when}`, "cancellation");
     if (row.settings?.emailOwnerOnCancellation ?? true) {
       const mail = emails.proCancelled(row.info, `${appUrl()}/app/agenda`);
       for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_cancelled", businessId: row.business.id, appointmentId: row.a.id });
@@ -267,6 +276,7 @@ export function notifyRescheduledByCustomer(appointmentId: string, previousStart
     const before = `${formatDay(previousStart, tz, "EEEE d MMMM")} à ${formatTime(previousStart, tz)}`;
     const prev = before.charAt(0).toUpperCase() + before.slice(1);
     await toClient(row, "rescheduled_by_customer", emails.bookingConfirmed(row.clientInfo, row.settings?.confirmationMessage));
+    await pushToPros(row, "Rendez-vous déplacé par le client", `${row.a.contactName ?? "Client"} · ${row.info.when}`, "booking");
     const mail = emails.proRescheduledByCustomer(row.info, prev, `${appUrl()}/app/agenda/rdv/${row.a.id}`);
     for (const to of await proRecipients(row)) await sendEmail({ ...mail, to, template: "pro_rescheduled", businessId: row.business.id, appointmentId: row.a.id });
   });

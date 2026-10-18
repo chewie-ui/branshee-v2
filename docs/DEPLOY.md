@@ -69,6 +69,13 @@ Dans Google Cloud › Identifiants, sur le client OAuth existant : ajouter l'URI
 `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Les connexions Google Agenda de l'ancien Branshee sont reprises
 par la migration (jetons chiffrés). Les flux iCal gardent la même adresse (`/ical/<jeton>`).
 
+## Application mobile et application de bureau
+- **Mobile** : l'application déjà publiée (`branshee-app`) parle à `/api/v1` ; la v2 sert le même contrat. Reporter
+  `GOOGLE_CLIENT_ID_IOS`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_WEB`, `APPLE_BUNDLE_ID` (et `APPLE_SERVICE_ID`
+  s'il existe) depuis l'ancien `.env`. Les comptes de l'app se reconnectent une fois après la bascule (les jetons de
+  l'ancien serveur ne sont pas repris). Notifications push : service Expo, rien à configurer côté serveur.
+- **Bureau** : dossier `desktop/` (Electron), voir `desktop/README.md` pour construire les installateurs.
+
 ## Domaines personnalisés (« Mon site », Pro+)
 Le pro saisit son domaine dans Mon site › Réglages et crée chez son registraire un CNAME vers le domaine de l'app.
 Le serveur web doit ensuite accepter ce domaine et obtenir un certificat :

@@ -1,0 +1,1 @@
+ALTER TABLE "sessions" ADD COLUMN "kind" text DEFAULT 'web' NOT NULL;

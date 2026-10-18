@@ -83,6 +83,8 @@ export const sessions = pgTable(
     ip: text("ip"),
     /** Super-admin connecté « en tant que » cet utilisateur. */
     impersonatedById: uuid("impersonated_by_id").references(() => users.id),
+    /** « web » = cookie du site ; « api » = jeton de rafraîchissement de l'application mobile / de bureau. */
+    kind: text("kind", { enum: ["web", "api"] }).notNull().default("web"),
     ...timestamps,
   },
   (t) => [index("sessions_user_idx").on(t.userId)],

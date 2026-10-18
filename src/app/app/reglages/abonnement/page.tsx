@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { featureStatus } from "@/server/features";
-import { randomBytes } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businessPlans, promoCodes, users } from "@/db/schema";
 import { BillingPanel, ReferralCard } from "@/components/settings/billing-panel";
-import { slugify } from "@/lib/slug";
 import { referralStatus } from "@/server/actions/billing";
 import { activeCampaign, billingEnabled, describePromo } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
+
+import { ensureReferralCode } from "@/server/referral";
 
 export const metadata: Metadata = { title: "Abonnement · Réglages" };
 
@@ -19,17 +19,7 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
   "non-verifie": { ok: false, text: "Le paiement n'a pas pu être vérifié. Si vous avez été débité, contactez le support : votre forfait sera activé." },
 };
 
-/** Code de parrainage personnel, créé à la première visite. */
-async function referralCode(userId: string, name: string) {
-  const [u] = await db.select({ code: users.referralCode }).from(users).where(eq(users.id, userId));
-  if (u?.code) return u.code;
-  for (let i = 0; i < 5; i++) {
-    const code = `${slugify(name).split("-")[0]?.slice(0, 8).toUpperCase() || "PRO"}${randomBytes(2).toString("hex").toUpperCase()}`;
-    const done = await db.update(users).set({ referralCode: code }).where(eq(users.id, userId)).returning({ code: users.referralCode }).catch(() => []);
-    if (done.length) return code;
-  }
-  return "";
-}
+const referralCode = ensureReferralCode;
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
   const gate = await featureStatus("subscription");

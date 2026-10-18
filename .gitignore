@@ -46,3 +46,5 @@ next-env.d.ts
 
 # fichiers envoyés (dossiers chiffrés, images)
 /storage/
+/desktop/node_modules
+/desktop/dist
