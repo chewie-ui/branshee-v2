@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { appointments, articles, businessPlans, businesses, members, services, users } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
+import { indexNow } from "@/server/indexnow";
 
 /**
  * Tâches planifiées (appelées par la crontab du VPS via /api/cron/*).
@@ -19,7 +20,8 @@ export async function publishScheduledArticles(now = new Date()) {
     .update(articles)
     .set({ status: "published", publishedAt: sql`coalesce(${articles.scheduledFor}, now())` })
     .where(and(eq(articles.status, "scheduled"), isNotNull(articles.scheduledFor), lte(articles.scheduledFor, now)))
-    .returning({ id: articles.id });
+    .returning({ slug: articles.slug });
+  if (rows.length) await indexNow([...rows.map((r) => `/blog/${r.slug}`), "/blog"]);
   return rows.length;
 }
 

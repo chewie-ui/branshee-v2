@@ -156,12 +156,16 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ✅ Support (conversations, réponse + email au pro, clôture → note, suppression, satisfaction moyenne), messages aux pros (tous ou liste d'emails), avis signalés (supprimer / conserver), éditeur du centre d'aide (sections, vidéos, FAQ en texte riche, ordre), blog (éditeur riche, images, couverture, brouillon / programmé / publié, SEO, duplication)
 - ✅ Liste officielle des 144 métiers reprise (`lib/professions.ts`)
 
-## Lot O — Site public Branshee (marketing)
-- ❌ Accueil, page pro, tarifs, contact (formulaire), confidentialité, CGU
-- ❌ Annuaire : recherche par métier / ville, établissements mis en avant
-- ❌ Pages SEO par métier (« logiciel rendez-vous kiné »…), blog, RSS, sitemap, IndexNow
-- ❌ Inscription en plusieurs étapes avec choix du métier (+ demande de nouveau métier), page « Démarrer »
-- ❌ Pages d'état : fonctionnalité en maintenance, compte désactivé, 404 soignée
+## Lot O — Site public Branshee (marketing) ✅
+- ✅ Accueil (accroche, comparatif, « six outils en un », fonctionnalités, tout inclus, comment ça marche, transparence, tarifs, métiers, établissements mis en avant, FAQ avec balisage Google, appel final), en-tête et pied de page, menu mobile
+- ✅ Tarifs (forfaits mensuel / annuel tirés des vraies limites, tableau comparatif, FAQ), contact (formulaire avec anti-robots et limitation, email à `SUPPORT_EMAIL`), confidentialité et CGU reprises et mises à jour (sous-traitance des données de santé, cookies réels)
+- ✅ Annuaire `/annuaire` : recherche métier / nom, ville ou code postal, puces de métiers, filtre « 4,5 et plus », ordre mis en avant → forfait → note, pagination
+- ✅ 80 pages SEO métier × ville `/logiciel-rendez-vous/…` (textes de l'ancien) + page index, avec les établissements réels de la ville
+- ✅ Blog public (catégories, pagination, article avec encart d'inscription, « à lire aussi », compteur de vues, balisage BlogPosting), flux RSS, sitemap.xml (pages, SEO, articles, établissements actifs), robots.txt, IndexNow (même clé que l'ancien) à la publication
+- ✅ Création de l'établissement en 3 étapes (nom, métier avec liste officielle + métiers validés, ville) ; métier hors liste → demande dans le super-admin
+- ✅ Mesure d'audience maison sans cookie publicitaire ni service tiers (`/api/track`), première source gardée et enregistrée sur le compte à l'inscription → page Acquisition du super-admin
+- ✅ Page 404 soignée, pages en maintenance (interrupteurs accueil / annuaire), message « compte désactivé », `metadataBase` et Open Graph
+- ✅ Redirections des anciennes adresses (/login, /register, /search, /subscription, /panel, /appointment, /pro, /cgu…)
 
 ## Lot P — Mon site (créateur de site)
 - ❌ Sections, modèles, thème, SEO, logo, réseaux, publication, aperçu, images, formulaire de contact, compteur de visites, domaine

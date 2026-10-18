@@ -11,6 +11,8 @@ import { slugify } from "@/lib/slug";
 import { requireSuperadmin } from "@/server/admin";
 import { richTextToPlain, sanitizeArticleHtml } from "@/server/rich-text";
 import { savePublicImage } from "@/server/storage";
+import { indexNow } from "@/server/indexnow";
+import { after } from "next/server";
 
 type Result = { ok: boolean; error?: string; message?: string; id?: string };
 
@@ -73,6 +75,7 @@ export async function saveArticle(id: string | null, input: z.input<typeof schem
   else saved = (await db.insert(articles).values(values).returning({ id: articles.id }))[0]!.id;
   revalidatePath("/admin/blog");
   revalidatePath("/blog", "layout");
+  if (d.status === "published") after(() => indexNow([`/blog/${slug}`, "/blog"]));
   return { ok: true, id: saved!, message: d.status === "published" ? "Article publié." : d.status === "scheduled" ? "Publication programmée." : "Brouillon enregistré." };
 }
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -44,6 +44,19 @@ async function landing(userId: string, verified: boolean) {
   return verified ? "/espace-client" : "/verifier-email";
 }
 
+/** Première source de visite (cookie posé par /api/track), pour savoir d'où viennent les inscrits. */
+async function readAcquisition() {
+  const raw = (await cookies()).get("bs_acq")?.value;
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(Buffer.from(raw, "base64url").toString()) as Record<string, unknown>;
+    const pick = (k: string) => (typeof v[k] === "string" ? (v[k] as string).slice(0, 300) : undefined);
+    return { source: pick("source"), medium: pick("medium"), campaign: pick("campaign"), term: pick("term"), content: pick("content"), gclid: pick("gclid"), referrer: pick("referrer"), landing: pick("landing"), capturedAt: pick("capturedAt") };
+  } catch {
+    return null;
+  }
+}
+
 const registerSchema = z.object({
   fullName: z.string().trim().min(2, "Indiquez votre nom.").max(120),
   email: z.email({ message: "Adresse email invalide." }).transform((e) => e.toLowerCase()),
@@ -67,7 +80,7 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   const refCode = String(formData.get("ref") ?? "").trim().toUpperCase().slice(0, 40);
   const [referrer] = refCode ? await db.select({ id: users.id }).from(users).where(eq(users.referralCode, refCode)) : [];
   const intent = formData.get("kind") === "client" ? "client" : "pro";
-  const [user] = await db.insert(users).values({ fullName, email, passwordHash: await hashPassword(password), referredById: referrer?.id ?? null, signupIntent: intent }).returning({ id: users.id });
+  const [user] = await db.insert(users).values({ fullName, email, passwordHash: await hashPassword(password), referredById: referrer?.id ?? null, signupIntent: intent, acquisition: await readAcquisition() }).returning({ id: users.id });
   await createSession(user!.id, meta);
   await db.insert(loginEvents).values({ userId: user!.id, method: "password", ip: meta.ip });
   // Invité par un établissement ? Il arrive directement dans son espace, sans créer d'établissement.
@@ -103,7 +116,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
     return { error: "Email ou mot de passe incorrect.", values };
   }
   if (!(await verifyPassword(password, user.passwordHash))) return { error: "Email ou mot de passe incorrect.", values };
-  if (user.disabledAt) return { error: "Ce compte est désactivé. Contactez le support.", values };
+  if (user.disabledAt) return { error: "Ce compte a été désactivé. Pour en savoir plus, écrivez-nous depuis la page Contact.", values };
   // Compte repris de l'ancien Branshee : on remplace le hash bcrypt par un hash scrypt.
   if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
 

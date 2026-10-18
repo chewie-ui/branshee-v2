@@ -412,4 +412,18 @@ export const emails = {
       }),
     };
   },
+
+  contactMessage(p: { name: string; email: string; subject: string; message: string }) {
+    return {
+      subject: `[Contact Branshee] ${p.subject}`,
+      ...render({
+        preheader: p.message.slice(0, 90),
+        title: "Message depuis le formulaire de contact",
+        intro: `${p.name} (${p.email}) a écrit :`,
+        details: [{ label: "Sujet", value: p.subject }, { label: "Message", value: p.message }],
+        note: "Répondez directement à cet email pour lui écrire.",
+        footer: "Branshee — formulaire de contact",
+      }),
+    };
+  },
 };

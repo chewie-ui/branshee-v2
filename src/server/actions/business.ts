@@ -8,7 +8,8 @@ import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { businesses, members, users } from "@/db/schema";
+import { businesses, jobTitles, members, users } from "@/db/schema";
+import { isOfficialProfession, professionKey } from "@/lib/professions";
 import { BUSINESS_COOKIE } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
 import { requireContext, requireUser } from "@/server/context";
@@ -37,6 +38,11 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   const firstBusiness = (await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, user.id)).limit(1)).length === 0;
   const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null });
   if (firstBusiness) after(() => notifyWelcomePro(user.id, business.name));
+  // Métier hors liste : proposé à l'équipe (page Métiers du super-admin).
+  const type = parsed.data.businessType;
+  if (type && !isOfficialProfession(type)) {
+    await db.insert(jobTitles).values({ name: type, key: professionKey(type), source: "request", requestedById: user.id }).onConflictDoNothing();
+  }
   (await cookies()).set(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   redirect("/app?bienvenue=1");
 }

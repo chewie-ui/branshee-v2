@@ -9,6 +9,31 @@ const nextConfig: NextConfig = {
   },
   // L'espace pro, l'admin et la connexion ne doivent jamais être affichés dans le cadre d'un autre site
   // (clickjacking). Les pages publiques de réservation, elles, sont faites pour être intégrées.
+  // Anciennes adresses de Branshee (liens partagés, favoris, Google) → nouvelles pages.
+  async redirects() {
+    const map: [string, string][] = [
+      ["/login", "/connexion"],
+      ["/register", "/inscription"],
+      ["/s-inscrire", "/inscription"],
+      ["/client-login", "/connexion"],
+      ["/client-register", "/inscription?client=1"],
+      ["/forgot-password", "/mot-de-passe-oublie"],
+      ["/pro", "/"],
+      ["/manage-business", "/"],
+      ["/welcome", "/bienvenue"],
+      ["/demarrer", "/bienvenue"],
+      ["/panel", "/app"],
+      ["/appointment", "/app/agenda"],
+      ["/subscription", "/app/reglages/abonnement"],
+      ["/parrainage", "/app/reglages/abonnement"],
+      ["/support", "/app/aide"],
+      ["/superadmin", "/admin"],
+      ["/conditions", "/conditions-utilisation"],
+      ["/cgu", "/conditions-utilisation"],
+      ["/privacy", "/confidentialite"],
+    ];
+    return map.map(([source, destination]) => ({ source, destination, permanent: true }));
+  },
   async headers() {
     const noFrame = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
