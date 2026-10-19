@@ -11,6 +11,8 @@ type Layout = {
   preheader: string;
   title: string;
   intro: string;
+  /** Message écrit par le pro, affiché en citation. */
+  quote?: string;
   details?: Detail[];
   cta?: { label: string; url: string };
   note?: string;
@@ -41,6 +43,7 @@ function render(l: Layout): { html: string; text: string } {
         <tr><td style="padding:32px 28px">
           <h1 style="margin:0 0 12px;font-size:22px;line-height:28px;color:#18181b">${esc(l.title)}</h1>
           <p style="margin:0;font-size:15px;line-height:23px;color:#3f3f46">${esc(l.intro)}</p>
+          ${l.quote ? `<p style="margin:16px 0 0;padding:12px 16px;border-left:3px solid #4f46e5;background:#f4f4f5;border-radius:6px;font-size:15px;line-height:23px;color:#18181b">${esc(l.quote).replace(/\n/g, "<br>")}</p>` : ""}
           ${details}
           ${cta}
           ${l.note ? `<p style="margin:0;font-size:13px;line-height:20px;color:#52525b">${esc(l.note)}</p>` : ""}
@@ -51,7 +54,7 @@ function render(l: Layout): { html: string; text: string } {
   </table>
 </body></html>`;
 
-  const text = [l.title, "", l.intro, "", ...(l.details ?? []).map((d) => `${d.label} : ${d.value}`), ...(l.cta ? ["", `${l.cta.label} : ${l.cta.url}`] : []), ...(l.note ? ["", l.note] : []), "", "—", l.footer].join("\n");
+  const text = [l.title, "", l.intro, "", ...(l.quote ? [l.quote, ""] : []), ...(l.details ?? []).map((d) => `${d.label} : ${d.value}`), ...(l.cta ? ["", `${l.cta.label} : ${l.cta.url}`] : []), ...(l.note ? ["", l.note] : []), "", "—", l.footer].join("\n");
   return { html, text };
 }
 
@@ -189,6 +192,23 @@ export const emails = {
         details: c.details,
         cta: { label: c.t("email.seeOrCancel"), url: a.manageUrl },
         note: message ? c.t("email.messageFrom", { business: c.business, message }) : c.t("email.rescheduledNote"),
+        footer: c.footer,
+      }),
+    };
+  },
+
+  customMessage(a: AppointmentInfo, message: string) {
+    const c = customer(a);
+    return {
+      subject: c.t("email.customSubject", { business: c.business }),
+      ...render({
+        lang: c.lang,
+        preheader: message.slice(0, 90),
+        title: c.t("email.customTitle", { business: c.business }),
+        intro: c.t("email.customIntro", { name: c.name, business: c.business }),
+        quote: message,
+        details: c.details,
+        cta: { label: c.t("email.seeOrCancel"), url: a.manageUrl },
         footer: c.footer,
       }),
     };

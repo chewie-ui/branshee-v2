@@ -210,6 +210,13 @@ export function notifyRescheduled(appointmentId: string, previousStart: Date, me
   });
 }
 
+/** Message libre écrit par le pro, envoyé par email au client avec le récapitulatif du RDV. */
+export async function sendCustomMessage(appointmentId: string, message: string) {
+  const row = await load(appointmentId);
+  if (!row || !row.a.contactEmail) return false;
+  return toClient(row, "custom_message", emails.customMessage(row.clientInfo, message));
+}
+
 /** Rappel envoyé à la main par le pro (bouton « Envoyer un rappel »). Renvoie false si le client n'a pas d'email. */
 export async function sendManualReminder(appointmentId: string) {
   const row = await load(appointmentId);

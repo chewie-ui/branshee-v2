@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BellRing, Pencil, RotateCcw } from "lucide-react";
+import { BellRing, MessageSquareText, Pencil, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
-import { rescheduleAppointment, restoreAppointment, savePayment, sendReminderNow } from "@/server/actions/appointments";
+import { rescheduleAppointment, restoreAppointment, savePayment, sendClientMessage, sendReminderNow } from "@/server/actions/appointments";
 
 /** Modifier date, heure, durée et membre d'un RDV, avec un mot facultatif pour le client. */
 export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: { id: string; initial: { date: string; start: string; durationMin: number; memberId: string }; members: { id: string; name: string }[]; hasEmail: boolean; clientTerm: string }) {
@@ -94,6 +94,62 @@ export function ReminderButton({ id, sentAt }: { id: string; sentAt: string | nu
         Envoyer un rappel
       </Button>
       {msg ? <span className={msg.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{msg.text}</span> : null}
+    </div>
+  );
+}
+
+/** Rappel et message libre au client, côte à côte ; le message s'écrit dans un petit formulaire qui s'ouvre en dessous. */
+export function ClientContactActions({ id, sentAt, canRemind, clientTerm }: { id: string; sentAt: string | null; canRemind: boolean; clientTerm: string }) {
+  const [remindPending, startRemind] = useTransition();
+  const [sendPending, startSend] = useTransition();
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(sentAt ? { ok: true, text: `Dernier rappel manuel : ${sentAt}` } : null);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {canRemind ? (
+          <Button variant="secondary" icon={<BellRing className="size-4" aria-hidden="true" />} loading={remindPending} onClick={() => startRemind(async () => { const r = await sendReminderNow(id); setStatus(r.ok ? { ok: true, text: "Rappel envoyé." } : { ok: false, text: r.error ?? "Erreur." }); })}>
+            Envoyer un rappel
+          </Button>
+        ) : null}
+        <Button variant="secondary" icon={<MessageSquareText className="size-4" aria-hidden="true" />} aria-expanded={open} aria-controls={`msg-${id}`} onClick={() => { setOpen((o) => !o); setError(null); }}>
+          Envoyer un message
+        </Button>
+        {status && !open ? <span className={status.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{status.text}</span> : null}
+      </div>
+      {open ? (
+        <div id={`msg-${id}`} className="space-y-3 rounded-lg border border-border p-4">
+          <Field label={`Message au ${clientTerm}`} htmlFor={`msg-text-${id}`} hint="Envoyé par email, avec le rappel de la date et de l'heure du rendez-vous." error={error ?? undefined}>
+            <Textarea id={`msg-text-${id}`} rows={4} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex. j'aurai environ 15 minutes de retard, merci de votre patience." autoFocus />
+          </Field>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-muted tabular-nums">{text.length}/1000</span>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setOpen(false)} disabled={sendPending}>Annuler</Button>
+              <Button
+                icon={<Send className="size-4" aria-hidden="true" />}
+                loading={sendPending}
+                disabled={text.trim().length < 2}
+                onClick={() =>
+                  startSend(async () => {
+                    setError(null);
+                    const r = await sendClientMessage(id, text);
+                    if (r.ok) {
+                      setOpen(false);
+                      setText("");
+                      setStatus({ ok: true, text: "Message envoyé." });
+                    } else setError(r.error ?? "Erreur.");
+                  })
+                }
+              >
+                Envoyer
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

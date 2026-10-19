@@ -244,6 +244,9 @@ const fr = {
     reminderIntro: "Bonjour {name}, petit rappel de votre rendez-vous chez {business}.",
     seeOrCancelShort: "Voir ou annuler",
     reminderNote: "Un empêchement ? Merci d'annuler dès que possible pour libérer le créneau.",
+    customSubject: "Message de {business} au sujet de votre rendez-vous",
+    customTitle: "Un message de {business}",
+    customIntro: "Bonjour {name}, {business} vous a écrit au sujet de votre rendez-vous :",
     atTime: "{day} à {time}",
   },
   /** Messages d'erreur renvoyés par le serveur (texte français d'origine → traduction). */

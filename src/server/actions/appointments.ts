@@ -13,7 +13,8 @@ import { getAvailableSlots } from "@/server/availability";
 import { requireContext, type AppContext } from "@/server/context";
 import { syncAppointmentToGoogle } from "@/server/google";
 import { applyBusinessCancellation, applyNoShow, reviewPenalty } from "@/server/payments";
-import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision, notifyRescheduled, sendManualReminder } from "@/server/notifications";
+import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision, notifyRescheduled, sendCustomMessage, sendManualReminder } from "@/server/notifications";
+import { rateLimit } from "@/server/auth/rate-limit";
 
 const idSchema = z.uuid();
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide.");
@@ -401,6 +402,23 @@ export async function releaseExpiredRequests(): Promise<{ ok: boolean; released:
   if (released.length) await log(ctx, "appointment.release", `${released.length} demande${released.length > 1 ? "s" : ""} expirée${released.length > 1 ? "s" : ""} libérée${released.length > 1 ? "s" : ""}`);
   revalidatePath("/app", "layout");
   return { ok: true, released: released.length };
+}
+
+/** Message libre au client (retard, consigne, changement…), envoyé par email avec le récapitulatif du RDV. */
+export async function sendClientMessage(rawId: string, message: string): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await requireContext("appointments.manage");
+  const id = idSchema.parse(rawId);
+  const text = String(message ?? "").trim();
+  if (text.length < 2) return { ok: false, error: "Écrivez votre message." };
+  if (text.length > 1000) return { ok: false, error: "Message trop long (1000 caractères maximum)." };
+  if (!rateLimit(`client-msg:${ctx.user.id}`, 30, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de messages envoyés. Réessayez plus tard." };
+  const [appt] = await db.select({ email: appointments.contactEmail, name: appointments.contactName, status: appointments.status }).from(appointments).where(and(eq(appointments.id, id), eq(appointments.businessId, ctx.business.id)));
+  if (!appt) return { ok: false, error: "Rendez-vous introuvable." };
+  if (!appt.email) return { ok: false, error: "Ce client n'a pas d'adresse email." };
+  const ok = await sendCustomMessage(id, text);
+  if (!ok) return { ok: false, error: "L'email n'a pas pu partir. Réessayez plus tard." };
+  await log(ctx, "appointment.message", `Message envoyé à ${appt.name ?? "client"}`);
+  return { ok: true };
 }
 
 export async function sendReminderNow(rawId: string): Promise<{ ok: boolean; error?: string }> {

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { appointmentPayments, appointments, customers, members, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";
-import { PaymentForm, ReminderButton, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
+import { ClientContactActions, PaymentForm, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +114,14 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
               hasEmail={!!a.contactEmail}
               clientTerm={term}
             />
-            {!past && a.status === "confirmed" && a.contactEmail ? <ReminderButton id={a.id} sentAt={a.manualReminderSentAt ? `${formatDay(a.manualReminderSentAt, tz, "d MMM")} à ${formatTime(a.manualReminderSentAt, tz)}` : null} /> : null}
+            {a.contactEmail ? (
+              <ClientContactActions
+                id={a.id}
+                canRemind={!past && a.status === "confirmed"}
+                sentAt={a.manualReminderSentAt ? `${formatDay(a.manualReminderSentAt, tz, "d MMM")} à ${formatTime(a.manualReminderSentAt, tz)}` : null}
+                clientTerm={term}
+              />
+            ) : null}
           </Card>
         ) : null}
 
