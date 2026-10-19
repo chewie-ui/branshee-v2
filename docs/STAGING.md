@@ -27,7 +27,7 @@ puis s'arrête pour que tu complètes `SMTP_URL` (le même que l'ancien Branshee
 ```bash
 bash /var/www/branshee-v2/deploy/staging.sh v2.branshee.com ton.adresse@email.com
 ```
-Il installe, construit, démarre l'app (pm2, port 3001) et configure Nginx + HTTPS.
+Il installe, construit, démarre l'app (pm2, port 3050) et configure Nginx + HTTPS.
 L'ancien Branshee n'est pas touché (autre dossier, autre port, autre base).
 
 ## 3. Copier les vraies données (une fois, puis quand tu veux rafraîchir)

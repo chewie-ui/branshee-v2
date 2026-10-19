@@ -12,7 +12,7 @@ set -euo pipefail
 DOMAIN="${1:?Indique le sous-domaine, ex. v2.branshee.com}"
 TEST_EMAIL="${2:?Indique l’adresse qui recevra les emails de test}"
 APP_DIR="${APP_DIR:-/var/www/branshee-v2}"
-PORT="${PORT:-3001}"
+PORT="${PORT:-3050}"
 DB_NAME="branshee_staging"
 DB_USER="branshee_staging"
 REPO="${REPO:-https://github.com/chewie-ui/branshee-v2.git}"
@@ -81,7 +81,7 @@ step "Démarrage (pm2, port ${PORT})"
 if pm2 describe branshee-staging >/dev/null 2>&1; then
   pm2 restart branshee-staging --update-env
 else
-  pm2 start npm --name branshee-staging -- start -- -p "$PORT"
+  pm2 start npm --name branshee-staging -- start -- -p "$PORT" -H 127.0.0.1
 fi
 pm2 save >/dev/null
 
