@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Ban, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import { addDays, addMonths, format } from "date-fns";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, max, min } from "drizzle-orm";
 import { db } from "@/db";
-import { members } from "@/db/schema";
+import { members, weeklyHours } from "@/db/schema";
 import { DayClickLayer } from "@/components/agenda/grid-click";
 import { EventLink } from "@/components/agenda/event-hover";
 import { ButtonLink } from "@/components/ui/button";
@@ -44,6 +44,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   const range: { start: Date; end: Date; monthStart?: Date } = view === "month" ? monthGridBounds(ref, tz) : weekBounds(ref, tz);
   const monthStart = range.monthStart ?? ref;
   const items = await listAppointments(ctx.business.id, range.start, range.end, { memberId: memberFilter });
+  // Grille de la semaine : au moins les heures d'ouverture (communes et de chaque membre), pour pouvoir y créer un RDV.
+  const [open] = await db.select({ first: min(weeklyHours.startTime), last: max(weeklyHours.endTime) }).from(weeklyHours).where(eq(weeklyHours.businessId, ctx.business.id));
+  const toHour = (t: string | null, up: boolean) => (t ? (up ? Math.ceil((Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))) / 60) : Number(t.slice(0, 2))) : null);
+  const openRange = { start: toHour(open?.first ?? null, false), end: open?.last && open.last >= "23:59" ? 24 : toHour(open?.last ?? null, true) };
   const dayKey = (d: Date) => format(zoned(d, tz), "yyyy-MM-dd");
   const todayKey = dayKey(new Date());
 
@@ -121,7 +125,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
         ) : null}
       </div>
 
-      {view === "month" ? <MonthView items={items} range={range} tz={tz} todayKey={todayKey} refMonth={dayKey(monthStart).slice(0, 7)} qs={qs} /> : <WeekView items={items} range={range} tz={tz} todayKey={todayKey} team={team} memberFilter={memberFilter} hourPx={HOUR_PX} canManage={canManage} />}
+      {view === "month" ? <MonthView items={items} range={range} tz={tz} todayKey={todayKey} refMonth={dayKey(monthStart).slice(0, 7)} qs={qs} /> : <WeekView items={items} range={range} tz={tz} todayKey={todayKey} team={team} memberFilter={memberFilter} hourPx={HOUR_PX} canManage={canManage} openRange={openRange} />}
 
       <p className="mt-3 text-xs text-muted">
         {view === "week" && canManage ? "Cliquez sur un espace libre pour créer un rendez-vous ou bloquer le créneau. " : ""}
@@ -131,17 +135,21 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   );
 }
 
-function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean }) {
+function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
   // Vue « toute l'équipe » : une colonne par membre dans chaque journée, pour que les RDV simultanés ne se superposent pas.
   const lanes: (string | null)[] = memberFilter ? [memberFilter] : team.length < 2 ? [team[0]?.id ?? null] : team.map((m) => m.id);
   const laneOf = (memberId: string | null) => Math.max(0, lanes.indexOf(memberId));
 
-  let startHour = DEFAULT_START;
-  let endHour = DEFAULT_END;
+  let startHour = Math.min(DEFAULT_START, openRange.start ?? DEFAULT_START);
+  let endHour = Math.max(DEFAULT_END, openRange.end ?? DEFAULT_END);
+  const dayOf = (d: Date) => format(zoned(d, tz), "yyyy-MM-dd");
   for (const a of items) {
     startHour = Math.min(startHour, Math.floor(minutesOfDay(a.startsAt, tz) / 60));
-    endHour = Math.max(endHour, Math.ceil(minutesOfDay(a.endsAt, tz) / 60) || 24);
+    // Un RDV qui finit après minuit (ex. 23:30 – 00:30) étend la grille jusqu'à minuit.
+    const crossesMidnight = dayOf(a.endsAt) !== dayOf(a.startsAt);
+    endHour = Math.max(endHour, crossesMidnight ? 24 : Math.ceil(minutesOfDay(a.endsAt, tz) / 60));
   }
+  endHour = Math.min(24, endHour);
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
   const days = Array.from({ length: 7 }, (_, i) => addDays(range.start, i));
   const nowMin = minutesOfDay(new Date(), tz);
@@ -185,7 +193,7 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                   ) : null}
                   {dayItems.map((a) => {
                     const top = ((minutesOfDay(a.startsAt, tz) - startHour * 60) / 60) * hourPx;
-                    const height = Math.max(((a.endsAt.getTime() - a.startsAt.getTime()) / 3600000) * hourPx - 2, 20);
+                    const height = Math.min(Math.max(((a.endsAt.getTime() - a.startsAt.getTime()) / 3600000) * hourPx - 2, 20), hours.length * hourPx - top);
                     const color = itemColor(a);
                     // Blocage de tout l'établissement : toute la largeur de la journée.
                     const fullWidth = a.kind === "block" && a.memberId === null;
