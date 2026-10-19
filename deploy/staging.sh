@@ -60,13 +60,14 @@ CRON_SECRET=$(openssl rand -hex 32)
 STORAGE_DIR=${APP_DIR}/storage
 # Emails : mets ici le même SMTP que l'ancien Branshee (tout sera détourné vers ${TEST_EMAIL})
 SMTP_URL=
-MAIL_FROM=Branshee (test) <no-reply@branshee.com>
+MAIL_FROM="Branshee (test) <no-reply@branshee.com>"
 # Stripe : clés de TEST uniquement (sk_test_… / pk_test_…), jamais les clés live ici
 STRIPE_SECRET_KEY=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 ENV
   chmod 600 "$ENV_FILE"
   echo "→ ${ENV_FILE} créé. Complète SMTP_URL (et les clés Stripe de test) puis relance ce script."
+  exit 0
 fi
 
 set -a; . "$ENV_FILE"; set +a
