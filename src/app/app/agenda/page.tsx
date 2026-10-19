@@ -6,6 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { members } from "@/db/schema";
 import { DayClickLayer } from "@/components/agenda/grid-click";
+import { EventLink } from "@/components/agenda/event-hover";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -165,8 +166,8 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
           <div className="grid grid-cols-[56px_repeat(7,1fr)]">
             <div>
               {hours.map((h) => (
-                <div key={h} className="relative pr-2 text-right text-xs text-muted" style={{ height: hourPx }}>
-                  <span className="relative -top-2">{String(h).padStart(2, "0")}:00</span>
+                <div key={h} className="relative pr-2 pt-1 text-right text-xs leading-none text-muted tabular-nums" style={{ height: hourPx }}>
+                  {String(h).padStart(2, "0")}:00
                 </div>
               ))}
             </div>
@@ -176,7 +177,7 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
               return (
                 <div key={key} className="relative border-l border-border" style={{ height: hours.length * hourPx }}>
                   {hours.map((h) => (
-                    <div key={h} className="pointer-events-none border-b border-border/70" style={{ height: hourPx }} />
+                    <div key={h} className="pointer-events-none border-b border-border/70" style={{ height: hourPx, backgroundImage: "linear-gradient(to bottom, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% + 0.5px), transparent calc(50% + 0.5px))" }} />
                   ))}
                   <DayClickLayer day={key} startHour={startHour} hourPx={hourPx} lanes={lanes} canManage={canManage} />
                   {key === todayKey && nowMin >= startHour * 60 && nowMin <= endHour * 60 ? (
@@ -191,16 +192,26 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                     const width = fullWidth ? 100 : 100 / lanes.length;
                     const left = fullWidth ? 0 : laneOf(a.memberId) * width;
                     return (
-                      <Link
+                      <EventLink
                         key={a.id}
                         href={a.href}
+                        summary={{
+                          title: a.title,
+                          time: `${formatTime(a.startsAt, tz)} – ${formatTime(a.endsAt, tz)}`,
+                          kindLabel: a.kind === "block" ? (a.memberId ? "Indisponible" : "Établissement fermé") : a.kind === "group" ? "Cours collectif" : null,
+                          service: a.kind === "appointment" ? a.serviceName : a.kind === "group" ? a.serviceName : null,
+                          member: a.memberName,
+                          phone: a.kind === "appointment" ? a.phone : null,
+                          note: a.internalNote && a.kind !== "block" ? a.internalNote : null,
+                          status: a.status === "pending" ? "À confirmer" : null,
+                          color,
+                        }}
                         className={cn(
                           "absolute z-[5] overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-xs leading-tight text-text hover:brightness-95",
                           a.status === "pending" && "border-dashed",
                           a.kind === "block" && "bg-[repeating-linear-gradient(135deg,#f4f4f5,#f4f4f5_6px,#e4e4e7_6px,#e4e4e7_12px)]",
                         )}
                         style={{ top, height, left: `calc(${left}% + 2px)`, width: `calc(${width}% - 4px)`, borderLeftColor: color, background: a.kind === "block" ? undefined : `${color}1f` }}
-                        title={`${a.title} — ${formatTime(a.startsAt, tz)}`}
                       >
                         <p className="truncate font-semibold">
                           {a.kind === "group" ? <Users className="mr-1 inline size-3" aria-hidden="true" /> : null}
@@ -211,7 +222,7 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                             {formatTime(a.startsAt, tz)} · {a.kind === "block" ? (a.memberId ? "Indisponible" : "Établissement fermé") : a.kind === "group" ? "Cours collectif" : a.serviceName}
                           </p>
                         ) : null}
-                      </Link>
+                      </EventLink>
                     );
                   })}
                 </div>

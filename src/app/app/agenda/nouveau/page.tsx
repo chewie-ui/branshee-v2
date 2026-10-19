@@ -12,7 +12,7 @@ import { requireContext } from "@/server/context";
 
 export const metadata: Metadata = { title: "Nouveau rendez-vous" };
 
-type SearchParams = Promise<{ date?: string; heure?: string; membre?: string; client?: string }>;
+type SearchParams = Promise<{ date?: string; heure?: string; fin?: string; membre?: string; client?: string }>;
 
 export default async function NewAppointmentPage({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireContext("appointments.manage");
@@ -40,6 +40,11 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
 
   const day = parseIsoDay(params.date) ? params.date! : format(zoned(new Date(), ctx.business.timezone), "yyyy-MM-dd");
   const term = clientWord(ctx.business.businessType);
+  // Plage sélectionnée dans l'agenda : la durée en découle.
+  const start = parseQuickTime(params.heure ?? "");
+  const end = parseQuickTime(params.fin ?? "");
+  const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const span = start && end ? toMin(end) - toMin(start) : 0;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -49,7 +54,8 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
         members={team}
         customers={clients}
         defaultDate={day}
-        defaultTime={parseQuickTime(params.heure ?? "") ?? undefined}
+        defaultTime={start ?? undefined}
+        defaultDuration={span >= 5 && span <= 720 ? span : undefined}
         defaultMemberId={team.some((m) => m.id === params.membre) ? params.membre : undefined}
         defaultCustomerId={params.client}
         clientTerm={term}

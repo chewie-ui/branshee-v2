@@ -13,7 +13,7 @@ import { requireContext } from "@/server/context";
 
 export const metadata: Metadata = { title: "Bloquer un créneau" };
 
-type SearchParams = Promise<{ id?: string; date?: string; heure?: string; membre?: string }>;
+type SearchParams = Promise<{ id?: string; date?: string; heure?: string; fin?: string; membre?: string }>;
 
 export default async function BlockPage({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireContext("appointments.manage");
@@ -34,7 +34,10 @@ export default async function BlockPage({ searchParams }: { searchParams: Search
       id: null,
       date: parseIsoDay(p.date) ? p.date! : format(zoned(new Date(), tz), "yyyy-MM-dd"),
       start,
-      end: hhmmOf(Math.min(minutesOf(start) + 60, 23 * 60 + 59)),
+      end: (() => {
+        const fin = parseQuickTime(p.fin ?? "");
+        return fin && minutesOf(fin) > minutesOf(start) ? fin : hhmmOf(Math.min(minutesOf(start) + 60, 23 * 60 + 59));
+      })(),
       memberId: team.some((m) => m.id === p.membre) ? p.membre! : team.length === 1 ? team[0]!.id : "",
       note: "",
     };

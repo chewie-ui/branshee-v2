@@ -19,6 +19,8 @@ type Props = {
   customers: Customer[];
   defaultDate: string;
   defaultTime?: string;
+  /** Durée choisie en sélectionnant une plage dans l'agenda. */
+  defaultDuration?: number;
   defaultMemberId?: string;
   defaultCustomerId?: string;
   clientTerm: string;
@@ -26,7 +28,7 @@ type Props = {
 
 const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
-export function NewAppointmentForm({ services, members, customers, defaultDate, defaultTime, defaultMemberId, defaultCustomerId, clientTerm }: Props) {
+export function NewAppointmentForm({ services, members, customers, defaultDate, defaultTime, defaultDuration, defaultMemberId, defaultCustomerId, clientTerm }: Props) {
   const [state, action, pending] = useActionState<CreateAppointmentState, FormData>(createAppointment, undefined);
   const err = state?.fieldErrors ?? {};
 
@@ -41,7 +43,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
 
   const [serviceId, setServiceId] = useState("");
   const [memberId, setMemberId] = useState(defaultMemberId ?? (members.length === 1 ? members[0]!.id : ""));
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(defaultDuration ?? 30);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultTime ?? "09:00");
   const [extra, setExtra] = useState<{ date: string; time: string }[]>([]);
