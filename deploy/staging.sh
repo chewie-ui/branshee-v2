@@ -107,7 +107,10 @@ server {
 NGINX
   sudo ln -sf "$SITE" /etc/nginx/sites-enabled/branshee-staging
   sudo nginx -t && sudo systemctl reload nginx
-  sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$TEST_EMAIL" --redirect
+fi
+# Certificat HTTPS (réessayé à chaque lancement tant qu'il n'existe pas : il faut que le DNS pointe déjà vers ce VPS)
+if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
+  sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$TEST_EMAIL" --redirect || echo "⚠ HTTPS pas encore actif : vérifie l'entrée DNS de ${DOMAIN}, attends quelques minutes et relance ce script."
 fi
 
 step "Terminé"
