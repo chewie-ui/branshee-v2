@@ -2,6 +2,7 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/db";
 import { emailLogs } from "@/db/schema";
+import { isStaging } from "@/lib/staging";
 
 export type OutgoingEmail = {
   to: string;
@@ -33,9 +34,12 @@ export async function sendEmail(mail: OutgoingEmail): Promise<boolean> {
   let status: "sent" | "failed" | "logged" = "logged";
   let error: string | null = null;
 
+  // Version de test : aucun email ne part vers les vrais destinataires.
+  const staging = isStaging();
+  const redirect = staging ? process.env.STAGING_EMAIL_TO?.trim() : null;
   try {
-    if (transport) {
-      await transport.sendMail({ from, to: mail.to, subject: mail.subject, html: mail.html, text: mail.text, replyTo: mail.replyTo ?? undefined });
+    if (transport && (!staging || redirect)) {
+      await transport.sendMail({ from, to: redirect || mail.to, subject: redirect ? `[TEST → ${mail.to}] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, replyTo: redirect ? undefined : (mail.replyTo ?? undefined) });
       status = "sent";
     } else {
       console.info(`\n[email:dev] → ${mail.to}\n  Sujet : ${mail.subject}\n${mail.text.split("\n").map((l) => "  " + l).join("\n")}\n`);

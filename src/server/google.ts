@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { appointments, businesses, googleCalendarConnections, members } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";
 import { businessHas } from "@/server/plan";
+import { isStaging } from "@/lib/staging";
 
 /**
  * Google : connexion (« Continuer avec Google ») et synchronisation Google Agenda.
@@ -104,6 +105,7 @@ const api = (token: string, path: string, init: RequestInit = {}) =>
  * L'événement ne contient que le nom du client et la prestation (pas de notes ni de dossier).
  */
 export async function syncAppointmentToGoogle(appointmentId: string) {
+  if (isStaging()) return; // version de test : jamais dans les vrais agendas
   try {
     const [row] = await db
       .select({ a: appointments, bizName: businesses.name, tz: businesses.timezone })
@@ -142,6 +144,7 @@ export async function syncAppointmentToGoogle(appointmentId: string) {
 
 /** À la connexion : envoie les RDV à venir du praticien dans son Google Agenda. */
 export async function pushUpcomingToGoogle(userId: string) {
+  if (isStaging()) return;
   const mine = await db.select({ id: members.id }).from(members).where(eq(members.userId, userId));
   if (!mine.length) return;
   const upcoming = await db

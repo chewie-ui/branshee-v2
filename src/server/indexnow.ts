@@ -1,4 +1,5 @@
 import "server-only";
+import { isStaging } from "@/lib/staging";
 
 /**
  * IndexNow (Bing, Yandex… — pas Google) : signale une URL nouvelle ou modifiée. Silencieux et non bloquant.
@@ -7,6 +8,7 @@ import "server-only";
 const KEY = () => process.env.INDEXNOW_KEY || "b7f3a91c4e2d84605fa1c9d3e8b26074";
 
 export async function indexNow(paths: string[]) {
+  if (isStaging()) return;
   if (process.env.NODE_ENV !== "production") return;
   const base = (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
   const host = new URL(base).host;

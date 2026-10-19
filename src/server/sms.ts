@@ -5,6 +5,7 @@ import { adminMessages, processedPayments, smsWallets, subscriptions } from "@/d
 import { hiddenFeatureOn } from "@/server/features";
 import { LIMITS, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
+import { isStaging } from "@/lib/staging";
 
 /**
  * SMS (Spryng) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
@@ -24,8 +25,8 @@ export function normalizeMsisdn(phone: string, defaultCc = process.env.SPRYNG_DE
   return p;
 }
 
-export const smsConfigured = () => !!process.env.SPRYNG_API_TOKEN;
-export const whatsappConfigured = () => !!process.env.WHATSAPP_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID;
+export const smsConfigured = () => !!process.env.SPRYNG_API_TOKEN && !isStaging();
+export const whatsappConfigured = () => !!process.env.WHATSAPP_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID && !isStaging();
 
 /** Interrupteur global (super-admin) : éteint tant qu'il n'a pas été allumé, comme dans l'ancien Branshee. */
 export async function smsFeatureOn() {
