@@ -74,7 +74,7 @@ set -a; . "$ENV_FILE"; set +a
 grep -q '^STAGING=1' "$ENV_FILE" || { echo "STAGING=1 absent de ${ENV_FILE} : refus de continuer (sécurité)."; exit 1; }
 
 step "Dépendances, base de données, construction"
-npm ci --no-audit --no-fund
+npm ci --include=dev --no-audit --no-fund
 npm run db:migrate
 npm run build
 
