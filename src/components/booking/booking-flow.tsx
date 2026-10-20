@@ -20,7 +20,8 @@ import { intlLocale } from "@/i18n";
 import type { Locale } from "@/i18n/config";
 
 type Step = "visit" | "service" | "member" | "time" | "session" | "details";
-type Props = { data: PublicBusiness; today: string; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
+export type BookingResume = { serviceId: string; memberId: string | null; day: string | null; time: string | null; visit: "new" | "existing" | null; intake: { questionId: string; optionId: string }[] };
+type Props = { data: PublicBusiness; today: string; resume?: BookingResume | null; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
 
 /** Formats de date dans la langue de la page. */
 function fmts(locale: Locale) {
@@ -47,7 +48,11 @@ const sessionParts = (iso: string, timeZone: string) => {
   return { day, time };
 };
 
-export function BookingFlow({ data, today, viewer = null }: Props) {
+export function BookingFlow({ data, today, resume: resumeProp = null, viewer = null }: Props) {
+  // Reprise après connexion : seulement si la prestation existe toujours.
+  const resumeSvc = resumeProp ? data.services.find((s) => s.id === resumeProp.serviceId) : null;
+  const resume = resumeSvc ? resumeProp : null;
+  const resumeAt = resume && resumeSvc?.kind !== "group" && resume.day && resume.time && resume.day >= today;
   const router = useRouter();
   const { locale, t, tr } = useI18n();
   // Calendrier intégré sur le site du pro : la connexion s'ouvre dans un nouvel onglet (pas dans l'iframe).
@@ -56,12 +61,12 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
   const at = (day: string, time: string) => t("common.at", { day: cap(LONG.format(utc(day))), time });
   const { categories, team, questions, settings } = data;
   const fv = settings?.firstVisitQuestion;
-  const [visit, setVisit] = useState<"new" | "existing" | null>(null);
-  const [step, setStep] = useState<Step>(fv?.enabled ? "visit" : "service");
+  const [visit, setVisit] = useState<"new" | "existing" | null>(resume?.visit ?? null);
+  const [step, setStep] = useState<Step>(resume ? (resumeSvc?.kind === "group" ? "session" : resumeAt ? "details" : "time") : fv?.enabled ? "visit" : "service");
   // Prestations proposées selon la réponse à « première visite ? ».
   const byAudience = useMemo(() => (visit ? data.services.filter((s) => s.audience === "all" || s.audience === visit) : data.services), [data.services, visit]);
   // Questionnaire d'orientation : réponses dans l'ordre où elles ont été données (pour pouvoir revenir en arrière).
-  const [intakeOrder, setIntakeOrder] = useState<{ questionId: string; optionId: string }[]>([]);
+  const [intakeOrder, setIntakeOrder] = useState<{ questionId: string; optionId: string }[]>(resume?.intake ?? []);
   const intakeAnswers = useMemo(() => Object.fromEntries(intakeOrder.map((a) => [a.questionId, a.optionId])), [intakeOrder]);
   const services = useMemo(() => {
     const answered = data.intake.filter((q) => intakeAnswers[q.id]);
@@ -69,12 +74,12 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
   }, [byAudience, data.intake, intakeAnswers]);
   // Prochaine question utile : non répondue, et dont la réponse change encore les prestations proposées.
   const nextQuestion = data.intake.find((q) => !intakeAnswers[q.id] && questionMatters(q, services.map((s) => s.id))) ?? null;
-  const [serviceId, setServiceId] = useState<string | null>(null);
-  const [memberId, setMemberId] = useState<string | null>(null);
-  const [weekStart, setWeekStart] = useState(today);
+  const [serviceId, setServiceId] = useState<string | null>(resume?.serviceId ?? null);
+  const [memberId, setMemberId] = useState<string | null>(resume?.memberId ?? null);
+  const [weekStart, setWeekStart] = useState(resumeAt ? resume!.day! : today);
   const [days, setDays] = useState<PublicDay[] | null>(null);
-  const [day, setDay] = useState<string | null>(null);
-  const [time, setTime] = useState<string | null>(null);
+  const [day, setDay] = useState<string | null>(resumeAt ? resume!.day : null);
+  const [time, setTime] = useState<string | null>(resumeAt ? resume!.time : null);
   const [loadingSlots, startSlots] = useTransition();
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -259,6 +264,20 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
         setStep("time");
       }
     });
+  }
+
+  /** Adresse de retour après connexion : la page de réservation, avec les choix déjà faits. */
+  function resumePath() {
+    const p = new URLSearchParams({ reserver: "1" });
+    if (serviceId) p.set("s", serviceId);
+    if (memberId) p.set("m", memberId);
+    if (day && time) {
+      p.set("d", day);
+      p.set("h", time);
+    }
+    if (visit) p.set("v", visit);
+    for (const a of intakeOrder) p.append("q", `${a.questionId}.${a.optionId}`);
+    return `/${data.business.slug}?${p.toString()}`;
   }
 
   const summary = (
@@ -593,7 +612,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
           ) : (
             <p className="text-sm text-muted">
               {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[0]}
-              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} {...(embedded ? { target: "_blank", rel: "noopener" } : {})} className="font-medium text-accent hover:text-accent-hover">{t("booking.login")}</a>
+              <a href={`/connexion?suite=${encodeURIComponent(resumePath())}`} {...(embedded ? { target: "_blank", rel: "noopener" } : {})} className="font-medium text-accent hover:text-accent-hover">{t("booking.login")}</a>
               {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[1]}
             </p>
           )}

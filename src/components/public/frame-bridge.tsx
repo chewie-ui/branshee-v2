@@ -10,17 +10,44 @@ import { useEffect } from "react";
 export function EmbedResize() {
   useEffect(() => {
     if (window.self === window.top) return;
+    // Hauteur du contenu réel (bas du dernier bloc), pas celle du document : la page a une hauteur minimale
+    // « plein écran » qui suit celle de l'iframe, que le site parent agrandit à chaque message → l'iframe
+    // grandissait sans fin (jusqu'à 6000 px).
     let last = 0;
+    const rootEl = () => document.querySelector<HTMLElement>("[data-embed-root]") ?? document.getElementById("bp-root") ?? document.body;
     const post = () => {
-      const h = Math.ceil(document.documentElement.scrollHeight);
+      const root = rootEl();
+      const pad = parseFloat(getComputedStyle(root).paddingBottom) || 0;
+      const bottoms = [...root.children].map((c) => c.getBoundingClientRect().bottom + window.scrollY);
+      const h = Math.ceil(Math.max(0, ...bottoms) + pad);
       if (Math.abs(h - last) < 4) return;
       last = h;
       window.parent.postMessage({ type: "branshee-resize", height: h }, "*");
     };
+    // Chaque bloc de la page est observé (le corps, lui, garde sa hauteur « plein écran » et ne bougerait pas).
     const ro = new ResizeObserver(post);
-    ro.observe(document.body);
+    const watch = () => {
+      ro.disconnect();
+      for (const c of rootEl().children) ro.observe(c);
+    };
+    const mo = new MutationObserver(() => {
+      watch();
+      post();
+    });
+    mo.observe(document.body, { childList: true, subtree: false });
+    mo.observe(rootEl(), { childList: true });
+    watch();
     post();
-    return () => ro.disconnect();
+    // Échap dans la fenêtre de réservation (mode popup / bulle) : le script du site la ferme.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") window.parent.postMessage({ type: "branshee-close" }, "*");
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
   return null;
 }

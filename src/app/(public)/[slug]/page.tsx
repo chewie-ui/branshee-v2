@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Clock, Facebook, Globe, Instagram, Languages, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Video, Youtube } from "lucide-react";
 import { format } from "date-fns";
-import { BookingFlow } from "@/components/booking/booking-flow";
+import { BookingFlow, type BookingResume } from "@/components/booking/booking-flow";
 import { EmbedResize, ThemePreview } from "@/components/public/frame-bridge";
 import { CopyButton } from "@/components/public/copy-button";
 import { Gallery } from "@/components/public/gallery";
@@ -35,7 +35,25 @@ import { LanguageSwitcher } from "@/components/public/language-switcher";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type Search = Promise<{ sections?: string; apercu?: string; reserver?: string; lang?: string }>;
+type Search = Promise<{ sections?: string; apercu?: string; reserver?: string; lang?: string; s?: string; m?: string; d?: string; h?: string; v?: string; q?: string | string[] }>;
+
+const UUID = /^[0-9a-f-]{36}$/i;
+/** Réservation reprise après connexion / inscription : prestation, praticien, créneau et réponses déjà choisis. */
+function resumeFrom(sp: Awaited<Search>): BookingResume | null {
+  if (!sp.s || !UUID.test(sp.s)) return null;
+  const q = (Array.isArray(sp.q) ? sp.q : sp.q ? [sp.q] : []).flatMap((x) => {
+    const [questionId, optionId] = x.split(".");
+    return questionId && optionId && /^[\w-]{1,64}$/.test(questionId) && /^[\w-]{1,64}$/.test(optionId) ? [{ questionId, optionId }] : [];
+  });
+  return {
+    serviceId: sp.s,
+    memberId: sp.m && UUID.test(sp.m) ? sp.m : null,
+    day: sp.d && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) ? sp.d : null,
+    time: sp.h && /^\d{2}:\d{2}$/.test(sp.h) ? sp.h : null,
+    visit: sp.v === "new" || sp.v === "existing" ? sp.v : null,
+    intake: q.slice(0, 20),
+  };
+}
 
 export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Search }): Promise<Metadata> {
   const data = await getPublicBusiness((await params).slug);
@@ -150,7 +168,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
       <main className={cn("mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
         <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label={t("page.bookingLabel")}>
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
-          <BookingFlow data={data} today={today} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
+          <BookingFlow data={data} today={today} resume={resumeFrom(sp)} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
         </section>
 
         {aside.length ? <aside className="space-y-4 lg:group-data-[layout=split]:order-first">{aside}</aside> : null}

@@ -63,7 +63,7 @@
          reset agressif…). On repart de zéro plutôt que de lutter. */
       ".bshe-btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;",
       "cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;line-height:1;",
-      "padding:13px 22px;border-radius:10px;color:#fff;text-align:center;",
+      "padding:13px 22px!important;border-radius:10px!important;color:#fff;text-align:center;text-transform:none!important;letter-spacing:normal!important;font-size:15px!important;",
       "transition:filter .15s ease,transform .15s ease}",
       ".bshe-btn:hover{filter:brightness(1.08)}",
       ".bshe-btn:active{transform:translateY(1px)}",
@@ -71,7 +71,7 @@
       ".bshe-btn svg{flex:none}",
 
       /* Bulle flottante */
-      ".bshe-bubble{position:fixed;bottom:20px;z-index:2147483000;box-shadow:0 6px 24px rgba(0,0,0,.22);padding:14px 20px;border-radius:100px}",
+      ".bshe-bubble{position:fixed;bottom:20px;z-index:2147483000;box-shadow:0 6px 24px rgba(0,0,0,.22);padding:14px 20px!important;border-radius:100px!important}",
       ".bshe-bubble--right{right:20px}",
       ".bshe-bubble--left{left:20px}",
 
@@ -154,6 +154,11 @@
     return close;
   }
 
+  // Échap pressé alors que le focus est dans la page de réservation (iframe) : elle nous prévient.
+  window.addEventListener("message", function (e) {
+    if (frame && e.source === frame.contentWindow && e.data && e.data.type === "branshee-close") fermer();
+  });
+
   function surEchap(e) {
     if (e.key === "Escape" || e.key === "Esc") fermer();
   }
@@ -189,7 +194,9 @@
   var btn = document.createElement("button");
   btn.type = "button";
   btn.className = "bshe-btn" + (mode === "bubble" ? " bshe-bubble bshe-bubble--" + position : "");
-  btn.style.background = couleur;
+  // `!important` : certains thèmes (WordPress…) forcent `button{background:…!important}`.
+  btn.style.setProperty("background", couleur, "important");
+  btn.style.setProperty("color", "#fff", "important");
   btn.innerHTML = ICONE + "<span></span>";
   // Le libellé passe par textContent : il vient d'un champ libre côté admin,
   // et rien ne justifie d'y interpréter du HTML sur le site d'un client.

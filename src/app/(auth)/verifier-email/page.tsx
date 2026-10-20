@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { VerifyEmailForm } from "@/components/auth/verify-email-form";
@@ -20,6 +21,12 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
       <Card className="mt-6 p-6">
         <VerifyEmailForm next={next} />
       </Card>
+      {/* Inscription au milieu d'une réservation : le code peut attendre, la réservation non. */}
+      {next !== "/espace-client" && !next.startsWith("/app") ? (
+        <p className="mt-4 text-center text-sm text-muted">
+          <Link href={next} className="font-medium text-accent hover:text-accent-hover">Plus tard — revenir à ma réservation</Link>
+        </p>
+      ) : null}
     </>
   );
 }

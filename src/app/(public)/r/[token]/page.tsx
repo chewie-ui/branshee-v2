@@ -1,3 +1,4 @@
+import { EmbedResize } from "@/components/public/frame-bridge";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -58,7 +59,8 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
 
   return (
     <I18nProvider locale={locale}>
-    <div lang={locale} className="flex min-h-dvh flex-col items-center px-4 py-10">
+    <div lang={locale} data-embed-root className="flex min-h-dvh flex-col items-center px-4 py-10">
+      <EmbedResize />
       <main className="w-full max-w-md">
         <div className="mb-3 flex justify-end"><LanguageSwitcher /></div>
         <div className="rounded-xl border border-border bg-surface p-6">
