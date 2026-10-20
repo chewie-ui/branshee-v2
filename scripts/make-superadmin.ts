@@ -16,6 +16,9 @@ const remove = process.argv.includes("--remove");
 
 const client = postgres(url, { max: 1 });
 const db = drizzle(client, { schema: s, casing: "snake_case" });
-const rows = await db.update(s.users).set({ isSuperadmin: !remove }).where(sql`lower(${s.users.email}) = ${email}`).returning({ email: s.users.email });
-console.log(rows.length ? `${rows[0]!.email} : super-admin ${remove ? "retiré" : "activé"}.` : `Aucun compte avec l'email ${email}. Inscrivez-vous d'abord sur l'app.`);
-await client.end();
+// Pas d'`await` au premier niveau : tsx compile ce script en CommonJS.
+(async () => {
+  const rows = await db.update(s.users).set({ isSuperadmin: !remove }).where(sql`lower(${s.users.email}) = ${email}`).returning({ email: s.users.email });
+  console.log(rows.length ? `${rows[0]!.email} : super-admin ${remove ? "retiré" : "activé"}.` : `Aucun compte avec l'email ${email}. Inscrivez-vous d'abord sur l'app.`);
+  await client.end();
+})();
