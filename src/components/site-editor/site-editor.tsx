@@ -205,7 +205,7 @@ export function SiteEditor({ initial, published: initialPublished, publicUrl, vi
         </Button>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <div className="rounded-xl border border-border bg-surface">
           <div className="flex border-b border-border" role="tablist" aria-label="Éditeur du site">
             {TABS.map((t) => (

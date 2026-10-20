@@ -59,7 +59,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Déjà sur Branshee à {ville.nom}</h2>
             {pros.length ? (
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {pros.map((b) => (
                   <li key={b.id}>
                     <Link href={`/${b.slug}`} className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 hover:border-border-strong">

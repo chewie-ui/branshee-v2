@@ -9,7 +9,7 @@ export default function ContactPage() {
   const email = process.env.SUPPORT_EMAIL || "support@branshee.com";
   const whatsapp = (process.env.SUPPORT_WHATSAPP || "32477443988").replace(/\D/g, "");
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.3fr]">
+    <div className="mx-auto grid grid-cols-1 max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.3fr]">
       <div>
         <h1 className="text-4xl font-semibold tracking-tight">Contactez-nous</h1>
         <p className="mt-4 max-w-prose text-lg leading-relaxed text-muted">Une question avant de vous lancer, une idée, un souci ? Un humain de l&apos;équipe vous répond, souvent dans la journée.</p>

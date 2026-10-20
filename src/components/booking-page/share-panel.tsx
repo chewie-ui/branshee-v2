@@ -186,7 +186,7 @@ export function EmbedBuilder({ origin, slug, accent, initial }: { origin: string
             </div>
             <details className="rounded-lg border border-border p-3 text-sm">
               <summary className="cursor-pointer font-medium">Apparence et dimensions</summary>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Titre affiché au-dessus du calendrier" htmlFor="emb-title" className="sm:col-span-2">
                   <Input id="emb-title" value={look.title} onChange={(e) => { setLook({ ...look, title: e.target.value }); setStatus(null); }} maxLength={80} placeholder="Prenez rendez-vous en ligne" />
                 </Field>

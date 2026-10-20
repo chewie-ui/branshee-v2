@@ -71,7 +71,7 @@ export function BusinessInfoForm({ id, initial }: { id: string; initial: { name:
   const { status, pending, run } = useAction();
   return (
     <form
-      className="grid gap-4 p-5 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -192,7 +192,7 @@ export function PromoForm() {
   return (
     <form
       key={key}
-      className="grid gap-4 p-5 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -258,7 +258,7 @@ export function CampaignForm({ initial }: { initial: { isActive: boolean; endsAt
   const { status, pending, run } = useAction();
   return (
     <form
-      className="grid gap-4 p-5 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -291,7 +291,7 @@ export function AccessLinkForm() {
   return (
     <form
       key={key}
-      className="grid gap-4 p-5 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);

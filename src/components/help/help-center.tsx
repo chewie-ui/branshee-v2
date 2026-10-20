@@ -55,7 +55,7 @@ export function HelpCenter({ sections }: { sections: Section[] }) {
       {tours.length ? (
         <Card id="visites" className="scroll-mt-6">
           <CardHeader title="Visites guidées" description="On vous montre exactement où cliquer, en direct sur la page." />
-          <div className="grid gap-3 p-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
             {tours.map((t) => (
               <button key={t.key} type="button" onClick={() => startTour(t.key)} className="group flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-accent hover:bg-accent-soft/40">
                 <span className="text-2xl leading-none" aria-hidden="true">{t.icon}</span>
@@ -74,7 +74,7 @@ export function HelpCenter({ sections }: { sections: Section[] }) {
         <Card key={s.id} id={`s-${s.id}`} className="scroll-mt-6">
           <CardHeader title={s.title} />
           {s.videos.length ? (
-            <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
               {s.videos.map((v) => {
                 const yt = v.url ? youtubeId(v.url) : null;
                 const Inner = (

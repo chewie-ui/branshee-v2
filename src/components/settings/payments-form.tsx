@@ -102,7 +102,7 @@ export function PaymentsForm({ p }: { p: P }) {
               <span className="font-medium">Virement bancaire</span>
             </label>
             {bt ? (
-              <div className="grid gap-4 pl-7 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 pl-7 sm:grid-cols-2">
                 <Field label="IBAN" htmlFor="iban" error={err.iban}><Input id="iban" name="iban" defaultValue={p.accepted.bankTransfer.iban} placeholder="BE68 5390 0754 7034" /></Field>
                 <Field label="BIC" htmlFor="bic" error={err.bic}><Input id="bic" name="bic" defaultValue={p.accepted.bankTransfer.bic} /></Field>
                 <Field label="Banque" htmlFor="bankName"><Input id="bankName" name="bankName" defaultValue={p.accepted.bankTransfer.bankName} /></Field>
@@ -128,7 +128,7 @@ export function PaymentsForm({ p }: { p: P }) {
               <span><span className="font-medium">QR code de paiement</span><span className="block text-muted">Payconiq, Wero… : une photo de votre QR code.</span></span>
             </label>
             {qr ? (
-              <div className="grid gap-4 pl-7 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 pl-7 sm:grid-cols-2">
                 <div className="space-y-2">
                   {p.accepted.qrCode.imageUrl && !removeQr ? (
                     <div className="flex items-center gap-3">

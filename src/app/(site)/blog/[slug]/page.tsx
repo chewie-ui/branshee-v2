@@ -89,7 +89,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
       {related.length ? (
         <aside className="mt-14 border-t border-border pt-8">
           <p className="text-lg font-semibold">À lire aussi</p>
-          <ul className="mt-4 grid gap-4 sm:grid-cols-3">
+          <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {related.map((r) => (
               <li key={r.slug}>
                 <Link href={`/blog/${r.slug}`} className="block rounded-xl border border-border bg-surface p-4 hover:border-border-strong">

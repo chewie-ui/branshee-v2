@@ -11,7 +11,7 @@ const COLS = [
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div className="mx-auto grid grid-cols-1 max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Brand />
           <p className="mt-3 max-w-xs text-sm text-muted">La prise de rendez-vous en ligne pour les indépendants et les petites équipes. Sans commission, conçue en Belgique.</p>

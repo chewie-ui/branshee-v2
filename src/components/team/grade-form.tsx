@@ -33,7 +33,7 @@ export function GradeForm({ id, name, permissions, isBuiltIn }: { id: string | n
         </div>
         <div className="divide-y divide-border">
           {Object.entries(PERMISSIONS).map(([domain, def]) => (
-            <fieldset key={domain} className="grid gap-3 px-5 py-4 sm:grid-cols-[200px_1fr]">
+            <fieldset key={domain} className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-[200px_1fr]">
               <legend className="contents">
                 <span className="text-sm font-semibold">{def.label}</span>
               </legend>

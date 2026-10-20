@@ -20,7 +20,7 @@ export default async function MySitePage() {
         <UpgradeNotice feature="Mon site" required="pro_plus">Créez un site vitrine complet en quelques minutes, à partir de modèles prêts à l&apos;emploi, publié à l&apos;adresse de votre page.</UpgradeNotice>
         <Card className="mt-6 p-6">
           <LayoutTemplate className="size-8 text-accent" aria-hidden="true" />
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {["Modèles rédigés et prêts à publier", "Sections : accueil, prestations, réservation intégrée, à propos, galerie, avis, FAQ, contact", "Couleurs, polices, logo et réseaux sociaux", "Formulaire de contact et référencement Google", "Nom de domaine personnalisé", "Compteur de visites"].map((f) => (
               <li key={f} className="flex gap-2 text-sm"><Check className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />{f}</li>
             ))}

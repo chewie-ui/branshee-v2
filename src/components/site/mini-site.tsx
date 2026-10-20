@@ -154,7 +154,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
               const values = arr<{ title: string; desc: string }>(d.values).filter((v) => v.title);
               return (
                 <section key={sec.id} id={sec.id} className="scroll-mt-16 py-20">
-                  <div className={`mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 ${img ? "lg:grid-cols-2" : ""}`}>
+                  <div className={`mx-auto grid grid-cols-1 max-w-6xl items-center gap-10 px-4 sm:px-6 ${img ? "lg:grid-cols-2" : ""}`}>
                     <div className={img ? "" : "max-w-3xl"}>
                       {s(d.subtitle) ? <p className="text-sm font-semibold tracking-wide text-[var(--s-muted)] uppercase">{s(d.subtitle)}</p> : null}
                       <div className="mt-2"><H2>{s(d.title) || "À propos"}</H2></div>
@@ -166,7 +166,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                     ) : null}
                   </div>
                   {values.length ? (
-                    <ul className="mx-auto mt-12 grid max-w-6xl gap-4 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
+                    <ul className="mx-auto mt-12 grid grid-cols-1 max-w-6xl gap-4 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
                       {values.map((v) => (
                         <li key={v.title} className="rounded-[var(--s-radius-sm)] border border-[var(--s-border)] bg-[var(--s-surface)] p-5">
                           <span className="flex size-9 items-center justify-center rounded-full bg-[var(--s-primary)] text-[var(--s-on-primary)]"><Check className="size-4" aria-hidden="true" /></span>
@@ -187,7 +187,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                 <section key={sec.id} id={sec.id} className="scroll-mt-16 py-20">
                   <div className="mx-auto max-w-6xl px-4 sm:px-6">
                     {s(d.title) ? <div className="mb-10"><H2>{s(d.title)}</H2></div> : null}
-                    <ul className={`grid gap-4 ${cols}`}>
+                    <ul className={`grid grid-cols-1 gap-4 ${cols}`}>
                       {imgs.map((i) => (
                         <li key={i.url}>
                           <figure>
@@ -279,7 +279,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
             case "contact":
               return (
                 <section key={sec.id} id={sec.id} className="scroll-mt-16 bg-[var(--s-surface)] py-20">
-                  <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
+                  <div className="mx-auto grid grid-cols-1 max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
                     <div>
                       <H2>{s(d.title) || "Nous trouver"}</H2>
                       <ul className="mt-6 space-y-4">

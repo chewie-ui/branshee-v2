@@ -37,7 +37,7 @@ export default async function DirectoryPage({ searchParams }: { searchParams: SP
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Trouver un professionnel</h1>
       <p className="mt-2 text-muted">Réservez en ligne, 24 h/24, sans appeler.</p>
 
-      <form className="mt-6 grid gap-3 rounded-2xl border border-border bg-surface p-3 sm:grid-cols-[1fr_1fr_auto]" role="search" action="/annuaire">
+      <form className="mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-border bg-surface p-3 sm:grid-cols-[1fr_1fr_auto]" role="search" action="/annuaire">
         <label className="relative">
           <span className="sr-only">Métier ou nom</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
@@ -71,7 +71,7 @@ export default async function DirectoryPage({ searchParams }: { searchParams: SP
           <p className="mt-1 text-sm text-muted">Essayez une autre ville ou un autre métier. Vous êtes professionnel ? <Link href="/inscription" className="font-medium text-accent hover:text-accent-hover">Créez votre page gratuitement</Link>.</p>
         </div>
       ) : (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {res.rows.map((b) => (
             <li key={b.id}>
               <Link href={`/${b.slug}`} className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong">

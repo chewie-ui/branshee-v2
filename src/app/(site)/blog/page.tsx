@@ -38,7 +38,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
       {res.rows.length === 0 ? (
         <p className="mt-10 rounded-2xl border border-border bg-surface p-10 text-center text-muted">Aucun article pour le moment. Revenez bientôt !</p>
       ) : (
-        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {res.rows.map((a) => (
             <li key={a.id}>
               <Link href={`/blog/${a.slug}`} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-border-strong">

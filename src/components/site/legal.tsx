@@ -6,7 +6,7 @@ export function LegalPage({ title, updated, sections }: { title: string; updated
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
       <h1 className="text-4xl font-semibold tracking-tight">{title}</h1>
       <p className="mt-3 text-sm text-muted">Dernière mise à jour : {updated} — Branshee, Belgique</p>
-      <div className="mt-10 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Sommaire" className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-sm font-semibold">Sommaire</p>
           <ol className="mt-3 space-y-2 text-sm">

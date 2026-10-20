@@ -176,7 +176,7 @@ export function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
   return (
     <Card>
       <CardHeader title="Mot de passe" description={hasPassword ? "Changer de mot de passe déconnecte vos autres appareils." : "Vous vous connectez avec Google : vous pouvez aussi définir un mot de passe."} />
-      <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => changePassword({ current, next }), (r) => { if (r.ok) { setCurrent(""); setNext(""); } }); }}>
+      <form className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => changePassword({ current, next }), (r) => { if (r.ok) { setCurrent(""); setNext(""); } }); }}>
         {hasPassword ? (
           <Field label="Mot de passe actuel" htmlFor="pw-cur">
             <PasswordInput id="pw-cur" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />

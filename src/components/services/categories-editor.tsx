@@ -83,7 +83,7 @@ export function CategoriesEditor({ categories, style }: { categories: Cat[]; sty
 
       <Card>
         <CardHeader title="Affichage sur la page de réservation" />
-        <div className="grid gap-3 p-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
           {([["pills", "Pastilles", "Un filtre par catégorie au-dessus de la liste."], ["accordion", "Accordéon", "Chaque catégorie se déplie."], ["grid", "Liste groupée", "Toutes les prestations, groupées par catégorie."]] as const).map(([v, t, d]) => (
             <button key={v} type="button" aria-pressed={current === v} disabled={pending} onClick={() => { setCurrent(v); start(async () => void (await setCategoryStyle(v))); }} className={cn("rounded-xl border p-4 text-left", current === v ? "border-accent ring-1 ring-accent" : "border-border hover:border-border-strong")}>
               <span className="block text-sm font-semibold">{t}</span>

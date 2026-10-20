@@ -115,7 +115,12 @@ const date = (v: any): Date | null => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 const DEFAULT_AVATAR = /no-user\.webp$/;
-const image = (v: any) => (text(v) && !DEFAULT_AVATAR.test(v) ? text(v) : null);
+const image = (v: any) => {
+  const t = text(v);
+  if (!t || DEFAULT_AVATAR.test(t)) return null;
+  // L'ancien Branshee rangeait certaines photos (prestations) sous leur seul nom de fichier, affiché depuis /uploads/profiles/.
+  return /^[\w.-]+\.(jpe?g|png|webp|gif|svg|heic|avif)$/i.test(t) ? `/uploads/profiles/${t}` : t;
+};
 /** Carte Google Maps : l'ancien champ contenait l'URL ou tout le code <iframe>. On ne garde qu'une URL d'intégration Google. */
 const mapSrc = (v: string | null): string | null => {
   if (!v) return null;

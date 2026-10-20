@@ -212,7 +212,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
             Toute l&apos;équipe
           </label>
           {!everyone ? (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {team.map((m) => (
                 <label key={m.id} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-sm hover:bg-surface-muted">
                   <input type="checkbox" name="memberIds" value={m.id} defaultChecked={initial.memberIds.includes(m.id)} className="size-4 accent-[var(--accent)]" />

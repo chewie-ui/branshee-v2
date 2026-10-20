@@ -120,7 +120,7 @@ export default async function HomePage() {
     <>
       {/* Accroche */}
       <section className="overflow-hidden border-b border-border bg-surface">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_1fr]">
+        <div className="mx-auto grid grid-cols-1 max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_1fr]">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">
               <Sparkles className="size-4" aria-hidden="true" />
@@ -233,7 +233,7 @@ export default async function HomePage() {
         <SectionTitle pill="Fonctionnalités" title="La prise de rendez-vous en ligne qui travaille pour vous." />
         <div className="space-y-6">
           {FEATURES.map((f) => (
-            <div key={f.tag} className="grid gap-6 rounded-2xl border border-border bg-surface p-6 sm:p-8 lg:grid-cols-[1fr_1fr] lg:gap-10">
+            <div key={f.tag} className="grid grid-cols-1 gap-6 rounded-2xl border border-border bg-surface p-6 sm:p-8 lg:grid-cols-[1fr_1fr] lg:gap-10">
               <div>
                 <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent"><f.icon className="size-4" aria-hidden="true" />{f.tag}</p>
                 <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance">{f.title}</h3>

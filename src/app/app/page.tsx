@@ -120,7 +120,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={steps.length} aria-label="Progression">
             <div className="h-full rounded-full bg-accent" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
           </div>
-          <ol className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ol className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {steps.map((s) => (
               <li key={s.title} className={cn("flex gap-3 rounded-xl border p-3", s.done ? "border-border bg-surface-muted/60" : "border-border")}>
                 <span className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border", s.done ? "border-success bg-success text-white" : "border-border-strong")} aria-hidden="true">
