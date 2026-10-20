@@ -490,7 +490,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
                     aria-label={`${LONG.format(utc(d.date))}, ${available ? t("booking.slotsCount", { n: d.slots.length }) : t("booking.full")}`}
                     className={cn(
                       "flex min-h-16 flex-col items-center justify-center rounded-lg border text-sm transition-colors disabled:cursor-not-allowed",
-                      selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))]" : "border-transparent bg-surface-muted text-muted",
+                      selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] text-[var(--day-text,var(--text))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))]" : "border-transparent bg-surface-muted text-muted",
                       loadingSlots && "animate-pulse",
                     )}
                   >

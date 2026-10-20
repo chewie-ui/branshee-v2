@@ -21,12 +21,19 @@ import {
 
 const Saved = ({ state }: { state: CustomerState }) => (state?.ok ? <span className="text-sm text-success" role="status">Enregistré.</span> : state?.error ? <span className="text-sm text-danger" role="alert">{state.error}</span> : null);
 
-export function ContactForm({ customerId, c }: { customerId: string; c: { firstName: string; lastName: string; email: string; phone: string } }) {
+export function ContactForm({ customerId, c, hasAccount = false }: { customerId: string; c: { firstName: string; lastName: string; email: string; phone: string }; hasAccount?: boolean }) {
   const [state, action, pending] = useActionState<CustomerState, FormData>(saveContact.bind(null, customerId), undefined);
   const err = state?.fieldErrors ?? {};
   return (
     <Card>
-      <CardHeader title="Coordonnées" description="L'email et le téléphone rattachent les futurs rendez-vous à cette fiche." />
+      <CardHeader
+        title="Coordonnées"
+        description={
+          hasAccount
+            ? "Ce patient a un compte Branshee : ces coordonnées ne concernent que votre fiche. Son compte, son email de connexion et ses autres rendez-vous ne changent pas."
+            : "L'email et le téléphone rattachent les futurs rendez-vous à cette fiche. Ils ne concernent que votre établissement."
+        }
+      />
       <form onSubmit={submitKeepingValues(action)} className="space-y-4 p-5" noValidate>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Prénom" htmlFor="c-first" error={err.firstName}><Input id="c-first" name="firstName" defaultValue={c.firstName} aria-invalid={!!err.firstName || undefined} /></Field>

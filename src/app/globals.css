@@ -109,3 +109,18 @@ body {
 .prose-article hr { border-color: var(--border); }
 .prose-article table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
 .prose-article th, .prose-article td { border: 1px solid var(--border); padding: 0.4em 0.6em; text-align: left; }
+
+/* Page de réservation personnalisée : les éléments natifs du navigateur (liste des langues, champs date…)
+   suivent le thème clair / sombre, et les options des listes restent lisibles quelles que soient les couleurs. */
+#bp-root {
+  color-scheme: var(--bp-scheme, light);
+}
+#bp-root option {
+  background-color: var(--surface);
+  color: var(--text);
+}
+#bp-root .text-accent,
+#bp-root .hover\:text-accent-hover:hover,
+#bp-root .hover\:text-accent:hover {
+  color: var(--accent-link, var(--accent));
+}

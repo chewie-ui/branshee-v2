@@ -160,7 +160,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           <div className="min-w-0 space-y-6">
             {canManage ? (
               <>
-                <ContactForm customerId={customer.id} c={{ firstName: customer.firstName ?? (customer.lastName ? "" : customer.fullName), lastName: customer.lastName ?? "", email: customer.email ?? "", phone: customer.phone ?? "" }} />
+                <ContactForm customerId={customer.id} hasAccount={!!customer.userId} c={{ firstName: customer.firstName ?? (customer.lastName ? "" : customer.fullName), lastName: customer.lastName ?? "", email: customer.email ?? "", phone: customer.phone ?? "" }} />
                 <AltContactsForm customerId={customer.id} c={{ altName: customer.altName ?? "", altEmail: customer.altEmail ?? "", altPhone: customer.altPhone ?? "" }} />
                 <CustomerActions customerId={customer.id} name={customer.fullName} blocked={!!customer.blockedAt} blockedReason={customer.blockedReason ?? ""} term={term} />
               </>

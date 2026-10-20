@@ -112,31 +112,69 @@ function isDark(color: string) {
   return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 128;
 }
 
+/** Contraste WCAG entre deux couleurs #rrggbb (1 à 21). */
+export function contrast(a: string, b: string) {
+  const lum = (c: string) => {
+    const n = parseInt(c.slice(1), 16);
+    const [r, g, bl] = [16, 8, 0].map((s) => {
+      const v = ((n >> s) & 255) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+  return (x! + 0.05) / (y! + 0.05);
+}
+
+/**
+ * Couleur de texte lisible sur un fond : celle choisie par le pro si le contraste suffit,
+ * sinon du noir ou du blanc (le plus lisible des deux). Un thème personnalisé ne doit jamais rendre la page illisible.
+ */
+function readable(fg: string, bg: string, min = 4.5) {
+  if (contrast(fg, bg) >= min) return fg;
+  return contrast("#111111", bg) >= contrast("#ffffff", bg) ? "#111111" : "#ffffff";
+}
+
+/** Texte secondaire : le plus proche possible du fond (discret) tout en restant lisible. */
+function muted(text: string, bg: string) {
+  for (let w = 0.68; w < 1; w += 0.04) {
+    const c = mix(text, bg, w);
+    if (contrast(c, bg) >= 4.5) return c;
+  }
+  return text;
+}
+
 const RADII = { none: ["0px", "0px", "0px", "0px"], sm: ["2px", "4px", "6px", "8px"], md: ["4px", "6px", "8px", "12px"], lg: ["8px", "12px", "16px", "20px"] } as const;
 const SHADOWS = { none: "none", subtle: "0 1px 2px rgb(0 0 0 / 0.05)", medium: "0 4px 12px rgb(0 0 0 / 0.08)", strong: "0 10px 30px rgb(0 0 0 / 0.14)" } as const;
 
 /** Variables CSS appliquées à la page publique (elles surchargent les jetons du design system). */
 export function themeVars(t: FullTheme): Record<string, string> {
   const dark = isDark(t.calBg);
-  const border = t.borderStyle === "none" ? "transparent" : mix(t.textColor, t.calBg, t.borderStyle === "subtle" ? 0.12 : t.borderStyle === "medium" ? 0.22 : 0.4);
+  const text = readable(t.textColor, t.calBg);
+  const accentText = readable(t.accentText, t.accentColor);
+  const selBg = t.daySelectedBg || t.accentColor;
+  const border = t.borderStyle === "none" ? "transparent" : mix(text, t.calBg, t.borderStyle === "subtle" ? 0.12 : t.borderStyle === "medium" ? 0.22 : 0.4);
   const r = RADII[t.radius];
   const family = t.customFontFamily && t.customFontUrl ? `"${t.customFontFamily}"` : `"${t.font}"`;
   return {
     "--background": t.pageBg,
     "--surface": t.calBg,
-    "--surface-muted": mix(t.textColor, t.calBg, dark ? 0.1 : 0.04),
+    "--surface-muted": mix(text, t.calBg, dark ? 0.1 : 0.04),
     "--border": border,
-    "--border-strong": t.borderStyle === "none" ? mix(t.textColor, t.calBg, 0.12) : mix(t.textColor, t.calBg, t.borderStyle === "strong" ? 0.5 : 0.2),
-    "--text": t.textColor,
-    "--text-muted": mix(t.textColor, t.calBg, 0.68),
+    "--border-strong": t.borderStyle === "none" ? mix(text, t.calBg, 0.12) : mix(text, t.calBg, t.borderStyle === "strong" ? 0.5 : 0.2),
+    "--text": text,
+    "--text-muted": muted(text, t.calBg),
     "--accent": t.accentColor,
     "--accent-hover": t.btnHoverBg || shade(t.accentColor, -0.12),
-    "--accent-foreground": t.accentText,
+    "--accent-foreground": accentText,
+    // Liens et textes en couleur d'accent : lisibles sur le fond des cartes, même avec un accent très clair ou très sombre.
+    "--accent-link": readable(t.accentColor, t.calBg),
     "--accent-soft": mix(t.accentColor, t.calBg, 0.1),
-    "--accent-soft-foreground": dark ? t.accentColor : shade(t.accentColor, -0.25),
+    "--accent-soft-foreground": readable(dark ? t.accentColor : shade(t.accentColor, -0.25), mix(t.accentColor, t.calBg, 0.1)),
     "--day-bg": t.dayBg,
-    "--day-selected-bg": t.daySelectedBg || t.accentColor,
-    "--day-selected-text": t.daySelectedText || t.accentText,
+    "--day-text": readable(text, t.dayBg),
+    "--day-selected-bg": selBg,
+    "--day-selected-text": readable(t.daySelectedText || t.accentText, selBg),
     "--day-hover-bg": t.dayHoverBg || mix(t.accentColor, t.dayBg, 0.08),
     "--day-available": t.dayAvailableColor,
     "--day-busy": t.dayBusyColor,
@@ -147,6 +185,8 @@ export function themeVars(t: FullTheme): Record<string, string> {
     "--radius-xl": r[3],
     "--card-shadow": SHADOWS[t.shadowStyle],
     "--font-sans": `${family}, ui-sans-serif, system-ui, sans-serif`,
+    // Listes déroulantes, cases et barres de défilement du navigateur dans le bon thème (clair / sombre).
+    "--bp-scheme": dark ? "dark" : "light",
   };
 }
 
