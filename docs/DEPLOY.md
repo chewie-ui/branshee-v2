@@ -82,3 +82,11 @@ Le serveur web doit ensuite accepter ce domaine et obtenir un certificat :
 - **Caddy** (le plus simple) : `on_demand_tls` avec une route `ask` qui vérifie le domaine, puis un bloc `https:// { reverse_proxy 127.0.0.1:3000 }`.
 - **Nginx + certbot** : ajouter le domaine au `server_name`, puis `certbot --nginx -d www.domaine-du-pro.be`.
 L'app reconnaît le domaine via l'en-tête `Host` (transmettre `proxy_set_header Host $host;`) et affiche le site à « / ».
+
+## SMS (Twilio)
+1. Compte Twilio payant (Upgrade), **recharge automatique** dans Admin › Billing (ex. +20 $ sous 10 $).
+2. Messaging › Settings › Geo permissions : autoriser la Belgique (et France / Pays-Bas si besoin).
+3. Dans `.env.production` : `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_SENDER=Branshee` (11 caractères max).
+4. Super-admin › Fonctionnalités : allumer « Notifications SMS / WhatsApp ».
+Les SMS inclus (Pro 10 / Pro+ 30 par mois) sont couverts par l'abonnement, les SMS en plus par le crédit prépayé du pro (0,30 €) :
+le solde Twilio ne baisse que pour des SMS déjà payés. Chaque rappel tient en un seul SMS (160 caractères, lien court /g/…).

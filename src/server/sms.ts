@@ -8,14 +8,14 @@ import { stripe } from "@/server/payments";
 import { isStaging } from "@/lib/staging";
 
 /**
- * SMS (Brevo par défaut, ou Twilio) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
+ * SMS (Twilio) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
  * 1) quota inclus du forfait (Pro 10 / Pro+ 30 par mois) ; 2) au-delà, solde prépayé si le pro
  * l'autorise (recharge automatique possible) ; 3) sinon repli email. Jamais d'impayé.
  * Le quota et le solde sont communs aux deux canaux ; seul le prix diffère.
  *
  * Fournisseur SMS (variables d'environnement) :
- *   Brevo  : BREVO_API_KEY                         (SMS_PROVIDER=brevo, par défaut)
- *   Twilio : TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN (SMS_PROVIDER=twilio)
+ *   Twilio : TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN (par défaut ; solde rechargé automatiquement côté Twilio)
+ *   Brevo  : BREVO_API_KEY avec SMS_PROVIDER=brevo  (solution de secours)
  *   SMS_SENDER : nom d'expéditeur affiché (11 caractères max, lettres et chiffres), « Branshee » par défaut.
  */
 export const SMS_PRICE_CENTS = 30;
@@ -30,7 +30,7 @@ export function normalizeMsisdn(phone: string, defaultCc = process.env.SMS_DEFAU
   return p;
 }
 
-const provider = () => (process.env.SMS_PROVIDER || (process.env.TWILIO_ACCOUNT_SID && !process.env.BREVO_API_KEY ? "twilio" : "brevo")).toLowerCase();
+const provider = () => (process.env.SMS_PROVIDER || "twilio").toLowerCase();
 const sender = () => (process.env.SMS_SENDER || "Branshee").replace(/[^A-Za-z0-9 ]/g, "").slice(0, 11) || "Branshee";
 
 export const smsConfigured = () =>
