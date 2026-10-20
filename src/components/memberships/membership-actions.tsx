@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -20,9 +21,23 @@ function useRun() {
 
 export function InvitationButtons({ memberId }: { memberId: string }) {
   const { pending, run, node } = useRun();
+  const router = useRouter();
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" loading={pending} onClick={() => run(() => acceptInvitation(memberId))}>Accepter</Button>
+      <Button
+        size="sm"
+        loading={pending}
+        onClick={() =>
+          run(async () => {
+            const r = await acceptInvitation(memberId);
+            // Invitation acceptée : on entre directement dans l'établissement.
+            if (r.ok) router.push("/app");
+            return r;
+          })
+        }
+      >
+        Accepter
+      </Button>
       <Button size="sm" variant="ghost" loading={pending} onClick={() => run(() => declineInvitation(memberId))}>Refuser</Button>
       {node}
     </div>

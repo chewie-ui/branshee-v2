@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businesses, grades, members, users } from "@/db/schema";
 import { rateLimit } from "@/server/auth/rate-limit";
-import { getSessionUser } from "@/server/auth/session";
+import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
 import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
@@ -35,6 +36,8 @@ export async function acceptInvitation(memberId: string): Promise<Result> {
   if (!updated.length) return { ok: false, error: "Invitation introuvable." };
   await db.insert(activityLogs).values({ businessId: updated[0]!.businessId, userId: u.id, actorName: u.fullName, action: "team.join", description: `${u.fullName} a rejoint l'équipe` });
   revalidatePath("/", "layout");
+  // L'établissement rejoint devient l'établissement actif (le site y emmène l'invité juste après).
+  (await cookies()).set(BUSINESS_COOKIE, updated[0]!.businessId, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   return { ok: true, message: "Bienvenue dans l'équipe !" };
 }
 
