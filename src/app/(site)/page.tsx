@@ -9,6 +9,11 @@ import { PricingTable } from "@/components/site/pricing";
 import { Section, SectionTitle } from "@/components/site/section";
 import { featureStatus } from "@/server/features";
 import { featuredBusinesses } from "@/server/site";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { customHostOf } from "@/lib/custom-host";
+import PublicBusinessPage from "@/app/(public)/[slug]/page";
+import { businessSlugForDomain } from "@/server/site-builder";
 
 export const metadata: Metadata = {
   title: { absolute: "Agenda en ligne gratuit et prise de rendez-vous 24 h/24 | Branshee" },
@@ -100,6 +105,13 @@ const FAQ = [
 ];
 
 export default async function HomePage() {
+  // Domaine personnalisé d'un pro (« Mon site ») : sa page s'affiche à la racine de son domaine.
+  const custom = customHostOf((await headers()).get("host"));
+  if (custom) {
+    const slug = await businessSlugForDomain(custom);
+    if (!slug) notFound();
+    return PublicBusinessPage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
+  }
   const gate = await featureStatus("home");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const featured = await featuredBusinesses(6);
