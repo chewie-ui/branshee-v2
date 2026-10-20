@@ -13,7 +13,7 @@ import { sendPush } from "@/server/push";
 import { businessHas, effectivePlan } from "@/server/plan";
 import { LIMITS } from "@/lib/plans";
 import { syncAppointmentToGoogle } from "@/server/google";
-import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, whatsappConfigured } from "@/server/sms";
+import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, smsText, whatsappConfigured } from "@/server/sms";
 
 /** « lundi 3 mars à 10:00 » dans la langue du client (sans majuscule imposée). */
 function dayAndTime(d: Date, tz: string, locale: Locale) {
@@ -101,11 +101,7 @@ async function toPhone(row: Loaded, kind: "reminder" | "confirmation") {
     if (r.sent) return true;
   }
   if (wantSms && (await smsFeatureOn())) {
-    const where = row.info.address ? `\nLieu : ${row.info.address}` : "";
-    const body =
-      kind === "reminder"
-        ? `Rappel : votre rendez-vous chez ${row.business.name} est ${date} à ${time}.${where}\nGérer : ${row.info.manageUrl}`
-        : `Rendez-vous confirmé chez ${row.business.name} : ${date} à ${time}.${where}\nGérer : ${row.info.manageUrl}`;
+    const body = smsText(kind, { business: row.business.name, date, time, address: row.info.address, link: `${appUrl()}/g/${row.a.manageToken.slice(0, 16)}` });
     const r = await chargeAndSend(owner, plan, st.smsAllowOverage, SMS_PRICE_CENTS, () => sendSms(phone, body));
     if (r.sent) return true;
   }

@@ -8,15 +8,20 @@ import { stripe } from "@/server/payments";
 import { isStaging } from "@/lib/staging";
 
 /**
- * SMS (Spryng) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
+ * SMS (Brevo par défaut, ou Twilio) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
  * 1) quota inclus du forfait (Pro 10 / Pro+ 30 par mois) ; 2) au-delà, solde prépayé si le pro
  * l'autorise (recharge automatique possible) ; 3) sinon repli email. Jamais d'impayé.
  * Le quota et le solde sont communs aux deux canaux ; seul le prix diffère.
+ *
+ * Fournisseur SMS (variables d'environnement) :
+ *   Brevo  : BREVO_API_KEY                         (SMS_PROVIDER=brevo, par défaut)
+ *   Twilio : TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN (SMS_PROVIDER=twilio)
+ *   SMS_SENDER : nom d'expéditeur affiché (11 caractères max, lettres et chiffres), « Branshee » par défaut.
  */
 export const SMS_PRICE_CENTS = 30;
 export const WHATSAPP_PRICE_CENTS = 5;
 
-export function normalizeMsisdn(phone: string, defaultCc = process.env.SPRYNG_DEFAULT_CC || "32") {
+export function normalizeMsisdn(phone: string, defaultCc = process.env.SMS_DEFAULT_CC || "32") {
   const p = String(phone || "").replace(/[^\d+]/g, "");
   if (!p) return "";
   if (p.startsWith("+")) return p.slice(1);
@@ -25,7 +30,11 @@ export function normalizeMsisdn(phone: string, defaultCc = process.env.SPRYNG_DE
   return p;
 }
 
-export const smsConfigured = () => !!process.env.SPRYNG_API_TOKEN && !isStaging();
+const provider = () => (process.env.SMS_PROVIDER || (process.env.TWILIO_ACCOUNT_SID && !process.env.BREVO_API_KEY ? "twilio" : "brevo")).toLowerCase();
+const sender = () => (process.env.SMS_SENDER || "Branshee").replace(/[^A-Za-z0-9 ]/g, "").slice(0, 11) || "Branshee";
+
+export const smsConfigured = () =>
+  !isStaging() && (provider() === "twilio" ? !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN : !!process.env.BREVO_API_KEY);
 export const whatsappConfigured = () => !!process.env.WHATSAPP_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID && !isStaging();
 
 /** Interrupteur global (super-admin) : éteint tant qu'il n'a pas été allumé, comme dans l'ancien Branshee. */
@@ -33,11 +42,40 @@ export async function smsFeatureOn() {
   return hiddenFeatureOn("sms_notifications");
 }
 
-async function post(url: string, headers: Record<string, string>, body: unknown) {
+/* ── Texte des SMS : un seul message (160 caractères, alphabet GSM) pour ne payer qu'un SMS ── */
+
+// Caractères de l'alphabet GSM 7 bits (au-delà, le SMS passe en Unicode : 70 caractères seulement).
+const GSM = new Set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà");
+/** Remplace les caractères hors alphabet GSM (ê, ç, ô, guillemets typographiques…) par leur équivalent simple. */
+export function toGsm(s: string) {
+  return [...s.replace(/[’‘]/g, "'").replace(/[“”«»]/g, '"').replace(/[–—]/g, "-").replace(/…/g, "...")]
+    .map((c) => (GSM.has(c) ? c : c.normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
+    .map((c) => (GSM.has(c) ? c : ""))
+    .join("");
+}
+
+/** Rappel / confirmation : l'adresse n'est ajoutée que si le SMS reste sous 160 caractères. */
+export function smsText(kind: "reminder" | "confirmation", v: { business: string; date: string; time: string; address: string | null; link: string }) {
+  const tail = `\nGérer : ${v.link}`;
+  const make = (b: string) => (kind === "reminder" ? `Rappel : RDV chez ${b} ${v.date} à ${v.time}.` : `RDV confirmé chez ${b} ${v.date} à ${v.time}.`);
+  // Nom trop long : raccourci au dernier mot entier qui tient.
+  let business = toGsm(v.business).trim();
+  while (business.includes(" ") && toGsm(make(business) + tail).length > 160) business = business.slice(0, business.lastIndexOf(" ")).replace(/[\s&,–-]+$/, "");
+  const head = make(business);
+  const withAddress = v.address ? toGsm(`${head}\n${v.address}${tail}`) : "";
+  return withAddress && withAddress.length <= 160 ? withAddress : toGsm(head + tail).slice(0, 160);
+}
+
+async function post(url: string, headers: Record<string, string>, body: unknown, form = false) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(url, { method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json", Accept: "application/json", ...headers }, body: JSON.stringify(body) });
+    const res = await fetch(url, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json", Accept: "application/json", ...headers },
+      body: form ? new URLSearchParams(body as Record<string, string>).toString() : JSON.stringify(body),
+    });
     if (!res.ok) {
       console.error("[sms] fournisseur :", res.status, (await res.text().catch(() => "")).slice(0, 300));
       return null;
@@ -58,8 +96,14 @@ export async function sendSms(to: string, body: string): Promise<string | null> 
     console.info(`[sms:dev] → ${recipient} : ${body}`);
     return null;
   }
-  const data = await post(process.env.SPRYNG_ENDPOINT || "https://api.spryngsms.com/v1/messages", { Authorization: `Bearer ${process.env.SPRYNG_API_TOKEN}` }, { encoding: "auto", body, originator: process.env.SPRYNG_ORIGINATOR || "Branshee", recipients: [recipient], route: "business" });
-  return data ? String((data.id as string) ?? "sent") : null;
+  if (provider() === "twilio") {
+    const sid = process.env.TWILIO_ACCOUNT_SID!;
+    const auth = Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
+    const data = await post(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, { Authorization: `Basic ${auth}` }, { To: `+${recipient}`, From: sender(), Body: body }, true);
+    return data ? String((data.sid as string) ?? "sent") : null;
+  }
+  const data = await post("https://api.brevo.com/v3/transactionalSMS/sms", { "api-key": process.env.BREVO_API_KEY! }, { type: "transactional", sender: sender(), recipient, content: body, unicodeEnabled: false });
+  return data ? String((data.messageId as string | number) ?? "sent") : null;
 }
 
 /** WhatsApp : uniquement via des modèles validés par Meta (rappel et confirmation de RDV). */

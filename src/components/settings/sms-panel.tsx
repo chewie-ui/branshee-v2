@@ -56,7 +56,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
       </div>
 
       <Card>
-        <CardHeader title="SMS" description={smsReady ? "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place." : "Les SMS ne sont pas encore configurés sur ce serveur (Spryng)."} />
+        <CardHeader title="SMS" description={smsReady ? "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place." : "Les SMS ne sont pas encore activés sur ce serveur."} />
         <div className="divide-y divide-border">
           <Switch checked={f.smsReminders} onChange={set("smsReminders")} label="Rappel par SMS" description="Remplace l'email de rappel, au même moment." />
           <Switch checked={f.smsConfirmations} onChange={set("smsConfirmations")} label="SMS de confirmation" description="En plus de l'email de confirmation." />

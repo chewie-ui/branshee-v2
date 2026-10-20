@@ -121,12 +121,12 @@ Trois onglets dans « Page de réservation » : **Contenu**, **Apparence**, **Pa
 - ℹ️ Sans clés Stripe, les forfaits s'affichent mais le paiement est désactivé (testé) ; à tester avec les clés de test sur le VPS
 
 ## Lot K — SMS et WhatsApp ✅
-- ✅ Rappel (remplace l'email) et confirmation (en plus de l'email) par SMS — Spryng, comme l'ancien
+- ✅ Rappel (remplace l'email) et confirmation (en plus de l'email) par SMS — Brevo ou Twilio (Spryng retiré)
 - ✅ Quota inclus par forfait (Pro 10, Pro+ 30 / mois), réservé de façon atomique ; au-delà : solde prépayé si « continuer au-delà du forfait » est activé (SMS 0,30 €, WhatsApp 0,05 €), remboursé si l'envoi échoue ; sinon repli email
 - ✅ Recharge du solde (10 / 20 / 50 €, Stripe Checkout, crédité une seule fois même si retour + webhook), recharge automatique sous un seuil (carte enregistrée), alerte « solde bas » puis « épuisé » dans l'espace pro, compteur mensuel
 - ✅ WhatsApp (modèles Meta « rdv_rappel » et « rdv_confirmation ») prioritaire, repli SMS puis email ; même quota et même solde
 - ✅ Interrupteur global `sms_notifications` (super-admin)
-- ℹ️ Sans jetons Spryng / Meta, rien ne part et l'email prend le relais (testé, facturation testée en base)
+- ℹ️ Sans clé SMS (Brevo/Twilio) ni jeton Meta, rien ne part et l'email prend le relais (testé, facturation testée en base)
 
 ## Lot L — Intégrations ✅
 - ✅ Google Agenda (forfait Pro) : connexion OAuth, RDV envoyés / mis à jour / supprimés automatiquement (création, confirmation, report, annulation, restauration), RDV à venir envoyés à la connexion, événements personnels Google qui bloquent les créneaux, déconnexion avec révocation — connexions de l'ancien reprises
