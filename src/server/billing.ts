@@ -2,7 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { businessPlans, formQuestions, members, promoCampaigns, promoCodes, promoRedemptions, services, subscriptions, users } from "@/db/schema";
+import { businessPlans, formQuestions, members, notificationSettings, promoCampaigns, promoCodes, promoRedemptions, services, subscriptions, users } from "@/db/schema";
 import { LIMITS, PLANS, collaboratorLimit, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 
@@ -89,6 +89,11 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   const [before] = await db.select({ plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   await db.insert(businessPlans).values({ businessId, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   if (!ended) await countReferral(sub.metadata?.userId);
+  // Passage du gratuit au payant : les rappels SMS (quota inclus dans le forfait) s'allument d'office.
+  // Le pro peut toujours les couper dans Réglages › SMS et WhatsApp.
+  if (!ended && rank(values.plan) > 0 && (!before || rank(before.plan) === 0)) {
+    await db.insert(notificationSettings).values({ businessId, smsReminders: true }).onConflictDoUpdate({ target: notificationSettings.businessId, set: { smsReminders: true } });
+  }
   // Forfait inférieur : on désactive ce qui dépasse (jamais de suppression).
   if (before && rank(values.plan) < rank(before.plan)) await enforceLimits(businessId, values.plan, values.extraSeats);
   return { businessId, ...values };
