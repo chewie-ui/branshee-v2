@@ -15,6 +15,7 @@ import type { PublicSession } from "@/server/group-sessions";
 import type { PublicBusiness } from "@/server/public";
 import { questionMatters, serviceMatches } from "@/lib/intake";
 import { useI18n } from "@/i18n/client";
+import { useEmbedded } from "@/lib/use-embedded";
 import { intlLocale } from "@/i18n";
 import type { Locale } from "@/i18n/config";
 
@@ -49,6 +50,8 @@ const sessionParts = (iso: string, timeZone: string) => {
 export function BookingFlow({ data, today, viewer = null }: Props) {
   const router = useRouter();
   const { locale, t, tr } = useI18n();
+  // Calendrier intégré sur le site du pro : la connexion s'ouvre dans un nouvel onglet (pas dans l'iframe).
+  const embedded = useEmbedded();
   const { WEEKDAY, DAYNUM, LONG, MONTH } = useMemo(() => fmts(locale), [locale]);
   const at = (day: string, time: string) => t("common.at", { day: cap(LONG.format(utc(day))), time });
   const { categories, team, questions, settings } = data;
@@ -573,7 +576,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
           ) : (
             <p className="text-sm text-muted">
               {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[0]}
-              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} className="font-medium text-accent hover:text-accent-hover">{t("booking.login")}</a>
+              <a href={`/connexion?suite=${encodeURIComponent(`/${data.business.slug}`)}`} {...(embedded ? { target: "_blank", rel: "noopener" } : {})} className="font-medium text-accent hover:text-accent-hover">{t("booking.login")}</a>
               {t("booking.haveAccount", { link: "\u0000" }).split("\u0000")[1]}
             </p>
           )}

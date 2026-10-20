@@ -1,5 +1,14 @@
-/** « Continuer avec Google » — affiché seulement si Google est configuré sur le serveur. */
+"use client";
+
+import { useEmbedded } from "@/lib/use-embedded";
+
+/**
+ * « Continuer avec Google » — affiché seulement si Google est configuré sur le serveur,
+ * et jamais dans un calendrier intégré sur le site d'un pro (Google refuse de s'ouvrir dans une iframe).
+ */
 export function GoogleButton({ suite, label = "Continuer avec Google" }: { suite?: string; label?: string }) {
+  const embedded = useEmbedded();
+  if (embedded) return null;
   return (
     <>
       <a href={`/auth/google?intention=connexion${suite ? `&suite=${encodeURIComponent(suite)}` : ""}`} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-border-strong bg-surface text-sm font-medium hover:bg-surface-muted">
