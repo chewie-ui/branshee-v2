@@ -52,7 +52,7 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
           ))}
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {plans.map((p) => {
           const price = yearly ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
           const popular = p === "pro";

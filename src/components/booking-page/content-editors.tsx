@@ -156,7 +156,7 @@ export function LocationEditor({ initial }: { initial: Loc }) {
     <Card>
       <CardHeader title="Localisation" description="Où se passent vos rendez-vous. Utilisé sur votre page et dans les emails aux clients." />
       <div className="space-y-5 p-5">
-        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Type de lieu">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Type de lieu">
           {[
             { k: "on_site", t: "Sur place", d: "À votre cabinet / salon" },
             { k: "online", t: "En ligne", d: "Visio, téléphone" },
@@ -170,7 +170,7 @@ export function LocationEditor({ initial }: { initial: Loc }) {
         </div>
 
         {v.mode !== "online" ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Adresse" htmlFor="loc-address" className="sm:col-span-2">
               <Input id="loc-address" value={v.address} onChange={(e) => set({ address: e.target.value })} autoComplete="street-address" maxLength={120} placeholder="Rue de l'Exemple 1" />
             </Field>
@@ -183,7 +183,7 @@ export function LocationEditor({ initial }: { initial: Loc }) {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Pays" htmlFor="loc-country">
             <Input id="loc-country" list="loc-countries" value={v.country} onChange={(e) => set({ country: e.target.value })} maxLength={60} />
             <datalist id="loc-countries">{COUNTRIES.map((c) => <option key={c} value={c} />)}</datalist>

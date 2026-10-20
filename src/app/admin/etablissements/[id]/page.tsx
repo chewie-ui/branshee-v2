@@ -71,7 +71,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { label: "Membres actifs", value: team.filter((m) => m.status === "active").length },
             { label: "Prestations", value: nbServices },

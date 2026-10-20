@@ -59,7 +59,7 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
           <Section title="Créneaux proposés">
             <fieldset>
               <legend className="mb-2 text-sm font-medium">Heures de début</legend>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
                   { v: "fixed", t: "À la suite", d: "Les créneaux s'enchaînent selon la durée de la prestation (9:00, 9:45, 10:30…)." },
                   { v: "interval", t: "À intervalle régulier", d: "Un départ possible toutes les N minutes, quelle que soit la durée." },
@@ -83,7 +83,7 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
             ) : (
               <input type="hidden" name="slotIntervalMin" value={r.slotIntervalMin} />
             )}
-            <div className="grid gap-4 sm:grid-cols-2" hidden={!showBuffers}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" hidden={!showBuffers}>
               <Field label="Temps de battement avant" htmlFor="bufferBeforeMin" hint="Préparation avant chaque RDV.">
                 <Select id="bufferBeforeMin" name="bufferBeforeMin" defaultValue={String(r.bufferBeforeMin)}>
                   {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : "Aucun"}</option>)}
@@ -98,7 +98,7 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
           </Section>
 
           <Section title="Quand peut-on réserver ?" description="S'applique uniquement aux réservations en ligne.">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Field label="Délai minimum avant un RDV" htmlFor="minLeadSel" error={err.minLeadMin} hint="Pour avoir le temps de vous préparer.">
                   <Select id="minLeadSel" value={lead} onChange={(e) => setLead(e.target.value)}>
@@ -172,7 +172,7 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
               <Field label="Question" htmlFor="fvQuestion" error={err.fvQuestion}>
                 <Input id="fvQuestion" name="fvQuestion" defaultValue={r.firstVisitQuestion.question} maxLength={140} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Réponse « nouveau client »" htmlFor="fvNew">
                   <Input id="fvNew" name="fvNew" defaultValue={r.firstVisitQuestion.newLabel} maxLength={60} />
                 </Field>

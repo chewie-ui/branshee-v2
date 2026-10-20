@@ -116,7 +116,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                   <div className="mx-auto max-w-6xl px-4 sm:px-6">
                     <div className="mb-10 max-w-2xl"><H2>{s(d.title) || "Nos prestations"}</H2>{s(d.subtitle) ? <p className="mt-3 text-[var(--s-muted)]">{s(d.subtitle)}</p> : null}</div>
                     {content.services.length ? (
-                      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {content.services.map((v) => (
                           <li key={v.id} className="flex flex-col overflow-hidden rounded-[var(--s-radius-sm)] border border-[var(--s-border)] bg-[var(--s-surface)]">
                             {v.imageUrl ? (
@@ -213,7 +213,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                       <H2>{s(d.title) || "Avis de nos clients"}</H2>
                       {d.source !== "manual" && content.reviews.average ? <p className="mt-3 inline-flex items-center gap-1.5 text-[var(--s-muted)]"><Star className="size-4 fill-current" aria-hidden="true" />{String(content.reviews.average).replace(".", ",")} / 5 · {content.reviews.count} avis vérifiés</p> : null}
                     </div>
-                    <ul className="grid gap-4 md:grid-cols-3">
+                    <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       {items.slice(0, 6).map((r) => (
                         <li key={r.id} className="rounded-[var(--s-radius-sm)] border border-[var(--s-border)] bg-[var(--s-bg)] p-5">
                           <p className="flex gap-0.5" aria-label={`${r.rating} sur 5`}>{Array.from({ length: 5 }, (_, i) => <Star key={i} className={`size-4 ${i < r.rating ? "fill-current" : "opacity-30"}`} aria-hidden="true" />)}</p>

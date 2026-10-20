@@ -115,7 +115,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
               </div>
             ) : null}
             <p className="text-sm text-muted">{customers.length > 0 ? `Ou remplissez les champs ci-dessous pour un nouveau ${clientTerm}.` : `Nouveau ${clientTerm} :`}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Prénom" htmlFor="newFirstName" error={err.newFirstName}>
                 <Input id="newFirstName" name="newFirstName" autoComplete="off" aria-invalid={!!err.newFirstName || undefined} />
               </Field>
@@ -135,7 +135,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
 
       <Card className="space-y-5 p-5">
         <h2 className="text-base font-semibold">Rendez-vous</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Prestation" htmlFor="serviceId">
             <Select id="serviceId" name="serviceId" value={serviceId} onChange={(e) => pickService(e.target.value)}>
               <option value="">Aucune prestation</option>

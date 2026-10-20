@@ -316,7 +316,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       {step === "visit" && fv ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">{fv.question}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {([["new", fv.newLabel], ["existing", fv.existingLabel]] as const).map(([value, label]) => (
               <button key={value} type="button" onClick={() => { setVisit(value); setStep("service"); }} className="rounded-xl border border-border bg-surface p-4 text-left font-medium transition-colors hover:border-accent">
                 {label}
@@ -329,7 +329,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       {step === "service" && nextQuestion ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">{nextQuestion.question}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {nextQuestion.options.map((o) => (
               <button key={o.id} type="button" onClick={() => setIntakeOrder((list) => [...list, { questionId: nextQuestion.id, optionId: o.id }])} className="rounded-xl border border-border bg-surface p-4 text-left font-medium transition-colors hover:border-accent">
                 {o.label}
@@ -411,7 +411,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
       {step === "member" && service ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">{t("booking.withWhom")}</h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <li>
               <button type="button" onClick={() => { setMemberId(null); setStep("time"); }} className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-accent">
                 <span className="flex size-12 items-center justify-center rounded-full bg-surface-muted text-muted" aria-hidden="true">
@@ -598,7 +598,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
             </p>
           )}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label={t("booking.firstName")} htmlFor="firstName" error={fieldErrors.firstName}>
               <Input id="firstName" name="firstName" autoComplete="given-name" defaultValue={viewer?.firstName} required aria-invalid={!!fieldErrors.firstName || undefined} />
             </Field>
@@ -666,7 +666,7 @@ function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: stri
     >
       <p className="flex items-start gap-2 text-sm"><BellRing className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>{t("booking.waitlistIntro", { day: dayLabel })}</span></p>
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-px w-px opacity-0" aria-hidden="true" />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input name="wl-name" placeholder={t("booking.waitlistName")} aria-label={t("booking.waitlistName")} required autoComplete="name" />
         <Input name="wl-email" type="email" placeholder={t("booking.waitlistEmail")} aria-label={t("booking.waitlistEmail")} required autoComplete="email" />
       </div>

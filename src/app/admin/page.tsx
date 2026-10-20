@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
   return (
     <>
       <PageHeader title="Tableau de bord" description="Vue d'ensemble de la plateforme" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label} className="p-5">
             <p className="text-sm text-muted">{s.label}</p>

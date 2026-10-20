@@ -37,7 +37,7 @@ function NoteEditor({ customerId, note, today, onDone }: { customerId: string; n
         });
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr]">
         <Field label="Date" htmlFor={`d-${k}`}>
           <Input id={`d-${k}`} name="date" type="date" defaultValue={note?.date ?? today} />
         </Field>

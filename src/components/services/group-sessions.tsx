@@ -51,7 +51,7 @@ export function NewSessionForm({ serviceId, team, capacity, durationMin, default
   const err = state?.fieldErrors ?? {};
   return (
     <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Field label="Date" htmlFor="date" error={err.date} className="sm:col-span-2">
           <Input id="date" name="date" type="date" required defaultValue={defaultDate} min={defaultDate} aria-invalid={!!err.date || undefined} />
         </Field>
@@ -73,7 +73,7 @@ export function NewSessionForm({ serviceId, team, capacity, durationMin, default
           <Input id="end" name="end" value={end} onChange={(e) => setEnd(e.target.value)} onBlur={() => setEnd(parseQuickTime(end) ?? end)} inputMode="numeric" aria-invalid={!!err.end || undefined} />
         </Field>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Places" htmlFor="capacity" error={err.capacity}>
           <Input id="capacity" name="capacity" type="number" min={1} max={500} defaultValue={capacity ?? ""} aria-invalid={!!err.capacity || undefined} />
         </Field>

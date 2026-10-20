@@ -12,7 +12,7 @@ export function BusinessForm({ b }: { b: B }) {
       {(err) => (
         <>
           <Section title="Identité" description="Ce que vos clients voient en haut de votre page.">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Nom de l'établissement" htmlFor="name" error={err.name}>
                 <Input id="name" name="name" defaultValue={b.name} maxLength={80} aria-invalid={!!err.name || undefined} />
               </Field>
@@ -26,7 +26,7 @@ export function BusinessForm({ b }: { b: B }) {
           </Section>
 
           <Section title="Coordonnées" description="Affichées sur votre page et dans les emails envoyés aux clients. L'adresse, les réseaux sociaux et le lien de votre page se règlent dans « Page de réservation ».">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Email de contact" htmlFor="email" error={err.email} hint="Les réponses des clients aux emails arrivent ici.">
                 <Input id="email" name="email" type="email" defaultValue={b.email} aria-invalid={!!err.email || undefined} />
               </Field>

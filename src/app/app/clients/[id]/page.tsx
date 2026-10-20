@@ -131,7 +131,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       ) : null}
 
       {tab === "apercu" ? (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="min-w-0 space-y-6 lg:col-span-2">
             <Card className="grid grid-cols-2 divide-border sm:grid-cols-4 sm:divide-x">
               {[["Terminés", done], ["Annulés", cancelled], ["Absences", noShows], ["Encaissé", formatPrice(paid)]].map(([l, v]) => (

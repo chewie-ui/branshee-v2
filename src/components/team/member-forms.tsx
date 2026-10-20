@@ -24,7 +24,7 @@ export function AddMemberForm({ grades, defaultGradeId }: { grades: Grade[]; def
     <form onSubmit={submitKeepingValues(action)} className="space-y-6" noValidate>
       <Errors state={state} />
       <Card className="space-y-5 p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Nom affiché" htmlFor="displayName" error={err.displayName}>
             <Input id="displayName" name="displayName" maxLength={80} aria-invalid={!!err.displayName || undefined} />
           </Field>
@@ -70,7 +70,7 @@ export function EditMemberForm({ m, grades }: { m: Member; grades: Grade[] }) {
       <Errors state={state} />
       <Card className="space-y-5 p-5">
         <h2 className="text-base font-semibold">Profil public</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Nom affiché" htmlFor="displayName" error={err.displayName}>
             <Input id="displayName" name="displayName" defaultValue={m.displayName} maxLength={80} />
           </Field>

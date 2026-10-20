@@ -57,7 +57,7 @@ export function ArticleEditor({ initial }: { initial: ArticleInput }) {
     });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="space-y-4">
         <Field label="Titre" htmlFor="a-title">
           <Input id="a-title" value={a.title} onChange={(e) => set({ title: e.target.value })} maxLength={160} className="h-12 text-lg font-semibold" />

@@ -85,7 +85,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
         </Field>
         <fieldset hidden={!allowGroup && initial.kind !== "group"}>
           <legend className="mb-2 text-sm font-medium">Type</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {([["individual", "Rendez-vous individuel", "Un client à la fois."], ["group", "Cours collectif", "Plusieurs clients sur une même séance planifiée."]] as const).map(([v, t, d]) => (
               <label key={v} className={cn("flex cursor-pointer gap-3 rounded-xl border p-4", kind === v ? "border-accent ring-1 ring-accent" : "border-border hover:border-border-strong")}>
                 <input type="radio" name="kind" value={v} checked={kind === v} onChange={() => setKind(v)} className="mt-0.5 size-4 accent-[var(--accent)]" />
@@ -138,7 +138,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
         <Field label="Lieu (facultatif)" htmlFor="location" hint="Si différent de votre adresse habituelle (ex. salle louée pour un cours).">
           <Input id="location" name="location" defaultValue={initial.location} maxLength={200} placeholder="Laissez vide pour utiliser votre adresse" />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Field label={variable ? "Durée (de…)" : "Durée"} htmlFor="durationMin" error={err.durationMin}>
               <Select id="durationMin" name="durationMin" defaultValue={String(initial.durationMin)}>

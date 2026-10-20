@@ -81,7 +81,7 @@ function SectionFields({ sec, set }: { sec: SiteSection; set: (data: Record<stri
           {A("subtitle", "Sous-titre")}
           {T("ctaText", "Texte du bouton", 60)}
           <ImageField label="Image de fond" value={v("bgImage")} onChange={(u) => set({ ...d, bgImage: u })} />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Alignement" htmlFor={id("align")}><Select id={id("align")} value={v("textAlign") || "center"} onChange={up("textAlign")}><option value="center">Centré</option><option value="left">À gauche</option></Select></Field>
             <Field label={`Assombrir l'image (${Number(d.overlayOpacity ?? 45)} %)`} htmlFor={id("ov")}><input id={id("ov")} type="range" min={35} max={85} value={Number(d.overlayOpacity ?? 45)} onChange={(e) => set({ ...d, overlayOpacity: Number(e.target.value) })} className="w-full accent-[var(--accent)]" /></Field>
           </div>
@@ -151,7 +151,7 @@ function SectionFields({ sec, set }: { sec: SiteSection; set: (data: Record<stri
         <>
           {T("title", "Titre")}
           {T("address", "Adresse", 240)}
-          <div className="grid gap-3 sm:grid-cols-2">{T("phone", "Téléphone", 40)}{T("email", "Email", 160)}</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{T("phone", "Téléphone", 40)}{T("email", "Email", 160)}</div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={d.showForm !== false} onChange={(e) => set({ ...d, showForm: e.target.checked })} className="size-4 accent-[var(--accent)]" />Formulaire de contact (les messages arrivent dans votre boîte email)</label>
         </>
       );

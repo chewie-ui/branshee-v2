@@ -47,7 +47,7 @@ export default async function AdminSupport({ searchParams }: { searchParams: Pro
       {threads.length === 0 ? (
         <Card><EmptyState icon={<MessagesSquare />} title="Aucune conversation" description="Les messages envoyés depuis « Aide et support » arrivent ici." /></Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
           <Card className={cn("overflow-hidden", selected && "hidden lg:block")}>
             <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
               {threads.map((t) => (

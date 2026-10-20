@@ -78,7 +78,7 @@ export function AdminMessageForm() {
         });
       }}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Destinataires" htmlFor="m-aud">
           <Select id="m-aud" value={audience} onChange={(e) => setAudience(e.target.value as "all")}>
             <option value="all">Tous les pros</option>
@@ -102,7 +102,7 @@ export function AdminMessageForm() {
       ) : null}
       <Field label="Titre" htmlFor="m-title"><Input id="m-title" name="title" maxLength={140} required /></Field>
       <Field label="Message" htmlFor="m-body"><textarea id="m-body" name="body" rows={4} maxLength={4000} className={textarea} required /></Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Bouton (facultatif)" htmlFor="m-cta"><Input id="m-cta" name="ctaLabel" maxLength={60} placeholder="Découvrir" /></Field>
         <Field label="Lien du bouton" htmlFor="m-url"><Input id="m-url" name="ctaUrl" maxLength={500} placeholder="/app/reglages/sms ou https://…" /></Field>
       </div>
@@ -155,7 +155,7 @@ export function HelpSectionEditor({ initial, first, last, onCreated }: { initial
       <div className="space-y-2">
         <p className="text-sm font-medium">Vidéos</p>
         {videos.map((v, i) => (
-          <div key={v.id || i} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_auto]">
+          <div key={v.id || i} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_6rem_auto]">
             <Input value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} placeholder="Titre" aria-label={`Titre de la vidéo ${i + 1}`} maxLength={160} />
             <Input value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} placeholder="https://youtu.be/… (vide = bientôt)" aria-label={`Lien de la vidéo ${i + 1}`} maxLength={500} />
             <Input value={v.duration} onChange={(e) => setVideo(i, { duration: e.target.value })} placeholder="3 min" aria-label={`Durée de la vidéo ${i + 1}`} maxLength={20} />

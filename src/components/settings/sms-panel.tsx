@@ -36,7 +36,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
   return (
     <div className="space-y-6">
       {msg ? <p className={cn("rounded-lg p-3 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role="status">{msg.text}</p> : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-5">
           <p className="text-sm text-muted">Ce mois-ci</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{Math.min(used, included)} / {included}</p>

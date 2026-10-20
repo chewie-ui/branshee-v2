@@ -147,7 +147,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
 
       {showProfile ? <ProfileHeader data={data} t={t} /> : null}
 
-      <main className={cn("mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
+      <main className={cn("mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
         <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label={t("page.bookingLabel")}>
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
           <BookingFlow data={data} today={today} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
@@ -190,8 +190,8 @@ function ProfileHeader({ data, t }: { data: PublicBusiness; t: T }) {
         <div className="flex items-center gap-4">
           <Avatar name={b.name} src={b.photoUrl} size="lg" className="size-16 text-lg" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{b.name}</h1>
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+              <h1 className="min-w-0 text-xl font-semibold tracking-tight break-words sm:text-2xl">{b.name}</h1>
               <LanguageSwitcher className="shrink-0" />
             </div>
             <p className="text-sm text-muted">{[b.businessType, b.locationMode === "online" ? t("common.online") : b.city].filter(Boolean).join(" · ")}</p>

@@ -28,7 +28,7 @@ export function ContactForm({ customerId, c }: { customerId: string; c: { firstN
     <Card>
       <CardHeader title="Coordonnées" description="L'email et le téléphone rattachent les futurs rendez-vous à cette fiche." />
       <form onSubmit={submitKeepingValues(action)} className="space-y-4 p-5" noValidate>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Prénom" htmlFor="c-first" error={err.firstName}><Input id="c-first" name="firstName" defaultValue={c.firstName} aria-invalid={!!err.firstName || undefined} /></Field>
           <Field label="Nom" htmlFor="c-last"><Input id="c-last" name="lastName" defaultValue={c.lastName} /></Field>
         </div>
@@ -212,7 +212,7 @@ export function NewCustomerForm({ term, initialOpen = false }: { term: string; i
           <h2 className="font-semibold">Ajouter un {term}</h2>
           <p className="text-sm text-muted">Le nom suffit. L&apos;email ou le téléphone rattacheront automatiquement ses futurs rendez-vous à cette fiche.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Prénom" htmlFor="n-first" error={err.firstName}><Input id="n-first" name="firstName" autoFocus aria-invalid={!!err.firstName || undefined} /></Field>
           <Field label="Nom" htmlFor="n-last"><Input id="n-last" name="lastName" /></Field>
           <Field label="Email (facultatif)" htmlFor="n-email" error={err.email}><Input id="n-email" name="email" type="email" aria-invalid={!!err.email || undefined} /></Field>

@@ -37,7 +37,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
       </section>
 
       <Section>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {metier.arguments.map((a) => (
             <div key={a.titre} className="rounded-2xl border border-border bg-surface p-6">
               <Check className="size-5 text-accent" aria-hidden="true" />
@@ -49,7 +49,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
       </Section>
 
       <Section muted>
-        <div className="grid gap-10 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Exercer à {ville.nom}</h2>
             <p className="mt-4 text-[15px] leading-relaxed text-muted">{ville.contexte}</p>

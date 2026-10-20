@@ -22,7 +22,7 @@ export function BlockForm({ initial, members }: { initial: Initial; members: { i
 
   return (
     <Card className="space-y-5 p-5">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Field label="Date" htmlFor="b-date">
           <Input id="b-date" type="date" value={v.date} onChange={(e) => set({ date: e.target.value })} />
         </Field>

@@ -34,7 +34,7 @@ function ReminderFields({ n }: { n: N }) {
   const pay = [METHODS.filter((m) => methods.includes(m.v)).map((m) => m.l).join(", "), note.trim()].filter(Boolean).join(" — ");
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
       <div className="space-y-4">
         <Field label="Rappel avant le rendez-vous" htmlFor="reminderDelayHours">
           <Select id="reminderDelayHours" name="reminderDelayHours" value={delay} onChange={(e) => setDelay(e.target.value)} className="sm:max-w-xs">

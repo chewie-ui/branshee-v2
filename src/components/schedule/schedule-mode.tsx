@@ -18,7 +18,7 @@ export function ScheduleMode({ value, canEdit }: { value: "shared" | "per_member
         Horaires de l&apos;équipe
         {pending ? <Loader2 className="size-4 animate-spin text-muted" aria-label="Enregistrement" /> : null}
       </legend>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {OPTIONS.map((o) => (
           <label
             key={o.value}

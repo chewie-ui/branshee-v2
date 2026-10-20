@@ -21,7 +21,7 @@ export function ContactForm() {
   return (
     <form onSubmit={submitKeepingValues(action)} className="space-y-4" noValidate>
       {state?.error ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-danger" role="alert">{state.error}</p> : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Nom" htmlFor="c-name" error={err.name}><Input id="c-name" name="name" autoComplete="name" defaultValue={state?.values?.name} aria-invalid={!!err.name || undefined} /></Field>
         <Field label="Email" htmlFor="c-email" error={err.email}><Input id="c-email" name="email" type="email" autoComplete="email" defaultValue={state?.values?.email} aria-invalid={!!err.email || undefined} /></Field>
       </div>

@@ -159,7 +159,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
           {pending.length > 0 ? (
             <Card>

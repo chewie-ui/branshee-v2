@@ -68,7 +68,7 @@ export default async function AdminAcquisition({ searchParams }: { searchParams:
           ))}
         </div>
       </Card>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="Sources" />
           <ul className="divide-y divide-border text-sm">

@@ -118,7 +118,7 @@ export function EmbedBuilder({ origin, slug, accent, initial }: { origin: string
       <div className="space-y-8 p-5">
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-semibold"><span className="flex size-6 items-center justify-center rounded-full bg-accent text-xs text-accent-foreground">1</span>Sous quelle forme ?</h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {FORMATS.map((f) => (
               <button key={f.k} type="button" aria-pressed={format === f.k} onClick={() => setFormat(f.k)} className={cn("flex gap-3 rounded-lg border p-3 text-left", format === f.k ? "border-accent bg-accent-soft" : "border-border-strong hover:border-accent")}>
                 <f.icon className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
@@ -130,7 +130,7 @@ export function EmbedBuilder({ origin, slug, accent, initial }: { origin: string
             ))}
           </div>
           {format !== "inline" ? (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Texte du bouton" htmlFor="emb-label">
                 <Input id="emb-label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} />
               </Field>

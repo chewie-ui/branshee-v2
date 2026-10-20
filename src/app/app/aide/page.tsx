@@ -27,7 +27,7 @@ export default async function HelpPage() {
   return (
     <>
       <PageHeader title="Aide et support" description="Visites guidées, vidéos, questions fréquentes, et une équipe humaine pour vous répondre." />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <HelpCenter sections={sections} />
         <div id="contact" className="scroll-mt-6 space-y-6 lg:sticky lg:top-6 lg:self-start">
           <Card>

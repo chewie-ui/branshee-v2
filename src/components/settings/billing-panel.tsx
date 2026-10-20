@@ -112,7 +112,7 @@ export function BillingPanel({
               </button>
             ))}
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {(["free", "pro", "pro_plus"] as const).map((p) => {
               const price = interval === "year" ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
               const isCurrent = current.plan === p;

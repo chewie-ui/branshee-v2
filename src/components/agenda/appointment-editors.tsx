@@ -29,7 +29,7 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Date" htmlFor="r-date">
           <Input id="r-date" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} />
         </Field>
@@ -176,7 +176,7 @@ export function PaymentForm({ id, initial }: { id: string; initial: { method: st
   const [pending, start] = useTransition();
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Mode" htmlFor="p-method">
           <Select id="p-method" value={v.method} onChange={(e) => setV({ ...v, method: e.target.value })}>
             {METHODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}

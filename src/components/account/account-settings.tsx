@@ -66,7 +66,7 @@ export function ProfileCard({ p, client }: { p: ProfileData; client: boolean }) 
           </div>
           <input ref={fileRef} name="avatar" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Photo de profil" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPreview(URL.createObjectURL(f)); setRemoved(false); } }} />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Nom complet" htmlFor="pf-name">
             <Input id="pf-name" name="fullName" defaultValue={p.fullName} autoComplete="name" required maxLength={120} />
           </Field>
@@ -140,7 +140,7 @@ export function EmailCard({ email, hasPassword }: { email: string; hasPassword: 
         <p className="text-sm">Adresse actuelle : <span className="font-medium">{current}</span></p>
         {step === "idle" ? <Button variant="secondary" size="sm" onClick={() => { setStep("form"); setStatus(null); }}>Changer d&apos;adresse</Button> : null}
         {step === "form" ? (
-          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => requestEmailChange({ email: newEmail, password }), (r) => r.ok && setStep("code")); }}>
+          <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => requestEmailChange({ email: newEmail, password }), (r) => r.ok && setStep("code")); }}>
             <Field label="Nouvelle adresse" htmlFor="em-new">
               <Input id="em-new" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required autoComplete="email" />
             </Field>

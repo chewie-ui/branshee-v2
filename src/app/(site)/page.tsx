@@ -201,7 +201,7 @@ export default async function HomePage() {
       {/* Comparatif */}
       <Section>
         <SectionTitle title="Faites le calcul." sub="Pas de commission. Pas de frais cachés. Pas d'engagement. Le prix affiché est le prix payé." />
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {COMPARE.map((c) => (
             <div key={c.name} className={`rounded-2xl border p-6 ${c.highlight ? "border-accent bg-surface ring-1 ring-accent" : "border-border bg-surface"}`}>
               <p className="text-sm font-medium text-muted">{c.name}</p>
@@ -215,7 +215,7 @@ export default async function HomePage() {
       {/* Remplace la pile d'outils */}
       <Section muted>
         <SectionTitle title="Aujourd'hui, votre activité tourne sur six outils. Demain, sur un seul." sub="Un cahier pour les rendez-vous, WhatsApp pour confirmer, Excel pour les clients, et toujours pas de site. Branshee remplace tout ça." />
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {STACK.map((s) => (
             <li key={s.old} className="flex gap-4 rounded-xl border border-border bg-background p-5">
               <X className="mt-0.5 size-5 shrink-0 text-danger" aria-hidden="true" />
@@ -253,7 +253,7 @@ export default async function HomePage() {
       {/* Tout inclus */}
       <Section muted>
         <SectionTitle pill="Tout inclus" title="Tout ce qu'il vous faut. Sans mauvaise surprise." sub="Aucune option cachée : chaque forfait inclut tout ce qu'il annonce." />
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {INCLUDED.map((i) => (
             <li key={i.title} className="rounded-xl border border-border bg-background p-5">
               <span className="flex size-10 items-center justify-center rounded-lg bg-accent-soft text-accent"><i.icon className="size-5" aria-hidden="true" /></span>
@@ -267,7 +267,7 @@ export default async function HomePage() {
       {/* Comment ça marche */}
       <Section>
         <SectionTitle pill="Comment ça marche" title="En ligne en moins de 10 minutes." />
-        <ol className="grid gap-6 md:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {STEPS.map((s, i) => (
             <li key={s.title} className="rounded-2xl border border-border bg-surface p-6">
               <span className="flex size-9 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">{i + 1}</span>
@@ -284,7 +284,7 @@ export default async function HomePage() {
 
       {/* Transparence */}
       <Section muted>
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="text-sm font-semibold text-accent">Transparence</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Si c&apos;est moins cher, où est le piège ?</h2>
@@ -294,7 +294,7 @@ export default async function HomePage() {
               <p className="font-medium text-text">— L&apos;équipe Branshee</p>
             </div>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
             {[
               { icon: ShieldCheck, t: "Sans engagement", d: "Résiliation en un clic, quand vous voulez. Aucun frais caché." },
               { icon: Sparkles, t: "Mises à jour chaque semaine", d: "Vos retours sont lus, et réellement mis en œuvre." },
@@ -322,7 +322,7 @@ export default async function HomePage() {
       {/* Métiers */}
       <Section muted>
         <SectionTitle pill="Pour qui ?" title="La réservation en ligne, adaptée à votre métier." />
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {JOBS.map((j) => (
             <li key={j.name} className="rounded-xl border border-border bg-background p-5">
               <p className="font-semibold">{j.name}</p>
@@ -339,7 +339,7 @@ export default async function HomePage() {
       {featured.length ? (
         <Section>
           <SectionTitle title="Ils prennent leurs rendez-vous avec Branshee" />
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((b) => (
               <li key={b.id}>
                 <Link href={`/${b.slug}`} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">

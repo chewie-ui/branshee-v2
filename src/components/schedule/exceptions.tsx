@@ -35,7 +35,7 @@ export function ExceptionForm({ targets, today }: { targets: { value: string; la
 
   return (
     <form action={submit} className="space-y-4 p-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {targets.length > 1 ? (
           <fieldset className="sm:col-span-2">
             <legend className="mb-2 text-sm font-medium">Pour qui</legend>

@@ -82,7 +82,7 @@ export function PaymentsForm({ p }: { p: P }) {
           </Section>
 
           <Section title="Politique d'annulation" description="Appliquée aux clients qui ont payé en ligne ou laissé une carte en garantie. Les frais propres à une prestation la remplacent.">
-            <div className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
               {RULES.map((r) => (
                 <label key={r.v} className="cursor-pointer rounded-lg border border-border-strong p-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
                   <input type="radio" name="cancellationRule" value={r.v} defaultChecked={p.cancellationRule === r.v} className="sr-only" />
@@ -157,7 +157,7 @@ export function PaymentsForm({ p }: { p: P }) {
                 </Select>
               </Field>
               {payout === "bank_transfer" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="IBAN" htmlFor="payoutIban"><Input id="payoutIban" name="payoutIban" defaultValue={p.payout.iban} /></Field>
                   <Field label="BIC" htmlFor="payoutBic"><Input id="payoutBic" name="payoutBic" defaultValue={p.payout.bic} /></Field>
                 </div>
