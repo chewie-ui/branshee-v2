@@ -23,16 +23,18 @@ export function DayClickLayer({ day, startHour, hourPx, lanes, canManage }: { da
 
   useEffect(() => {
     if (!menu) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.querySelector("[role=menu]")?.contains(e.target as Node)) {
+    // pointerdown (et non mousedown) : sur mobile, le « mousedown » simulé qui suit un tap refermait aussitôt le menu.
+    // Un appui dans la couche elle-même est géré par la couche (nouvelle sélection).
+    const close = (e: PointerEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) {
         setMenu(null);
         setSel(null);
       }
     };
-    document.addEventListener("mousedown", close);
+    document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", close);
     return () => {
-      document.removeEventListener("mousedown", close);
+      document.removeEventListener("pointerdown", close);
       document.removeEventListener("keydown", close);
     };
   }, [menu]);

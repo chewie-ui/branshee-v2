@@ -43,7 +43,7 @@ export default async function AdminLogs({ searchParams }: { searchParams: Promis
               <span className="min-w-0 flex-1">
                 <span>{l.description}</span>
                 <span className="block text-muted">
-                  {l.actor} · <Link href={`/admin/etablissements/${l.businessId}`} className="hover:underline">{l.business}</Link> · <span className="font-mono text-xs">{l.action}</span>
+                  {l.actor} · <Link href={`/admin/etablissements/${l.businessId}`} className="hover:underline">{l.business}</Link> · <span className="font-mono text-xs break-all">{l.action}</span>
                 </span>
               </span>
             </li>

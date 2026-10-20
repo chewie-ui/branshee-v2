@@ -6,7 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { z } from "zod";
 import { db } from "@/db";
-import { appointmentPayments, appointments, customers, members, users } from "@/db/schema";
+import { appointmentPayments, appointments, customers, members, services, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";
 import { ClientContactActions, PaymentForm, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
@@ -27,15 +27,17 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
   const [row] = await db
-    .select({ a: appointments, memberName: members.displayName, pay: appointmentPayments, account: { email: users.email, name: users.fullName } })
+    .select({ a: appointments, memberName: members.displayName, pay: appointmentPayments, account: { email: users.email, name: users.fullName }, priceCents: services.priceCents })
     .from(appointments)
     .leftJoin(members, eq(members.id, appointments.memberId))
     .leftJoin(appointmentPayments, eq(appointmentPayments.appointmentId, appointments.id))
+    .leftJoin(services, eq(services.id, appointments.serviceId))
     .leftJoin(customers, eq(customers.id, appointments.customerId))
     .leftJoin(users, eq(users.id, customers.userId))
     .where(and(eq(appointments.id, id.data), eq(appointments.businessId, ctx.business.id)));
   if (!row) notFound();
-  const { a, memberName, pay, account } = row;
+  const { a, memberName, pay, account, priceCents } = row;
+  const euros = (c: number) => (c / 100).toString().replace(".", ",");
   if (a.kind === "block") redirect(`/app/agenda/bloquer?id=${a.id}`);
 
   const tz = ctx.business.timezone;
@@ -145,7 +147,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
                 </p>
               ) : null}
               {pay?.status === "penalty" && !pay.cancellationDecision ? <PenaltyReview id={a.id} amount={`${(pay.penaltyCents / 100).toFixed(2).replace(".", ",")} €`} /> : null}
-              <PaymentForm id={a.id} initial={{ method: pay?.method ?? "none", status: pay?.status ?? "none", amount: pay?.amountCents ? (pay.amountCents / 100).toString().replace(".", ",") : "" }} />
+              <PaymentForm id={a.id} initial={{ method: pay?.method ?? "none", status: pay?.status ?? "none", amount: pay?.amountCents ? euros(pay.amountCents) : priceCents ? euros(priceCents) : "" }} />
             </div>
           </Card>
         ) : null}

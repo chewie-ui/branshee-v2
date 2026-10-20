@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BellRing, Check, ChevronLeft, ChevronRight, Clock, MapPin, Star, UserRound, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -84,11 +84,19 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
   const tz = data.business.timezone;
   const style = data.categoryStyle;
   const waitlistOn = !!settings?.waitlistEnabled;
+  const horizonDays = settings?.horizonDays ?? null;
   const [catFilter, setCatFilter] = useState("all");
 
   const service = services.find((s) => s.id === serviceId) ?? null;
   const member = team.find((m) => m.id === memberId) ?? null;
   const candidates = service ? team.filter((m) => service.memberIds.includes(m.id)) : [];
+
+  // Semaine sans aucun créneau à l'ouverture : on avance tout seul jusqu'à la première semaine qui en a (8 semaines max).
+  // Désactivé dès que le client navigue lui-même entre les semaines.
+  const autoSkip = useRef(0);
+  useEffect(() => {
+    autoSkip.current = 8;
+  }, [serviceId, memberId]);
 
   // Charge les créneaux de la semaine affichée dès que la prestation / le praticien / la semaine changent.
   useEffect(() => {
@@ -97,13 +105,21 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
     startSlots(async () => {
       const res = await getPublicSlots(data.business.slug, serviceId, memberId, weekStart, 7);
       if (cancelled) return;
+      const next = addDays(weekStart, 7);
+      const withinHorizon = horizonDays == null || next <= addDays(today, horizonDays);
+      if (autoSkip.current > 0 && !res.some((d) => d.slots.length) && withinHorizon) {
+        autoSkip.current -= 1;
+        setWeekStart(next);
+        return;
+      }
+      autoSkip.current = 0;
       setDays(res);
       setDay((current) => (current && res.some((d) => d.date === current && d.slots.length) ? current : (res.find((d) => d.slots.length)?.date ?? null)));
     });
     return () => {
       cancelled = true;
     };
-  }, [step, serviceId, memberId, weekStart, data.business.slug]);
+  }, [step, serviceId, memberId, weekStart, data.business.slug, today, horizonDays]);
 
   // Cours collectif : charge les séances à venir.
   useEffect(() => {
@@ -140,6 +156,7 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
     setServiceId(id);
     setTime(null);
     setDays(null);
+    setWeekStart(today);
     setSessionId(null);
     setSessions(null);
     const s = services.find((x) => x.id === id)!;
@@ -430,10 +447,10 @@ export function BookingFlow({ data, today, viewer = null }: Props) {
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium">{cap(MONTH.format(utc(weekStart)))}</p>
               <div className="flex gap-1">
-                <button type="button" disabled={weekStart <= today || loadingSlots} onClick={() => setWeekStart(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.previousWeek")}>
+                <button type="button" disabled={weekStart <= today || loadingSlots} onClick={() => { autoSkip.current = 0; setWeekStart(addDays(weekStart, -7) < today ? today : addDays(weekStart, -7)); }} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.previousWeek")}>
                   <ChevronLeft className="size-4" aria-hidden="true" />
                 </button>
-                <button type="button" disabled={loadingSlots || (settings?.horizonDays != null && addDays(weekStart, 7) > addDays(today, settings.horizonDays))} onClick={() => setWeekStart(addDays(weekStart, 7))} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.nextWeek")}>
+                <button type="button" disabled={loadingSlots || (settings?.horizonDays != null && addDays(weekStart, 7) > addDays(today, settings.horizonDays))} onClick={() => { autoSkip.current = 0; setWeekStart(addDays(weekStart, 7)); }} className="flex size-10 items-center justify-center rounded-lg border border-border-strong bg-surface text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label={t("common.nextWeek")}>
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </button>
               </div>

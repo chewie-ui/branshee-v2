@@ -20,3 +20,8 @@ export function rateLimit(key: string, max: number, windowMs: number): { ok: boo
   }
   return { ok: true, retryAfterSec: 0 };
 }
+
+/** Remet un compteur à zéro (ex. connexion réussie : seuls les échecs doivent compter). */
+export function resetRateLimit(key: string) {
+  hits.delete(key);
+}

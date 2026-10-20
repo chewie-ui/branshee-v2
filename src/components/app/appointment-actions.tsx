@@ -81,7 +81,7 @@ export function InternalNote({ id, initial }: { id: string; initial: string }) {
   return (
     <div className="space-y-2">
       <label htmlFor="internalNote" className="text-sm font-medium">Note interne</label>
-      <Textarea id="internalNote" value={value} onChange={(e) => setValue(e.target.value)} rows={3} maxLength={2000} placeholder="Visible uniquement par l'équipe" />
+      <Textarea id="internalNote" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => { if (value !== saved) start(async () => { await saveInternalNote(id, value); setSaved(value); }); }} rows={3} maxLength={2000} placeholder="Visible uniquement par l'équipe" />
       {value !== saved ? (
         <div className="flex justify-end">
           <Button size="sm" loading={pending} onClick={() => start(async () => { await saveInternalNote(id, value); setSaved(value); })}>Enregistrer la note</Button>

@@ -76,8 +76,6 @@ export type BookingResult = { ok: true; token: string } | { ok: false; error: st
 
 export async function createPublicBooking(input: z.input<typeof bookingSchema>): Promise<BookingResult> {
   const clientIp = await ip();
-  if (!rateLimit(`book:${clientIp}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de réservations depuis cette connexion. Réessayez plus tard ou appelez l'établissement." };
-
   const parsed = bookingSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -85,6 +83,8 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
     return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors };
   }
   const v = parsed.data;
+  // Compté après la validation : une faute de frappe dans le formulaire ne consomme pas le quota.
+  if (!rateLimit(`book:${clientIp}:${v.slug}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de réservations depuis cette connexion. Réessayez plus tard ou appelez l'établissement." };
 
   const data = await getPublicBusiness(v.slug);
   if (!data || !data.settings) return { ok: false, error: "Établissement introuvable." };

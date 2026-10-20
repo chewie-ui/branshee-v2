@@ -192,13 +192,13 @@ class BookingError extends Error {
  * enregistrée à cette occasion. Les inscriptions aux cours sont confirmées directement.
  */
 export async function bookGroupSession(input: z.input<typeof bookingSchema>): Promise<GroupBookingResult> {
-  if (!rateLimit(`book:${await ip()}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de réservations depuis cette connexion. Réessayez plus tard ou appelez l'établissement." };
   const parsed = bookingSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
     return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors };
   }
+  if (!rateLimit(`book:${await ip()}:${parsed.data.slug}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de réservations depuis cette connexion. Réessayez plus tard ou appelez l'établissement." };
   const v = parsed.data;
   const data = await getPublicBusiness(v.slug);
   if (!data || !data.settings) return { ok: false, error: "Établissement introuvable." };

@@ -189,7 +189,7 @@ export function PaymentForm({ id, initial }: { id: string; initial: { method: st
           </Select>
         </Field>
         <Field label="Montant (€)" htmlFor="p-amount">
-          <Input id="p-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} placeholder="45" />
+          <Input id="p-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} placeholder="0,00" />
         </Field>
       </div>
       <div className="flex items-center justify-end gap-3">

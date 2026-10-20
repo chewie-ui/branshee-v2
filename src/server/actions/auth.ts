@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { loginEvents, users } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
-import { rateLimit } from "@/server/auth/rate-limit";
+import { rateLimit, resetRateLimit } from "@/server/auth/rate-limit";
 import { clearPendingTwoFactor, createSession, destroySession, getPendingTwoFactor, setPendingTwoFactor } from "@/server/auth/session";
 import { decrypt } from "@/lib/field-crypto";
 import { verifyTotp } from "@/lib/totp";
@@ -107,7 +107,8 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
 
   const meta = await clientMeta();
   const { email, password } = parsed.data;
-  const limit = rateLimit(`login:${meta.ip}:${email}`, 8, 15 * 60 * 1000);
+  const limitKey = `login:${meta.ip}:${email}`;
+  const limit = rateLimit(limitKey, 8, 15 * 60 * 1000);
   if (!limit.ok) return { error: `Trop de tentatives. Réessayez dans ${Math.ceil(limit.retryAfterSec / 60)} min.`, values };
 
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
@@ -116,6 +117,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
     return { error: "Email ou mot de passe incorrect.", values };
   }
   if (!(await verifyPassword(password, user.passwordHash))) return { error: "Email ou mot de passe incorrect.", values };
+  resetRateLimit(limitKey);
   if (user.disabledAt) return { error: "Ce compte a été désactivé. Pour en savoir plus, écrivez-nous depuis la page Contact.", values };
   // Compte repris de l'ancien Branshee : on remplace le hash bcrypt par un hash scrypt.
   if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
