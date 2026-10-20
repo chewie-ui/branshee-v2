@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Monitor, Redo2, RotateCcw, Smartphone, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
   );
 }
 
-export function ThemeEditor({ initial, previewUrl }: { initial: FullTheme; previewUrl: string }) {
+export function ThemeEditor({ initial, previewUrl, locked = false }: { initial: FullTheme; previewUrl: string; locked?: boolean }) {
   const [saved, setSaved] = useState(initial);
   const [hist, setHist] = useState<{ list: FullTheme[]; i: number }>({ list: [initial], i: 0 });
   const t = hist.list[hist.i]!;
@@ -123,13 +124,17 @@ export function ThemeEditor({ initial, previewUrl }: { initial: FullTheme; previ
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
       <div className="space-y-4">
-        <div className="sticky top-0 z-10 flex items-center gap-2 rounded-xl border border-border bg-surface p-2">
+        <div className="sticky top-0 z-10 rounded-xl border border-border bg-surface p-2">
+          <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={undo} disabled={hist.i === 0} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Annuler (Ctrl+Z)" title="Annuler (Ctrl+Z)"><Undo2 className="size-4" aria-hidden="true" /></button>
           <button type="button" onClick={redo} disabled={hist.i >= hist.list.length - 1} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Rétablir (Ctrl+Y)" title="Rétablir (Ctrl+Y)"><Redo2 className="size-4" aria-hidden="true" /></button>
           <button type="button" onClick={() => commit({ ...DEFAULT_THEME })} className="flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm text-muted hover:bg-surface-muted hover:text-text"><RotateCcw className="size-4" aria-hidden="true" />Réinitialiser</button>
           <span className="ml-auto flex items-center gap-2">
-            {status ? <span className={cn("text-sm", status.ok ? "text-success" : "text-danger")} role={status.ok ? "status" : "alert"}>{status.msg}</span> : null}
             {dirty ? <Button variant="ghost" size="sm" onClick={() => setHist({ list: [saved], i: 0 })}>Annuler</Button> : null}
+            {locked ? (
+              // Forfait gratuit : tout s'essaie dans l'aperçu ; l'enregistrement mène à l'abonnement.
+              <Link href="/app/reglages/abonnement" className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">Passer au forfait Pro</Link>
+            ) : (
             <Button
               size="sm"
               loading={pending}
@@ -144,7 +149,10 @@ export function ThemeEditor({ initial, previewUrl }: { initial: FullTheme; previ
             >
               Enregistrer
             </Button>
+            )}
           </span>
+          </div>
+          {status ? <p className={cn("px-2 pt-2 text-sm", status.ok ? "text-success" : "text-danger")} role={status.ok ? "status" : "alert"}>{status.msg}</p> : null}
         </div>
 
         <Card className="p-4">

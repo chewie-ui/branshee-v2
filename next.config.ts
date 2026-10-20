@@ -31,6 +31,23 @@ const nextConfig: NextConfig = {
       ["/conditions", "/conditions-utilisation"],
       ["/cgu", "/conditions-utilisation"],
       ["/privacy", "/confidentialite"],
+      // Autres adresses de l'ancien Branshee (favoris des pros, liens de l'app mobile, emails déjà envoyés).
+      ["/settings", "/app/reglages"],
+      ["/client", "/espace-client"],
+      ["/client/login", "/connexion"],
+      ["/client/register", "/inscription?client=1"],
+      ["/history", "/app/historique"],
+      ["/appointement/:id", "/app/agenda"],
+      ["/clients-hub", "/app/clients"],
+      ["/clients-hub/:id", "/app/clients"],
+      ["/employees", "/app/equipe"],
+      ["/availability", "/app/horaires"],
+      ["/demandes", "/app/demandes"],
+      ["/etablissement/mes-etablissements", "/app/etablissements"],
+      ["/customize-calendar", "/app/page-de-reservation"],
+      ["/forms", "/app/prestations/questions"],
+      ["/group-sessions", "/app/prestations"],
+      ["/dashboard", "/app"],
     ];
     return map.map(([source, destination]) => ({ source, destination, permanent: true }));
   },
