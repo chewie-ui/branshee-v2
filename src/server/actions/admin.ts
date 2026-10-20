@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, businessPlans, businesses, sessions, users } from "@/db/schema";
+import { activityLogs, businessPlans, businesses, notificationSettings, sessions, users } from "@/db/schema";
 import { requireSuperadmin } from "@/server/admin";
 
 type Result = { ok: boolean; error?: string; message?: string };
@@ -43,6 +43,10 @@ export async function grantPlan(businessId: string, input: { plan: string; until
   if (cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status)) return { ok: false, error: "Cet établissement a un abonnement Stripe actif : gérez-le depuis Stripe." };
   const values = grantedUntil ? { plan, grantedUntil, status: "active" as const, stripeSubscriptionId: null } : { plan: "free" as const, grantedUntil: null };
   await db.insert(businessPlans).values({ businessId: id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
+  // Forfait payant offert à un établissement gratuit : rappels SMS allumés, comme après un paiement.
+  if (grantedUntil && (!cur || cur.plan === "free")) {
+    await db.insert(notificationSettings).values({ businessId: id, smsReminders: true }).onConflictDoUpdate({ target: notificationSettings.businessId, set: { smsReminders: true } });
+  }
   revalidatePath("/admin", "layout");
   return { ok: true, message: grantedUntil ? "Forfait offert enregistré." : "Accès offert retiré." };
 }
