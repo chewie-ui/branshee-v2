@@ -50,6 +50,7 @@ const JSON_DIR = option("--json");
 const REPORT_FILE = option("--report") ?? "migration-report.json";
 
 // ─── Rapport ──────────────────────────────────────────────────────────────────
+const usedFeedTokens = new Set<string>();
 const report = {
   startedAt: new Date().toISOString(),
   dryRun: DRY_RUN,
@@ -595,7 +596,13 @@ async function main() {
           showRole: !!op.showRole,
           customInfo: (op.customInfo ?? []).filter((x: any) => x?.label).map((x: any) => ({ label: String(x.label), value: String(x.value ?? "") })),
           calendarColor: text(owner?.calendarColor),
-          calendarFeedToken: text(owner?.calendarFeedToken),
+          // Le flux iCal de l'ancien était lié au compte : il n'est repris que pour le premier établissement du propriétaire (jeton unique).
+          calendarFeedToken: (() => {
+            const t = text(owner?.calendarFeedToken);
+            if (!t || usedFeedTokens.has(t)) return null;
+            usedFeedTokens.add(t);
+            return t;
+          })(),
           joinedAt: date(c.createdAt),
         });
         count("members");
@@ -1117,6 +1124,8 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("\n❌ Migration interrompue, aucune donnée écrite :", e instanceof Error ? e.message : e);
+  const cause = (e as { cause?: { message?: string; detail?: string } })?.cause;
+  console.error("\n❌ Migration interrompue, aucune donnée écrite :", e instanceof Error ? e.message.split("\nparams:")[0] : e);
+  if (cause) console.error("Cause :", cause.message ?? "", cause.detail ?? "");
   process.exit(1);
 });
