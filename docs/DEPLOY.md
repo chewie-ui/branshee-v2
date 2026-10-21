@@ -1,5 +1,20 @@
 # Déploiement sur le VPS
 
+## Bascule de branshee.com vers la v2 (script tout-en-un)
+```bash
+cd /var/www/branshee-v2 && git pull
+bash deploy/production.sh prepare    # prépare la production sans rien couper (relançable)
+bash deploy/production.sh twilio     # ajoute les clés Twilio (demandées au clavier, jamais affichées)
+bash deploy/production.sh cutover    # le jour J : maintenance ~5 min, migration finale, branshee.com → v2
+bash deploy/production.sh rollback   # retour immédiat à l'ancien Branshee si besoin
+bash deploy/production.sh update     # mises à jour du code après la bascule
+```
+`prepare` crée `/var/www/branshee-prod` (base `branshee_prod`, port 3060) et une config reprise de l'ancien `.env`
+(Stripe live, prix, webhook) et de la version de test (SMTP Resend, Google). Le webhook Stripe existant
+(`https://www.branshee.com/account/webhook`) reste valable : la v2 sert cette adresse ; `cutover` lui ajoute les
+événements d'abonnement. `cutover` installe aussi les tâches planifiées (rappels, relances) et la sauvegarde quotidienne.
+
+
 ## Prérequis
 - Node.js 22, PostgreSQL 16, Nginx (reverse proxy + HTTPS via Let's Encrypt)
 - Un compte SMTP pour les emails (l'ancien Branshee utilisait Brevo : `smtps://LOGIN:CLE@smtp-relay.brevo.com:465`)
