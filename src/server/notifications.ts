@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, bookingSettings, businesses, members, notificationSettings, users, waitlistEntries } from "@/db/schema";
+import { appointmentPayments, appointments, bookingSettings, businesses, members, notificationSettings, users, waitlistEntries } from "@/db/schema";
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { formatDay, formatTime } from "@/lib/time";
@@ -150,7 +150,12 @@ export function notifyCancelledByCustomer(appointmentId: string) {
   return safely("annulation client", async () => {
     const row = await load(appointmentId);
     if (!row) return;
-    await toClient(row, "cancelled_customer", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage));
+    // Annulation tardive : le client est informé des frais prélevés ou retenus.
+    const [p] = await db.select({ status: appointmentPayments.status, penalty: appointmentPayments.penaltyCents, kept: appointmentPayments.keptCents, currency: appointmentPayments.currency }).from(appointmentPayments).where(eq(appointmentPayments.appointmentId, appointmentId));
+    const lang = (row.a.locale ?? "fr") as Locale;
+    const money = (c: number) => new Intl.NumberFormat(intlLocale(lang), { style: "currency", currency: (p?.currency ?? "eur").toUpperCase() }).format(c / 100);
+    const fee = p?.status === "penalty" && p.penalty > 0 ? { kind: "charged" as const, amount: money(p.penalty) } : p && ["partial", "paid"].includes(p.status) && p.kept > 0 ? { kind: "kept" as const, amount: money(p.kept) } : null;
+    await toClient(row, "cancelled_customer", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage, fee));
     await pushToPros(row, "Rendez-vous annulé", `${row.a.contactName ?? "Client"} · ${row.info.when}`, "cancellation");
     if (row.settings?.emailOwnerOnCancellation ?? true) {
       const mail = emails.proCancelled(row.info, `${appUrl()}/app/agenda`);

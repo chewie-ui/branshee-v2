@@ -14,6 +14,8 @@ import { getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { notifyAutoConfirmLimit, notifyBookingCreated } from "@/server/notifications";
 import { checkIntake, getPublicBusiness } from "@/server/public";
+import { policyAmounts } from "@/lib/cancellation";
+import { policyText } from "@/lib/cancellation-text";
 import { getSessionUser } from "@/server/auth/session";
 
 async function ip() {
@@ -68,6 +70,8 @@ const bookingSchema = z.object({
   website: z.string().max(0).optional(),
   locale: z.enum(LOCALES).optional(),
   paymentMethod: z.enum(["online", "on_site", "bank_transfer", "paypal", "none"]).optional(),
+  /** Case « J'accepte les conditions d'annulation » (obligatoire dès qu'une carte ou un paiement est demandé avec des frais). */
+  acceptPolicy: z.boolean().optional(),
   paymentIntentId: z.string().regex(/^pi_\w+$/).optional(),
   setupIntentId: z.string().regex(/^seti_\w+$/).optional(),
 });
@@ -112,6 +116,12 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const price = service.priceCents ?? 0;
   const pay = data.payment;
   let payment: (Partial<typeof appointmentPayments.$inferInsert> & { method: typeof method }) | null = price > 0 && method !== "none" ? { method, amountCents: price, status: "none" } : null;
+  // Consentement aux frais d'annulation / d'absence : exigé quand ils pourront être prélevés (carte en garantie ou paiement en ligne).
+  const amounts = (method === "online" && pay.online) || pay.guarantee ? policyAmounts(pay.rule, price, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null) : null;
+  if (amounts && !v.acceptPolicy) return { ok: false, error: "Acceptez les conditions d'annulation pour réserver.", fieldErrors: { acceptPolicy: "Acceptez les conditions d'annulation pour réserver." } };
+  const policyConsent = amounts
+    ? { acceptedAt: new Date().toISOString(), ...amounts, locale: v.locale ?? "fr", ip: clientIp === "local" ? null : clientIp, text: policyText(v.locale ?? "fr", amounts) }
+    : null;
   if (pay.required && price > 0 && method !== "online") return { ok: false, error: "Le paiement en ligne est obligatoire pour cette prestation." };
   if (method === "online") {
     if (!pay.online || price <= 0 || !v.paymentIntentId) return { ok: false, error: "Paiement en ligne indisponible." };
@@ -188,6 +198,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
           contactPhone: v.phone || null,
           customerMessage: v.message || null,
           formAnswers: answers,
+          policyConsent,
         })
         .returning({ id: appointments.id, token: appointments.manageToken });
 

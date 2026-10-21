@@ -25,8 +25,8 @@ const MODES: { v: Mode; t: string; d: string }[] = [
   { v: "strict", t: "Paiement à la réservation", d: "Le client paie en ligne pour réserver. En cas d'annulation tardive ou d'absence, la somme est gardée (en partie ou en totalité)." },
 ];
 const FEES = [
-  { v: "half_24h", t: "50 % moins de 24 h avant", d: "Annulation la veille ou le jour même : la moitié du prix." },
-  { v: "full_12h", t: "50 % sous 24 h, 100 % sous 12 h", d: "Plus strict : tout le prix si le client annule moins de 12 h avant." },
+  { v: "half_24h", t: "Moyenne : 50 %", d: "Annulation moins de 24 h avant : la moitié du prix. Absence sans prévenir : la moitié du prix." },
+  { v: "full_12h", t: "Stricte : jusqu'à 100 %", d: "Moins de 24 h avant : la moitié ; moins de 12 h avant : tout le prix. Absence sans prévenir : tout le prix." },
 ] as const;
 
 export function StripeCard({ p }: { p: P }) {
@@ -98,7 +98,7 @@ export function PaymentsForm({ p }: { p: P }) {
 
             {mode !== "none" ? (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Frais en cas d&apos;annulation tardive</p>
+                <p className="text-sm font-medium">Frais d&apos;annulation tardive et d&apos;absence</p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Frais d'annulation tardive">
                   {FEES.map((r) => (
                     <label key={r.v} className="cursor-pointer rounded-lg border border-border-strong p-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
@@ -108,7 +108,7 @@ export function PaymentsForm({ p }: { p: P }) {
                     </label>
                   ))}
                 </div>
-                <p className="text-sm text-muted">Absence sans prévenir : 100 % du prix, prélevé quand vous marquez le RDV « Absent non excusé ». « Absent excusé » ne prélève rien. Vous pouvez toujours rembourser des frais depuis la fiche du RDV.</p>
+                <p className="text-sm text-muted">Le client accepte ces montants (calculés sur le prix de la prestation) en cochant une case avant de réserver ; son accord est conservé avec le RDV. Les frais d&apos;absence sont prélevés quand vous marquez le RDV « Absent non excusé » ; « Absent excusé » ne prélève rien. Vous pouvez toujours rembourser depuis la fiche du RDV.</p>
               </div>
             ) : (
               <label className="flex items-start gap-3 text-sm">

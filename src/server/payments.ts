@@ -21,22 +21,9 @@ export function stripe(): Stripe | null {
 }
 export const stripeEnabled = () => !!process.env.STRIPE_SECRET_KEY && !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
-export type CancellationRule = "free" | "half_24h" | "full_12h";
-
-export function penaltyRate(rule: CancellationRule, hoursBefore: number) {
-  if (hoursBefore < 0) return 0;
-  if (rule === "half_24h") return hoursBefore < 24 ? 0.5 : 0;
-  if (rule === "full_12h") return hoursBefore < 12 ? 1 : hoursBefore < 24 ? 0.5 : 0;
-  return 0;
-}
-
-/** Montant retenu : frais de la prestation s'ils existent (seulement quand la politique en prélève), sinon le % de la politique. */
-export function feeCents(totalCents: number, rate: number, serviceFee: { type: "amount" | "percent" | null; value: number | null } | null) {
-  const fallback = Math.round(totalCents * rate);
-  if (fallback <= 0) return 0;
-  if (!serviceFee?.type || serviceFee.value == null) return fallback;
-  return serviceFee.type === "amount" ? Math.min(totalCents, serviceFee.value) : Math.round(totalCents * (Math.min(100, serviceFee.value) / 100));
-}
+export type { CancellationRule } from "@/lib/cancellation";
+export { feeCents, penaltyRate } from "@/lib/cancellation";
+import { feeCents, noShowRate, penaltyRate, type CancellationRule } from "@/lib/cancellation";
 
 async function context(appointmentId: string) {
   const [row] = await db
@@ -118,7 +105,10 @@ export async function applyBusinessCancellation(appointmentId: string) {
   }
 }
 
-/** Absence : justifiée → rien n'est dû (remboursement) ; non justifiée → 100 % (ou frais de la prestation). */
+/**
+ * Absence : justifiée → rien n'est dû (remboursement) ; non justifiée → selon la politique :
+ * 50 % (moyenne) ou 100 % (stricte), ou les frais propres à la prestation. Déjà payé → le reste est remboursé.
+ */
 export async function applyNoShow(appointmentId: string, justified: boolean): Promise<{ charged: boolean; cents?: number; error?: string }> {
   const row = await context(appointmentId);
   if (!row || !["authorized", "paid"].includes(row.p.status)) return { charged: false };
@@ -132,8 +122,16 @@ export async function applyNoShow(appointmentId: string, justified: boolean): Pr
       }
       return { charged: false };
     }
-    if (row.p.status === "paid") return { charged: true, cents: row.p.amountCents };
-    const fee = feeCents(row.p.amountCents, 1, row.feeType ? { type: row.feeType, value: row.feeValue } : null);
+    const fee = feeCents(row.p.amountCents, noShowRate((row.rule ?? "free") as CancellationRule), row.feeType ? { type: row.feeType, value: row.feeValue } : null);
+    if (row.p.status === "paid") {
+      // Payé à la réservation : on garde la part due et on rembourse le reste.
+      const refund = row.p.amountCents - fee;
+      if (s && row.p.stripePaymentIntentId && refund >= 50) {
+        await s.refunds.create({ payment_intent: row.p.stripePaymentIntentId, amount: refund, reason: "requested_by_customer" });
+        await set(appointmentId, { status: fee > 0 ? "partial" : "refunded", keptCents: fee });
+      } else await set(appointmentId, { keptCents: row.p.amountCents });
+      return { charged: fee > 0, cents: refund >= 50 ? fee : row.p.amountCents };
+    }
     if (fee < 50) return { charged: false, error: "Montant trop faible pour être prélevé." };
     const pi = await chargeCard(row, fee, `Absence non excusée — ${row.a.serviceName ?? "rendez-vous"}`);
     await set(appointmentId, { status: "penalty", penaltyCents: fee, stripePaymentIntentId: pi.id, paidAt: new Date() });

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
+import { policyAmounts } from "@/lib/cancellation";
+import { policyLines } from "@/lib/cancellation-text";
 import { createPublicBooking, getPublicSlots, joinWaitlist, startPayment, type PublicDay } from "@/server/actions/booking";
 import { PaymentStep } from "@/components/booking/payment-step";
 import { bookGroupSession, getPublicSessions } from "@/server/actions/group-sessions";
@@ -58,6 +60,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   // Calendrier intégré sur le site du pro : la connexion s'ouvre dans un nouvel onglet (pas dans l'iframe).
   const embedded = useEmbedded();
   const { WEEKDAY, DAYNUM, LONG, MONTH } = useMemo(() => fmts(locale), [locale]);
+  const money = (c: number) => new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "EUR" }).format(c / 100);
   const at = (day: string, time: string) => t("common.at", { day: cap(LONG.format(utc(day))), time });
   const { categories, team, questions, settings } = data;
   const fv = settings?.firstVisitQuestion;
@@ -190,6 +193,11 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
 
   const [pendingPay, setPendingPay] = useState<{ mode: "pay" | "guarantee"; clientSecret: string; payload: Parameters<typeof createPublicBooking>[0] } | null>(null);
   const ruleText = data.payment.rule === "half_24h" ? t("booking.ruleHalf") : data.payment.rule === "full_12h" ? t("booking.ruleFull") : null;
+  // Frais d'annulation / d'absence qui pourront être prélevés : le client les accepte explicitement (case à cocher).
+  const policy =
+    service && service.kind !== "group" && (data.payment.guarantee || data.payment.online)
+      ? policyAmounts(data.payment.rule, service.priceCents ?? 0, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null)
+      : null;
 
   function submit(formData: FormData) {
     if (!service) return;
@@ -197,7 +205,12 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     setFieldErrors({});
     const answers: Record<string, string> = {};
     for (const q of questions) answers[q.id] = String(formData.get(`q_${q.id}`) ?? "");
+    if (policy && formData.get("acceptPolicy") !== "on") {
+      setFieldErrors({ acceptPolicy: tr("Acceptez les conditions d'annulation pour réserver.") });
+      return;
+    }
     const contact = {
+      acceptPolicy: formData.get("acceptPolicy") === "on",
       firstName: String(formData.get("firstName") ?? ""),
       lastName: String(formData.get("lastName") ?? ""),
       email: String(formData.get("email") ?? ""),
@@ -652,7 +665,20 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           <Field label={t("common.optional", { label: t("booking.message") })} htmlFor="message">
             <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder={t("booking.messagePlaceholder")} />
           </Field>
-          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} ruleText={ruleText} /> : null}
+          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} ruleText={policy ? null : ruleText} /> : null}
+          {policy ? (
+            <fieldset className="space-y-3 rounded-lg border border-border-strong p-4 text-sm">
+              <legend className="px-1 font-semibold">{t("booking.policyTitle")}</legend>
+              <ul className="list-disc space-y-1 pl-5 text-muted">
+                {policyLines(t, policy, money).map((l) => <li key={l}>{l}</li>)}
+              </ul>
+              <label className="flex items-start gap-3">
+                <input type="checkbox" name="acceptPolicy" required className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" aria-invalid={!!fieldErrors.acceptPolicy || undefined} aria-describedby={fieldErrors.acceptPolicy ? "acceptPolicy-error" : undefined} />
+                <span>{t("booking.policyAccept")}</span>
+              </label>
+              {fieldErrors.acceptPolicy ? <p id="acceptPolicy-error" className="text-danger" role="alert">{fieldErrors.acceptPolicy}</p> : null}
+            </fieldset>
+          ) : null}
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
             {service.kind === "group" ? t("booking.confirmGroup") : settings?.autoConfirm ? t("booking.confirm") : t("booking.request")}
           </Button>

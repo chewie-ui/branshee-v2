@@ -101,6 +101,8 @@ export const appointments = pgTable(
     contactPhone: text("contact_phone"),
     customerMessage: text("customer_message"),
     formAnswers: jsonb("form_answers").$type<{ question: string; answer: string }[]>().notNull().default([]),
+    /** Conditions d'annulation acceptées par le client en réservant (preuve : date, montants, texte affiché). */
+    policyConsent: jsonb("policy_consent").$type<{ acceptedAt: string; rule: string; late24Cents: number; late12Cents: number | null; noShowCents: number; text: string; locale: string; ip: string | null }>(),
 
     internalNote: text("internal_note"),
     overbooked: boolean("overbooked").notNull().default(false),

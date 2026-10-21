@@ -163,8 +163,9 @@ export const emails = {
     };
   },
 
-  cancelledForCustomer(a: AppointmentInfo, bookingUrl: string, customMessage?: string | null) {
+  cancelledForCustomer(a: AppointmentInfo, bookingUrl: string, customMessage?: string | null, fee?: { kind: "charged" | "kept"; amount: string } | null) {
     const c = customer(a);
+    const feeNote = fee ? c.t(fee.kind === "charged" ? "email.cancelFeeCharged" : "email.cancelFeeKept", { amount: fee.amount }) : null;
     return {
       subject: c.t("email.cancelledSubject", { business: c.business }),
       ...render({
@@ -174,7 +175,7 @@ export const emails = {
         intro: c.t("email.cancelledIntro", { name: c.name, business: c.business }),
         details: c.details,
         cta: { label: c.t("email.rebook"), url: bookingUrl },
-        note: customMessage ?? undefined,
+        note: [feeNote, customMessage].filter(Boolean).join("\n\n") || undefined,
         footer: c.footer,
       }),
     };

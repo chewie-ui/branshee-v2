@@ -53,7 +53,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
 
   const [svc, cats, links, team, questions, hours, intakeAll] = await Promise.all([
     db
-      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience, imageUrl: services.imageUrl, location: services.location })
+      .select({ id: services.id, name: services.name, color: services.color, description: services.description, priceCents: services.priceCents, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, categoryId: services.categoryId, kind: services.kind, capacity: services.capacity, audience: services.audience, imageUrl: services.imageUrl, location: services.location, cancellationFeeType: services.cancellationFeeType, cancellationFeeValue: services.cancellationFeeValue })
       .from(services)
       .where(and(eq(services.businessId, biz.id), eq(services.isActive, true)))
       .orderBy(asc(services.position), asc(services.name)),

@@ -91,6 +91,17 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
                 {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte Branshee : {account.email}</p> : null}
               </dd>
             </div>
+            {a.policyConsent ? (
+              <div className="flex gap-3">
+                <dt className="w-28 shrink-0 text-muted">Conditions</dt>
+                <dd>
+                  <details>
+                    <summary className="cursor-pointer">Acceptées le {formatDay(new Date(a.policyConsent.acceptedAt), tz, "d MMMM yyyy")} à {formatTime(new Date(a.policyConsent.acceptedAt), tz)}</summary>
+                    <p className="mt-1 whitespace-pre-line text-muted">{a.policyConsent.text}</p>
+                  </details>
+                </dd>
+              </div>
+            ) : null}
             {pay && pay.method !== "none" ? (
               <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Paiement</dt><dd>{formatPrice(pay.amountCents)} · {PAY_METHOD[pay.method]} · {PAY_STATUS[pay.status]}{pay.penaltyCents ? ` · frais ${formatPrice(pay.penaltyCents)}` : ""}</dd></div>
             ) : null}

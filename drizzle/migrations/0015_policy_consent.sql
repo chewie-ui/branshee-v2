@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" ADD COLUMN "policy_consent" jsonb;
