@@ -108,6 +108,7 @@ const nl: Messages = {
     bankTransfer: "Overschrijving",
     bankTransferHint: "De gegevens worden na de reservatie meegedeeld.",
     paypalHint: "De PayPal-link wordt na de reservatie meegedeeld.",
+    payRequired: "Online betalen is vereist om de reservering te bevestigen.",
     guaranteeNote: "Er wordt een kaart als garantie gevraagd (er wordt nu niets afgeschreven).",
     waitlistIntro: "{day} is volzet. Laat uw e-mailadres achter: we verwittigen u als er een plaats vrijkomt.",
     waitlistName: "Uw naam",

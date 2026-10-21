@@ -108,6 +108,7 @@ const es: Messages = {
     bankTransfer: "Transferencia bancaria",
     bankTransferHint: "Los datos se le darán después de la reserva.",
     paypalHint: "El enlace de PayPal se le dará después de la reserva.",
+    payRequired: "Se requiere el pago en línea para confirmar la reserva.",
     guaranteeNote: "Se le pedirá una tarjeta como garantía (no se cobra nada ahora).",
     waitlistIntro: "{day} está completo. Deje su correo: le avisaremos si se libera una plaza.",
     waitlistName: "Su nombre",

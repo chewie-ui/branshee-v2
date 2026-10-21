@@ -108,6 +108,7 @@ const it: Messages = {
     bankTransfer: "Bonifico bancario",
     bankTransferHint: "Le coordinate le saranno fornite dopo la prenotazione.",
     paypalHint: "Il link PayPal le sarà fornito dopo la prenotazione.",
+    payRequired: "Il pagamento online è richiesto per confermare la prenotazione.",
     guaranteeNote: "Le sarà richiesta una carta a garanzia (non viene addebitato nulla ora).",
     waitlistIntro: "{day} è al completo. Lasci la sua email: la avviseremo se si libera un posto.",
     waitlistName: "Il suo nome",

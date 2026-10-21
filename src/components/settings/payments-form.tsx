@@ -18,11 +18,16 @@ type P = {
   payout: { method?: string; iban?: string; bic?: string; paypalEmail?: string; other?: string };
 };
 
-const RULES = [
-  { v: "free", t: "Annulation gratuite", d: "Le client peut annuler à tout moment sans frais." },
-  { v: "half_24h", t: "50 % moins de 24 h avant", d: "Annulation tardive : la moitié du prix est due." },
-  { v: "full_12h", t: "50 % sous 24 h, 100 % sous 12 h", d: "La politique la plus stricte." },
+type Mode = "none" | "guarantee" | "strict";
+const MODES: { v: Mode; t: string; d: string }[] = [
+  { v: "none", t: "Sans protection", d: "Annulation gratuite. Le client réserve sans carte bancaire ; il paie sur place." },
+  { v: "guarantee", t: "Carte en garantie", d: "Le client enregistre sa carte, rien n'est prélevé. Elle n'est débitée qu'en cas d'annulation tardive ou d'absence." },
+  { v: "strict", t: "Paiement à la réservation", d: "Le client paie en ligne pour réserver. En cas d'annulation tardive ou d'absence, la somme est gardée (en partie ou en totalité)." },
 ];
+const FEES = [
+  { v: "half_24h", t: "50 % moins de 24 h avant", d: "Annulation la veille ou le jour même : la moitié du prix." },
+  { v: "full_12h", t: "50 % sous 24 h, 100 % sous 12 h", d: "Plus strict : tout le prix si le client annule moins de 12 h avant." },
+] as const;
 
 export function StripeCard({ p }: { p: P }) {
   const [manual, setManual] = useState("");
@@ -63,7 +68,10 @@ export function StripeCard({ p }: { p: P }) {
 }
 
 export function PaymentsForm({ p }: { p: P }) {
+  const [mode, setMode] = useState<Mode>(p.prepaymentEnabled && p.prepaymentRequired ? "strict" : p.cancellationRule !== "free" ? "guarantee" : "none");
+  const [fee, setFee] = useState<"half_24h" | "full_12h">(p.cancellationRule === "full_12h" ? "full_12h" : "half_24h");
   const [prepay, setPrepay] = useState(p.prepaymentEnabled);
+  const canCharge = p.stripeConfigured && (p.stripe.status === "active" || !!p.payout.method);
   const [bt, setBt] = useState(p.accepted.bankTransfer.enabled);
   const [pp, setPp] = useState(p.accepted.paypal.enabled);
   const [qr, setQr] = useState(p.accepted.qrCode.enabled);
@@ -73,25 +81,53 @@ export function PaymentsForm({ p }: { p: P }) {
     <SettingsForm action={savePaymentSettings}>
       {(err) => (
         <>
-          <Section title="Prépaiement" description="Faire payer en ligne au moment de la réservation (prestations avec un prix).">
-            <label className="flex items-start gap-3 text-sm">
-              <input type="checkbox" name="prepaymentEnabled" checked={prepay} onChange={(e) => setPrepay(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
-              <span><span className="font-medium">Proposer le paiement en ligne</span><span className="block text-muted">Nécessite un compte Stripe connecté, ou un moyen de reversement ci-dessous.</span></span>
-            </label>
-            {prepay ? <Toggle name="prepaymentRequired" defaultChecked={p.prepaymentRequired} label="Obligatoire" description="Sinon, le client choisit entre payer en ligne et payer sur place." /> : null}
-          </Section>
-
-          <Section title="Politique d'annulation" description="Appliquée aux clients qui ont payé en ligne ou laissé une carte en garantie. Les frais propres à une prestation la remplacent.">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
-              {RULES.map((r) => (
-                <label key={r.v} className="cursor-pointer rounded-lg border border-border-strong p-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
-                  <input type="radio" name="cancellationRule" value={r.v} defaultChecked={p.cancellationRule === r.v} className="sr-only" />
-                  <span className="block font-medium">{r.t}</span>
-                  <span className="block text-muted">{r.d}</span>
+          <Section title="Protection contre les annulations et absences" description="Choisissez ce que vous demandez au client au moment de réserver. Les frais propres à une prestation remplacent les pourcentages ci-dessous.">
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-3" role="radiogroup" aria-label="Niveau de protection">
+              {MODES.map((m) => (
+                <label key={m.v} className="cursor-pointer rounded-lg border border-border-strong p-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                  <input type="radio" name="protectionMode" value={m.v} checked={mode === m.v} onChange={() => { setMode(m.v); setPrepay(false); }} className="sr-only" />
+                  <span className="block font-medium">{m.t}</span>
+                  <span className="mt-1 block text-muted">{m.d}</span>
                 </label>
               ))}
             </div>
-            <p className="text-sm text-muted">Hors annulation gratuite, une carte est demandée en garantie aux clients qui paient sur place (rien n&apos;est prélevé à la réservation). Une absence non excusée peut être facturée depuis la fiche du rendez-vous.</p>
+
+            {/* Champs lus par le serveur, déduits du niveau choisi. */}
+            <input type="hidden" name="cancellationRule" value={mode === "none" ? "free" : fee} />
+            {mode === "strict" ? <><input type="hidden" name="prepaymentEnabled" value="on" /><input type="hidden" name="prepaymentRequired" value="on" /></> : null}
+
+            {mode !== "none" ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Frais en cas d&apos;annulation tardive</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Frais d'annulation tardive">
+                  {FEES.map((r) => (
+                    <label key={r.v} className="cursor-pointer rounded-lg border border-border-strong p-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                      <input type="radio" name="feeRule" value={r.v} checked={fee === r.v} onChange={() => setFee(r.v)} className="sr-only" />
+                      <span className="block font-medium">{r.t}</span>
+                      <span className="block text-muted">{r.d}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-sm text-muted">Absence sans prévenir : 100 % du prix, prélevé quand vous marquez le RDV « Absent non excusé ». « Absent excusé » ne prélève rien. Vous pouvez toujours rembourser des frais depuis la fiche du RDV.</p>
+              </div>
+            ) : (
+              <label className="flex items-start gap-3 text-sm">
+                <input type="checkbox" name="prepaymentEnabled" checked={prepay} onChange={(e) => setPrepay(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                <span><span className="font-medium">Proposer quand même le paiement en ligne</span><span className="block text-muted">Le client choisit : payer en ligne, ou sur place sans laisser de carte.</span></span>
+              </label>
+            )}
+            {mode === "guarantee" ? (
+              <label className="flex items-start gap-3 text-sm">
+                <input type="checkbox" name="prepaymentEnabled" checked={prepay} onChange={(e) => setPrepay(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                <span><span className="font-medium">Proposer aussi de payer en ligne tout de suite</span><span className="block text-muted">Sinon, le client laisse seulement sa carte et paie sur place.</span></span>
+              </label>
+            ) : null}
+
+            {mode !== "none" && !canCharge ? (
+              <p className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm" role="status">
+                Pour encaisser les paiements et les frais, connectez votre compte Stripe ci-dessus (ou renseignez un moyen de reversement plus bas). Sans cela, la réservation reste possible mais rien ne peut être prélevé.
+              </p>
+            ) : null}
           </Section>
 
           <Section title="Modes de paiement acceptés sur place" description="Affichés au client lors de la réservation et dans le rappel.">

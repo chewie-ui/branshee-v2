@@ -652,7 +652,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           <Field label={t("common.optional", { label: t("booking.message") })} htmlFor="message">
             <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder={t("booking.messagePlaceholder")} />
           </Field>
-          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} /> : null}
+          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} ruleText={ruleText} /> : null}
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
             {service.kind === "group" ? t("booking.confirmGroup") : settings?.autoConfirm ? t("booking.confirm") : t("booking.request")}
           </Button>
@@ -696,7 +696,7 @@ function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: stri
 }
 
 /** Choix du mode de paiement (affiché seulement s'il y a un vrai choix). */
-function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
+function PaymentChoice({ pay, ruleText }: { pay: PublicBusiness["payment"]; ruleText: string | null }) {
   const { t: tt } = useI18n();
   const site = [pay.onSite.cash && tt("booking.cash"), pay.onSite.card && tt("booking.card"), pay.onSite.qr && tt("booking.qr")].filter(Boolean).join(", ");
   const options = [
@@ -706,12 +706,20 @@ function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
     !pay.required && pay.onSite.paypal ? { v: "paypal", t: "PayPal", d: tt("booking.paypalHint") } : null,
   ].filter((o): o is { v: string; t: string; d: string } => !!o);
   const [value, setValue] = useState(options[0]?.v ?? "none");
-  if (options.length === 0) return null;
+  // Conditions affichées AVANT de réserver : paiement exigé, carte en garantie, frais d'annulation.
+  const notes = (
+    <div className="space-y-1 text-sm text-muted">
+      {pay.required ? <p className="font-medium text-text">{tt("booking.payRequired")}</p> : null}
+      {pay.guarantee && value !== "online" ? <p>{tt("booking.guaranteeNote")}</p> : null}
+      {ruleText ? <p>{ruleText}</p> : null}
+    </div>
+  );
+  if (options.length === 0) return ruleText ? notes : null;
   if (options.length === 1)
     return (
       <>
         <input type="hidden" name="paymentMethod" value={options[0]!.v} />
-        {pay.guarantee && options[0]!.v !== "online" ? <p className="text-sm text-muted">{tt("booking.guaranteeNote")}</p> : null}
+        {notes}
       </>
     );
   return (
@@ -726,7 +734,7 @@ function PaymentChoice({ pay }: { pay: PublicBusiness["payment"] }) {
           </span>
         </label>
       ))}
-      {pay.guarantee && value !== "online" ? <p className="text-sm text-muted">{tt("booking.guaranteeNote")}</p> : null}
+      {notes}
     </fieldset>
   );
 }

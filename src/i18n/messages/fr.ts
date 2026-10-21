@@ -111,6 +111,7 @@ const fr = {
     bankTransfer: "Virement bancaire",
     bankTransferHint: "Les coordonnées vous seront données après la réservation.",
     paypalHint: "Le lien PayPal vous sera donné après la réservation.",
+    payRequired: "Le paiement en ligne est demandé pour confirmer la réservation.",
     guaranteeNote: "Une carte vous sera demandée en garantie (rien n'est prélevé maintenant).",
     waitlistIntro: "{day} est complet. Laissez votre email : nous vous prévenons si une place se libère.",
     waitlistName: "Votre nom",

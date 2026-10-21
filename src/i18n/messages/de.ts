@@ -108,6 +108,7 @@ const de: Messages = {
     bankTransfer: "Überweisung",
     bankTransferHint: "Die Bankdaten erhalten Sie nach der Buchung.",
     paypalHint: "Den PayPal-Link erhalten Sie nach der Buchung.",
+    payRequired: "Zur Bestätigung der Buchung ist eine Online-Zahlung erforderlich.",
     guaranteeNote: "Es wird eine Karte als Garantie verlangt (jetzt wird nichts abgebucht).",
     waitlistIntro: "{day} ist ausgebucht. Hinterlassen Sie Ihre E-Mail-Adresse: Wir benachrichtigen Sie, wenn ein Platz frei wird.",
     waitlistName: "Ihr Name",
