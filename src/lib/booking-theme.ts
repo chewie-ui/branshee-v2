@@ -153,6 +153,8 @@ export function themeVars(t: FullTheme): Record<string, string> {
   const text = readable(t.textColor, t.calBg);
   const accentText = readable(t.accentText, t.accentColor);
   const selBg = t.daySelectedBg || t.accentColor;
+  const dayHover = t.dayHoverBg || mix(t.accentColor, t.dayBg, 0.08);
+  const accentHover = t.btnHoverBg || shade(t.accentColor, -0.12);
   const border = t.borderStyle === "none" ? "transparent" : mix(text, t.calBg, t.borderStyle === "subtle" ? 0.12 : t.borderStyle === "medium" ? 0.22 : 0.4);
   const r = RADII[t.radius];
   const family = t.customFontFamily && t.customFontUrl ? `"${t.customFontFamily}"` : `"${t.font}"`;
@@ -165,7 +167,8 @@ export function themeVars(t: FullTheme): Record<string, string> {
     "--text": text,
     "--text-muted": muted(text, t.calBg),
     "--accent": t.accentColor,
-    "--accent-hover": t.btnHoverBg || shade(t.accentColor, -0.12),
+    "--accent-hover": accentHover,
+    "--accent-hover-foreground": readable(accentText, accentHover),
     "--accent-foreground": accentText,
     // Liens et textes en couleur d'accent : lisibles sur le fond des cartes, même avec un accent très clair ou très sombre.
     "--accent-link": readable(t.accentColor, t.calBg),
@@ -175,7 +178,8 @@ export function themeVars(t: FullTheme): Record<string, string> {
     "--day-text": readable(text, t.dayBg),
     "--day-selected-bg": selBg,
     "--day-selected-text": readable(t.daySelectedText || t.accentText, selBg),
-    "--day-hover-bg": t.dayHoverBg || mix(t.accentColor, t.dayBg, 0.08),
+    "--day-hover-bg": dayHover,
+    "--day-hover-text": readable(text, dayHover),
     "--day-available": t.dayAvailableColor,
     "--day-busy": t.dayBusyColor,
     "--day-full": t.dayFullColor,

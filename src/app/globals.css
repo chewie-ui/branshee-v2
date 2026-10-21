@@ -124,3 +124,7 @@ body {
 #bp-root .hover\:text-accent:hover {
   color: var(--accent-link, var(--accent));
 }
+/* Survol des boutons d'accent avec une couleur de survol personnalisée : le texte reste lisible. */
+#bp-root .hover\:bg-accent-hover:hover {
+  color: var(--accent-hover-foreground, var(--accent-foreground));
+}
