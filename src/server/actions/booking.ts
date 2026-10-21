@@ -117,7 +117,8 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const pay = data.payment;
   let payment: (Partial<typeof appointmentPayments.$inferInsert> & { method: typeof method }) | null = price > 0 && method !== "none" ? { method, amountCents: price, status: "none" } : null;
   // Consentement aux frais d'annulation / d'absence : exigé quand ils pourront être prélevés (carte en garantie ou paiement en ligne).
-  const amounts = (method === "online" && pay.online) || pay.guarantee ? policyAmounts(pay.rule, price, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null) : null;
+  // Dès que le pro a une politique payante, le client l'accepte (même si rien n'est encore prélevable en ligne).
+  const amounts = policyAmounts(pay.rule, price, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null);
   if (amounts && !v.acceptPolicy) return { ok: false, error: "Acceptez les conditions d'annulation pour réserver.", fieldErrors: { acceptPolicy: "Acceptez les conditions d'annulation pour réserver." } };
   const policyConsent = amounts
     ? { acceptedAt: new Date().toISOString(), ...amounts, locale: v.locale ?? "fr", ip: clientIp === "local" ? null : clientIp, text: policyText(v.locale ?? "fr", amounts) }

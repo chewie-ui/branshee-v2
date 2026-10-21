@@ -195,7 +195,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   const ruleText = data.payment.rule === "half_24h" ? t("booking.ruleHalf") : data.payment.rule === "full_12h" ? t("booking.ruleFull") : null;
   // Frais d'annulation / d'absence qui pourront être prélevés : le client les accepte explicitement (case à cocher).
   const policy =
-    service && service.kind !== "group" && (data.payment.guarantee || data.payment.online)
+    service && service.kind !== "group"
       ? policyAmounts(data.payment.rule, service.priceCents ?? 0, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null)
       : null;
 
