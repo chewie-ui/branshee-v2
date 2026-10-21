@@ -100,7 +100,7 @@ export function shade(color: string, amount = -0.1) {
 }
 
 /** Mélange d'une couleur avec du blanc/noir, pour les fonds « doux ». */
-function mix(color: string, base: string, weight: number) {
+export function mix(color: string, base: string, weight: number) {
   const a = parseInt(color.slice(1), 16);
   const b = parseInt(base.slice(1), 16);
   const ch = (s: number) => Math.round(((a >> s) & 255) * weight + ((b >> s) & 255) * (1 - weight));
@@ -130,13 +130,13 @@ export function contrast(a: string, b: string) {
  * Couleur de texte lisible sur un fond : celle choisie par le pro si le contraste suffit,
  * sinon du noir ou du blanc (le plus lisible des deux). Un thème personnalisé ne doit jamais rendre la page illisible.
  */
-function readable(fg: string, bg: string, min = 4.5) {
+export function readable(fg: string, bg: string, min = 4.5) {
   if (contrast(fg, bg) >= min) return fg;
   return contrast("#111111", bg) >= contrast("#ffffff", bg) ? "#111111" : "#ffffff";
 }
 
 /** Texte secondaire : le plus proche possible du fond (discret) tout en restant lisible. */
-function muted(text: string, bg: string) {
+export function muted(text: string, bg: string) {
   for (let w = 0.68; w < 1; w += 0.04) {
     const c = mix(text, bg, w);
     if (contrast(c, bg) >= 4.5) return c;
@@ -147,7 +147,7 @@ function muted(text: string, bg: string) {
 const RADII = { none: ["0px", "0px", "0px", "0px"], sm: ["2px", "4px", "6px", "8px"], md: ["4px", "6px", "8px", "12px"], lg: ["8px", "12px", "16px", "20px"] } as const;
 const SHADOWS = { none: "none", subtle: "0 1px 2px rgb(0 0 0 / 0.05)", medium: "0 4px 12px rgb(0 0 0 / 0.08)", strong: "0 10px 30px rgb(0 0 0 / 0.14)" } as const;
 
-const STATE = { warning: "#b45309", danger: "#dc2626", success: "#15803d" } as const;
+const STATE = { warning: "#b45309", danger: "#b91c1c", success: "#15803d" } as const;
 /** --warning / --warning-soft, etc. : lisibles sur le fond des cartes, clair ou sombre. */
 function stateColors(bg: string, dark: boolean, text: string) {
   const out: Record<string, string> = {};
@@ -167,7 +167,8 @@ export function themeVars(t: FullTheme): Record<string, string> {
   const accentText = readable(t.accentText, t.accentColor);
   const selBg = t.daySelectedBg || t.accentColor;
   const dayHover = t.dayHoverBg || mix(t.accentColor, t.dayBg, 0.08);
-  const accentHover = t.btnHoverBg || shade(t.accentColor, -0.12);
+  // Survol automatique : plus foncé, ou plus clair si le texte du bouton y deviendrait illisible.
+  const accentHover = t.btnHoverBg || [shade(t.accentColor, -0.12), shade(t.accentColor, 0.15), shade(t.accentColor, -0.25)].find((c) => contrast(accentText, c) >= 4.5) || shade(t.accentColor, -0.12);
   const border = t.borderStyle === "none" ? "transparent" : mix(text, t.calBg, t.borderStyle === "subtle" ? 0.12 : t.borderStyle === "medium" ? 0.22 : 0.4);
   const r = RADII[t.radius];
   const family = t.customFontFamily && t.customFontUrl ? `"${t.customFontFamily}"` : `"${t.font}"`;

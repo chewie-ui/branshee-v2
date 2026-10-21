@@ -537,7 +537,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
                           key={s.time}
                           type="button"
                           onClick={() => { setTime(s.time); setError(null); setStep("details"); }}
-                          className={cn("relative h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : s.grouped ? "border-warning/60 bg-warning-soft text-text hover:border-accent hover:text-accent" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
+                          className={cn("relative h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : s.grouped ? "border-warning/60 bg-warning-soft text-text hover:border-accent" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
                           aria-label={s.grouped ? t("booking.recommendedSlot", { time: s.time }) : undefined}
                         >
                           {s.time}

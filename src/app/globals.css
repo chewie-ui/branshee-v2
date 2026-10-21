@@ -4,7 +4,7 @@
 /*
  * Design tokens Branshee — une seule source pour toutes les couleurs.
  * Contrastes vérifiés (WCAG) sur fond surface #ffffff :
- *   text 17.5:1 · text-muted 7.6:1 · accent 6.3:1 · danger 4.8:1 · success 5.0:1 · warning 5.0:1
+ *   text 17.5:1 · text-muted 7.6:1 · accent 6.3:1 · danger 6.5:1 · success 5.0:1 · warning 5.0:1
  */
 :root {
   --background: #f6f6f7;
@@ -19,7 +19,7 @@
   --accent-foreground: #ffffff;
   --accent-soft: #eef2ff;
   --accent-soft-foreground: #3730a3;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-soft: #fef2f2;
   --success: #15803d;
   --success-soft: #f0fdf4;

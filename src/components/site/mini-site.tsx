@@ -1,3 +1,4 @@
+import { mix, muted, readable } from "@/lib/booking-theme";
 import type { CSSProperties } from "react";
 import { Check, Clock, Facebook, Instagram, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Youtube } from "lucide-react";
 import type { SocialLinks } from "@/db/schema";
@@ -33,22 +34,24 @@ const NAV: Partial<Record<SiteSection["type"], string>> = { services: "Prestatio
 /** Rendu public d'un site « Mon site » (aussi utilisé pour l'aperçu de l'éditeur). */
 export function MiniSite({ site, business, content, preview = false }: Props) {
   const t = site.theme;
+  const text = readable(t.textColor, t.bgColor);
   const radius = t.roundness === "sharp" ? "4px" : t.roundness === "round" ? "999px" : "12px";
   const radiusSm = t.roundness === "sharp" ? "2px" : t.roundness === "round" ? "16px" : "8px";
   const vars = {
     "--s-primary": t.primaryColor,
     "--s-on-primary": onColor(t.primaryColor),
     "--s-bg": t.bgColor,
-    "--s-text": t.textColor,
-    "--s-muted": `color-mix(in srgb, ${t.textColor} 72%, ${t.bgColor})`,
-    "--s-surface": `color-mix(in srgb, ${t.textColor} 4%, ${t.bgColor})`,
-    "--s-border": `color-mix(in srgb, ${t.textColor} 14%, ${t.bgColor})`,
+    // Texte toujours lisible sur le fond choisi (sinon noir ou blanc), texte secondaire au contraste minimum.
+    "--s-text": text,
+    "--s-muted": muted(text, mix(text, t.bgColor, 0.04)),
+    "--s-surface": mix(text, t.bgColor, 0.04),
+    "--s-border": mix(text, t.bgColor, 0.14),
     "--s-radius": radius,
     "--s-radius-sm": radiusSm,
     "--s-font": `"${t.fontFamily}", ui-sans-serif, system-ui, sans-serif`,
     "--s-heading": `"${t.headingFont || t.fontFamily}", ui-sans-serif, system-ui, sans-serif`,
     background: t.bgColor,
-    color: t.textColor,
+    color: text,
     fontFamily: "var(--s-font)",
   } as CSSProperties;
   const sections = site.sections.filter((x) => x.enabled);
