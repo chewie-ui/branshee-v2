@@ -147,6 +147,19 @@ function muted(text: string, bg: string) {
 const RADII = { none: ["0px", "0px", "0px", "0px"], sm: ["2px", "4px", "6px", "8px"], md: ["4px", "6px", "8px", "12px"], lg: ["8px", "12px", "16px", "20px"] } as const;
 const SHADOWS = { none: "none", subtle: "0 1px 2px rgb(0 0 0 / 0.05)", medium: "0 4px 12px rgb(0 0 0 / 0.08)", strong: "0 10px 30px rgb(0 0 0 / 0.14)" } as const;
 
+const STATE = { warning: "#b45309", danger: "#dc2626", success: "#15803d" } as const;
+/** --warning / --warning-soft, etc. : lisibles sur le fond des cartes, clair ou sombre. */
+function stateColors(bg: string, dark: boolean, text: string) {
+  const out: Record<string, string> = {};
+  for (const [k, base] of Object.entries(STATE)) {
+    const soft = mix(base, bg, dark ? 0.22 : 0.1);
+    const fg = dark ? shade(base, 0.45) : base;
+    out[`--${k}-soft`] = soft;
+    out[`--${k}`] = contrast(fg, soft) >= 4.5 ? fg : readable(text, soft);
+  }
+  return out;
+}
+
 /** Variables CSS appliquées à la page publique (elles surchargent les jetons du design system). */
 export function themeVars(t: FullTheme): Record<string, string> {
   const dark = isDark(t.calBg);
@@ -189,6 +202,9 @@ export function themeVars(t: FullTheme): Record<string, string> {
     "--radius-xl": r[3],
     "--card-shadow": SHADOWS[t.shadowStyle],
     "--font-sans": `${family}, ui-sans-serif, system-ui, sans-serif`,
+    // Couleurs d'état (créneaux conseillés, erreurs, succès) recalculées sur le fond des cartes :
+    // fond doux teinté + texte lisible, au lieu des fonds clairs du thème par défaut.
+    ...stateColors(t.calBg, dark, text),
     // Listes déroulantes, cases et barres de défilement du navigateur dans le bon thème (clair / sombre).
     "--bp-scheme": dark ? "dark" : "light",
   };
