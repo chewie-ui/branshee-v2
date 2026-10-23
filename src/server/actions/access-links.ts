@@ -6,6 +6,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accessLinkUses, accessLinks, activityLogs, businessPlans, businesses } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
+import { clientIp } from "@/lib/client-ip";
 
 /** Lien d'accès offert (créé par le super-admin) : forfait gratuit pendant N jours sur un établissement possédé. */
 export async function redeemAccessLink(code: string, businessId: string): Promise<{ ok: false; error: string } | never> {
@@ -25,7 +26,7 @@ export async function redeemAccessLink(code: string, businessId: string): Promis
   const values = { plan: link.plan, status: "active" as const, grantedUntil: until, stripeSubscriptionId: null, isTrial: false };
   await db.insert(businessPlans).values({ businessId: biz.id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   const h = await headers();
-  await db.insert(accessLinkUses).values({ accessLinkId: link.id, userId: s.user.id, email: s.user.email, ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null });
+  await db.insert(accessLinkUses).values({ accessLinkId: link.id, userId: s.user.id, email: s.user.email, ip: (clientIp(h) ?? null) });
   await db.insert(activityLogs).values({ businessId: biz.id, userId: s.user.id, actorName: s.user.fullName, action: "billing.access_link", description: `Accès offert activé (${link.durationDays} jours)` });
   redirect("/app/reglages/abonnement");
 }

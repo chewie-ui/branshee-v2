@@ -30,6 +30,7 @@ async function ownerOf(ctx: Awaited<ReturnType<typeof requireContext>>) {
 
 export async function topUpSms(amountEuros: number): Promise<Result> {
   const ctx = await requireContext("billing.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const amount = z.union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)]).safeParse(amountEuros);
   if (!amount.success) return { ok: false, error: "Montant invalide." };
   const s = stripe();
@@ -59,9 +60,12 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
 
 export async function saveAutoRecharge(input: { enabled: boolean; thresholdCents: number; amountCents: number }): Promise<Result> {
   const ctx = await requireContext("billing.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const v = z.object({ enabled: z.boolean(), thresholdCents: z.number().int().min(100).max(10000), amountCents: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(10000)]) }).safeParse(input);
   if (!v.success) return { ok: false, error: "Réglages invalides." };
   const owner = await ownerOf(ctx);
+  // Prélèvements automatiques sur la carte du propriétaire : lui seul peut les activer.
+  if (owner !== ctx.user.id) return { ok: false, error: "Seul le propriétaire de l'établissement peut régler la recharge automatique." };
   await db.insert(smsWallets).values({ userId: owner, autoRecharge: v.data }).onConflictDoUpdate({ target: smsWallets.userId, set: { autoRecharge: v.data } });
   revalidatePath("/app/reglages/sms");
   return { ok: true, message: v.data.enabled ? "Recharge automatique activée." : "Recharge automatique désactivée." };

@@ -11,6 +11,7 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { getSessionUser } from "@/server/auth/session";
 import { reviewEligibility } from "@/server/client-account";
 import { requireContext } from "@/server/context";
+import { clientIp } from "@/lib/client-ip";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -59,7 +60,7 @@ const reportSchema = z.object({
 async function fingerprint(userId: string | null) {
   if (userId) return `u:${userId}`;
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+  const ip = (clientIp(h) ?? "");
   return `v:${createHash("sha256").update(`${ip}|${h.get("user-agent") ?? ""}`).digest("hex").slice(0, 32)}`;
 }
 
@@ -70,7 +71,7 @@ async function fingerprint(userId: string | null) {
 export async function reportReview(reviewId: string, input: { reason: string; message: string }): Promise<Result> {
   const s = await getSessionUser();
   const h = await headers();
-  if (!rateLimit(`report:${h.get("x-forwarded-for") ?? "?"}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de signalements envoyés. Réessayez plus tard." };
+  if (!rateLimit(`report:${clientIp(h) ?? "?"}`, 10, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de signalements envoyés. Réessayez plus tard." };
   const parsed = reportSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const id = z.uuid().safeParse(reviewId);

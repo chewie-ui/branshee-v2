@@ -13,6 +13,7 @@ import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { collaboratorUsage } from "@/server/plan";
+import { isImpersonating } from "@/server/context";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
@@ -28,6 +29,7 @@ const uuid = (v: string) => z.uuid().parse(v);
 
 export async function acceptInvitation(memberId: string): Promise<Result> {
   const u = await me();
+  if (!u.emailVerifiedAt) return { ok: false, error: "Confirmez d'abord votre adresse email (code reçu par email) pour rejoindre une équipe." };
   const updated = await db
     .update(members)
     .set({ status: "active", joinedAt: new Date(), displayName: sql`coalesce(nullif(${members.displayName}, ''), ${u.fullName})` })
@@ -94,6 +96,7 @@ export async function cancelJoinRequest(memberId: string): Promise<Result> {
 
 export async function decideJoinRequest(memberId: string, accept: boolean): Promise<Result> {
   const ctx = await requireContext("team.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, uuid(memberId)), eq(members.businessId, ctx.business.id), eq(members.status, "requested")));
   if (!m) return { ok: false, error: "Demande introuvable." };
   if (accept) {
@@ -138,6 +141,7 @@ export async function setBusinessPausedByOwner(businessId: string, paused: boole
 
 export async function deleteBusinessByOwner(businessId: string, confirmName: string): Promise<Result> {
   const own = await ownBusiness(businessId);
+  if (await isImpersonating()) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!own) return { ok: false, error: "Seul le propriétaire peut faire cela." };
   if (confirmName.trim().toLowerCase() !== own.b.name.trim().toLowerCase()) return { ok: false, error: "Le nom saisi ne correspond pas." };
   await db.update(businesses).set({ deletedAt: new Date(), pausedAt: new Date() }).where(eq(businesses.id, own.b.id));

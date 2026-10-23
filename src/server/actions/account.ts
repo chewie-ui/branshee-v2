@@ -17,6 +17,7 @@ import { consumeCode, issueCode } from "@/server/codes";
 import { deletePublicImage, savePublicImage } from "@/server/storage";
 import { isImpersonating } from "@/server/context";
 import { deleteUserAccount } from "@/server/account-deletion";
+import { linkInvitations } from "@/server/team";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -45,6 +46,7 @@ export async function verifyEmail(_prev: Result | undefined, fd: FormData): Prom
   if (!res.ok) return res;
   await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, u.id));
   await linkCustomerRecords(u.id, u.email);
+  await linkInvitations(u.id, u.email);
   redirect(internal(String(fd.get("next") ?? "")) ?? "/espace-client");
 }
 
@@ -143,6 +145,7 @@ export async function confirmEmailChange(code: string): Promise<Result> {
   const [taken] = await db.select({ id: users.id }).from(users).where(and(sql`lower(${users.email}) = ${res.email}`, ne(users.id, u.id)));
   if (taken) return { ok: false, error: "Cette adresse est déjà utilisée par un autre compte." };
   await db.update(users).set({ email: res.email, emailVerifiedAt: new Date() }).where(eq(users.id, u.id));
+  await linkInvitations(u.id, res.email);
   await linkCustomerRecords(u.id, res.email);
   await destroyAllSessions(u.id, true);
   revalidatePath("/", "layout");

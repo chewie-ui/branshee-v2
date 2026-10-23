@@ -7,6 +7,7 @@ import { createSession, getSessionUser, setPendingTwoFactor } from "@/server/aut
 import { isPro, linkCustomerRecords } from "@/server/client-account";
 import { exchangeCode, pushUpcomingToGoogle, readState, saveCalendarConnection } from "@/server/google";
 import { linkInvitations } from "@/server/team";
+import { clientIp } from "@/lib/client-ip";
 
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 const go = (path: string) => NextResponse.redirect(`${appUrl()}${path}`);
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     return go("/connexion/verification");
   }
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const ip = (clientIp(h) ?? null);
   await createSession(user.id, { ip, userAgent: h.get("user-agent") });
   await db.insert(loginEvents).values({ userId: user.id, method: "google", ip });
   return go(state.s || ((await isPro(user.id)) ? "/app" : "/espace-client"));

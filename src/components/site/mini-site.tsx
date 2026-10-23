@@ -6,6 +6,9 @@ import type { SiteSection, SiteTheme } from "@/lib/site-templates";
 import { sanitizeArticleHtml } from "@/server/rich-text";
 import { BookingFrame, SiteContactForm, SiteMobileMenu } from "@/components/site/mini-site-client";
 
+/** Lien externe d'un réseau social : uniquement http(s) (un identifiant seul devient https://…). */
+const extLink = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v.replace(/^[a-z]+:/i, "").replace(/^\/+/, "")}`);
+
 /** Contraste WCAG : choisit le texte (blanc ou quasi-noir) le plus lisible sur une couleur. */
 function lum(hex: string) {
   const c = hex.replace("#", "").match(/.{2}/g)!.map((x) => parseInt(x, 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
@@ -313,11 +316,11 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 text-sm text-[var(--s-muted)] sm:flex-row sm:justify-between sm:px-6">
           <p>© {new Date().getFullYear()} {business.name}</p>
           <ul className="flex gap-2">
-            {site.social.instagram ? <li><a href={site.social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Instagram className="size-4" aria-hidden="true" /></a></li> : null}
-            {site.social.facebook ? <li><a href={site.social.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Facebook className="size-4" aria-hidden="true" /></a></li> : null}
-            {site.social.linkedin ? <li><a href={site.social.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Linkedin className="size-4" aria-hidden="true" /></a></li> : null}
-            {site.social.youtube ? <li><a href={site.social.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Youtube className="size-4" aria-hidden="true" /></a></li> : null}
-            {site.social.tiktok ? <li><a href={site.social.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="flex h-10 items-center justify-center rounded-full border border-[var(--s-border)] px-3 text-xs font-semibold">TikTok</a></li> : null}
+            {site.social.instagram ? <li><a href={extLink(site.social.instagram)} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Instagram className="size-4" aria-hidden="true" /></a></li> : null}
+            {site.social.facebook ? <li><a href={extLink(site.social.facebook)} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Facebook className="size-4" aria-hidden="true" /></a></li> : null}
+            {site.social.linkedin ? <li><a href={extLink(site.social.linkedin)} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Linkedin className="size-4" aria-hidden="true" /></a></li> : null}
+            {site.social.youtube ? <li><a href={extLink(site.social.youtube)} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><Youtube className="size-4" aria-hidden="true" /></a></li> : null}
+            {site.social.tiktok ? <li><a href={extLink(site.social.tiktok)} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="flex h-10 items-center justify-center rounded-full border border-[var(--s-border)] px-3 text-xs font-semibold">TikTok</a></li> : null}
             {site.social.whatsapp ? <li><a href={`https://wa.me/${site.social.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><MessageCircle className="size-4" aria-hidden="true" /></a></li> : null}
           </ul>
           {!business.noBranding ? <a href="https://branshee.com" className="hover:underline">Réservation en ligne par Branshee</a> : null}

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { VerifyEmailForm } from "@/components/auth/verify-email-form";
 import { Card } from "@/components/ui/card";
 import { getSessionUser } from "@/server/auth/session";
+import { safeInternalPath } from "@/lib/safe-path";
 
 export const metadata: Metadata = { title: "Confirmer votre email" };
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
   const { suite } = await searchParams;
   const s = await getSessionUser();
   if (!s) redirect(`/connexion?suite=${encodeURIComponent(`/verifier-email${suite ? `?suite=${encodeURIComponent(suite)}` : ""}`)}`);
-  const next = suite && suite.startsWith("/") && !suite.startsWith("//") ? suite : "/espace-client";
+  const next = safeInternalPath(suite) ?? "/espace-client";
   if (s.user.emailVerifiedAt) redirect(next);
   return (
     <>

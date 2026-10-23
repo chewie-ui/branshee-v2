@@ -17,6 +17,7 @@ import { requireContext } from "@/server/context";
 import { listPublicSessions, materializeSession, type PublicSession } from "@/server/group-sessions";
 import { notifyBookingCreated, notifyCancelledByBusiness } from "@/server/notifications";
 import { checkIntake, getPublicBusiness } from "@/server/public";
+import { clientIp } from "@/lib/client-ip";
 
 export type SessionFormState = { ok?: boolean; message?: string; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -160,7 +161,7 @@ export async function restoreSession(sessionId: string): Promise<{ ok: boolean }
 
 async function ip() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown";
+  return (clientIp(h) ?? "unknown");
 }
 
 const bookingSchema = z.object({

@@ -95,7 +95,8 @@ export async function sendSms(to: string, body: string): Promise<string | null> 
   const recipient = normalizeMsisdn(to);
   if (!recipient) return null;
   if (!smsConfigured()) {
-    console.info(`[sms:dev] → ${recipient} : ${body}`);
+    if (process.env.NODE_ENV === "production") console.warn(`[sms] non envoyé (aucun fournisseur configuré) → +${recipient.slice(0, 4)}…`);
+    else console.info(`[sms:dev] → ${recipient} : ${body}`);
     return null;
   }
   if (provider() === "twilio") {

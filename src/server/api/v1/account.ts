@@ -26,6 +26,8 @@ async function me(r: ApiRequest) {
 /** Image envoyée en multipart (champ « photo »), 5 Mo maximum, format vérifié. */
 export async function readPhoto(r: ApiRequest) {
   let form: FormData;
+  // Refus avant lecture du corps : un envoi énorme ne doit pas remplir la mémoire.
+  if (Number(r.raw.headers.get("content-length") ?? 0) > 6 * 1024 * 1024) return invalid("Photo trop lourde (5 Mo maximum).");
   try {
     form = await r.raw.formData();
   } catch {

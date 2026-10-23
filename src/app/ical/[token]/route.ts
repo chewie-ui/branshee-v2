@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { appointments, businesses, members } from "@/db/schema";
 
 const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 const fold = (line: string) => (line.length <= 74 ? line : line.match(/.{1,73}/g)!.join("\r\n "));
 
 /**
@@ -14,8 +14,9 @@ const fold = (line: string) => (line.length <= 74 ? line : line.match(/.{1,73}/g
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!/^[\w-]{16,128}$/.test(token)) return new Response("Flux introuvable.", { status: 404 });
-  const [m] = await db.select({ m: members, bizName: businesses.name }).from(members).innerJoin(businesses, eq(businesses.id, members.businessId)).where(eq(members.calendarFeedToken, token));
-  if (!m || m.m.status !== "active") return new Response("Flux introuvable.", { status: 404 });
+  const [m] = await db.select({ m: members, bizName: businesses.name, deleted: businesses.deletedAt }).from(members).innerJoin(businesses, eq(businesses.id, members.businessId)).where(eq(members.calendarFeedToken, token));
+  // Membre actif ET toujours activé, dans un établissement non supprimé : sinon le flux s'arrête.
+  if (!m || m.m.status !== "active" || !m.m.isActive || m.deleted) return new Response("Flux introuvable.", { status: 404 });
   const since = new Date();
   since.setMonth(since.getMonth() - 3);
   const rows = await db

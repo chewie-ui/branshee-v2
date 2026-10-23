@@ -12,6 +12,8 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { createSession } from "@/server/auth/session";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
+import { clientIp } from "@/lib/client-ip";
+import { markCodeUsed, reserveCodeAttempt } from "@/server/codes";
 
 const CODE_TTL_MIN = 15;
 const MAX_ATTEMPTS = 5;
@@ -19,7 +21,7 @@ const hashCode = (email: string, code: string) => createHash("sha256").update(`$
 
 async function ip() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  return (clientIp(h) ?? "unknown");
 }
 
 export type ResetState = { step: "email" | "code"; email?: string; error?: string; info?: string } | undefined;
@@ -71,21 +73,22 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
 
   const invalid: ResetState = { step: "code", email, error: "Code incorrect ou expiré." };
   if (!entry || !entry.userId) return invalid;
-  if (entry.attempts >= MAX_ATTEMPTS) return { step: "email", error: "Trop d'essais. Demandez un nouveau code." };
+  if (!rateLimit(`reset-verify:${email}`, 10, 15 * 60 * 1000).ok) return { step: "email", error: "Trop d'essais. Demandez un nouveau code dans quelques minutes." };
+  if (!(await reserveCodeAttempt(entry.id, MAX_ATTEMPTS))) return { step: "email", error: "Trop d'essais. Demandez un nouveau code." };
 
   const a = Buffer.from(entry.codeHash, "hex");
   const b = Buffer.from(hashCode(email, code), "hex");
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    await db.update(verificationCodes).set({ attempts: entry.attempts + 1 }).where(eq(verificationCodes.id, entry.id));
-    return invalid;
-  }
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return invalid;
+  if (!(await markCodeUsed(entry.id))) return invalid;
 
   const userId = entry.userId;
   await db.transaction(async (tx) => {
-    await tx.update(verificationCodes).set({ usedAt: new Date() }).where(eq(verificationCodes.id, entry.id));
     await tx.update(users).set({ passwordHash: await hashPassword(password), sessionVersion: sql`${users.sessionVersion} + 1` }).where(eq(users.id, userId));
     await tx.delete(sessions).where(eq(sessions.userId, userId));
   });
+  // Double authentification activée : le nouveau mot de passe ne suffit pas, on repasse par la connexion + code.
+  const [u] = await db.select({ twoFactorSecret: users.twoFactorSecret }).from(users).where(eq(users.id, userId));
+  if (u?.twoFactorSecret) redirect("/connexion?reinitialise=1");
   const h = await headers();
   await createSession(userId, { ip: await ip(), userAgent: h.get("user-agent") });
   redirect("/app");

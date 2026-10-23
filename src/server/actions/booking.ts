@@ -17,10 +17,11 @@ import { checkIntake, getPublicBusiness } from "@/server/public";
 import { policyAmounts } from "@/lib/cancellation";
 import { policyText } from "@/lib/cancellation-text";
 import { getSessionUser } from "@/server/auth/session";
+import { clientIp } from "@/lib/client-ip";
 
 async function ip() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown";
+  return (clientIp(h) ?? "unknown");
 }
 
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

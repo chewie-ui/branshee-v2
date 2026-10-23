@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { verificationCodes } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
@@ -34,13 +34,34 @@ export async function consumeCode(userId: string, purpose: Purpose, code: string
     .orderBy(desc(verificationCodes.createdAt))
     .limit(1);
   if (!entry) return { ok: false, error: "Code expiré. Demandez-en un nouveau." };
-  if (entry.attempts >= MAX_ATTEMPTS) return { ok: false, error: "Trop d'essais. Demandez un nouveau code." };
+  // L'essai est réservé AVANT la comparaison, de façon atomique : des essais envoyés en parallèle ne peuvent pas dépasser la limite.
+  const [slot] = await db
+    .update(verificationCodes)
+    .set({ attempts: sql`${verificationCodes.attempts} + 1` })
+    .where(and(eq(verificationCodes.id, entry.id), lt(verificationCodes.attempts, MAX_ATTEMPTS), isNull(verificationCodes.usedAt)))
+    .returning({ attempts: verificationCodes.attempts });
+  if (!slot) return { ok: false, error: "Trop d'essais. Demandez un nouveau code." };
   const a = Buffer.from(entry.codeHash, "hex");
   const b = Buffer.from(hash(entry.email, clean), "hex");
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    await db.update(verificationCodes).set({ attempts: entry.attempts + 1 }).where(eq(verificationCodes.id, entry.id));
-    return { ok: false, error: "Code incorrect." };
-  }
-  await db.update(verificationCodes).set({ usedAt: new Date() }).where(eq(verificationCodes.id, entry.id));
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, error: "Code incorrect." };
+  const [used] = await db.update(verificationCodes).set({ usedAt: new Date() }).where(and(eq(verificationCodes.id, entry.id), isNull(verificationCodes.usedAt))).returning({ id: verificationCodes.id });
+  if (!used) return { ok: false, error: "Code déjà utilisé. Demandez-en un nouveau." };
   return { ok: true, email: entry.email };
+}
+
+
+/** Réserve un essai sur un code (atomique) ; `false` si la limite d'essais est atteinte ou le code déjà utilisé. */
+export async function reserveCodeAttempt(id: string, max = MAX_ATTEMPTS) {
+  const [slot] = await db
+    .update(verificationCodes)
+    .set({ attempts: sql`${verificationCodes.attempts} + 1` })
+    .where(and(eq(verificationCodes.id, id), lt(verificationCodes.attempts, max), isNull(verificationCodes.usedAt)))
+    .returning({ id: verificationCodes.id });
+  return !!slot;
+}
+
+/** Marque un code comme utilisé ; `false` s'il l'était déjà (deux requêtes simultanées). */
+export async function markCodeUsed(id: string) {
+  const [used] = await db.update(verificationCodes).set({ usedAt: new Date() }).where(and(eq(verificationCodes.id, id), isNull(verificationCodes.usedAt))).returning({ id: verificationCodes.id });
+  return !!used;
 }

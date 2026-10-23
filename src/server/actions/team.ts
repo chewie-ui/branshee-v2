@@ -35,6 +35,7 @@ const addSchema = z.object({
 /** Ajoute un membre. Avec un email, il est relié à son compte (existant ou créé plus tard). */
 export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamState> {
   const ctx = await requireContext("team.manage");
+  if (ctx.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = addSchema.safeParse({ displayName: str(fd, "displayName"), email: str(fd, "email").toLowerCase(), roleLabel: str(fd, "roleLabel"), gradeId: str(fd, "gradeId"), isBookable: fd.get("isBookable") === "on" });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -95,6 +96,7 @@ const updateSchema = z.object({
 
 export async function updateMember(memberId: string, _prev: TeamState, fd: FormData): Promise<TeamState> {
   const ctx = await requireContext("team.manage");
+  if (ctx.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, z.uuid().parse(memberId)), eq(members.businessId, ctx.business.id)));
   if (!m) return { error: "Membre introuvable." };
   const parsed = updateSchema.safeParse({
@@ -145,6 +147,7 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
 
 export async function removeMember(memberId: string): Promise<{ ok: boolean; error?: string }> {
   const ctx = await requireContext("team.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, z.uuid().parse(memberId)), eq(members.businessId, ctx.business.id)));
   if (!m) return { ok: false, error: "Membre introuvable." };
   if (m.isOwner) return { ok: false, error: "Le propriétaire ne peut pas être retiré." };
@@ -159,6 +162,7 @@ export async function removeMember(memberId: string): Promise<{ ok: boolean; err
 export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: FormData): Promise<TeamState> {
   {
     const c = await requireContext("grades.manage");
+    if (c.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
     if (!(await businessHas(c.business.id, "grades"))) return { error: "Les grades sur mesure sont inclus dans le forfait Pro+." };
   }
   const ctx = await requireContext("grades.manage");
@@ -193,6 +197,7 @@ export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: Fo
 
 export async function deleteGrade(gradeId: string): Promise<{ ok: boolean; error?: string }> {
   const ctx = await requireContext("grades.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const id = z.uuid().parse(gradeId);
   const [g] = await db.select().from(grades).where(and(eq(grades.id, id), eq(grades.businessId, ctx.business.id)));
   if (!g) return { ok: false, error: "Grade introuvable." };

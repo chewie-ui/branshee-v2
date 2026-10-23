@@ -11,6 +11,7 @@ const back = (q: string) => NextResponse.redirect(`${appUrl()}/app/reglages/paie
 /** Démarre (ou reprend) l'ouverture d'un compte Stripe Express ; Stripe héberge le formulaire. */
 export async function GET() {
   const ctx = await requireContext("billing.manage");
+  if (ctx.impersonating) return back("stripe=erreur");
   const s = stripe();
   if (!s) return back("stripe=non_configure");
   const [ps] = await db.select().from(paymentSettings).where(eq(paymentSettings.businessId, ctx.business.id));

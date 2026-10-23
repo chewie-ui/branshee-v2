@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { loginEvents, sessions, users, verificationCodes } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
-import { rateLimit } from "@/server/auth/rate-limit";
+import { rateLimit, resetRateLimit } from "@/server/auth/rate-limit";
 import { decrypt } from "@/lib/field-crypto";
 import { verifyTotp } from "@/lib/totp";
 import { linkInvitations } from "@/server/team";
@@ -16,13 +16,21 @@ import { apiAuth } from "@/server/api/als";
 import { issueSession, readChallenge, revokeSession, rotateRefresh, signChallenge } from "@/server/api/tokens";
 import { fail, invalid, str, type Route } from "@/server/api/http";
 import { authPayload, userProfile, appContext } from "@/server/api/v1/shared";
+import { clientIp } from "@/lib/client-ip";
+import { markCodeUsed, reserveCodeAttempt } from "@/server/codes";
 
 async function meta() {
   const h = await headers();
-  return { ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null, userAgent: h.get("user-agent") };
+  return { ip: (clientIp(h) ?? null), userAgent: h.get("user-agent") };
 }
 
 /** Ouvre une session d'application et renvoie jetons + profil + contexte. */
+/** Google / Apple : si la double authentification est activée, le code reste exigé (comme sur le web). */
+async function twoFactorGate(userId: string) {
+  const [u] = await db.select({ tf: users.twoFactorSecret }).from(users).where(eq(users.id, userId));
+  return u?.tf ? { twoFactorRequired: true, challengeToken: signChallenge({ k: "2fa", u: userId }, 5) } : null;
+}
+
 async function signIn(userId: string, method: "password" | "two_factor" | "google" | "apple", extra: Record<string, unknown> = {}) {
   const m = await meta();
   const { tokens, sessionId } = await issueSession(userId, { userAgent: m.userAgent ? `Application · ${m.userAgent}` : "Application Branshee", ip: m.ip });
@@ -40,6 +48,8 @@ async function login(body: Record<string, unknown>) {
   if (!email.success || !password) return fail(400, "missing_credentials", "Email et mot de passe requis.");
   const m = await meta();
   const limit = rateLimit(`login:${m.ip}:${email.data}`, 8, 15 * 60 * 1000);
+  const acct = limit.ok ? rateLimit(`login-acct:${email.data}`, 20, 60 * 60 * 1000) : limit;
+  if (!acct.ok) return fail(429, "rate_limited", `Trop de tentatives. Réessayez dans ${Math.ceil(acct.retryAfterSec / 60)} min.`);
   if (!limit.ok) return fail(429, "rate_limited", `Trop de tentatives. Réessayez dans ${Math.ceil(limit.retryAfterSec / 60)} min.`);
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email.data}`);
   if (!user) {
@@ -47,6 +57,8 @@ async function login(body: Record<string, unknown>) {
     return fail(401, "invalid_credentials", "Email ou mot de passe incorrect.");
   }
   if (!(await verifyPassword(password, user.passwordHash))) return fail(401, "invalid_credentials", "Email ou mot de passe incorrect.");
+  resetRateLimit(`login:${m.ip}:${email.data}`);
+  resetRateLimit(`login-acct:${email.data}`);
   if (user.disabledAt) return fail(403, "account_disabled", "Ce compte a été désactivé.");
   if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
   if (user.twoFactorSecret) return { twoFactorRequired: true, challengeToken: signChallenge({ k: "2fa", u: user.id }, 5) };
@@ -117,7 +129,7 @@ async function google(body: Record<string, unknown>) {
   if (!ok) return fail(401, "invalid_google_token", "Connexion Google refusée.");
   const verified = info.email_verified === true || info.email_verified === "true";
   const { id, created } = await findOrCreateSocial("google", info.sub!, verified ? (info.email ?? null) : null, info.name ?? "", body.accountIntent);
-  return signIn(id, "google", { created });
+  return (await twoFactorGate(id)) ?? signIn(id, "google", { created });
 }
 
 let appleKeys: { keys: { kid: string; kty: string; n: string; e: string; alg?: string }[]; at: number } | null = null;
@@ -151,7 +163,7 @@ async function apple(body: Record<string, unknown>) {
   const payload = token ? await verifyApple(token).catch(() => null) : null;
   if (!payload) return fail(401, "invalid_apple_token", "Connexion Apple refusée.");
   const { id, created } = await findOrCreateSocial("apple", payload.sub!, payload.email ?? null, str(body.fullName, 120), body.accountIntent);
-  return signIn(id, "apple", { created });
+  return (await twoFactorGate(id)) ?? signIn(id, "apple", { created });
 }
 
 /* ── Mot de passe oublié en trois étapes (code par email) ── */
@@ -186,20 +198,22 @@ async function forgotVerify(body: Record<string, unknown>) {
     .orderBy(desc(verificationCodes.createdAt))
     .limit(1);
   if (!entry?.userId) return fail(400, "invalid_code", "Code incorrect ou expiré.");
-  if (entry.attempts >= 5) return fail(400, "too_many_attempts", "Trop d'essais. Demandez un nouveau code.");
+  if (!rateLimit(`reset-verify:${c.em}`, 10, 15 * 60 * 1000).ok) return fail(429, "rate_limited", "Trop d'essais. Réessayez dans quelques minutes.");
+  if (!(await reserveCodeAttempt(entry.id, 5))) return fail(400, "too_many_attempts", "Trop d'essais. Demandez un nouveau code.");
   const a = Buffer.from(entry.codeHash, "hex");
   const b = Buffer.from(codeHash(c.em, code), "hex");
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    await db.update(verificationCodes).set({ attempts: entry.attempts + 1 }).where(eq(verificationCodes.id, entry.id));
-    return fail(400, "invalid_code", "Code incorrect ou expiré.");
-  }
-  await db.update(verificationCodes).set({ usedAt: new Date() }).where(eq(verificationCodes.id, entry.id));
-  return { ok: true, resetToken: signChallenge({ k: "reset-ok", u: entry.userId }, 15) };
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return fail(400, "invalid_code", "Code incorrect ou expiré.");
+  if (!(await markCodeUsed(entry.id))) return fail(400, "invalid_code", "Code incorrect ou expiré.");
+  // Jeton lié à la version de session : il ne sert qu'une fois (le changement de mot de passe l'incrémente).
+  const [u] = await db.select({ v: users.sessionVersion }).from(users).where(eq(users.id, entry.userId));
+  return { ok: true, resetToken: signChallenge({ k: "reset-ok", u: entry.userId, v: u?.v ?? 0 }, 15) };
 }
 
 async function forgotReset(body: Record<string, unknown>) {
-  const c = readChallenge<{ k: string; u: string }>(body.resetToken);
+  const c = readChallenge<{ k: string; u: string; v?: number }>(body.resetToken);
   if (!c || c.k !== "reset-ok") return fail(401, "reset_expired", "Délai dépassé. Recommencez.");
+  const [cur] = await db.select({ v: users.sessionVersion }).from(users).where(eq(users.id, c.u));
+  if (!cur || cur.v !== (c.v ?? -1)) return fail(401, "reset_expired", "Lien déjà utilisé. Recommencez.");
   const password = typeof body.password === "string" ? body.password : "";
   if (password.length < 10 || password.length > 200) return invalid("Le mot de passe doit contenir au moins 10 caractères.", { field: "password" });
   if (typeof body.confirmPassword === "string" && body.confirmPassword !== password) return invalid("Les mots de passe ne correspondent pas.", { field: "confirmPassword" });

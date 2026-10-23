@@ -15,6 +15,7 @@ import { businessHas } from "@/server/plan";
 import { sanitizeArticleHtml } from "@/server/rich-text";
 import { getOrCreateSite } from "@/server/site-builder";
 import { savePublicImage } from "@/server/storage";
+import { clientIp } from "@/lib/client-ip";
 
 type Result = { ok: boolean; error?: string; message?: string };
 const LOCKED: Result = { ok: false, error: "« Mon site » est inclus dans le forfait Pro+." };
@@ -131,7 +132,7 @@ export async function sendSiteContact(businessId: string, input: { name: string;
   if (input.website) return { ok: true };
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const ip = (clientIp(await headers()) ?? "local");
   if (!rateLimit(`site-contact:${ip}`, 5, 60 * 60 * 1000).ok) return { ok: false, error: "Trop de messages envoyés : réessayez plus tard." };
   const [row] = await db
     .select({ name: businesses.name, email: users.email, published: sites.publishedAt })

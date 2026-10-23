@@ -42,7 +42,9 @@ export async function sendEmail(mail: OutgoingEmail): Promise<boolean> {
       await transport.sendMail({ from, to: redirect || mail.to, subject: redirect ? `[TEST → ${mail.to}] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, replyTo: redirect ? undefined : (mail.replyTo ?? undefined) });
       status = "sent";
     } else {
-      console.info(`\n[email:dev] → ${mail.to}\n  Sujet : ${mail.subject}\n${mail.text.split("\n").map((l) => "  " + l).join("\n")}\n`);
+      // En production, jamais le contenu (codes, noms de patients) dans les journaux.
+      if (process.env.NODE_ENV === "production") console.warn(`[email] non envoyé (SMTP absent) : ${mail.template} → @${mail.to.split("@")[1] ?? "?"}`);
+      else console.info(`\n[email:dev] → ${mail.to}\n  Sujet : ${mail.subject}\n${mail.text.split("\n").map((l) => "  " + l).join("\n")}\n`);
     }
   } catch (e) {
     status = "failed";

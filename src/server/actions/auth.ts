@@ -14,12 +14,13 @@ import { verifyTotp } from "@/lib/totp";
 import { linkInvitations } from "@/server/team";
 import { isPro } from "@/server/client-account";
 import { issueCode } from "@/server/codes";
+import { clientIp } from "@/lib/client-ip";
 
 export type AuthState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
 async function clientMeta() {
   const h = await headers();
-  return { ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null, userAgent: h.get("user-agent") };
+  return { ip: (clientIp(h) ?? null), userAgent: h.get("user-agent") };
 }
 
 function fieldErrors(error: z.ZodError) {
@@ -108,8 +109,11 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   const meta = await clientMeta();
   const { email, password } = parsed.data;
   const limitKey = `login:${meta.ip}:${email}`;
+  // Par IP et par compte (indépendamment de l'IP) : 20 échecs par heure sur un même compte, d'où qu'ils viennent.
+  const acctKey = `login-acct:${email}`;
   const limit = rateLimit(limitKey, 8, 15 * 60 * 1000);
-  if (!limit.ok) return { error: `Trop de tentatives. Réessayez dans ${Math.ceil(limit.retryAfterSec / 60)} min.`, values };
+  const acct = limit.ok ? rateLimit(acctKey, 20, 60 * 60 * 1000) : limit;
+  if (!limit.ok || !acct.ok) return { error: `Trop de tentatives. Réessayez dans ${Math.ceil(Math.max(limit.retryAfterSec, acct.retryAfterSec) / 60)} min.`, values };
 
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
   if (!user) {
@@ -118,6 +122,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   }
   if (!(await verifyPassword(password, user.passwordHash))) return { error: "Email ou mot de passe incorrect.", values };
   resetRateLimit(limitKey);
+  resetRateLimit(acctKey);
   if (user.disabledAt) return { error: "Ce compte a été désactivé. Pour en savoir plus, écrivez-nous depuis la page Contact.", values };
   // Compte repris de l'ancien Branshee : on remplace le hash bcrypt par un hash scrypt.
   if (isLegacyHash(user.passwordHash)) await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));

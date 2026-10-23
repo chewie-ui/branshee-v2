@@ -98,6 +98,7 @@ export async function disconnectStripe(): Promise<{ ok: boolean }> {
 /** Compte Stripe existant saisi à la main (acct_…), vérifié auprès de Stripe. */
 export async function linkStripeAccount(accountId: string): Promise<{ ok: boolean; error?: string }> {
   const ctx = await requireContext("billing.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!/^acct_[A-Za-z0-9]{8,}$/.test(accountId.trim())) return { ok: false, error: "L'identifiant doit commencer par acct_." };
   const s = stripe();
   if (!s) return { ok: false, error: "Stripe n'est pas configuré sur ce serveur." };
@@ -105,6 +106,10 @@ export async function linkStripeAccount(accountId: string): Promise<{ ok: boolea
   let active = false;
   try {
     const acc = await s.accounts.retrieve(accountId.trim());
+    // Preuve de propriété : compte créé pour CET établissement, ou ouvert avec l'adresse email de la personne connectée.
+    // Sinon, n'importe quel membre pourrait lier (et ouvrir) le compte Stripe d'un autre pro.
+    const own = acc.metadata?.businessId === ctx.business.id || (!!acc.email && acc.email.toLowerCase() === ctx.user.email.toLowerCase());
+    if (!own) return { ok: false, error: "Compte Stripe introuvable ou non relié à Branshee." };
     email = acc.email ?? acc.business_profile?.support_email ?? null;
     active = !!acc.details_submitted;
   } catch {

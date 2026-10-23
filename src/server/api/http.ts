@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { apiAuth } from "@/server/api/als";
 import { verifyAccess } from "@/server/api/tokens";
 import { rateLimit } from "@/server/auth/rate-limit";
+import { clientIp } from "@/lib/client-ip";
 
 /** Erreur renvoyée à l'application : `{ error, message }` avec le code HTTP. */
 export class ApiError extends Error {
@@ -76,7 +77,7 @@ export async function dispatch(routes: Route[], req: Request, segments: string[]
   }
   if (!found) return json({ error: pathExists ? "method_not_allowed" : "not_found", message: "Route inconnue." }, pathExists ? 405 : 404);
 
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const ip = (clientIp(await headers()) ?? "local");
   if (!rateLimit(`api:${ip}`, 600, 60_000).ok) return json({ error: "rate_limited", message: "Trop de requêtes. Réessayez dans une minute." }, 429);
 
   const url = new URL(req.url);

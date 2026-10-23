@@ -12,6 +12,7 @@ import { applyCustomerCancellation } from "@/server/payments";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { headers } from "next/headers";
 import { services } from "@/db/schema";
+import { clientIp as ipFrom } from "@/lib/client-ip";
 
 export async function cancelByToken(token: string): Promise<{ ok: boolean; error?: string }> {
   const row = await getAppointmentByToken(token);
@@ -57,7 +58,7 @@ function nextDays(from: string, count: number) {
 }
 async function clientIp() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  return ipFrom(h) ?? "unknown";
 }
 
 /** Créneaux libres pour déplacer un RDV (même prestation, même praticien, règles de la réservation en ligne). */

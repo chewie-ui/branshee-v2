@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db";
 import { pageViews } from "@/db/schema";
+import { clientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
   }
   const source = d.source || refHost || null;
   const medium = d.medium || (d.gclid ? "cpc" : refHost ? "referral" : null);
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0]!.trim() || h.get("x-real-ip") || "";
+  const ip = (clientIp(h) ?? "");
   // Empreinte du jour (IP + navigateur + date + secret) : compte les visiteurs uniques sans cookie ni donnée réversible.
   const day = new Date().toISOString().slice(0, 10);
   const visitorId = createHash("sha256").update(`${ip}|${ua}|${day}|${process.env.DATA_ENCRYPTION_KEY ?? "dev"}`).digest("hex").slice(0, 32);
