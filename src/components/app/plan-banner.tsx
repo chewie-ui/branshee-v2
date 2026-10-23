@@ -36,7 +36,7 @@ export function PlanBanner({ plan, canManage, timezone }: { plan: EffectivePlan;
         <p className={cn("font-medium", soon ? "text-warning" : "text-accent-soft-foreground")}>
           Essai gratuit du forfait Pro : {days === 1 ? "dernier jour" : `encore ${days} jours`}
         </p>
-        <p className="text-text">Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné{canManage ? " — en vous abonnant maintenant, vous ne payez qu'à la fin de l'essai" : ""}.</p>
+        <p className="text-text">Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné.</p>
       </div>
       {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm" variant={soon ? "primary" : "secondary"}>Choisir mon forfait</ButtonLink> : null}
     </div>

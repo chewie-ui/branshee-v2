@@ -56,10 +56,9 @@ export function BillingPanel({
     });
   const paid = current.source === "stripe" || current.source === "account";
   const now = useNow();
-  // Essai en cours : un abonnement pris maintenant ne coûte rien avant la fin de l'essai (Stripe exige plus de 48 h restantes).
+  // Essai gratuit en cours : compte à rebours jusqu'à sa fin (s'abonner avant, c'est payer dès aujourd'hui).
   const trialEnd = !paid && current.isTrial && current.source === "granted" && current.grantedUntil ? new Date(current.grantedUntil) : null;
-  const trialOffer = !!trialEnd && (now === null || trialEnd.getTime() - now > 49 * 3600_000);
-  const freeDays = trialEnd && now !== null ? Math.max(1, Math.floor((trialEnd.getTime() - now) / 86400_000)) : null;
+  const trialOffer = !!trialEnd && (now === null || trialEnd.getTime() > now);
 
   return (
     <div className="space-y-6">
@@ -71,7 +70,7 @@ export function BillingPanel({
             <p className="text-sm text-muted">
               {current.source === "granted"
                 ? current.isTrial && current.grantedUntil
-                  ? `Essai gratuit jusqu'au ${fmtDate(current.grantedUntil)}. Abonnez-vous dès maintenant : le premier paiement n'aura lieu qu'à la fin de l'essai.`
+                  ? `Essai gratuit jusqu'au ${fmtDate(current.grantedUntil)}. Abonnez-vous avant cette date pour garder votre réservation en ligne ouverte.`
                   : current.grantedUntil
                     ? `Accès offert jusqu'au ${fmtDate(current.grantedUntil)}.`
                     : "Accès offert."
@@ -125,21 +124,10 @@ export function BillingPanel({
                 <div key={p} className={cn("flex flex-col rounded-xl border p-5", isCurrent ? "border-accent ring-1 ring-accent" : "border-border")}>
                   <p className="font-semibold">{PLANS[p].label}</p>
                   <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
-                  {trialOffer && trialEnd ? (
-                    <div className="mt-4">
-                      <p className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-xl font-medium text-muted line-through" aria-label={`Au lieu de ${price} € par mois`}>{price} €</span>
-                        <span className="text-3xl font-semibold text-accent">0 €</span>
-                        <span className="text-sm text-muted">{freeDays ? `pendant ${freeDays} jours` : "jusqu'à la fin de l'essai"}</span>
-                      </p>
-                      <p className="mt-1 text-xs text-muted">Puis {price} €/mois{interval === "year" ? " (facturé à l'année)" : ""} à partir du {fmtDate(trialEnd.toISOString())}. Sans engagement.</p>
-                    </div>
-                  ) : (
-                    <p className="mt-4">
-                      <span className="text-3xl font-semibold">{price} €</span>
-                      <span className="text-sm text-muted"> / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
-                    </p>
-                  )}
+                  <p className="mt-4">
+                    <span className="text-3xl font-semibold">{price} €</span>
+                    <span className="text-sm text-muted"> / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
+                  </p>
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                     {FEATURES.map((f) => {
                       const v = f[p];
@@ -157,7 +145,7 @@ export function BillingPanel({
                       <p className="text-center text-sm font-medium text-accent">Forfait actuel</p>
                     ) : canManage ? (
                       <Button className="w-full" variant={!paid || PLAN_RANK[p] > PLAN_RANK[current.plan] ? "primary" : "secondary"} loading={pending} disabled={!enabled} onClick={() => run(() => choosePlan({ plan: p, interval, promo: promo || undefined }))}>
-                        {paid ? `Passer à ${PLANS[p].label}` : trialOffer ? `${PLANS[p].label} — 0 € aujourd'hui` : `S'abonner à ${PLANS[p].label}`}
+                        {paid ? `Passer à ${PLANS[p].label}` : `S'abonner à ${PLANS[p].label}`}
                       </Button>
                     ) : null}
                   </div>
@@ -244,8 +232,8 @@ function TrialCountdown({ end, now }: { end: Date; now: number | null }) {
     <div className="flex flex-wrap items-center gap-4 rounded-xl border border-accent/30 bg-accent-soft p-5">
       <Gift className="size-6 shrink-0 text-accent" aria-hidden="true" />
       <div className="min-w-0 flex-1 basis-56 text-sm">
-        <p className="font-semibold text-accent-soft-foreground">Abonnez-vous maintenant, payez 0 € jusqu&apos;à la fin de votre essai</p>
-        <p className="text-muted">Vous gardez tous vos jours gratuits. Le premier paiement a lieu le {fmtDate(end.toISOString())}, résiliable avant en un clic.</p>
+        <p className="font-semibold text-accent-soft-foreground">Votre essai gratuit se termine le {fmtDate(end.toISOString())}</p>
+        <p className="text-muted">Abonnez-vous avant pour que vos clients continuent à réserver en ligne. Sans engagement, résiliable en un clic.</p>
       </div>
       {left != null ? (
         <div className="w-full sm:w-auto sm:text-right">

@@ -447,7 +447,6 @@ export const emails = {
           : `L'accès complet offert à ${p.businessName} se termine le ${p.until}. Pour que vos clients puissent continuer à réserver en ligne, choisissez un forfait. Sinon, votre page de réservation sera fermée (rien n'est supprimé).`,
         details: [{ label: "Réservations ces 30 derniers jours", value: String(p.bookings30) }],
         cta: { label: "Choisir mon forfait", url: p.url },
-        note: p.trial ? "En vous abonnant avant la fin de l'essai, vous ne payez qu'à partir de cette date." : undefined,
         footer: `Branshee — ${p.businessName}`,
       }),
     };

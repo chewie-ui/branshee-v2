@@ -105,13 +105,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
       }
     }
   }
-  // Abonnement pris pendant l'essai : les jours restants sont gardés, le premier paiement tombe à la fin de l'essai
-  // (Stripe exige une fin d'essai à plus de 48 h).
-  const cur = await effectivePlan(ctx.business.id);
-  if (cur.isTrial && cur.grantedUntil && cur.grantedUntil.getTime() > Date.now() + 49 * 3600_000 && !params.subscription_data?.trial_period_days) {
-    params.subscription_data = { ...params.subscription_data, trial_end: Math.floor(cur.grantedUntil.getTime() / 1000) };
-    params.payment_method_collection = "always";
-  }
+  // Abonnement pris pendant l'essai gratuit : il démarre (et se paie) tout de suite ; l'essai s'arrête alors.
   if (!params.discounts) params.allow_promotion_codes = true;
   const session = await s.checkout.sessions.create(params);
   return { ok: true, url: session.url! };
