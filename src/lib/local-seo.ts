@@ -21,7 +21,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** « Morgane Forzée — Kinésithérapeute à Wavre » (sans répéter ce que le nom contient déjà). */
 export function localTitle(name: string, businessType: string | null, city: string | null) {
   const n = name.toLowerCase();
-  const parts = [businessType && !n.includes(businessType.toLowerCase()) ? cap(businessType) : null, city && !n.includes(city.toLowerCase()) ? `à ${city}` : null].filter(Boolean);
+  const type = businessType && businessType.toLowerCase() !== city?.toLowerCase() ? businessType : null;
+  const parts = [type && !n.includes(type.toLowerCase()) ? cap(type) : null, city && !n.includes(city.toLowerCase()) ? `à ${city}` : null].filter(Boolean);
   return parts.length ? `${name} — ${parts.join(" ")}` : name;
 }
 
