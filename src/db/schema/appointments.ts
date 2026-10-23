@@ -1,7 +1,7 @@
 import { boolean, date, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
-import { id, legacyId, timestamps } from "./_shared";
+import { encryptedAnswers, encryptedText, id, legacyId, timestamps } from "./_shared";
 import { businesses } from "./businesses";
 import { groupSessions, services } from "./services";
 import { members } from "./team";
@@ -99,12 +99,13 @@ export const appointments = pgTable(
     /** Langue du client à la réservation (emails envoyés dans cette langue). */
     locale: text("locale").notNull().default("fr"),
     contactPhone: text("contact_phone"),
-    customerMessage: text("customer_message"),
-    formAnswers: jsonb("form_answers").$type<{ question: string; answer: string }[]>().notNull().default([]),
+    // Données de santé : chiffrées en base (motif saisi par le patient, réponses au questionnaire).
+    customerMessage: encryptedText("customer_message"),
+    formAnswers: encryptedAnswers("form_answers").notNull().default([]),
     /** Conditions d'annulation acceptées par le client en réservant (preuve : date, montants, texte affiché). */
     policyConsent: jsonb("policy_consent").$type<{ acceptedAt: string; rule: string; late24Cents: number; late12Cents: number | null; noShowCents: number; text: string; locale: string; ip: string | null }>(),
 
-    internalNote: text("internal_note"),
+    internalNote: encryptedText("internal_note"),
     overbooked: boolean("overbooked").notNull().default(false),
     noShow: boolean("no_show").notNull().default(false),
     noShowReason: noShowReasonEnum("no_show_reason"),

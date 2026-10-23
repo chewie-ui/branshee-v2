@@ -16,7 +16,8 @@
     "migrate:mongo": "tsx scripts/migrate-from-mongo.ts",
     "migrate:sample": "node test/fixtures/make-legacy-sample.mjs /tmp/legacy-sample && tsx scripts/migrate-from-mongo.ts --json /tmp/legacy-sample --dry-run --report /tmp/legacy-sample-report.json",
     "admin:grant": "tsx scripts/make-superadmin.ts",
-    "local": "tsx scripts/local.ts"
+    "local": "tsx scripts/local.ts",
+    "encrypt:health": "tsx scripts/encrypt-health-fields.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
