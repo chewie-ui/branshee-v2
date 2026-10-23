@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionTitle } from "@/components/site/section";
-import { METIERS, VILLES } from "@/lib/seo-landing";
+import { METIERS, villesFor } from "@/lib/seo-landing";
 
 export const metadata: Metadata = {
   title: "Logiciel de prise de rendez-vous par métier et par ville",
@@ -19,7 +19,7 @@ export default function SeoHub() {
             <h2 className="text-lg font-semibold first-letter:uppercase">{m.pluriel}</h2>
             <p className="mt-1 text-sm text-muted">{m.accroche}</p>
             <ul className="mt-4 flex flex-wrap gap-2">
-              {VILLES.map((v) => (
+              {villesFor(m.slug).map((v) => (
                 <li key={v.slug}>
                   <Link href={`/logiciel-rendez-vous/${m.slug}-${v.slug}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm text-muted hover:border-border-strong hover:text-text">{v.nom}</Link>
                 </li>

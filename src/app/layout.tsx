@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "La prise de rendez-vous en ligne, simple, pour les indépendants et les petites équipes.",
   openGraph: { type: "website", siteName: "Branshee", locale: "fr_BE" },
   twitter: { card: "summary_large_image" },
+  // Google Search Console : code de la balise « google-site-verification » (sans la balise), dans l'environnement.
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

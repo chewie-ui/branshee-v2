@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Check, MapPin } from "lucide-react";
 import { Faq } from "@/components/site/faq";
 import { Section } from "@/components/site/section";
-import { VILLES, resolveSeo } from "@/lib/seo-landing";
+import { resolveSeo, villesFor } from "@/lib/seo-landing";
 import { businessesInCity, listArticles } from "@/server/site";
 
 type Params = Promise<{ slug: string }>;
@@ -82,7 +82,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
         <div className="mx-auto mt-12 max-w-3xl">
           <p className="text-sm font-semibold">Ailleurs en Belgique</p>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {VILLES.filter((v) => v.slug !== ville.slug).map((v) => (
+            {villesFor(metier.slug).filter((v) => v.slug !== ville.slug).map((v) => (
               <li key={v.slug}><Link href={`/logiciel-rendez-vous/${metier.slug}-${v.slug}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm text-muted hover:text-text">{metier.nom} à {v.nom}</Link></li>
             ))}
           </ul>

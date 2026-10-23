@@ -3,7 +3,8 @@
  * à l’autre, et chaque page liste les établissements réels de la ville. Matrice volontairement courte.
  */
 export type SeoMetier = { slug: string; nom: string; pluriel: string; clients: string; motsCles: string[]; accroche: string; arguments: { titre: string; texte: string }[]; faq: { q: string; r: string }[] };
-export type SeoVille = { slug: string; nom: string; region: string; contexte: string; zones: string[]; mobilite: string };
+/** `metiers` : si présent, la ville n'a de page que pour ces métiers (villes ajoutées pour la prospection kiné). */
+export type SeoVille = { slug: string; nom: string; region: string; contexte: string; zones: string[]; mobilite: string; metiers?: string[] };
 
 export const METIERS: SeoMetier[] = [
   {
@@ -503,11 +504,222 @@ export const VILLES: SeoVille[] = [
       "Limelette"
     ],
     "mobilite": "Le centre étant piéton, précisez le parking le plus proche : c'est la première question de tout nouveau client."
+  },
+  {
+    "slug": "waterloo",
+    "nom": "Waterloo",
+    "region": "Province du Brabant wallon",
+    "contexte": "Waterloo compte une population très internationale et beaucoup de familles actives qui jonglent entre le travail à Bruxelles et la vie locale. Pouvoir réserver une séance le soir, depuis son téléphone, sans attendre l'ouverture du cabinet, fait souvent la différence.",
+    "zones": [
+      "Mont-Saint-Jean",
+      "Joli-Bois",
+      "Chenois",
+      "Faubourg",
+      "Braine-l'Alleud",
+      "Lasne"
+    ],
+    "mobilite": "Beaucoup de patients viennent en voiture : indiquez où se garer et si le cabinet est accessible aux personnes à mobilité réduite.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "nivelles",
+    "nom": "Nivelles",
+    "region": "Province du Brabant wallon",
+    "contexte": "Nivelles attire des patients de toute la région, de Baulers à Bornival, et beaucoup combinent leurs séances avec une journée de travail. Les créneaux du début et de la fin de journée sont les plus demandés : les ouvrir à la réservation en ligne évite les allers-retours au téléphone.",
+    "zones": [
+      "Baulers",
+      "Bornival",
+      "Thines",
+      "Monstreux",
+      "Centre"
+    ],
+    "mobilite": "Précisez le parking le plus proche du cabinet dans votre description : c'est la première question des nouveaux patients.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "braine-l-alleud",
+    "nom": "Braine-l'Alleud",
+    "region": "Province du Brabant wallon",
+    "contexte": "Commune résidentielle étendue, Braine-l'Alleud regroupe Lillois-Witterzée et Ophain, et beaucoup de patients font la route depuis les communes voisines. Une page de réservation claire leur évite d'appeler pendant vos séances.",
+    "zones": [
+      "Lillois-Witterzée",
+      "Ophain-Bois-Seigneur-Isaac",
+      "Centre",
+      "Waterloo"
+    ],
+    "mobilite": "Pour les patients qui viennent de loin, un rappel la veille avec l'adresse exacte limite les retards et les rendez-vous manqués.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "jodoigne",
+    "nom": "Jodoigne",
+    "region": "Province du Brabant wallon",
+    "contexte": "À Jodoigne et dans ses villages, les patients viennent souvent de plusieurs kilomètres. Savoir en ligne quand vous êtes disponible leur évite un déplacement ou un appel pour rien.",
+    "zones": [
+      "Jauchelette",
+      "Saint-Remy-Geest",
+      "Dongelberg",
+      "Lathuy",
+      "Piétrain",
+      "Mélin"
+    ],
+    "mobilite": "En zone rurale, le rappel automatique la veille est précieux : un patient qui ne peut plus venir libère sa place à temps.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "gembloux",
+    "nom": "Gembloux",
+    "region": "Province de Namur",
+    "contexte": "Ville universitaire et résidentielle, Gembloux mêle étudiants, familles et actifs qui travaillent à Namur ou à Bruxelles. Les séances tôt le matin et en soirée partent vite : la réservation en ligne les remplit sans effort.",
+    "zones": [
+      "Sauvenière",
+      "Grand-Leez",
+      "Lonzée",
+      "Corroy-le-Château",
+      "Beuzet",
+      "Ernage"
+    ],
+    "mobilite": "La gare est proche du centre : signalez si votre cabinet est accessible à pied depuis le train.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "huy",
+    "nom": "Huy",
+    "region": "Province de Liège",
+    "contexte": "Huy rayonne sur toute la vallée de la Meuse et le Condroz voisin. Pour des patients qui viennent des villages alentour, réserver en ligne à n'importe quelle heure est plus simple que d'essayer de vous joindre entre deux séances.",
+    "zones": [
+      "Tihange",
+      "Ben-Ahin",
+      "Statte",
+      "Neuville-sous-Huy",
+      "Centre"
+    ],
+    "mobilite": "Le centre se traverse difficilement aux heures de pointe : prévoyez un battement entre deux séances pour les patients qui arrivent en retard.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "verviers",
+    "nom": "Verviers",
+    "region": "Province de Liège",
+    "contexte": "Deuxième ville de la province de Liège, Verviers draine une patientèle venant de tout l'arrondissement, jusqu'aux Cantons de l'Est. Une page de réservation disponible en plusieurs langues lève la barrière pour les patients germanophones.",
+    "zones": [
+      "Heusy",
+      "Lambermont",
+      "Stembert",
+      "Ensival",
+      "Petit-Rechain"
+    ],
+    "mobilite": "Indiquez l'arrêt de bus ou le parking le plus proche : beaucoup de nouveaux patients ne connaissent pas le quartier.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "la-louviere",
+    "nom": "La Louvière",
+    "region": "Province de Hainaut",
+    "contexte": "La Louvière et ses anciennes communes, de Houdeng à Haine-Saint-Pierre, forment un bassin de patients large. Beaucoup ont des horaires de travail décalés : ils réservent quand ils peuvent, parfois tard le soir.",
+    "zones": [
+      "Houdeng",
+      "Haine-Saint-Pierre",
+      "Strépy-Bracquegnies",
+      "Trivières",
+      "Saint-Vaast",
+      "Maurage"
+    ],
+    "mobilite": "Pour les séances qui reviennent chaque semaine, la réservation en ligne permet au patient de reprendre son créneau habituel sans vous appeler.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "mouscron",
+    "nom": "Mouscron",
+    "region": "Province de Hainaut",
+    "contexte": "À la frontière de la métropole lilloise, Mouscron accueille aussi des patients venus de France. Une réservation en ligne, avec confirmation et rappel automatiques, simplifie la prise de rendez-vous des deux côtés de la frontière.",
+    "zones": [
+      "Dottignies",
+      "Luingne",
+      "Herseaux",
+      "Centre"
+    ],
+    "mobilite": "Pour les patients qui viennent de France, précisez l'adresse complète et le parking dans le message de confirmation.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "arlon",
+    "nom": "Arlon",
+    "region": "Province de Luxembourg",
+    "contexte": "Beaucoup d'habitants d'Arlon travaillent au Grand-Duché et rentrent tard : ils ont rarement le temps d'appeler un cabinet en journée. Réserver en ligne le soir ou le week-end leur convient bien mieux.",
+    "zones": [
+      "Bonnert",
+      "Heinsch",
+      "Toernich",
+      "Guirsch",
+      "Centre"
+    ],
+    "mobilite": "Avec les trajets transfrontaliers, les retards arrivent : un battement entre deux séances garde votre planning à l'heure.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "dinant",
+    "nom": "Dinant",
+    "region": "Province de Namur",
+    "contexte": "Dinant et ses villages, d'Anseremme à Bouvignes, sont étendus : un patient qui se déplace veut être sûr d'avoir sa place. La réservation en ligne affiche vos vraies disponibilités, sans coup de fil.",
+    "zones": [
+      "Anseremme",
+      "Bouvignes-sur-Meuse",
+      "Dréhance",
+      "Lisogne",
+      "Falmignoul"
+    ],
+    "mobilite": "En été, le centre est très fréquenté : indiquez où se garer pour éviter les retards.",
+    "metiers": [
+      "kine"
+    ]
+  },
+{
+    "slug": "ath",
+    "nom": "Ath",
+    "region": "Province de Hainaut",
+    "contexte": "Ath rayonne sur de nombreux villages de Wallonie picarde, de Ghislenghien à Ormeignies. Les patients qui viennent de la campagne apprécient de voir et réserver vos créneaux libres en quelques secondes.",
+    "zones": [
+      "Ghislenghien",
+      "Irchonwelz",
+      "Maffle",
+      "Meslin-l'Évêque",
+      "Ormeignies",
+      "Rebaix"
+    ],
+    "mobilite": "Le rappel automatique la veille, avec l'adresse, limite les rendez-vous manqués pour les patients qui viennent de loin.",
+    "metiers": [
+      "kine"
+    ]
   }
 ];
 
+/** La ville a-t-elle une page pour ce métier ? */
+export const villeFor = (metierSlug: string, v: SeoVille) => !v.metiers || v.metiers.includes(metierSlug);
+export const villesFor = (metierSlug: string) => VILLES.filter((v) => villeFor(metierSlug, v));
+
 export function allSeoPages() {
-  return METIERS.flatMap((metier) => VILLES.map((ville) => ({ metier, ville, slug: `${metier.slug}-${ville.slug}` })));
+  return METIERS.flatMap((metier) => villesFor(metier.slug).map((ville) => ({ metier, ville, slug: `${metier.slug}-${ville.slug}` })));
 }
 
 /** « kine-louvain-la-neuve » → métier + ville (slugs testés du plus long au plus court). */
@@ -515,7 +727,7 @@ export function resolveSeo(slug: string) {
   const s = slug.toLowerCase().trim();
   for (const metier of [...METIERS].sort((a, b) => b.slug.length - a.slug.length)) {
     if (!s.startsWith(metier.slug + "-")) continue;
-    const ville = VILLES.find((v) => v.slug === s.slice(metier.slug.length + 1));
+    const ville = VILLES.find((v) => v.slug === s.slice(metier.slug.length + 1) && villeFor(metier.slug, v));
     if (ville) return { metier, ville, slug: s };
   }
   return null;

@@ -26,6 +26,7 @@ import { zoned } from "@/lib/time";
 import { Brand } from "@/components/brand";
 import { getPublicBusiness, type PublicBusiness } from "@/server/public";
 import { richTextToPlain } from "@/server/rich-text";
+import { businessJsonLd, localDescription, localTitle } from "@/lib/local-seo";
 import { createT, getMessages, intlLocale, type T } from "@/i18n";
 import type { Locale } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/client";
@@ -63,10 +64,14 @@ export async function generateMetadata({ params, searchParams }: { params: Param
   const site = typeof sp.sections !== "string" && !sp.reserver ? await publishedSiteFor(b.id) : null;
   if (site) return { title: { absolute: site.seo.title || b.name }, description: site.seo.description || b.description || undefined, openGraph: b.photoUrl ? { images: [b.photoUrl] } : undefined, alternates: { canonical: `/${b.slug}` } };
   const about = b.description ?? (data.aboutHtml ? richTextToPlain(data.aboutHtml).slice(0, 160) : null);
+  // Référencement local : « Nom — Métier à Ville | Prendre rendez-vous », une seule adresse canonique (sans ?sections=…).
+  const title = `${localTitle(b.name, b.businessType, b.city)} | Prendre rendez-vous`;
+  const description = about && about.length > 60 ? about : localDescription(b.name, b.businessType, b.city);
   return {
-    title: `${b.name} — Prendre rendez-vous`,
-    description: about ?? `Réservez en ligne chez ${b.name}${b.city ? ` à ${b.city}` : ""}.`,
-    openGraph: b.photoUrl ? { images: [b.photoUrl] } : undefined,
+    title: { absolute: title },
+    description,
+    alternates: { canonical: `/${b.slug}` },
+    openGraph: { title, description, type: "website", url: `/${b.slug}`, images: b.photoUrl ? [b.photoUrl] : undefined },
   };
 }
 
@@ -162,6 +167,29 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
       style={{ ...(vars as React.CSSProperties), background: undefined, backgroundColor: "var(--background)", backgroundImage: theme.pageBgImage ? `url("${theme.pageBgImage}")` : undefined, fontFamily: "var(--font-sans)" }}
     >
       {fontHref ? <link rel="stylesheet" href={fontHref} /> : null}
+      {!embedded ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: businessJsonLd({
+              url: `${(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")}/${b.slug}`,
+              name: b.name,
+              businessType: b.businessType,
+              description: b.description,
+              photoUrl: b.photoUrl,
+              phone: b.phone,
+              email: b.email,
+              address: b.address,
+              postalCode: b.postalCode,
+              city: b.city,
+              country: b.country,
+              hours: data.hours,
+              reviews: { count: data.reviews.count, average: data.reviews.average },
+              services: data.services.map((x) => ({ name: x.name, priceCents: x.priceCents })),
+            }),
+          }}
+        />
+      ) : null}
 
       {showProfile ? <ProfileHeader data={data} t={t} /> : null}
 
