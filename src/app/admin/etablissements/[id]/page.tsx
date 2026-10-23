@@ -5,7 +5,9 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { and, asc, count, desc, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, appointments, businesses, members, services, subscriptions, users } from "@/db/schema";
+import { activityLogs, appointments, bookingPageSettings, businesses, members, services, subscriptions, users } from "@/db/schema";
+import { AdminEmbedCode } from "@/components/admin/embed-code";
+import { resolveTheme } from "@/lib/booking-theme";
 import { GrantPlanForm, PauseToggle } from "@/components/admin/admin-actions";
 import { BusinessInfoForm, TypeToDelete } from "@/components/admin/platform";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +101,13 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
             <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} />
           </div>
         </Card>
+
+        {!b.deletedAt ? (
+          <Card>
+            <CardHeader title="Code d'intégration" description="À coller sur le site de l'établissement (WordPress, Wix, site sur mesure…) : le même code que dans son espace, sans avoir besoin de son compte." />
+            <AdminEmbedCode origin={(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")} slug={b.slug} accent={resolveTheme((await db.select({ theme: bookingPageSettings.theme }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, b.id)))[0]?.theme).accentColor} />
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader title="Réservation en ligne" description={b.pausedAt ? `En pause depuis le ${formatDay(b.pausedAt, tz, "d MMMM yyyy")}.` : "Les clients peuvent réserver sur la page publique."} />
