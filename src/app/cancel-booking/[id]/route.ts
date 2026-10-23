@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { absoluteUrl } from "@/lib/app-url";
 
 /**
  * Lien « annuler / reprogrammer » des emails de l'ancien Branshee : /cancel-booking/<id>?token=<jeton>.
@@ -6,8 +7,5 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token") ?? "";
-  const url = req.nextUrl.clone();
-  url.search = "";
-  url.pathname = /^[a-f0-9]{64}$/.test(token) ? `/r/${token}` : "/";
-  return NextResponse.redirect(url, 308);
+  return NextResponse.redirect(absoluteUrl(/^[a-f0-9]{64}$/.test(token) ? `/r/${token}` : "/"), 308);
 }

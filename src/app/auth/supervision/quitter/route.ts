@@ -1,10 +1,11 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getSessionUser, stopImpersonation } from "@/server/auth/session";
+import { absoluteUrl } from "@/lib/app-url";
 
 /** Quitte la session supervisée et revient dans l'espace super-admin. */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const s = await getSessionUser();
-  if (!s?.impersonatedById) return NextResponse.redirect(new URL("/app", request.url));
+  if (!s?.impersonatedById) return NextResponse.redirect(absoluteUrl("/app"));
   await stopImpersonation();
-  return NextResponse.redirect(new URL(`/admin/utilisateurs/${s.user.id}`, request.url));
+  return NextResponse.redirect(absoluteUrl(`/admin/utilisateurs/${s.user.id}`));
 }

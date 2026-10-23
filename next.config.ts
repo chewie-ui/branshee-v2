@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // Ne pas générer AGENTS.md / CLAUDE.md à chaque `next dev`.
   agentRules: false,
   experimental: {
@@ -56,7 +57,17 @@ const nextConfig: NextConfig = {
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
     ];
-    return ["/app/:path*", "/admin/:path*", "/connexion", "/inscription", "/mot-de-passe-oublie/:path*", "/bienvenue"].map((source) => ({ source, headers: noFrame }));
+    // En-têtes de sécurité sur tout le site (les pages de réservation restent intégrables sur le site des pros).
+    const everywhere = [
+      { key: "Strict-Transport-Security", value: "max-age=31536000" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+    ];
+    return [
+      { source: "/:path*", headers: everywhere },
+      ...["/app/:path*", "/admin/:path*", "/connexion", "/inscription", "/mot-de-passe-oublie/:path*", "/bienvenue", "/espace-client/:path*", "/espace-client"].map((source) => ({ source, headers: noFrame })),
+    ];
   },
 };
 

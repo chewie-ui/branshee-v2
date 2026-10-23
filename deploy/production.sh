@@ -152,11 +152,11 @@ HTML
   curl -fsS -X POST -H "Authorization: Bearer ${CRON_SECRET}" "http://127.0.0.1:${PORT}/api/cron/start-trials" && echo "  ✔ Essais de 30 jours démarrés" || echo "  … essais à démarrer à la main : curl -X POST -H 'Authorization: Bearer \$CRON_SECRET' https://branshee.com/api/cron/start-trials"
 
   step "8/8 Tâches planifiées, sauvegardes, Stripe"
-  sudo mkdir -p "$BACKUP_DIR" && sudo chown "$USER" "$BACKUP_DIR"
+  sudo mkdir -p "$BACKUP_DIR" && sudo chown "$USER" "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
   ( crontab -l 2>/dev/null | grep -v 'branshee-v2-prod' || true
     echo "*/15 * * * * curl -fsS -X POST -H 'Authorization: Bearer ${CRON_SECRET}' https://branshee.com/api/cron/reminders > /dev/null # branshee-v2-prod"
     echo "0 10 * * * curl -fsS -X POST -H 'Authorization: Bearer ${CRON_SECRET}' https://branshee.com/api/cron/daily > /dev/null # branshee-v2-prod"
-    echo "0 3 * * * pg_dump '${DATABASE_URL}' | gzip > ${BACKUP_DIR}/\$(date +\\%F).sql.gz && find ${BACKUP_DIR} -name '*.sql.gz' -mtime +14 -delete # branshee-v2-prod"
+    echo "0 3 * * * umask 077; pg_dump '${DATABASE_URL}' | gzip > ${BACKUP_DIR}/\$(date +\\%F).sql.gz && find ${BACKUP_DIR} -name '*.sql.gz' -mtime +14 -delete # branshee-v2-prod"
   ) | crontab -
   # Le webhook Stripe existant (www.branshee.com/account/webhook) est servi par la v2 : on y ajoute les événements d'abonnement.
   node -e '
