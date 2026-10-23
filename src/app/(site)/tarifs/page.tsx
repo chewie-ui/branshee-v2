@@ -7,7 +7,7 @@ import { ADDONS, FEATURE_LABELS, FEATURES, LIMITS, PLANS, type Plan, atLeast } f
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "Amateur gratuit pour toujours, Pro à 19 €/mois, Pro+ à 49 €/mois. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
+  description: "30 jours d'essai gratuit, puis Pro à 19 €/mois ou Pro+ à 49 €/mois. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
   alternates: { canonical: "/tarifs" },
 };
 
@@ -30,7 +30,8 @@ const ROWS: { label: string; value: (p: Plan) => string | boolean }[] = [
 
 const FAQ = [
   { q: "Puis-je changer de forfait à tout moment ?", a: "Oui. Le changement est immédiat et calculé au prorata. En passant à un forfait inférieur, ce qui dépasse est désactivé, jamais supprimé : vous le retrouvez si vous revenez." },
-  { q: "Le forfait est-il lié à mon compte ou à mon établissement ?", a: "À l'établissement. Si vous gérez deux cabinets, chacun a son propre forfait. Un établissement Pro+ vous donne droit à un établissement gratuit de plus." },
+  { q: "Le forfait est-il lié à mon compte ou à mon établissement ?", a: "À l'établissement. Si vous gérez deux cabinets, chacun a son propre forfait." },
+  { q: "Comment fonctionne l'essai gratuit ?", a: "30 jours de forfait Pro, sans carte bancaire, pour votre premier établissement. Si vous vous abonnez pendant l'essai, le premier paiement n'a lieu qu'à sa fin. Sans abonnement, la réservation en ligne se ferme à la fin de l'essai ; vos données sont conservées." },
   { q: "Comment se passe le paiement ?", a: "Par carte, via Stripe, chaque mois ou chaque année. Les factures (avec numéro de TVA si besoin) sont disponibles dans votre espace." },
   { q: "Y a-t-il des frais sur les paiements de mes clients ?", a: "Branshee ne prend aucune commission. Seuls les frais habituels de Stripe s'appliquent quand vos clients paient en ligne." },
 ];
@@ -39,7 +40,7 @@ export default function PricingPage() {
   return (
     <>
       <Section>
-        <SectionTitle title="Des prix simples. Pas de surprises." sub="Gratuit pour toujours avec Amateur. Sans engagement, sans commission, sans frais cachés." />
+        <SectionTitle title="Des prix simples. Pas de surprises." sub="30 jours d'essai gratuit du forfait Pro, sans carte bancaire. Sans engagement, sans commission, sans frais cachés." />
         <PricingTable />
       </Section>
       <Section muted>

@@ -123,7 +123,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   const locale = await resolvePublicLocale(sp.lang);
   const t = createT(getMessages(locale));
-  if (b.pausedAt) return <PausedPage data={data} t={t} />;
+  if (data.closed) return <PausedPage data={data} t={t} />;
   // Forfait Pro+ avec un site publié : le site remplace la page à cette adresse (la réservation y est intégrée).
   if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver) {
     const site = await publishedSiteFor(b.id);

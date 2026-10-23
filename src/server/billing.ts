@@ -85,6 +85,9 @@ export async function syncSubscription(sub: Stripe.Subscription) {
     cancelAtPeriodEnd: !!sub.cancel_at_period_end,
     extraSeats: ended ? 0 : seats,
     customUrlAddon: ended ? false : customUrl,
+    // L'essai gratuit s'arrête dès qu'un abonnement existe (ses jours restants sont repris par Stripe).
+    isTrial: false,
+    ...(ended ? { grantedUntil: null } : {}),
   };
   const [before] = await db.select({ plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   await db.insert(businessPlans).values({ businessId, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });

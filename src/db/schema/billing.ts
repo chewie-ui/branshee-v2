@@ -58,9 +58,11 @@ export const businessPlans = pgTable("business_plans", {
   periodEnd: timestamp("period_end", { withTimezone: true }),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   grantedUntil: timestamp("granted_until", { withTimezone: true }),
+  /** L'accès « grantedUntil » est l'essai gratuit de 30 jours (et non un accès offert par l'équipe). */
+  isTrial: boolean("is_trial").notNull().default(false),
   extraSeats: integer("extra_seats").notNull().default(0),
   customUrlAddon: boolean("custom_url_addon").notNull().default(false),
-  /** Relance avant la fin d'un accès offert : échéance couverte et palier (1 = J-7, 2 = J-1). */
+  /** Relance avant la fin d'un accès offert : échéance couverte et palier (1 = J-7, 2 = J-1, 3 = terminé). */
   grantReminder: jsonb("grant_reminder").$type<{ sentFor?: string; stage?: number }>().notNull().default({}),
   ...timestamps,
 });

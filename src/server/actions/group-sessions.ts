@@ -202,7 +202,7 @@ export async function bookGroupSession(input: z.input<typeof bookingSchema>): Pr
   const v = parsed.data;
   const data = await getPublicBusiness(v.slug);
   if (!data || !data.settings) return { ok: false, error: "Établissement introuvable." };
-  if (data.business.pausedAt) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
+  if (data.closed) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
   if (data.settings.phoneRequired && v.phone.replace(/\D/g, "").length < 8) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { phone: "Indiquez un numéro de téléphone." } };
 
   const answers: { question: string; answer: string }[] = [];
@@ -298,7 +298,7 @@ export async function getPublicSessions(slug: string, serviceId: string): Promis
   const sid = z.uuid().safeParse(serviceId);
   if (!sid.success) return [];
   const data = await getPublicBusiness(slug);
-  if (!data || !data.settings || data.business.pausedAt) return [];
+  if (!data || !data.settings || data.closed) return [];
   if (!data.services.some((s) => s.id === sid.data && s.kind === "group")) return [];
   const now = Date.now();
   const from = new Date(now + (data.settings.minLeadMin ?? 0) * 60000);

@@ -43,7 +43,7 @@ export async function getPublicSlots(slug: string, serviceId: string, memberId: 
   const parsed = z.object({ serviceId: z.uuid(), memberId: z.uuid().nullable(), fromDay: isoDay, count: z.number().int().min(1).max(14) }).safeParse({ serviceId, memberId, fromDay, count });
   if (!parsed.success) return [];
   const data = await getPublicBusiness(slug);
-  if (!data || data.business.pausedAt) return [];
+  if (!data || data.closed) return [];
   const service = data.services.find((s) => s.id === serviceId);
   if (!service || (memberId && !service.memberIds.includes(memberId))) return [];
 
@@ -92,7 +92,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
 
   const data = await getPublicBusiness(v.slug);
   if (!data || !data.settings) return { ok: false, error: "Établissement introuvable." };
-  if (data.business.pausedAt) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
+  if (data.closed) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
   const service = data.services.find((s) => s.id === v.serviceId);
   if (!service) return { ok: false, error: "Cette prestation n'est plus disponible." };
 
@@ -238,7 +238,7 @@ export async function joinWaitlist(input: z.input<typeof waitlistSchema>): Promi
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
   const data = await getPublicBusiness(v.slug);
-  if (!data?.settings?.waitlistEnabled || data.business.pausedAt) return { ok: false, error: "La liste d'attente n'est pas disponible." };
+  if (!data?.settings?.waitlistEnabled || data.closed) return { ok: false, error: "La liste d'attente n'est pas disponible." };
   const service = data.services.find((s) => s.id === v.serviceId);
   if (!service) return { ok: false, error: "Prestation introuvable." };
   await db.insert(waitlistEntries).values({ businessId: data.business.id, serviceId: service.id, memberId: v.memberId && service.memberIds.includes(v.memberId) ? v.memberId : null, date: v.date, name: v.name, email: v.email, locale: v.locale ?? "fr" }).onConflictDoNothing();
@@ -254,7 +254,7 @@ export async function startPayment(input: { slug: string; serviceId: string; ema
   const s = stripe();
   const data = await getPublicBusiness(String(input.slug));
   const email = z.email().safeParse(String(input.email ?? "").trim().toLowerCase());
-  if (!s || !data || data.business.pausedAt || !email.success) return { ok: false, error: "Paiement indisponible." };
+  if (!s || !data || data.closed || !email.success) return { ok: false, error: "Paiement indisponible." };
   const service = data.services.find((x) => x.id === input.serviceId);
   if (!service?.priceCents) return { ok: false, error: "Cette prestation n'a pas de prix." };
   const [ps] = await db.select({ acct: paymentSettings.stripeAccountId, status: paymentSettings.stripeStatus }).from(paymentSettings).where(eq(paymentSettings.businessId, data.business.id));

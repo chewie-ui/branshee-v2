@@ -1,7 +1,8 @@
 import "server-only";
 import { like } from "drizzle-orm";
 import { db } from "@/db";
-import { bookingPageSettings, bookingSettings, businesses, grades, members, notificationSettings, paymentSettings, weeklyHours } from "@/db/schema";
+import { bookingPageSettings, bookingSettings, businessPlans, businesses, grades, members, notificationSettings, paymentSettings, weeklyHours } from "@/db/schema";
+import { TRIAL_DAYS } from "@/lib/plans";
 import { BUILT_IN_GRADES } from "@/lib/permissions";
 import { slugify } from "@/lib/slug";
 
@@ -19,15 +20,17 @@ async function freeSlug(name: string) {
 /**
  * Crée un établissement complet et prêt à l'emploi : réglages par défaut, grades intégrés,
  * le propriétaire comme membre réservable, et des horaires du lundi au vendredi 9h–18h.
+ * Avec `trial`, l'établissement démarre avec 30 jours du forfait Pro (rappels SMS compris).
  */
-export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }) {
+export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }, opts: { trial?: boolean } = {}) {
   const slug = await freeSlug(input.name);
   return db.transaction(async (tx) => {
     const [biz] = await tx.insert(businesses).values({ ownerId: owner.id, name: input.name, slug, businessType: input.businessType, city: input.city }).returning();
     const bid = biz!.id;
     await tx.insert(bookingSettings).values({ businessId: bid });
     await tx.insert(paymentSettings).values({ businessId: bid });
-    await tx.insert(notificationSettings).values({ businessId: bid });
+    await tx.insert(notificationSettings).values({ businessId: bid, smsReminders: !!opts.trial });
+    if (opts.trial) await tx.insert(businessPlans).values({ businessId: bid, ...trialValues() });
     await tx.insert(bookingPageSettings).values({ businessId: bid });
     await tx.insert(grades).values(BUILT_IN_GRADES.map((g) => ({ businessId: bid, name: g.name, isBuiltIn: true, permissions: g.permissions })));
     const [member] = await tx
@@ -37,4 +40,9 @@ export async function createBusiness(owner: { id: string; fullName: string }, in
     await tx.insert(weeklyHours).values([1, 2, 3, 4, 5].map((weekday) => ({ businessId: bid, memberId: null, weekday, startTime: "09:00", endTime: "18:00" })));
     return { business: biz!, member: member! };
   });
+}
+
+/** Valeurs d'un essai Pro qui démarre maintenant. */
+export function trialValues(now = new Date()) {
+  return { plan: "pro" as const, status: "active" as const, isTrial: true, grantedUntil: new Date(now.getTime() + TRIAL_DAYS * 86400_000), stripeSubscriptionId: null, grantReminder: {} };
 }

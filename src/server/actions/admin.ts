@@ -41,7 +41,7 @@ export async function grantPlan(businessId: string, input: { plan: string; until
   if (!b) return { ok: false, error: "Établissement introuvable." };
   const [cur] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, id));
   if (cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status)) return { ok: false, error: "Cet établissement a un abonnement Stripe actif : gérez-le depuis Stripe." };
-  const values = grantedUntil ? { plan, grantedUntil, status: "active" as const, stripeSubscriptionId: null } : { plan: "free" as const, grantedUntil: null };
+  const values = grantedUntil ? { plan, grantedUntil, status: "active" as const, stripeSubscriptionId: null, isTrial: false } : { plan: "free" as const, grantedUntil: null, isTrial: false };
   await db.insert(businessPlans).values({ businessId: id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   // Forfait payant offert à un établissement gratuit : rappels SMS allumés, comme après un paiement.
   if (grantedUntil && (!cur || cur.plan === "free")) {

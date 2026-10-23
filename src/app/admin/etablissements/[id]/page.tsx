@@ -17,7 +17,7 @@ import { effectivePlan } from "@/server/plan";
 
 export const metadata: Metadata = { title: "Établissement" };
 
-const PLAN: Record<string, string> = { free: "Gratuit", pro: "Pro", pro_plus: "Pro+" };
+const PLAN: Record<string, string> = { free: "Sans abonnement", pro: "Pro", pro_plus: "Pro+" };
 
 /**
  * Fiche établissement côté super-admin.

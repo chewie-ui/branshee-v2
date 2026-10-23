@@ -68,7 +68,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
         <>
           <aside className="my-10 rounded-2xl border border-accent/30 bg-accent-soft p-6">
             <p className="font-semibold text-accent-soft-foreground">Vos clients réservent seuls, 24 h/24</p>
-            <p className="mt-1 text-sm text-text/80">Agenda en ligne, rappels automatiques, 0 % de commission. Gratuit pour commencer, en ligne en 10 minutes.</p>
+            <p className="mt-1 text-sm text-text/80">Agenda en ligne, rappels automatiques, 0 % de commission. 30 jours d&apos;essai gratuit, en ligne en 10 minutes.</p>
             <Link href="/inscription" className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">Essayer gratuitement<ArrowRight className="size-4" aria-hidden="true" /></Link>
           </aside>
           <div className="prose-article text-[17px]" dangerouslySetInnerHTML={{ __html: rest }} />
@@ -82,7 +82,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
       {!rest ? (
         <div className="mt-12 rounded-2xl border border-accent/30 bg-accent-soft p-6">
           <p className="font-semibold text-accent-soft-foreground">Vos clients réservent seuls, 24 h/24</p>
-          <p className="mt-1 text-sm text-text/80">Gratuit pour commencer, en ligne en 10 minutes, sans commission.</p>
+          <p className="mt-1 text-sm text-text/80">30 jours d&apos;essai gratuit, en ligne en 10 minutes, sans commission.</p>
           <Link href="/inscription" className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">Créer mon agenda<ArrowRight className="size-4" aria-hidden="true" /></Link>
         </div>
       ) : null}

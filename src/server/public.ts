@@ -8,7 +8,7 @@ import { bookingPageSettings, bookingSettings, businesses, formQuestions, member
 import { format } from "date-fns";
 import { zoned } from "@/lib/time";
 import { resolveTheme } from "@/lib/booking-theme";
-import { hasFeature } from "@/lib/plans";
+import { hasFeature, bookingOpen } from "@/lib/plans";
 import { effectivePlan } from "@/server/plan";
 import { sanitizeRichText } from "@/server/rich-text";
 
@@ -96,6 +96,8 @@ export const getPublicBusiness = cache(async (slug: string) => {
 
   return {
     business: biz,
+    /** Réservation en ligne fermée : mise en pause par le pro, ou pas d'abonnement actif (essai terminé). */
+    closed: !!biz.pausedAt || !bookingOpen(plan.plan),
     intake,
     settings: settings ? { waitlistEnabled: settings.waitlistEnabled, minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
     services: servicesWithMembers,

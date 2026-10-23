@@ -15,6 +15,8 @@ import { syncAppointmentToGoogle } from "@/server/google";
 import { applyBusinessCancellation, applyNoShow, reviewPenalty } from "@/server/payments";
 import { notifyBookingCreated, notifyCancelledByBusiness, notifyRequestDecision, notifyRescheduled, sendCustomMessage, sendManualReminder } from "@/server/notifications";
 import { rateLimit } from "@/server/auth/rate-limit";
+import { effectivePlan } from "@/server/plan";
+import { bookingOpen } from "@/lib/plans";
 
 const idSchema = z.uuid();
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide.");
@@ -112,6 +114,7 @@ export async function createAppointment(_prev: CreateAppointmentState, formData:
   const ctx = await requireContext("appointments.manage");
   const bid = ctx.business.id;
   const tz = ctx.business.timezone;
+  if (!bookingOpen((await effectivePlan(bid)).plan)) return { error: "Pas d’abonnement actif : abonnez-vous (Réglages › Abonnement) pour ajouter de nouveaux rendez-vous. Vos rendez-vous existants restent consultables." };
   let slotsRaw: unknown = [];
   try {
     slotsRaw = JSON.parse(String(formData.get("slots") ?? "[]"));

@@ -435,15 +435,50 @@ export const emails = {
     };
   },
 
-  grantExpiry(p: { name: string; businessName: string; daysLeft: number; until: string; bookings30: number; url: string }) {
+  grantExpiry(p: { name: string; businessName: string; daysLeft: number; until: string; bookings30: number; url: string; trial?: boolean }) {
+    const what = p.trial ? "Votre essai gratuit Branshee" : "Votre accès complet Branshee";
     return {
-      subject: p.daysLeft <= 1 ? "Votre accès complet Branshee se termine demain" : `Votre accès complet Branshee se termine dans ${p.daysLeft} jours`,
+      subject: p.daysLeft <= 1 ? `${what} se termine demain` : `${what} se termine dans ${p.daysLeft} jours`,
       ...render({
-        preheader: `Fin de l'accès offert le ${p.until}`,
+        preheader: p.trial ? `Fin de l'essai le ${p.until}` : `Fin de l'accès offert le ${p.until}`,
         title: `Bonjour ${p.name},`,
-        intro: `L'accès complet offert à ${p.businessName} se termine le ${p.until}. Ensuite, l'établissement passe au forfait gratuit : rappels automatiques coupés, confirmation automatique limitée à 20 réservations par mois, personnalisation réduite. Rien n'est supprimé.`,
+        intro: p.trial
+          ? `L'essai gratuit du forfait Pro pour ${p.businessName} se termine le ${p.until}. Pour que vos clients puissent continuer à réserver en ligne, choisissez un forfait : sans engagement, résiliable en un clic. Sinon, votre page de réservation sera fermée (vos rendez-vous et votre fichier restent consultables, rien n'est supprimé).`
+          : `L'accès complet offert à ${p.businessName} se termine le ${p.until}. Pour que vos clients puissent continuer à réserver en ligne, choisissez un forfait. Sinon, votre page de réservation sera fermée (rien n'est supprimé).`,
         details: [{ label: "Réservations ces 30 derniers jours", value: String(p.bookings30) }],
         cta: { label: "Choisir mon forfait", url: p.url },
+        note: p.trial ? "En vous abonnant avant la fin de l'essai, vous ne payez qu'à partir de cette date." : undefined,
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
+  trialStarted(p: { name: string; businessName: string; until: string; url: string }) {
+    return {
+      subject: "Branshee fait peau neuve : 30 jours du forfait Pro offerts",
+      ...render({
+        preheader: `Tout le forfait Pro offert jusqu'au ${p.until}`,
+        title: `Bonjour ${p.name},`,
+        intro: `Branshee passe à une nouvelle version, plus rapide et plus complète. Pour la découvrir, ${p.businessName} profite du forfait Pro offert pendant 30 jours, jusqu'au ${p.until} : rappels automatiques par email et SMS, réservations illimitées, personnalisation de votre page. Votre page et vos rendez-vous sont repris tels quels.`,
+        details: [
+          { label: "Essai gratuit", value: `jusqu'au ${p.until}` },
+          { label: "Ensuite", value: "Pro à 19 €/mois, sans engagement" },
+        ],
+        cta: { label: "Découvrir les forfaits", url: p.url },
+        note: "Le forfait gratuit disparaît : à la fin de l'essai, la réservation en ligne reste ouverte seulement avec un abonnement. Nous vous préviendrons 7 jours et 1 jour avant.",
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
+  planEnded(p: { name: string; businessName: string; url: string; trial: boolean }) {
+    return {
+      subject: "Votre réservation en ligne Branshee est fermée",
+      ...render({
+        preheader: "Choisissez un forfait pour la rouvrir en un clic",
+        title: `Bonjour ${p.name},`,
+        intro: `${p.trial ? "L'essai gratuit" : "L'accès offert"} de ${p.businessName} est terminé : vos clients ne peuvent plus réserver en ligne pour le moment. Vos rendez-vous, votre fichier et vos réglages sont conservés. Choisissez un forfait et votre page rouvre immédiatement.`,
+        cta: { label: "Rouvrir ma réservation en ligne", url: p.url },
         footer: `Branshee — ${p.businessName}`,
       }),
     };

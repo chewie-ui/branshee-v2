@@ -1,10 +1,12 @@
 import "server-only";
 import { and, count, eq, gt, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, articles, businessPlans, businesses, members, services, users } from "@/db/schema";
+import { appointments, articles, businessPlans, businesses, members, notificationSettings, services, users } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { indexNow } from "@/server/indexnow";
+import { effectivePlan } from "@/server/plan";
+import { trialValues } from "@/server/business";
 
 /**
  * Tâches planifiées (appelées par la crontab du VPS via /api/cron/*).
@@ -145,11 +147,70 @@ export async function sendGrantExpiryReminders(now = new Date()) {
     if ((same ? (r.plan.grantReminder.stage ?? 0) : 0) >= target) continue;
     const [b30] = await db.select({ n: count() }).from(appointments).where(and(eq(appointments.businessId, r.plan.businessId), eq(appointments.kind, "appointment"), gt(appointments.createdAt, new Date(now.getTime() - 30 * 24 * H))));
     const label = new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", year: "numeric", timeZone: r.tz }).format(until);
-    const mail = emails.grantExpiry({ name: firstName(r.ownerName), businessName: r.name, daysLeft, until: label, bookings30: b30?.n ?? 0, url: `${appUrl()}/app/reglages/abonnement` });
+    const mail = emails.grantExpiry({ name: firstName(r.ownerName), businessName: r.name, daysLeft, until: label, bookings30: b30?.n ?? 0, url: `${appUrl()}/app/reglages/abonnement`, trial: r.plan.isTrial });
     if (await sendEmail({ to: r.ownerEmail, ...mail, template: "grant_expiry", businessId: r.plan.businessId })) {
       await db.update(businessPlans).set({ grantReminder: { sentFor: until.toISOString(), stage: target } }).where(eq(businessPlans.businessId, r.plan.businessId));
       sent++;
     }
   }
   return sent;
+}
+
+/** Essai ou accès offert terminé depuis moins de 3 jours : un email « réservation fermée », une seule fois. */
+export async function sendPlanEndedNotices(now = new Date()) {
+  const rows = await db
+    .select({ plan: businessPlans, name: businesses.name, ownerEmail: users.email, ownerName: users.fullName })
+    .from(businessPlans)
+    .innerJoin(businesses, eq(businesses.id, businessPlans.businessId))
+    .innerJoin(users, eq(users.id, businesses.ownerId))
+    .where(
+      and(
+        isNotNull(businessPlans.grantedUntil),
+        lte(businessPlans.grantedUntil, now),
+        gt(businessPlans.grantedUntil, new Date(now.getTime() - 3 * 24 * H)),
+        isNull(businessPlans.stripeSubscriptionId),
+        ne(businessPlans.plan, "free"),
+        isNull(businesses.deletedAt),
+        isNull(businesses.pausedAt),
+        isNull(users.disabledAt),
+      ),
+    );
+  let sent = 0;
+  for (const r of rows) {
+    const until = r.plan.grantedUntil!.toISOString();
+    if (r.plan.grantReminder.sentFor === until && (r.plan.grantReminder.stage ?? 0) >= 3) continue;
+    const mail = emails.planEnded({ name: firstName(r.ownerName), businessName: r.name, url: `${appUrl()}/app/reglages/abonnement`, trial: r.plan.isTrial });
+    if (await sendEmail({ to: r.ownerEmail, ...mail, template: "plan_ended", businessId: r.plan.businessId })) {
+      await db.update(businessPlans).set({ grantReminder: { sentFor: until, stage: 3 } }).where(eq(businessPlans.businessId, r.plan.businessId));
+      sent++;
+    }
+  }
+  return sent;
+}
+
+
+/** Bascule vers l'essai 30 jours : essai Pro pour chaque établissement existant sans forfait, avec un email au propriétaire. */
+export async function startTrialsForExisting(now = new Date()) {
+  const rows = await db
+    .select({ id: businesses.id, name: businesses.name, ownerEmail: users.email, ownerName: users.fullName, tz: businesses.timezone, plan: businessPlans })
+    .from(businesses)
+    .innerJoin(users, eq(users.id, businesses.ownerId))
+    .leftJoin(businessPlans, eq(businessPlans.businessId, businesses.id))
+    .where(and(isNull(businesses.deletedAt), isNull(users.disabledAt)));
+  let started = 0;
+  let emailed = 0;
+  for (const r of rows) {
+    // Déjà abonné, déjà en essai/accès offert, ou ancien abonnement porté par le compte : on ne touche à rien.
+    if (r.plan && (r.plan.plan !== "free" || r.plan.isTrial || r.plan.grantedUntil)) continue;
+    if ((await effectivePlan(r.id)).plan !== "free") continue;
+    const values = trialValues(now);
+    await db.insert(businessPlans).values({ businessId: r.id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
+    await db.insert(notificationSettings).values({ businessId: r.id, smsReminders: true }).onConflictDoUpdate({ target: notificationSettings.businessId, set: { smsReminders: true } });
+    started++;
+    if (r.ownerEmail.endsWith("@branshee.invalid")) continue;
+    const until = new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", year: "numeric", timeZone: r.tz }).format(values.grantedUntil);
+    const mail = emails.trialStarted({ name: firstName(r.ownerName), businessName: r.name, until, url: `${appUrl()}/app/reglages/abonnement` });
+    if (await sendEmail({ to: r.ownerEmail, ...mail, template: "trial_started", businessId: r.id })) emailed++;
+  }
+  return { started, emailed };
 }

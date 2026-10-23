@@ -68,7 +68,7 @@ export default async function DirectoryPage({ searchParams }: { searchParams: SP
       {res.rows.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-border bg-surface p-10 text-center">
           <p className="font-medium">Aucun professionnel ne correspond à cette recherche.</p>
-          <p className="mt-1 text-sm text-muted">Essayez une autre ville ou un autre métier. Vous êtes professionnel ? <Link href="/inscription" className="font-medium text-accent hover:text-accent-hover">Créez votre page gratuitement</Link>.</p>
+          <p className="mt-1 text-sm text-muted">Essayez une autre ville ou un autre métier. Vous êtes professionnel ? <Link href="/inscription" className="font-medium text-accent hover:text-accent-hover">Essayez Branshee 30 jours gratuitement</Link>.</p>
         </div>
       ) : (
         <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

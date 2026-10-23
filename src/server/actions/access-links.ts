@@ -22,7 +22,7 @@ export async function redeemAccessLink(code: string, businessId: string): Promis
   const until = new Date(Date.now() + link.durationDays * 86400000);
   const [cur] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, biz.id));
   if (cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status)) return { ok: false, error: "Cet établissement a déjà un abonnement payant." };
-  const values = { plan: link.plan, status: "active" as const, grantedUntil: until, stripeSubscriptionId: null };
+  const values = { plan: link.plan, status: "active" as const, grantedUntil: until, stripeSubscriptionId: null, isTrial: false };
   await db.insert(businessPlans).values({ businessId: biz.id, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   const h = await headers();
   await db.insert(accessLinkUses).values({ accessLinkId: link.id, userId: s.user.id, email: s.user.email, ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null });

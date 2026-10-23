@@ -148,6 +148,9 @@ HTML
   grep -q client_max_body_size "$NGINX_SITE" || sudo sed -i -E "0,/server_name branshee.com www.branshee.com;/s//server_name branshee.com www.branshee.com;\n    client_max_body_size 12m;/" "$NGINX_SITE"
   sudo nginx -t && sudo systemctl reload nginx
 
+  # Fin du forfait gratuit : chaque établissement repris démarre l'essai Pro de 30 jours (+ email au propriétaire).
+  curl -fsS -X POST -H "Authorization: Bearer ${CRON_SECRET}" "http://127.0.0.1:${PORT}/api/cron/start-trials" && echo "  ✔ Essais de 30 jours démarrés" || echo "  … essais à démarrer à la main : curl -X POST -H 'Authorization: Bearer \$CRON_SECRET' https://branshee.com/api/cron/start-trials"
+
   step "8/8 Tâches planifiées, sauvegardes, Stripe"
   sudo mkdir -p "$BACKUP_DIR" && sudo chown "$USER" "$BACKUP_DIR"
   ( crontab -l 2>/dev/null | grep -v 'branshee-v2-prod' || true

@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!t) return {};
   return {
     title: `Logiciel de prise de rendez-vous pour ${t.metier.nom} à ${t.ville.nom}`,
-    description: `Agenda en ligne pour ${t.metier.pluriel} à ${t.ville.nom} : vos ${t.metier.clients} réservent 24 h/24, rappels automatiques, 0 % de commission. Gratuit pour commencer.`,
+    description: `Agenda en ligne pour ${t.metier.pluriel} à ${t.ville.nom} : vos ${t.metier.clients} réservent 24 h/24, rappels automatiques, 0 % de commission. 30 jours d'essai gratuit.`,
     alternates: { canonical: `/logiciel-rendez-vous/${t.slug}` },
   };
 }
@@ -31,7 +31,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
           <p className="inline-flex items-center gap-1.5 text-sm font-medium text-accent"><MapPin className="size-4" aria-hidden="true" />{ville.nom} · {ville.region}</p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance sm:text-5xl">La prise de rendez-vous en ligne pour {metier.pluriel} à {ville.nom}</h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted">{metier.accroche}</p>
-          <Link href="/inscription" className="mt-8 inline-flex h-12 items-center gap-2 rounded-lg bg-accent px-6 text-base font-medium text-accent-foreground hover:bg-accent-hover">Créer mon agenda gratuit<ArrowRight className="size-4" aria-hidden="true" /></Link>
+          <Link href="/inscription" className="mt-8 inline-flex h-12 items-center gap-2 rounded-lg bg-accent px-6 text-base font-medium text-accent-foreground hover:bg-accent-hover">Essayer 30 jours gratuitement<ArrowRight className="size-4" aria-hidden="true" /></Link>
           <p className="mt-3 text-sm text-muted">Sans carte bancaire · 0 % de commission · Sans engagement</p>
         </div>
       </section>

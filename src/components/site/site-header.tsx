@@ -36,7 +36,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           ) : (
             <>
               <Link href="/connexion" className="inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium text-muted hover:bg-surface-muted hover:text-text">Connexion</Link>
-              <Link href="/inscription" className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground shadow-sm hover:bg-accent-hover">Commencer gratuitement</Link>
+              <Link href="/inscription" className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground shadow-sm hover:bg-accent-hover">Essai gratuit</Link>
             </>
           )}
         </div>
@@ -54,7 +54,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
               <Link href="/app" className="flex h-11 items-center justify-center rounded-lg bg-accent text-sm font-medium text-accent-foreground">Mon espace</Link>
             ) : (
               <>
-                <Link href="/inscription" className="flex h-11 items-center justify-center rounded-lg bg-accent text-sm font-medium text-accent-foreground">Commencer gratuitement</Link>
+                <Link href="/inscription" className="flex h-11 items-center justify-center rounded-lg bg-accent text-sm font-medium text-accent-foreground">Essai gratuit</Link>
                 <Link href="/connexion" className="flex h-11 items-center justify-center rounded-lg border border-border-strong text-sm font-medium">Connexion</Link>
               </>
             )}

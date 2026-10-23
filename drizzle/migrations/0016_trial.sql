@@ -1,0 +1,1 @@
+ALTER TABLE "business_plans" ADD COLUMN "is_trial" boolean DEFAULT false NOT NULL;

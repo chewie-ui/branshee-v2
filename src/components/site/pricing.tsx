@@ -4,28 +4,20 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { ADDONS, LIMITS, PLANS, type Plan } from "@/lib/plans";
+import { ADDONS, LIMITS, PLANS, TRIAL_DAYS, type Plan } from "@/lib/plans";
 
 /** Contenu des forfaits : dérivé des limites réelles (lib/plans), pour ne jamais promettre autre chose que l'application. */
-const ITEMS: Record<Plan, string[]> = {
-  free: [
-    "Rendez-vous illimités, 0 % de commission",
-    `Jusqu'à ${LIMITS.services.free} prestations actives`,
-    `Confirmation automatique jusqu'à ${LIMITS.autoConfirmUpTo.free} réservations en ligne par mois, ensuite à confirmer`,
-    "Page de réservation 24 h/24, sans compte client",
-    "Agenda, fiches et dossiers clients",
-    "Paiement en ligne et politique d'annulation (Stripe)",
-    `${LIMITS.formQuestions.free} question avant la réservation`,
-  ],
+const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
   pro: [
-    "Tout le forfait Amateur, sans limite de prestations",
-    "Toutes les réservations confirmées automatiquement",
+    "Rendez-vous et prestations illimités, 0 % de commission",
+    "Page de réservation 24 h/24, sans compte client",
     `Rappels automatiques par email, ${LIMITS.smsIncluded.pro} SMS ou WhatsApp inclus par mois`,
+    "Agenda, fiches et dossiers clients, historique complet",
+    "Paiement en ligne et politique d'annulation (Stripe)",
     "Page personnalisée : couleurs, polices, galerie, réseaux sociaux",
     "Synchronisation Google Agenda",
     `${LIMITS.collaborators.pro} collaborateurs inclus (${ADDONS.seat.monthly} €/mois le siège en plus)`,
     `${LIMITS.formQuestions.pro} questions avant la réservation`,
-    "Temps de battement, durée des créneaux, historique complet",
   ],
   pro_plus: [
     "Tout le forfait Pro",
@@ -34,13 +26,12 @@ const ITEMS: Record<Plan, string[]> = {
     "Mon site : un site vitrine publié en un clic",
     "Adresse personnalisée et emails sans mention Branshee",
     `${LIMITS.smsIncluded.pro_plus} SMS ou WhatsApp inclus par mois · ${LIMITS.formQuestions.pro_plus} questions`,
-    "Un établissement gratuit de plus",
   ],
 };
 
 export function PricingTable({ signupHref = "/inscription" }: { signupHref?: string }) {
   const [yearly, setYearly] = useState(false);
-  const plans: Plan[] = ["free", "pro", "pro_plus"];
+  const plans = ["pro", "pro_plus"] as const;
   return (
     <div>
       <div className="mb-8 flex justify-center">
@@ -52,7 +43,7 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
         {plans.map((p) => {
           const price = yearly ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
           const popular = p === "pro";
@@ -65,7 +56,7 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
                 <span className="text-4xl font-semibold tracking-tight tabular-nums">{price} €</span>
                 <span className="text-sm text-muted">/ mois</span>
               </p>
-              <p className="mt-1 h-5 text-xs text-muted">{p === "free" ? "Pour toujours, sans carte bancaire" : yearly ? `Facturé ${PLANS[p].yearlyPerMonth * 12} € par an` : `ou ${PLANS[p].yearlyPerMonth} €/mois à l'année`}</p>
+              <p className="mt-1 h-5 text-xs text-muted">{yearly ? `Facturé ${PLANS[p].yearlyPerMonth * 12} € par an` : `ou ${PLANS[p].yearlyPerMonth} €/mois à l'année`}</p>
               <ul className="mt-6 flex-1 space-y-3">
                 {ITEMS[p].map((i) => (
                   <li key={i} className="flex gap-2.5 text-sm">
@@ -75,13 +66,13 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
                 ))}
               </ul>
               <Link href={signupHref} className={cn("mt-8 inline-flex h-11 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors", popular ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "border border-border-strong hover:bg-surface-muted")}>
-                {p === "free" ? "Commencer gratuitement" : `Choisir ${PLANS[p].label}`}
+                {popular ? `Essayer ${PLANS[p].label} gratuitement` : `Choisir ${PLANS[p].label}`}
               </Link>
             </div>
           );
         })}
       </div>
-      <p className="mt-6 text-center text-sm text-muted">Paiement sécurisé par Stripe · Sans engagement · 0 % de commission · Le forfait se choisit par établissement, après l&apos;inscription.</p>
+      <p className="mt-6 text-center text-sm text-muted">{TRIAL_DAYS} jours d&apos;essai gratuit, sans carte bancaire · Sans engagement · 0 % de commission · Paiement sécurisé par Stripe</p>
     </div>
   );
 }

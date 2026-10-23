@@ -1,16 +1,20 @@
 /**
  * Forfaits Branshee : prix affichés et limites. Source unique, partagée serveur / interface.
- * Les noms commerciaux (Amateur, Pro, Pro+) sont séparés des clés stockées (free, pro, pro_plus).
+ * Pas de forfait gratuit : chaque compte a 30 jours d'essai du forfait Pro (sans carte), puis il faut s'abonner.
+ * La clé « free » désigne un établissement sans abonnement actif : sa réservation en ligne est fermée.
  * Les prix doivent correspondre aux prix Stripe (STRIPE_PRICE_* dans l'environnement).
  */
 export type Plan = "free" | "pro" | "pro_plus";
 export const PLAN_RANK: Record<Plan, number> = { free: 0, pro: 1, pro_plus: 2 };
 
 export const PLANS: Record<Plan, { label: string; monthly: number; yearlyPerMonth: number; tagline: string }> = {
-  free: { label: "Amateur", monthly: 0, yearlyPerMonth: 0, tagline: "Pour démarrer" },
+  free: { label: "Sans abonnement", monthly: 0, yearlyPerMonth: 0, tagline: "Réservation en ligne fermée" },
   pro: { label: "Pro", monthly: 19, yearlyPerMonth: 15, tagline: "Pour un indépendant qui se lance pour de bon" },
   pro_plus: { label: "Pro+", monthly: 49, yearlyPerMonth: 39, tagline: "Pour un cabinet avec une équipe" },
 };
+
+/** Durée de l'essai gratuit du forfait Pro, offert au premier établissement d'un compte. */
+export const TRIAL_DAYS = 30;
 
 export const ADDONS = {
   customUrl: { label: "URL personnalisée", monthly: 5 },
@@ -31,7 +35,7 @@ export const LIMITS = {
   /** SMS inclus par mois. */
   smsIncluded: { free: 0, pro: 10, pro_plus: 30 },
   /** Historique visible (jours) ; les RDV ne sont jamais supprimés, seulement masqués. */
-  historyDays: { free: 7, pro: INF, pro_plus: INF },
+  historyDays: { free: INF, pro: INF, pro_plus: INF },
 } satisfies Record<string, Record<Plan, number>>;
 
 export const FEATURES = {
@@ -67,13 +71,14 @@ export const limitOf = (plan: Plan, key: keyof typeof LIMITS) => LIMITS[key][pla
 export const collaboratorLimit = (plan: Plan, extraSeats: number) => LIMITS.collaborators[plan] + (plan === "free" ? 0 : extraSeats);
 
 /**
- * Peut-on créer un établissement de plus ? Un gratuit par compte, plus un gratuit par établissement Pro+ ;
- * au-delà, les établissements existants doivent être payants.
+ * Peut-on créer un établissement de plus ? Toujours : seul le premier établissement d'un compte
+ * a l'essai gratuit, les suivants doivent être abonnés pour ouvrir leur réservation en ligne.
  */
 export function canCreateBusiness(ownedPlans: Plan[]) {
-  const free = ownedPlans.filter((p) => p === "free").length;
-  const allowed = 1 + ownedPlans.filter((p) => p === "pro_plus").length;
-  return { ok: free < allowed, free, allowed };
+  return { ok: true as const, owned: ownedPlans.length };
 }
+
+/** Un établissement sans abonnement actif (essai terminé, abonnement arrêté) ne prend plus de réservation en ligne. */
+export const bookingOpen = (plan: Plan) => plan !== "free";
 
 export const planLabel = (p: Plan) => PLANS[p].label;

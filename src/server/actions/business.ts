@@ -13,7 +13,6 @@ import { isOfficialProfession, professionKey } from "@/lib/professions";
 import { BUSINESS_COOKIE } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
 import { requireContext, requireUser } from "@/server/context";
-import { canUserCreateBusiness } from "@/server/plan";
 
 export type CreateBusinessState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -32,11 +31,10 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
     for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
     return { fieldErrors, values };
   }
-  const can = await canUserCreateBusiness(user.id);
-  if (!can.ok) return { error: "Vous avez déjà un établissement au forfait Amateur. Passez-le au forfait Pro pour en créer un autre (chaque établissement Pro+ ouvre droit à un établissement gratuit de plus).", values };
   const [owner] = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(eq(users.id, user.id));
+  // Essai gratuit de 30 jours : seulement pour le premier établissement du compte (même supprimé depuis).
   const firstBusiness = (await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, user.id)).limit(1)).length === 0;
-  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null });
+  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null }, { trial: firstBusiness });
   if (firstBusiness) after(() => notifyWelcomePro(user.id, business.name));
   // Métier hors liste : proposé à l'équipe (page Métiers du super-admin).
   const type = parsed.data.businessType;

@@ -9,22 +9,19 @@ import { ADDONS, LIMITS, PLANS, PLAN_RANK, type Plan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { cancelPlan, checkPromo, choosePlan, claimReferral, openBillingPortal, resumePlan, setCustomUrlAddon, setExtraSeats } from "@/server/actions/billing";
 
-type Current = { plan: Plan; source: string; status: string; periodEnd: string | null; cancelAtPeriodEnd: boolean; grantedUntil: string | null; extraSeats: number; customUrlAddon: boolean; interval: "month" | "year" | null };
+type Current = { plan: Plan; source: string; status: string; periodEnd: string | null; cancelAtPeriodEnd: boolean; grantedUntil: string | null; isTrial: boolean; extraSeats: number; customUrlAddon: boolean; interval: "month" | "year" | null };
 type R = { ok: true; message?: string; url?: string } | { ok: false; error: string };
 
-const FEATURES: { label: string; free: string | boolean; pro: string | boolean; pro_plus: string | boolean }[] = [
-  { label: "Réservation en ligne illimitée", free: true, pro: true, pro_plus: true },
-  { label: "Prestations actives", free: String(LIMITS.services.free), pro: "Illimitées", pro_plus: "Illimitées" },
-  { label: "Confirmation automatique", free: `${LIMITS.autoConfirmUpTo.free} RDV / mois`, pro: "Illimitée", pro_plus: "Illimitée" },
-  { label: "Rappels automatiques par email", free: false, pro: true, pro_plus: true },
-  { label: "SMS inclus par mois", free: "—", pro: String(LIMITS.smsIncluded.pro), pro_plus: String(LIMITS.smsIncluded.pro_plus) },
-  { label: "Collaborateurs inclus", free: "—", pro: String(LIMITS.collaborators.pro), pro_plus: String(LIMITS.collaborators.pro_plus) },
-  { label: "Questions avant réservation", free: String(LIMITS.formQuestions.free), pro: String(LIMITS.formQuestions.pro), pro_plus: String(LIMITS.formQuestions.pro_plus) },
-  { label: "Historique", free: "7 jours", pro: "Complet", pro_plus: "Complet" },
-  { label: "Personnalisation de la page, réseaux sociaux", free: false, pro: true, pro_plus: true },
-  { label: "Synchronisation Google Agenda", free: false, pro: true, pro_plus: true },
-  { label: "Grades sur mesure, journal d'activité", free: false, pro: false, pro_plus: true },
-  { label: "Mon site, URL personnalisée, sans mention Branshee", free: false, pro: false, pro_plus: true },
+const FEATURES: { label: string; pro: string | boolean; pro_plus: string | boolean }[] = [
+  { label: "Réservation en ligne illimitée, prestations illimitées", pro: true, pro_plus: true },
+  { label: "Rappels automatiques par email", pro: true, pro_plus: true },
+  { label: "SMS inclus par mois", pro: String(LIMITS.smsIncluded.pro), pro_plus: String(LIMITS.smsIncluded.pro_plus) },
+  { label: "Collaborateurs inclus", pro: String(LIMITS.collaborators.pro), pro_plus: String(LIMITS.collaborators.pro_plus) },
+  { label: "Questions avant réservation", pro: String(LIMITS.formQuestions.pro), pro_plus: String(LIMITS.formQuestions.pro_plus) },
+  { label: "Personnalisation de la page, réseaux sociaux", pro: true, pro_plus: true },
+  { label: "Synchronisation Google Agenda", pro: true, pro_plus: true },
+  { label: "Grades sur mesure, journal d'activité", pro: false, pro_plus: true },
+  { label: "Mon site, URL personnalisée, sans mention Branshee", pro: false, pro_plus: true },
 ];
 
 const fmtDate = (iso: string | null) => (iso ? new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso)) : "");
@@ -65,12 +62,14 @@ export function BillingPanel({
         <CardHeader title="Votre forfait" />
         <div className="flex flex-wrap items-center gap-4 p-5">
           <div className="flex-1">
-            <p className="text-2xl font-semibold">{PLANS[current.plan].label}</p>
+            <p className="text-2xl font-semibold">{current.isTrial && current.source === "granted" ? `${PLANS[current.plan].label} — essai gratuit` : PLANS[current.plan].label}</p>
             <p className="text-sm text-muted">
               {current.source === "granted"
-                ? current.grantedUntil
-                  ? `Accès offert jusqu'au ${fmtDate(current.grantedUntil)}.`
-                  : "Accès offert."
+                ? current.isTrial && current.grantedUntil
+                  ? `Essai gratuit jusqu'au ${fmtDate(current.grantedUntil)}. Abonnez-vous dès maintenant : le premier paiement n'aura lieu qu'à la fin de l'essai.`
+                  : current.grantedUntil
+                    ? `Accès offert jusqu'au ${fmtDate(current.grantedUntil)}.`
+                    : "Accès offert."
                 : paid
                   ? current.cancelAtPeriodEnd
                     ? `Résilié : actif jusqu'au ${fmtDate(current.periodEnd)}.`
@@ -81,7 +80,7 @@ export function BillingPanel({
                         : current.periodEnd
                           ? `Prochain renouvellement le ${fmtDate(current.periodEnd)} (${current.interval === "year" ? "annuel" : "mensuel"}).`
                           : "Abonnement actif."
-                  : "Gratuit, sans limite de durée."}
+                  : "Pas d'abonnement actif : votre réservation en ligne est fermée. Choisissez un forfait pour la rouvrir."}
             </p>
           </div>
           {paid && canManage ? (
@@ -102,7 +101,7 @@ export function BillingPanel({
       ) : null}
 
       <Card>
-        <CardHeader title="Changer de forfait" description="Sans engagement. Un changement en cours de mois est calculé au prorata." />
+        <CardHeader title={paid ? "Changer de forfait" : "Choisir un forfait"} description="Sans engagement, résiliable en un clic. Un changement en cours de mois est calculé au prorata." />
         <div className="space-y-5 p-5">
           {!enabled ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-warning">Le paiement des abonnements n&apos;est pas encore configuré sur ce serveur (clés Stripe).</p> : null}
           <div className="inline-flex rounded-lg bg-surface-muted p-1" role="radiogroup" aria-label="Période">
@@ -112,17 +111,18 @@ export function BillingPanel({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {(["free", "pro", "pro_plus"] as const).map((p) => {
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {(["pro", "pro_plus"] as const).map((p) => {
               const price = interval === "year" ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
-              const isCurrent = current.plan === p;
+              // Pendant l'essai ou un accès offert, le forfait affiché n'est pas encore payé : on peut s'y abonner.
+              const isCurrent = current.plan === p && paid;
               return (
                 <div key={p} className={cn("flex flex-col rounded-xl border p-5", isCurrent ? "border-accent ring-1 ring-accent" : "border-border")}>
                   <p className="font-semibold">{PLANS[p].label}</p>
                   <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
                   <p className="mt-4">
                     <span className="text-3xl font-semibold">{price} €</span>
-                    <span className="text-sm text-muted"> / mois{interval === "year" && price ? ", facturé à l'année" : ""}</span>
+                    <span className="text-sm text-muted"> / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
                   </p>
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                     {FEATURES.map((f) => {
@@ -139,11 +139,9 @@ export function BillingPanel({
                   <div className="mt-5">
                     {isCurrent ? (
                       <p className="text-center text-sm font-medium text-accent">Forfait actuel</p>
-                    ) : p === "free" ? (
-                      paid && canManage ? <Button variant="ghost" className="w-full" loading={pending} onClick={() => run(cancelPlan)}>Revenir au gratuit à l&apos;échéance</Button> : null
                     ) : canManage ? (
-                      <Button className="w-full" variant={PLAN_RANK[p] > PLAN_RANK[current.plan] ? "primary" : "secondary"} loading={pending} disabled={!enabled} onClick={() => run(() => choosePlan({ plan: p, interval, promo: promo || undefined }))}>
-                        {PLAN_RANK[p] > PLAN_RANK[current.plan] ? `Passer à ${PLANS[p].label}` : `Passer à ${PLANS[p].label}`}
+                      <Button className="w-full" variant={!paid || PLAN_RANK[p] > PLAN_RANK[current.plan] ? "primary" : "secondary"} loading={pending} disabled={!enabled} onClick={() => run(() => choosePlan({ plan: p, interval, promo: promo || undefined }))}>
+                        {paid ? `Passer à ${PLANS[p].label}` : `S'abonner à ${PLANS[p].label}`}
                       </Button>
                     ) : null}
                   </div>

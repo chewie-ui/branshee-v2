@@ -44,7 +44,7 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
   const v = parsed.data;
   const seats = await collaboratorUsage(ctx.business.id);
   if (seats.used >= seats.max) {
-    return { error: seats.max === 0 ? "Le forfait Amateur ne permet pas d'ajouter de collaborateurs : passez au forfait Pro (Réglages › Abonnement)." : `Votre forfait inclut ${seats.max} collaborateur${seats.max > 1 ? "s" : ""}. Ajoutez un siège ou passez au forfait supérieur (Réglages › Abonnement).` };
+    return { error: seats.max === 0 ? "Sans abonnement, pas de collaborateurs : choisissez le forfait Pro (Réglages › Abonnement)." : `Votre forfait inclut ${seats.max} collaborateur${seats.max > 1 ? "s" : ""}. Ajoutez un siège ou passez au forfait supérieur (Réglages › Abonnement).` };
   }
 
   let userId: string | null = null;

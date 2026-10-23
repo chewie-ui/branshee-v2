@@ -1,5 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
-import { sendCreateBusinessNudges, sendGrantExpiryReminders, sendOnboardingNudges } from "@/server/jobs";
+import { sendCreateBusinessNudges, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +15,6 @@ export async function POST(req: Request) {
     onboardingNudges: await run("relances", sendOnboardingNudges),
     createBusinessNudges: await run("créez votre établissement", sendCreateBusinessNudges),
     grantReminders: await run("fin d'accès offert", sendGrantExpiryReminders),
+    planEnded: await run("réservation fermée (fin d’essai)", sendPlanEndedNotices),
   });
 }

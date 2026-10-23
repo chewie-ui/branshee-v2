@@ -35,7 +35,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
   const membre = team.some((m) => m.id === p.membre) ? p.membre! : "";
 
   const where: SQL[] = [eq(appointments.businessId, bid), eq(appointments.kind, "appointment"), isNull(appointments.groupSessionId)];
-  // Forfait Amateur : historique visible sur 7 jours (les rendez-vous ne sont jamais supprimés).
+  // Historique : limité selon le forfait (les rendez-vous ne sont jamais supprimés).
   const historyDays = limitOf((await effectivePlan(bid)).plan, "historyDays");
   if (Number.isFinite(historyDays)) where.push(gte(appointments.startsAt, new Date(now.getTime() - historyDays * 86400000)));
   if (statut === "confirme") where.push(eq(appointments.status, "confirmed"), gte(appointments.endsAt, now));
@@ -77,7 +77,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader title="Historique" description={`${total} rendez-vous`} />
-      {Number.isFinite(historyDays) ? <div className="mb-4"><UpgradeNotice feature="Historique complet" required="pro">Avec le forfait Amateur, l&apos;historique affiche les {historyDays} derniers jours. Rien n&apos;est supprimé : tout réapparaît en passant au forfait Pro.</UpgradeNotice></div> : null}
+      {Number.isFinite(historyDays) ? <div className="mb-4"><UpgradeNotice feature="Historique complet" required="pro">Avec votre forfait, l&apos;historique affiche les {historyDays} derniers jours. Rien n&apos;est supprimé : tout réapparaît en passant au forfait Pro.</UpgradeNotice></div> : null}
       <form className="mb-4 flex flex-wrap gap-2" role="search">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />

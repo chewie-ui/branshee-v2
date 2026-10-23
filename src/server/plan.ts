@@ -13,12 +13,14 @@ export type EffectivePlan = {
   periodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   grantedUntil: Date | null;
+  /** Accès en cours = essai gratuit de 30 jours. */
+  isTrial: boolean;
   extraSeats: number;
   customUrlAddon: boolean;
   stripeSubscriptionId: string | null;
 };
 
-const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null };
+const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, isTrial: false, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null };
 
 /**
  * Forfait effectif d'un établissement. Un accès offert expiré ne débloque jamais rien ;
@@ -28,7 +30,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   const now = new Date();
   const [row] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, businessId));
   if (row && row.plan !== "free") {
-    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status };
+    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, isTrial: row.isTrial, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status };
     if (row.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(row.status)) return { ...base, plan: row.plan, source: "stripe" };
     if (!row.stripeSubscriptionId && (!row.grantedUntil || row.grantedUntil > now) && row.status === "active") return { ...base, plan: row.plan, source: "granted" };
   }
@@ -38,7 +40,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   if (sub && sub.plan !== "free" && ["active", "trialing", "past_due"].includes(sub.status)) {
     const grantExpired = sub.grantedUntil && sub.grantedUntil <= now;
     if (!grantExpired || sub.stripeSubscriptionId) {
-      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId };
+      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, isTrial: false, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId };
     }
   }
   return { ...FREE, extraSeats: row?.extraSeats ?? 0, customUrlAddon: row?.customUrlAddon ?? false };

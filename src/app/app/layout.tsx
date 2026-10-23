@@ -12,6 +12,8 @@ import { NAV_FOOTER, NAV_GROUPS } from "@/lib/navigation";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { clientWord } from "@/lib/terminology";
+import { PlanBanner } from "@/components/app/plan-banner";
+import { effectivePlan } from "@/server/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +24,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (gate.status !== "active" && !(await getSessionUser())?.user.isSuperadmin) return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const hidden = await hiddenNavHrefs();
   const visible = (item: { permission?: Parameters<typeof ctx.can>[0] }) => !item.permission || ctx.can(item.permission);
-  const [pending, adminMessages, unread] = await Promise.all([
+  const [pending, adminMessages, unread, plan] = await Promise.all([
     ctx.can("appointments.manage") ? listPendingRequests(ctx.business.id).then((l) => l.length) : Promise.resolve(0),
     activeAdminMessages(ctx.user.id),
     supportUnread(ctx.user.id),
+    effectivePlan(ctx.business.id),
   ]);
   const clients = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
   const groups = NAV_GROUPS.map((g) => ({
@@ -48,6 +51,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {!ctx.impersonating ? <SupervisionPrompt /> : null}
           <AdminMessages messages={adminMessages} />
+          <PlanBanner plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} />
           {children}
         </div>
       </main>

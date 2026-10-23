@@ -43,10 +43,10 @@ async function list(r: ApiRequest) {
     requests: all.filter((x) => x.m.status === "requested").map((x) => ({ ...x.dto, status: "pending" as const })),
     canCreate: {
       canCreate: can.ok,
-      reason: can.ok ? "" : "Vous avez déjà un établissement au forfait Amateur. Passez-le au forfait Pro pour en créer un autre.",
-      freeCount: can.free,
+      reason: "",
+      freeCount: 0,
       businessCount: all.filter((x) => x.m.isOwner && x.dto.plan === "business").length,
-      allowedFree: can.allowed,
+      allowedFree: 0,
     },
   };
 }

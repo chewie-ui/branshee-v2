@@ -16,8 +16,8 @@ import PublicBusinessPage from "@/app/(public)/[slug]/page";
 import { businessSlugForDomain } from "@/server/site-builder";
 
 export const metadata: Metadata = {
-  title: { absolute: "Agenda en ligne gratuit et prise de rendez-vous 24 h/24 | Branshee" },
-  description: "Agenda en ligne gratuit : réservations 24 h/24, rappels anti-absence, 0 % de commission, widget pour votre site. Pro à 19 €/mois, sans engagement.",
+  title: { absolute: "Agenda en ligne et prise de rendez-vous 24 h/24 | Branshee" },
+  description: "Agenda en ligne : réservations 24 h/24, rappels anti-absence, 0 % de commission, widget pour votre site. 30 jours d'essai gratuit, puis 19 €/mois sans engagement.",
   alternates: { canonical: "/" },
 };
 
@@ -76,7 +76,7 @@ const INCLUDED = [
 ];
 
 const STEPS = [
-  { title: "Créez votre compte gratuit", desc: "Deux minutes, sans carte bancaire. Indiquez votre métier : kiné, coiffure, coaching, bien-être, tatouage…" },
+  { title: "Créez votre compte", desc: "Deux minutes, sans carte bancaire, 30 jours d'essai offerts. Indiquez votre métier : kiné, coiffure, coaching, bien-être, tatouage…" },
   { title: "Ajoutez vos prestations et horaires", desc: "Prix, durées, planning de la semaine, congés. Une visite guidée vous montre où cliquer." },
   { title: "Partagez votre lien", desc: "Sur Instagram, WhatsApp, Google, votre site, ou en QR code au cabinet. Vos clients réservent, vous êtes prévenu." },
 ];
@@ -93,15 +93,15 @@ const JOBS = [
 ];
 
 const FAQ = [
-  { q: "Est-ce vraiment gratuit ? Où est le piège ?", a: "Il n'y en a pas. Le forfait Amateur est gratuit pour toujours, sans carte bancaire : rendez-vous illimités, 5 prestations, confirmations automatiques et votre page de réservation. Quand votre activité grandit, le forfait Pro à 19 €/mois débloque les rappels automatiques, la synchronisation Google Agenda et les prestations illimitées." },
+  { q: "Comment fonctionne l'essai gratuit ?", a: "Vous profitez de tout le forfait Pro pendant 30 jours, sans carte bancaire : rendez-vous illimités, rappels automatiques par email et SMS, personnalisation de votre page. À la fin de l'essai, vous choisissez un forfait (Pro à 19 €/mois, sans engagement) pour que vos clients continuent à réserver. Rien n'est prélevé sans votre accord." },
   { q: "Branshee prend-il une commission sur mes réservations ?", a: "Non, jamais. Branshee fonctionne avec un abonnement fixe. Tout ce que paient vos clients vous revient, et vos clients restent vos clients : jamais démarchés, jamais redirigés vers d'autres professionnels." },
-  { q: "Que se passe-t-il au-delà de 20 réservations par mois en gratuit ?", a: "Rien n'est bloqué. Vos clients peuvent toujours réserver ; au-delà de 20 réservations en ligne dans le mois, les suivantes arrivent « à confirmer » dans votre espace au lieu d'être confirmées automatiquement." },
+  { q: "Que se passe-t-il si je ne m'abonne pas à la fin de l'essai ?", a: "Votre page de réservation en ligne se ferme, mais rien n'est supprimé : vos rendez-vous, votre fichier clients et vos réglages restent consultables. Vous pouvez vous abonner à tout moment, et tout rouvre immédiatement." },
   { q: "Combien de temps faut-il pour être prêt ?", a: "Moins de 10 minutes pour la plupart des professionnels : compte, prestations, horaires, puis partage du lien. Aucune compétence technique nécessaire." },
   { q: "Mes clients doivent-ils créer un compte ou installer une application ?", a: "Non. Ils réservent en 30 secondes depuis leur téléphone ou leur ordinateur, avec leur nom, leur email et leur téléphone. Le compte client est facultatif." },
   { q: "Puis-je intégrer le calendrier sur mon propre site ?", a: "Oui. Copiez une ligne de code (WordPress, Wix, Squarespace, Webflow, site sur mesure) : vos clients réservent sans quitter votre site. Sans site, le forfait Pro+ vous en génère un." },
   { q: "Comment Branshee réduit-il les rendez-vous manqués ?", a: "Trois mécanismes : un rappel automatique la veille (email, SMS ou WhatsApp), une politique d'annulation que vous choisissez, et le paiement en ligne via Stripe — acompte ou carte en garantie — pour que les absences ne soient plus à votre charge." },
   { q: "Les dossiers de mes patients sont-ils protégés ?", a: "Oui. Les notes de suivi et les documents sont chiffrés au repos, l'accès se règle par grade au sein de votre équipe, et l'équipe Branshee ne peut voir votre espace qu'avec votre accord explicite." },
-  { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement ni frais cachés : résiliation en un clic. Vous gardez l'accès jusqu'à la fin de la période payée, puis vous repassez au forfait gratuit sans rien perdre." },
+  { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement ni frais cachés : résiliation en un clic. Vous gardez l'accès jusqu'à la fin de la période payée, puis votre réservation en ligne se ferme, sans rien perdre : vos données restent là si vous revenez." },
 ];
 
 export default async function HomePage() {
@@ -124,15 +124,15 @@ export default async function HomePage() {
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">
               <Sparkles className="size-4" aria-hidden="true" />
-              Gratuit pour commencer · Sans carte bancaire
+              30 jours d'essai gratuit · Sans carte bancaire
             </p>
             <h1 className="mt-6 text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl">
               Créez votre agenda, vos clients réservent en ligne.
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">Vos clients réservent seuls, 24 h/24, pendant que vous travaillez. En ligne en 10 minutes, gratuit pour démarrer, 19 € quand ça décolle.</p>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">Vos clients réservent seuls, 24 h/24, pendant que vous travaillez. En ligne en 10 minutes, 30 jours d&apos;essai offerts, puis 19 €/mois sans engagement.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/inscription" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-accent px-6 text-base font-medium text-accent-foreground shadow-sm transition-colors hover:bg-accent-hover">
-                Commencer gratuitement
+                Essayer 30 jours gratuitement
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
               <Link href="/tarifs" className="inline-flex h-12 items-center justify-center rounded-lg border border-border-strong bg-surface px-6 text-base font-medium transition-colors hover:bg-surface-muted">
@@ -278,7 +278,7 @@ export default async function HomePage() {
         </ol>
         <div className="mt-10 text-center">
           <Link href="/inscription" className="inline-flex h-12 items-center gap-2 rounded-lg bg-accent px-6 text-base font-medium text-accent-foreground hover:bg-accent-hover">Lancer mon agenda maintenant<ArrowRight className="size-4" aria-hidden="true" /></Link>
-          <p className="mt-3 text-sm text-muted">Gratuit, sans carte bancaire. Si ça ne vous convient pas, vous n&apos;aurez rien payé.</p>
+          <p className="mt-3 text-sm text-muted">30 jours d&apos;essai, sans carte bancaire. Si ça ne vous convient pas, vous n&apos;aurez rien payé.</p>
         </div>
       </Section>
 
@@ -315,7 +315,7 @@ export default async function HomePage() {
 
       {/* Tarifs */}
       <Section id="tarifs">
-        <SectionTitle pill="Tarifs" title="Des prix simples. Pas de surprises." sub="Gratuit pour toujours avec Amateur. 19 €/mois quand vous grandissez, là où les logiciels classiques coûtent 30 à 70 €/mois. Jamais de commission." />
+        <SectionTitle pill="Tarifs" title="Des prix simples. Pas de surprises." sub="30 jours d'essai gratuit, puis 19 €/mois, là où les logiciels classiques coûtent 30 à 70 €/mois. Jamais de commission." />
         <PricingTable />
       </Section>
 
@@ -372,9 +372,9 @@ export default async function HomePage() {
       <section className="bg-accent">
         <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-20">
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-accent-foreground sm:text-4xl">Votre prochain client réserve peut-être ce soir.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-accent-foreground/90">Gratuit pour commencer, sans carte bancaire. Sans engagement, sans commission. Le pire qui puisse arriver : vous aurez essayé gratuitement.</p>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-accent-foreground/90">30 jours d&apos;essai, sans carte bancaire. Sans engagement, sans commission. Le pire qui puisse arriver : vous aurez essayé gratuitement.</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/inscription" className="inline-flex h-12 items-center justify-center rounded-lg bg-surface px-6 text-base font-medium text-text hover:bg-surface-muted">Créer mon agenda gratuit</Link>
+            <Link href="/inscription" className="inline-flex h-12 items-center justify-center rounded-lg bg-surface px-6 text-base font-medium text-text hover:bg-surface-muted">Essayer 30 jours gratuitement</Link>
             <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-lg border border-accent-foreground/40 px-6 text-base font-medium text-accent-foreground hover:bg-accent-hover">Poser une question</Link>
           </div>
         </div>
