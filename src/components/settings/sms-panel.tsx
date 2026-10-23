@@ -47,7 +47,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
           <p className="text-sm text-muted">Solde prépayé</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{eur(balanceCents)}</p>
           <p className="text-sm text-muted">SMS {eur(prices.sms)} · WhatsApp {eur(prices.wa)} au-delà du forfait</p>
-          {isOwner ? <p className="text-xs text-muted">Recharges hors TVA : 21 % de TVA en sus sur la facture.</p> : null}
+          {isOwner ? <p className="text-xs text-muted">Montants TVA comprise.</p> : null}
           {isOwner ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {[10, 20, 50].map((a) => <Button key={a} size="sm" variant="secondary" loading={pending} onClick={() => run(() => topUpSms(a))}>+ {a} €</Button>)}

@@ -461,7 +461,7 @@ export const emails = {
         intro: `Branshee passe à une nouvelle version, plus rapide et plus complète. Pour la découvrir, ${p.businessName} profite du forfait Pro offert pendant 30 jours, jusqu'au ${p.until} : rappels automatiques par email et SMS, réservations illimitées, personnalisation de votre page. Votre page et vos rendez-vous sont repris tels quels.`,
         details: [
           { label: "Essai gratuit", value: `jusqu'au ${p.until}` },
-          { label: "Ensuite", value: "Pro à 19 € HTVA/mois (22,99 € TVAC), sans engagement" },
+          { label: "Ensuite", value: "Pro à 23 €/mois TVAC, sans engagement" },
         ],
         cta: { label: "Découvrir les forfaits", url: p.url },
         note: "Le forfait gratuit disparaît : à la fin de l'essai, la réservation en ligne reste ouverte seulement avec un abonnement. Nous vous préviendrons 7 jours et 1 jour avant.",

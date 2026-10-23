@@ -17,14 +17,14 @@ import { businessSlugForDomain } from "@/server/site-builder";
 
 export const metadata: Metadata = {
   title: { absolute: "Agenda en ligne et prise de rendez-vous 24 h/24 | Branshee" },
-  description: "Agenda en ligne : réservations 24 h/24, rappels anti-absence, 0 % de commission, widget pour votre site. 30 jours d'essai gratuit, puis 19 € HTVA/mois sans engagement.",
+  description: "Agenda en ligne : réservations 24 h/24, rappels anti-absence, 0 % de commission, widget pour votre site. 30 jours d'essai gratuit, puis 23 €/mois TVAC sans engagement.",
   alternates: { canonical: "/" },
 };
 
 const COMPARE = [
   { name: "Logiciels de réservation classiques", price: "30 à 70 €/mois", desc: "Facturés dès le premier jour, fonctionnalités clés en option payante." },
   { name: "Plateformes à commission", price: "Un % sur chaque rendez-vous", desc: "Plus vous travaillez, plus vous payez. Vos clients appartiennent à la plateforme, qui leur montre vos concurrents." },
-  { name: "Branshee", price: "30 jours d'essai · 19 € HTVA/mois en Pro", desc: "Tout inclus, 0 % de commission. Votre marque en avant, et vos clients restent vos clients.", highlight: true },
+  { name: "Branshee", price: "30 jours d'essai · 23 €/mois TVAC en Pro", desc: "Tout inclus, 0 % de commission. Votre marque en avant, et vos clients restent vos clients.", highlight: true },
 ];
 
 const STACK = [
@@ -93,7 +93,7 @@ const JOBS = [
 ];
 
 const FAQ = [
-  { q: "Comment fonctionne l'essai gratuit ?", a: "Vous profitez de tout le forfait Pro pendant 30 jours, sans carte bancaire : rendez-vous illimités, rappels automatiques par email et SMS, personnalisation de votre page. À la fin de l'essai, vous choisissez un forfait (Pro à 19 € HTVA/mois, sans engagement) pour que vos clients continuent à réserver. Rien n'est prélevé sans votre accord." },
+  { q: "Comment fonctionne l'essai gratuit ?", a: "Vous profitez de tout le forfait Pro pendant 30 jours, sans carte bancaire : rendez-vous illimités, rappels automatiques par email et SMS, personnalisation de votre page. À la fin de l'essai, vous choisissez un forfait (Pro à 23 €/mois TVAC, sans engagement) pour que vos clients continuent à réserver. Rien n'est prélevé sans votre accord." },
   { q: "Branshee prend-il une commission sur mes réservations ?", a: "Non, jamais. Branshee fonctionne avec un abonnement fixe. Tout ce que paient vos clients vous revient, et vos clients restent vos clients : jamais démarchés, jamais redirigés vers d'autres professionnels." },
   { q: "Que se passe-t-il si je ne m'abonne pas à la fin de l'essai ?", a: "Votre page de réservation en ligne se ferme, mais rien n'est supprimé : vos rendez-vous, votre fichier clients et vos réglages restent consultables. Vous pouvez vous abonner à tout moment, et tout rouvre immédiatement." },
   { q: "Combien de temps faut-il pour être prêt ?", a: "Moins de 10 minutes pour la plupart des professionnels : compte, prestations, horaires, puis partage du lien. Aucune compétence technique nécessaire." },
@@ -129,7 +129,7 @@ export default async function HomePage() {
             <h1 className="mt-6 text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl">
               Créez votre agenda, vos clients réservent en ligne.
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">Vos clients réservent seuls, 24 h/24, pendant que vous travaillez. En ligne en 10 minutes, 30 jours d&apos;essai offerts, puis 19 € HTVA/mois sans engagement.</p>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">Vos clients réservent seuls, 24 h/24, pendant que vous travaillez. En ligne en 10 minutes, 30 jours d&apos;essai offerts, puis 23 €/mois TVAC sans engagement.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/inscription" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-accent px-6 text-base font-medium text-accent-foreground shadow-sm transition-colors hover:bg-accent-hover">
                 Essayer 30 jours gratuitement
@@ -315,7 +315,7 @@ export default async function HomePage() {
 
       {/* Tarifs */}
       <Section id="tarifs">
-        <SectionTitle pill="Tarifs" title="Des prix simples. Pas de surprises." sub="30 jours d'essai gratuit, puis 19 € HTVA/mois, là où les logiciels classiques coûtent 30 à 70 €/mois. Jamais de commission." />
+        <SectionTitle pill="Tarifs" title="Des prix simples. Pas de surprises." sub="30 jours d'essai gratuit, puis 23 €/mois TVAC, là où les logiciels classiques coûtent 30 à 70 €/mois. Jamais de commission." />
         <PricingTable />
       </Section>
 

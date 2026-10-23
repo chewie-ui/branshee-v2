@@ -5,7 +5,7 @@ import { Check, Copy, Gift, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
-import { ADDONS, LIMITS, PLANS, PLAN_RANK, withVat, type Plan } from "@/lib/plans";
+import { ADDONS, LIMITS, PLANS, PLAN_RANK, eur, excludingVat, type Plan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { cancelPlan, checkPromo, choosePlan, claimReferral, openBillingPortal, resumePlan, setCustomUrlAddon, setExtraSeats } from "@/server/actions/billing";
 
@@ -117,7 +117,7 @@ export function BillingPanel({
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {(["pro", "pro_plus"] as const).map((p) => {
-              const price = interval === "year" ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
+              const price = interval === "year" ? Math.round((PLANS[p].yearly / 12) * 100) / 100 : PLANS[p].monthly;
               // Pendant l'essai ou un accès offert, le forfait affiché n'est pas encore payé : on peut s'y abonner.
               const isCurrent = current.plan === p && paid;
               return (
@@ -125,10 +125,10 @@ export function BillingPanel({
                   <p className="font-semibold">{PLANS[p].label}</p>
                   <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
                   <p className="mt-4">
-                    <span className="text-3xl font-semibold">{price} €</span>
-                    <span className="text-sm text-muted"> HTVA / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
+                    <span className="text-3xl font-semibold">{eur(price)}</span>
+                    <span className="text-sm text-muted"> TVAC / mois</span>
                   </p>
-                  <p className="text-xs text-muted">{withVat(price)} TVA comprise (21 %)</p>
+                  <p className="text-xs text-muted">{interval === "year" ? `Facturé ${eur(PLANS[p].yearly)} TVAC par an · ` : ""}{excludingVat(price)} HTVA / mois</p>
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                     {FEATURES.map((f) => {
                       const v = f[p];
@@ -188,7 +188,7 @@ function Addons({ current, run, pending }: { current: Current; run: (fn: () => P
           <div className="flex flex-wrap items-center gap-3 px-5 py-4">
             <div className="flex-1 text-sm">
               <p className="font-medium">{ADDONS.customUrl.label}</p>
-              <p className="text-muted">branshee.com/votre-nom — {ADDONS.customUrl.monthly} €/mois (incluse dans Pro+).</p>
+              <p className="text-muted">branshee.com/votre-nom — {ADDONS.customUrl.monthly} € TVAC/mois (incluse dans Pro+).</p>
             </div>
             <Button size="sm" variant={current.customUrlAddon ? "ghost" : "secondary"} loading={pending} onClick={() => run(() => setCustomUrlAddon(!current.customUrlAddon))}>{current.customUrlAddon ? "Retirer" : "Ajouter"}</Button>
           </div>
@@ -196,7 +196,7 @@ function Addons({ current, run, pending }: { current: Current; run: (fn: () => P
         <div className="flex flex-wrap items-center gap-3 px-5 py-4">
           <div className="flex-1 text-sm">
             <p className="font-medium">Sièges collaborateurs supplémentaires</p>
-            <p className="text-muted">{ADDONS.seat.monthly} €/mois par siège, en plus des {LIMITS.collaborators[current.plan]} inclus.</p>
+            <p className="text-muted">{ADDONS.seat.monthly} € TVAC/mois par siège, en plus des {LIMITS.collaborators[current.plan]} inclus.</p>
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setSeats((s) => Math.max(0, s - 1))} className="flex size-9 items-center justify-center rounded-lg border border-border-strong" aria-label="Un siège de moins"><Minus className="size-4" aria-hidden="true" /></button>
@@ -264,7 +264,7 @@ function Countdown({ campaign }: { campaign: { endsAt: string | null; firstPerio
       <Gift className="size-6 text-accent" aria-hidden="true" />
       <div className="flex-1 text-sm">
         <p className="font-semibold text-accent-soft-foreground">Offre de lancement : {PLANS[campaign.plan].label} à {(campaign.firstPeriodCents / 100).toFixed(2).replace(".", ",")} € le premier mois</p>
-        <p className="text-muted">Une seule fois par compte, en mensuel. Ensuite {PLANS[campaign.plan].monthly} €/mois, sans engagement.</p>
+        <p className="text-muted">Une seule fois par compte, en mensuel. Ensuite {eur(PLANS[campaign.plan].monthly)} TVAC/mois, sans engagement.</p>
       </div>
       {left != null ? <p className="font-mono text-lg font-semibold tabular-nums" aria-label="Temps restant">{d}j {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}:{String(sec).padStart(2, "0")}</p> : null}
     </div>

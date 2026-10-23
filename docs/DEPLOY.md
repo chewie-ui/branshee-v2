@@ -103,5 +103,5 @@ L'app reconnaît le domaine via l'en-tête `Host` (transmettre `proxy_set_header
 2. Messaging › Settings › Geo permissions : autoriser la Belgique (et France / Pays-Bas si besoin).
 3. Dans `.env.production` : `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_SENDER=Branshee` (11 caractères max).
 4. Super-admin › Fonctionnalités : allumer « Notifications SMS / WhatsApp ».
-Les SMS inclus (Pro 10 / Pro+ 30 par mois) sont couverts par l'abonnement, les SMS en plus par le crédit prépayé du pro (0,30 €) :
+Les SMS inclus (Pro 10 / Pro+ 30 par mois) sont couverts par l'abonnement, les SMS en plus par le crédit prépayé du pro (0,36 € TVAC) :
 le solde Twilio ne baisse que pour des SMS déjà payés. Chaque rappel tient en un seul SMS (160 caractères, lien court /g/…).

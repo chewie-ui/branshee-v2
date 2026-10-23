@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { ADDONS, LIMITS, PLANS, TRIAL_DAYS, withVat, type Plan } from "@/lib/plans";
+import { ADDONS, LIMITS, PLANS, TRIAL_DAYS, eur, excludingVat, type Plan } from "@/lib/plans";
 
 /** Contenu des forfaits : dérivé des limites réelles (lib/plans), pour ne jamais promettre autre chose que l'application. */
 const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
@@ -16,7 +16,7 @@ const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
     "Paiement en ligne et politique d'annulation (Stripe)",
     "Page personnalisée : couleurs, polices, galerie, réseaux sociaux",
     "Synchronisation Google Agenda",
-    `${LIMITS.collaborators.pro} collaborateurs inclus (${ADDONS.seat.monthly} €/mois le siège en plus)`,
+    `${LIMITS.collaborators.pro} collaborateurs inclus (${ADDONS.seat.monthly} € TVAC/mois le siège en plus)`,
     `${LIMITS.formQuestions.pro} questions avant la réservation`,
   ],
   pro_plus: [
@@ -45,7 +45,7 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
       </div>
       <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
         {plans.map((p) => {
-          const price = yearly ? PLANS[p].yearlyPerMonth : PLANS[p].monthly;
+          const price = yearly ? Math.round((PLANS[p].yearly / 12) * 100) / 100 : PLANS[p].monthly;
           const popular = p === "pro";
           return (
             <div key={p} className={cn("relative flex flex-col rounded-2xl border bg-surface p-6", popular ? "border-accent shadow-lg ring-1 ring-accent" : "border-border")}>
@@ -53,10 +53,10 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
               <h3 className="text-lg font-semibold">{PLANS[p].label}</h3>
               <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
               <p className="mt-5 flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tracking-tight tabular-nums">{price} €</span>
-                <span className="text-sm text-muted">HTVA / mois</span>
+                <span className="text-4xl font-semibold tracking-tight tabular-nums">{eur(price)}</span>
+                <span className="text-sm text-muted">TVAC / mois</span>
               </p>
-              <p className="mt-1 text-xs text-muted">{withVat(price)} TVA comprise · {yearly ? `facturé ${PLANS[p].yearlyPerMonth * 12} € HTVA par an` : `ou ${PLANS[p].yearlyPerMonth} € HTVA/mois à l'année`}</p>
+              <p className="mt-1 text-xs text-muted">{yearly ? `Facturé ${eur(PLANS[p].yearly)} TVAC par an` : `ou ${eur(PLANS[p].yearly)} TVAC par an (-20 %)`} · {excludingVat(price)} HTVA / mois</p>
               <ul className="mt-6 flex-1 space-y-3">
                 {ITEMS[p].map((i) => (
                   <li key={i} className="flex gap-2.5 text-sm">

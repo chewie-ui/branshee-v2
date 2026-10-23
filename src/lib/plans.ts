@@ -2,28 +2,31 @@
  * Forfaits Branshee : prix affichés et limites. Source unique, partagée serveur / interface.
  * Pas de forfait gratuit : chaque compte a 30 jours d'essai du forfait Pro (sans carte), puis il faut s'abonner.
  * La clé « free » désigne un établissement sans abonnement actif : sa réservation en ligne est fermée.
- * Les prix doivent correspondre aux prix Stripe (STRIPE_PRICE_* dans l'environnement).
+ * Prix TVA comprise (TVA belge 21 % incluse) ; ils doivent correspondre aux prix Stripe (STRIPE_PRICE_*).
  */
 export type Plan = "free" | "pro" | "pro_plus";
 export const PLAN_RANK: Record<Plan, number> = { free: 0, pro: 1, pro_plus: 2 };
 
-export const PLANS: Record<Plan, { label: string; monthly: number; yearlyPerMonth: number; tagline: string }> = {
-  free: { label: "Sans abonnement", monthly: 0, yearlyPerMonth: 0, tagline: "Réservation en ligne fermée" },
-  pro: { label: "Pro", monthly: 19, yearlyPerMonth: 15, tagline: "Pour un indépendant qui se lance pour de bon" },
-  pro_plus: { label: "Pro+", monthly: 49, yearlyPerMonth: 39, tagline: "Pour un cabinet avec une équipe" },
+/** `monthly` : prix mensuel TVAC ; `yearly` : prix annuel TVAC (environ -20 %). */
+export const PLANS: Record<Plan, { label: string; monthly: number; yearly: number; tagline: string }> = {
+  free: { label: "Sans abonnement", monthly: 0, yearly: 0, tagline: "Réservation en ligne fermée" },
+  pro: { label: "Pro", monthly: 23, yearly: 220, tagline: "Pour un indépendant qui se lance pour de bon" },
+  pro_plus: { label: "Pro+", monthly: 59.5, yearly: 570, tagline: "Pour un cabinet avec une équipe" },
 };
 
-/** TVA belge appliquée aux abonnements et recharges (prix affichés hors TVA). */
+/** TVA belge, comprise dans tous les prix affichés et facturés. */
 export const VAT_RATE = 0.21;
-/** Montant TVA comprise, formaté « 22,99 € ». */
-export const withVat = (euros: number) => `${(Math.round(euros * (1 + VAT_RATE) * 100) / 100).toFixed(2).replace(".", ",")} €`;
+/** « 23 € », « 59,50 € », « 18,33 € » : montant en euros, décimales seulement si nécessaires. */
+export const eur = (euros: number) => `${Number.isInteger(euros) ? euros : euros.toFixed(2).replace(".", ",")} €`;
+/** Part hors TVA d'un prix TVAC, formatée (« 19,01 € »). */
+export const excludingVat = (euros: number) => `${(Math.round((euros / (1 + VAT_RATE)) * 100) / 100).toFixed(2).replace(".", ",")} €`;
 
 /** Durée de l'essai gratuit du forfait Pro, offert au premier établissement d'un compte. */
 export const TRIAL_DAYS = 30;
 
 export const ADDONS = {
-  customUrl: { label: "URL personnalisée", monthly: 5 },
-  seat: { label: "Siège collaborateur", monthly: 10 },
+  customUrl: { label: "URL personnalisée", monthly: 6 },
+  seat: { label: "Siège collaborateur", monthly: 12 },
 } as const;
 
 const INF = Number.POSITIVE_INFINITY;

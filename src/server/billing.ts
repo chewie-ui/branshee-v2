@@ -162,7 +162,7 @@ export async function hadSubscriptionBefore(userId: string) {
   return !!row?.id || Number(biz?.n ?? 0) > 0;
 }
 
-export const monthlyPriceCents = (plan: Exclude<Plan, "free">) => PLANS[plan].monthly * 100;
+export const monthlyPriceCents = (plan: Exclude<Plan, "free">) => Math.round(PLANS[plan].monthly * 100);
 
 /** Paiement d'abonnement confirmé (retour de Stripe ou webhook) : forfait activé, code promo consommé. */
 export async function completeCheckout(session: Stripe.Checkout.Session) {
@@ -182,13 +182,13 @@ export async function completeCheckout(session: Stripe.Checkout.Session) {
 
 
 let vatRateId: string | null = null;
-/** Taux de TVA Stripe (21 %, Belgique, hors taxe) appliqué aux factures Branshee ; créé une fois, puis réutilisé. */
+/** Taux de TVA Stripe (21 %, Belgique, compris dans le prix) appliqué aux factures Branshee ; créé une fois, puis réutilisé. */
 export async function vatRate(): Promise<string> {
   if (vatRateId) return vatRateId;
   const s = stripe()!;
   for await (const r of s.taxRates.list({ active: true, limit: 100 })) {
-    if (r.metadata?.branshee === "vat21") return (vatRateId = r.id);
+    if (r.metadata?.branshee === "vat21-incl") return (vatRateId = r.id);
   }
-  const r = await s.taxRates.create({ display_name: "TVA", description: "TVA belge 21 %", percentage: 21, inclusive: false, country: "BE", jurisdiction: "BE", tax_type: "vat", metadata: { branshee: "vat21" } });
+  const r = await s.taxRates.create({ display_name: "TVA", description: "TVA belge 21 %", percentage: 21, inclusive: true, country: "BE", jurisdiction: "BE", tax_type: "vat", metadata: { branshee: "vat21-incl" } });
   return (vatRateId = r.id);
 }

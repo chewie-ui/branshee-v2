@@ -19,8 +19,9 @@ import { vatRate } from "@/server/billing";
  *   Brevo  : BREVO_API_KEY avec SMS_PROVIDER=brevo  (solution de secours)
  *   SMS_SENDER : nom d'expéditeur affiché (11 caractères max, lettres et chiffres), « Branshee » par défaut.
  */
-export const SMS_PRICE_CENTS = 30;
-export const WHATSAPP_PRICE_CENTS = 5;
+/** Prix TVAC débités du solde prépayé (lui-même rechargé TVA comprise). */
+export const SMS_PRICE_CENTS = 36;
+export const WHATSAPP_PRICE_CENTS = 6;
 
 export function normalizeMsisdn(phone: string, defaultCc = process.env.SMS_DEFAULT_CC || "32") {
   const p = String(phone || "").replace(/[^\d+]/g, "");

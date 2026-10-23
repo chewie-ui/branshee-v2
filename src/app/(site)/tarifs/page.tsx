@@ -3,15 +3,15 @@ import { Check, Minus } from "lucide-react";
 import { Faq } from "@/components/site/faq";
 import { PricingTable } from "@/components/site/pricing";
 import { Section, SectionTitle } from "@/components/site/section";
-import { ADDONS, FEATURE_LABELS, FEATURES, LIMITS, PLANS, type Plan, atLeast } from "@/lib/plans";
+import { ADDONS, FEATURE_LABELS, FEATURES, LIMITS, PLANS, type Plan, atLeast, eur } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "30 jours d'essai gratuit, puis Pro à 19 € HTVA/mois ou Pro+ à 49 € HTVA/mois. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
+  description: "30 jours d'essai gratuit, puis Pro à 23 €/mois ou Pro+ à 59,50 €/mois TVAC. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
   alternates: { canonical: "/tarifs" },
 };
 
-const PLANS_ORDER: Plan[] = ["free", "pro", "pro_plus"];
+const PLANS_ORDER: Plan[] = ["pro", "pro_plus"];
 const n = (v: number) => (Number.isFinite(v) ? String(v) : "Illimité");
 
 const ROWS: { label: string; value: (p: Plan) => string | boolean }[] = [
@@ -19,13 +19,13 @@ const ROWS: { label: string; value: (p: Plan) => string | boolean }[] = [
   { label: "Commission sur les réservations", value: () => "0 %" },
   { label: "Prestations actives", value: (p) => n(LIMITS.services[p]) },
   { label: "Confirmation automatique des réservations en ligne", value: (p) => (Number.isFinite(LIMITS.autoConfirmUpTo[p]) ? `${LIMITS.autoConfirmUpTo[p]} / mois, puis à confirmer` : "Illimitée") },
-  { label: "Collaborateurs inclus", value: (p) => (p === "free" ? false : `${LIMITS.collaborators[p]} (+${ADDONS.seat.monthly} €/mois le siège)`) },
+  { label: "Collaborateurs inclus", value: (p) => (p === "free" ? false : `${LIMITS.collaborators[p]} (+${ADDONS.seat.monthly} € TVAC/mois le siège)`) },
   { label: "Questions avant la réservation", value: (p) => String(LIMITS.formQuestions[p]) },
   { label: "SMS ou WhatsApp inclus par mois", value: (p) => (LIMITS.smsIncluded[p] ? String(LIMITS.smsIncluded[p]) : false) },
   { label: "Historique des rendez-vous visible", value: (p) => (Number.isFinite(LIMITS.historyDays[p]) ? `${LIMITS.historyDays[p]} derniers jours` : "Complet") },
   { label: "Paiement en ligne et politique d'annulation", value: () => true },
   { label: "Dossiers clients chiffrés", value: () => true },
-  ...(Object.keys(FEATURES) as (keyof typeof FEATURES)[]).map((f) => ({ label: FEATURE_LABELS[f] + (f === "customUrl" ? ` (ou option ${ADDONS.customUrl.monthly} €/mois)` : ""), value: (p: Plan) => atLeast(p, FEATURES[f]) })),
+  ...(Object.keys(FEATURES) as (keyof typeof FEATURES)[]).map((f) => ({ label: FEATURE_LABELS[f] + (f === "customUrl" ? ` (ou option ${ADDONS.customUrl.monthly} € TVAC/mois)` : ""), value: (p: Plan) => atLeast(p, FEATURES[f]) })),
 ];
 
 const FAQ = [
@@ -54,7 +54,7 @@ export default function PricingPage() {
                 {PLANS_ORDER.map((p) => (
                   <th key={p} scope="col" className="px-5 py-4 text-left">
                     <span className="block font-semibold">{PLANS[p].label}</span>
-                    <span className="font-normal text-muted">{PLANS[p].monthly} €/mois</span>
+                    <span className="font-normal text-muted">{eur(PLANS[p].monthly)} TVAC/mois</span>
                   </th>
                 ))}
               </tr>
