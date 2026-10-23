@@ -48,6 +48,11 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
     success_url: `${appUrl()}/app/reglages/sms/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/app/reglages/sms`,
     locale: "fr",
+    // Facture Stripe numérotée (comme pour les abonnements), envoyée au pro avec ses coordonnées de facturation.
+    invoice_creation: { enabled: true, invoice_data: { description: "Crédit SMS / WhatsApp Branshee", metadata: { type: "sms_topup", userId: ctx.user.id } } },
+    billing_address_collection: "auto",
+    tax_id_collection: { enabled: true },
+    customer_update: { name: "auto", address: "auto" },
   });
   return { ok: true, url: session.url! };
 }

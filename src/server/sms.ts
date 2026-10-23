@@ -149,8 +149,17 @@ export async function tryAutoRecharge(userId: string) {
     if (!pm) pm = (await s.paymentMethods.list({ customer: sub.customer, type: "card" })).data[0]?.id ?? null;
     if (!pm) throw new Error("Aucune carte enregistrée.");
     const amount = w.autoRecharge.amountCents;
-    const pi = await s.paymentIntents.create({ amount, currency: "eur", customer: sub.customer, payment_method: pm, off_session: true, confirm: true, description: "Branshee — recharge automatique SMS", metadata: { type: "sms_autorecharge", userId } });
-    if (pi.status !== "succeeded") throw new Error(pi.status);
+    // Facture Stripe (numérotée, envoyée au pro) payée immédiatement avec sa carte, plutôt qu'un simple prélèvement.
+    const meta = { type: "sms_autorecharge", userId };
+    const draft = await s.invoices.create({ customer: sub.customer, collection_method: "charge_automatically", default_payment_method: pm, auto_advance: false, pending_invoice_items_behavior: "exclude", description: "Branshee — recharge automatique SMS / WhatsApp", metadata: meta });
+    await s.invoiceItems.create({ customer: sub.customer, invoice: draft.id, amount, currency: "eur", description: `Crédit SMS / WhatsApp — ${(amount / 100).toFixed(2).replace(".", ",")} €`, metadata: meta });
+    await s.invoices.finalizeInvoice(draft.id!);
+    const paidInvoice = await s.invoices.pay(draft.id!, { off_session: true, payment_method: pm }).catch(async (e) => {
+      // Carte refusée : la facture est annulée (pas de facture impayée qui traîne ni de relance Stripe).
+      await s.invoices.voidInvoice(draft.id!).catch(() => {});
+      throw e;
+    });
+    if (paidInvoice.status !== "paid") throw new Error(paidInvoice.status ?? "facture impayée");
     const [u] = await db.update(smsWallets).set({ balanceCents: sql`${smsWallets.balanceCents} + ${amount}`, lastAutoRechargeFailureAt: null, lowBalanceAlert: null }).where(eq(smsWallets.userId, userId)).returning({ b: smsWallets.balanceCents });
     return u?.b ?? w.balanceCents + amount;
   } catch (e) {
