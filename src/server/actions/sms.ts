@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businesses, notificationSettings, smsWallets } from "@/db/schema";
-import { getOrCreateCustomer } from "@/server/billing";
+import { getOrCreateCustomer, vatRate } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 
@@ -41,7 +41,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
   const session = await s.checkout.sessions.create({
     mode: "payment",
     customer,
-    line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: `Crédit SMS / WhatsApp — ${amount.data} €` } }, quantity: 1 }],
+    line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: `Crédit SMS / WhatsApp — ${amount.data} €` } }, quantity: 1, tax_rates: [await vatRate()] }],
     // La carte est gardée pour la recharge automatique.
     payment_intent_data: { setup_future_usage: "off_session", metadata: { type: "sms_topup", userId: ctx.user.id } },
     metadata: { type: "sms_topup", userId: ctx.user.id, creditCents: String(cents) },

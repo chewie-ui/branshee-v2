@@ -6,7 +6,7 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPrice, billingEnabled, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, monthlyPriceCents, priceFor, syncSubscription } from "@/server/billing";
+import { activeCampaign, addonPrice, billingEnabled, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, monthlyPriceCents, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { effectivePlan } from "@/server/plan";
@@ -50,7 +50,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (live) {
     const baseItem = live.items.data.find((i) => i.price.id !== addonPrice.seat() && i.price.id !== addonPrice.customUrl());
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
-    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price }], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan } });
+    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan } });
     await syncSubscription(updated);
     await log(ctx, "billing.change", `Forfait changé : ${plan === "pro" ? "Pro" : "Pro+"} (${interval === "year" ? "annuel" : "mensuel"})`);
     revalidatePath("/app", "layout");
@@ -65,7 +65,8 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     client_reference_id: ctx.user.id,
     line_items: [{ price, quantity: 1 }],
     metadata,
-    subscription_data: { metadata },
+    // TVA belge 21 % ajoutée aux prix (hors TVA) ; vaut aussi pour les options ajoutées plus tard.
+    subscription_data: { metadata, default_tax_rates: [await vatRate()] },
     payment_method_collection: "if_required",
     success_url: `${appUrl()}/app/reglages/abonnement/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/app/reglages/abonnement`,

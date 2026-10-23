@@ -5,7 +5,7 @@ import { Check, Copy, Gift, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
-import { ADDONS, LIMITS, PLANS, PLAN_RANK, type Plan } from "@/lib/plans";
+import { ADDONS, LIMITS, PLANS, PLAN_RANK, withVat, type Plan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { cancelPlan, checkPromo, choosePlan, claimReferral, openBillingPortal, resumePlan, setCustomUrlAddon, setExtraSeats } from "@/server/actions/billing";
 
@@ -126,8 +126,9 @@ export function BillingPanel({
                   <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
                   <p className="mt-4">
                     <span className="text-3xl font-semibold">{price} €</span>
-                    <span className="text-sm text-muted"> / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
+                    <span className="text-sm text-muted"> HTVA / mois{interval === "year" ? ", facturé à l'année" : ""}</span>
                   </p>
+                  <p className="text-xs text-muted">{withVat(price)} TVA comprise (21 %)</p>
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                     {FEATURES.map((f) => {
                       const v = f[p];

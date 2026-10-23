@@ -179,3 +179,16 @@ export async function completeCheckout(session: Stripe.Checkout.Session) {
   }
   return synced;
 }
+
+
+let vatRateId: string | null = null;
+/** Taux de TVA Stripe (21 %, Belgique, hors taxe) appliqué aux factures Branshee ; créé une fois, puis réutilisé. */
+export async function vatRate(): Promise<string> {
+  if (vatRateId) return vatRateId;
+  const s = stripe()!;
+  for await (const r of s.taxRates.list({ active: true, limit: 100 })) {
+    if (r.metadata?.branshee === "vat21") return (vatRateId = r.id);
+  }
+  const r = await s.taxRates.create({ display_name: "TVA", description: "TVA belge 21 %", percentage: 21, inclusive: false, country: "BE", jurisdiction: "BE", tax_type: "vat", metadata: { branshee: "vat21" } });
+  return (vatRateId = r.id);
+}

@@ -6,6 +6,7 @@ import { hiddenFeatureOn } from "@/server/features";
 import { LIMITS, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 import { isStaging } from "@/lib/staging";
+import { vatRate } from "@/server/billing";
 
 /**
  * SMS (Twilio) et WhatsApp (API Cloud de Meta), facturés comme dans l'ancien Branshee :
@@ -151,7 +152,7 @@ export async function tryAutoRecharge(userId: string) {
     const amount = w.autoRecharge.amountCents;
     // Facture Stripe (numérotée, envoyée au pro) payée immédiatement avec sa carte, plutôt qu'un simple prélèvement.
     const meta = { type: "sms_autorecharge", userId };
-    const draft = await s.invoices.create({ customer: sub.customer, collection_method: "charge_automatically", default_payment_method: pm, auto_advance: false, pending_invoice_items_behavior: "exclude", description: "Branshee — recharge automatique SMS / WhatsApp", metadata: meta });
+    const draft = await s.invoices.create({ customer: sub.customer, collection_method: "charge_automatically", default_payment_method: pm, auto_advance: false, pending_invoice_items_behavior: "exclude", default_tax_rates: [await vatRate()], description: "Branshee — recharge automatique SMS / WhatsApp", metadata: meta });
     await s.invoiceItems.create({ customer: sub.customer, invoice: draft.id, amount, currency: "eur", description: `Crédit SMS / WhatsApp — ${(amount / 100).toFixed(2).replace(".", ",")} €`, metadata: meta });
     await s.invoices.finalizeInvoice(draft.id!);
     const paidInvoice = await s.invoices.pay(draft.id!, { off_session: true, payment_method: pm }).catch(async (e) => {

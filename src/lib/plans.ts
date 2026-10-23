@@ -13,6 +13,11 @@ export const PLANS: Record<Plan, { label: string; monthly: number; yearlyPerMont
   pro_plus: { label: "Pro+", monthly: 49, yearlyPerMonth: 39, tagline: "Pour un cabinet avec une équipe" },
 };
 
+/** TVA belge appliquée aux abonnements et recharges (prix affichés hors TVA). */
+export const VAT_RATE = 0.21;
+/** Montant TVA comprise, formaté « 22,99 € ». */
+export const withVat = (euros: number) => `${(Math.round(euros * (1 + VAT_RATE) * 100) / 100).toFixed(2).replace(".", ",")} €`;
+
 /** Durée de l'essai gratuit du forfait Pro, offert au premier établissement d'un compte. */
 export const TRIAL_DAYS = 30;
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { ADDONS, LIMITS, PLANS, TRIAL_DAYS, type Plan } from "@/lib/plans";
+import { ADDONS, LIMITS, PLANS, TRIAL_DAYS, withVat, type Plan } from "@/lib/plans";
 
 /** Contenu des forfaits : dérivé des limites réelles (lib/plans), pour ne jamais promettre autre chose que l'application. */
 const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
@@ -54,9 +54,9 @@ export function PricingTable({ signupHref = "/inscription" }: { signupHref?: str
               <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
               <p className="mt-5 flex items-baseline gap-1">
                 <span className="text-4xl font-semibold tracking-tight tabular-nums">{price} €</span>
-                <span className="text-sm text-muted">/ mois</span>
+                <span className="text-sm text-muted">HTVA / mois</span>
               </p>
-              <p className="mt-1 h-5 text-xs text-muted">{yearly ? `Facturé ${PLANS[p].yearlyPerMonth * 12} € par an` : `ou ${PLANS[p].yearlyPerMonth} €/mois à l'année`}</p>
+              <p className="mt-1 text-xs text-muted">{withVat(price)} TVA comprise · {yearly ? `facturé ${PLANS[p].yearlyPerMonth * 12} € HTVA par an` : `ou ${PLANS[p].yearlyPerMonth} € HTVA/mois à l'année`}</p>
               <ul className="mt-6 flex-1 space-y-3">
                 {ITEMS[p].map((i) => (
                   <li key={i} className="flex gap-2.5 text-sm">

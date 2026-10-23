@@ -7,7 +7,7 @@ import { ADDONS, FEATURE_LABELS, FEATURES, LIMITS, PLANS, type Plan, atLeast } f
 
 export const metadata: Metadata = {
   title: "Tarifs",
-  description: "30 jours d'essai gratuit, puis Pro à 19 €/mois ou Pro+ à 49 €/mois. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
+  description: "30 jours d'essai gratuit, puis Pro à 19 € HTVA/mois ou Pro+ à 49 € HTVA/mois. Sans engagement, 0 % de commission. Comparez les forfaits Branshee.",
   alternates: { canonical: "/tarifs" },
 };
 
