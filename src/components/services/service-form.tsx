@@ -267,8 +267,10 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
 
       {kind === "individual" ? (
         <Card className="overflow-hidden">
-          <fieldset className="space-y-3 p-5">
-            <legend className="mb-2 text-sm font-medium">Quand cette prestation est-elle proposée ?</legend>
+          {/* Padding sur un conteneur : sur un <fieldset>, la légende se colle au bord supérieur. */}
+          <div className="p-5">
+          <fieldset className="space-y-3">
+            <legend className="mb-3 text-sm font-medium">Quand cette prestation est-elle proposée ?</legend>
             <input type="hidden" name="hours" value={limited ? JSON.stringify(hours) : "{}"} />
             {([[false, "Pendant toutes les heures d'ouverture"], [true, "Seulement certains jours ou à certaines heures"]] as const).map(([v, label]) => (
               <label key={String(v)} className="flex items-center gap-3 text-sm">
@@ -278,6 +280,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
             ))}
             {limited ? <p className="text-sm text-muted">Exemple : uniquement le mardi de 8 h à 13 h. Les créneaux restent limités aux horaires du praticien.</p> : null}
           </fieldset>
+          </div>
           {limited ? <WeekRanges value={hours} onChange={setHours} offLabel="Non proposée" defaultRange={{ start: "09:00", end: "12:00" }} className="border-t border-border" /> : null}
           {err.hours ? <p className="px-5 pb-4 text-sm text-danger" role="alert">{err.hours}</p> : null}
         </Card>
