@@ -85,12 +85,12 @@ export const APPS: SkyApp[] = [
   {
     id: "sur-mesure",
     name: "Sur mesure",
-    tagline: "Un site ou une app construits pour vous.",
+    tagline: "Tout ce dont vous avez besoin, construit pour vous.",
     icon: "wand",
     href: "/app/sur-mesure",
     status: "active",
     billing: "quote",
-    features: ["Site vitrine ou e-commerce sur mesure", "Application, espace client, CRM", "Maquette avant de commencer", "Prix fixe annoncé à l'avance"],
+    features: ["Sites et boutiques sur mesure", "Apps web et mobiles, logiciels métier, CRM", "Automatisations et outils avec de l'IA", "Maquette, puis prix fixe annoncé à l'avance"],
   },
 ];
 
