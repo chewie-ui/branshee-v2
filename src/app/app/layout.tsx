@@ -11,6 +11,8 @@ import { getSessionUser } from "@/server/auth/session";
 import { featureStatus, hiddenNavHrefs } from "@/server/features";
 import { NAV_FOOTER, navGroupsFor } from "@/lib/navigation";
 import { currentBrand } from "@/server/brand";
+import { visibleApps } from "@/server/apps";
+import { SkydevShell, type ShellApp } from "@/components/app/skydev-shell";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { clientWord } from "@/lib/terminology";
@@ -50,6 +52,29 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       .map((i) => (i.href === "/app/clients" ? { ...i, label: clients } : i)),
   })).filter((g) => g.items.length > 0);
 
+  const banners = (
+    <>
+      {!ctx.impersonating ? <SupervisionPrompt /> : null}
+      <AdminMessages messages={adminMessages} />
+      <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} />
+    </>
+  );
+
+  if (brand.id === "skydev") {
+    // Une app = ses menus uniquement (filtrés par permissions) ; une app sans menu accessible n'apparaît pas.
+    const apps: ShellApp[] = await visibleApps(ctx, { pending });
+    return (
+      <>
+        {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
+        <SkydevShell apps={apps} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
+          {banners}
+          {children}
+        </SkydevShell>
+        <RegisterServiceWorker />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-dvh">
       {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
@@ -58,9 +83,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <GuidedTour />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {!ctx.impersonating ? <SupervisionPrompt /> : null}
-          <AdminMessages messages={adminMessages} />
-          <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} />
+          {banners}
           {children}
         </div>
       </main>

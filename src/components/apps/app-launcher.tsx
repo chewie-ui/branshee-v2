@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 function StatusBadge({ app, active }: { app: SkyApp; active: boolean }) {
   if (active) return <Badge tone="success">Actif</Badge>;
   if (app.status === "soon") return <Badge tone="warning">Bientôt</Badge>;
+  if (app.billing === "system") return null;
   if (app.billing === "included") return <Badge tone="success">{BILLING_LABEL.included}</Badge>;
   return <Badge tone="accent">{BILLING_LABEL[app.billing]}</Badge>;
 }

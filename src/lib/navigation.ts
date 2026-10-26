@@ -4,7 +4,7 @@ import type { PermissionKey } from "@/lib/permissions";
 export type NavItem = {
   href: string;
   label: string;
-  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card";
+  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand";
   /** Permission requise pour voir l'entrée (absente = visible par tous les membres). */
   permission?: PermissionKey;
 };

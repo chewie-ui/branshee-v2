@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TodayPage } from "@/components/app/today";
-import { AppLauncher } from "@/components/apps/app-launcher";
-import { PageHeader } from "@/components/ui/page-header";
+import { AppHome } from "@/components/apps/app-home";
+import { visibleApps } from "@/server/apps";
 import { currentBrand } from "@/server/brand";
 import { requireContext } from "@/server/context";
 import { eq } from "drizzle-orm";
@@ -24,15 +24,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   if ((await searchParams).bienvenue) redirect("/app/rdv?bienvenue=1");
   const ctx = await requireContext();
   const firstName = ctx.user.name.split(" ")[0];
-  const [plan, mods] = await Promise.all([effectivePlan(ctx.business.id), db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id))]);
+  const [plan, mods, apps] = await Promise.all([
+    effectivePlan(ctx.business.id),
+    db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)),
+    visibleApps(ctx),
+  ]);
   // Clés de module (tel_ia) → identifiants d'app (tel-ia).
   const active = mods.map((m) => m.key.replace(/_/g, "-"));
   return (
     <>
-      <PageHeader title={`Bonjour ${firstName}`} description={`Toutes les apps de ${ctx.business.name}, au même endroit.`} />
+      <div className="mt-2 mb-10 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
+        <p className="mt-1 text-sm text-muted">Toutes les apps de {ctx.business.name}.</p>
+      </div>
+      <AppHome apps={apps} activeAddons={active} />
       {/* Essai ou abonnement absent : le bandeau du haut le dit déjà. */}
-      {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? <SubscriptionSummary plan={{ plan: plan.plan, source: plan.source, isTrial: plan.isTrial, grantedUntil: plan.grantedUntil?.toISOString() ?? null, cancelAtPeriodEnd: plan.cancelAtPeriodEnd, periodEnd: plan.periodEnd?.toISOString() ?? null }} addons={active.length} /> : null}
-      <AppLauncher activeAddons={active} />
+      {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? (
+        <div className="mx-auto mt-12 max-w-3xl">
+          <SubscriptionSummary plan={{ plan: plan.plan, source: plan.source, isTrial: plan.isTrial, grantedUntil: plan.grantedUntil?.toISOString() ?? null, cancelAtPeriodEnd: plan.cancelAtPeriodEnd, periodEnd: plan.periodEnd?.toISOString() ?? null }} addons={active.length} />
+        </div>
+      ) : null}
     </>
   );
 }

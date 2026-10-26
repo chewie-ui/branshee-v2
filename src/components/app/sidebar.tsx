@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import {
-  Blocks, CalendarDays, CreditCard, FileText, LayoutGrid, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
-} from "lucide-react";
+import { Check, ChevronsUpDown, Building2, LogOut, Menu, Plus, X } from "lucide-react";
+import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
 import { cn } from "@/lib/cn";
@@ -14,24 +13,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Brand } from "@/components/brand";
 import type { BrandId } from "@/lib/brand";
 
-const ICONS: Record<NavItem["icon"], typeof Sun> = {
-  today: Sun,
-  inbox: Inbox,
-  history: History,
-  calendar: CalendarDays,
-  users: UserRound,
-  scissors: Scissors,
-  team: Users,
-  clock: Clock,
-  globe: Globe,
-  layout: LayoutTemplate,
-  blocks: Blocks,
-  settings: Settings,
-  help: LifeBuoy,
-  apps: LayoutGrid,
-  file: FileText,
-  card: CreditCard,
-};
+const ICONS = NAV_ICONS;
 
 type Props = {
   brand: BrandId;

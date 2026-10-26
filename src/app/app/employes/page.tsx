@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-
+import { ButtonLink } from "@/components/ui/button";
 import { AppPlaceholder } from "@/components/apps/app-placeholder";
 import { appById } from "@/lib/apps";
 import { requireContext } from "@/server/context";
 
 const app = appById("employes");
 
-export const metadata: Metadata = { title: app.name };
+export const metadata: Metadata = { title: "Planning" };
 
 export default async function Page() {
-  await requireContext();
-  return <AppPlaceholder app={app} title="Arrive bientôt dans votre abonnement" text="Employés sera incluse dans votre abonnement, sans supplément. Le planning de l'équipe sera lié à l'agenda RDV." />;
+  const ctx = await requireContext();
+  return (
+    <AppPlaceholder
+      app={{ ...app, status: "soon" }}
+      title="Le planning arrive bientôt"
+      text="Horaires de la semaine, congés et remplacements de votre équipe, liés à l'agenda RDV. En attendant, gérez vos collaborateurs et leurs accès dans Équipe."
+      action={ctx.can("team.view") ? <ButtonLink href="/app/equipe" variant="secondary">Ouvrir Équipe</ButtonLink> : undefined}
+    />
+  );
 }
