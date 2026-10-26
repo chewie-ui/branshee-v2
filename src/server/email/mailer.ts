@@ -3,6 +3,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/db";
 import { emailLogs } from "@/db/schema";
 import { isStaging } from "@/lib/staging";
+import { brandForHost, visitedHost } from "@/lib/brand";
 
 export type OutgoingEmail = {
   to: string;
@@ -28,8 +29,29 @@ function getTransport() {
   return transporter;
 }
 
-export async function sendEmail(mail: OutgoingEmail): Promise<boolean> {
-  const from = process.env.MAIL_FROM ?? "Branshee <no-reply@branshee.com>";
+/**
+ * Marque de la requête qui déclenche l'email (inscription, code, invitation… faits sur une adresse Skydev).
+ * Hors requête (tâches planifiées), `headers()` est indisponible : on garde Branshee.
+ */
+async function requestBrand() {
+  try {
+    const { headers } = await import("next/headers");
+    return brandForHost(visitedHost(await headers()));
+  } catch {
+    return "branshee" as const;
+  }
+}
+
+/** Emails déclenchés depuis Skydev : le nom « Branshee » devient « Skydev » (les liens restent ceux de l'app). */
+function asSkydev(mail: OutgoingEmail): OutgoingEmail {
+  const swap = (t: string) => t.replace(/Branshee/g, "Skydev");
+  return { ...mail, subject: swap(mail.subject), html: swap(mail.html), text: swap(mail.text) };
+}
+
+export async function sendEmail(input: OutgoingEmail): Promise<boolean> {
+  const skydev = (await requestBrand()) === "skydev";
+  const mail = skydev ? asSkydev(input) : input;
+  const from = skydev ? (process.env.MAIL_FROM_SKYDEV ?? "Skydev <no-reply@branshee.com>") : (process.env.MAIL_FROM ?? "Branshee <no-reply@branshee.com>");
   const transport = getTransport();
   let status: "sent" | "failed" | "logged" = "logged";
   let error: string | null = null;

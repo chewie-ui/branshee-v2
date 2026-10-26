@@ -6,6 +6,7 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { clientIp } from "@/lib/client-ip";
+import { currentBrand } from "@/server/brand";
 
 export type ContactState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -28,7 +29,8 @@ export async function sendContact(_prev: ContactState, fd: FormData): Promise<Co
   }
   const ip = (clientIp(await headers()) ?? "local");
   if (!rateLimit(`contact:${ip}`, 5, 60 * 60 * 1000).ok) return { error: "Vous avez envoyé plusieurs messages : réessayez dans une heure, ou écrivez-nous directement par email.", values };
-  const to = process.env.SUPPORT_EMAIL || "support@branshee.com";
+  // Demandes venues du site Skydev : boîte Skydev ; sinon le support Branshee.
+  const to = (await currentBrand()).id === "skydev" ? process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be" : process.env.SUPPORT_EMAIL || "support@branshee.com";
   const ok = await sendEmail({ to, ...emails.contactMessage(parsed.data), template: "contact", replyTo: parsed.data.email });
   return ok ? { ok: true } : { error: "L'envoi a échoué. Réessayez dans un instant, ou écrivez-nous par email.", values };
 }

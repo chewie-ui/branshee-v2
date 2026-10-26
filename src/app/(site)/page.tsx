@@ -12,14 +12,26 @@ import { featuredBusinesses } from "@/server/site";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { customHostOf } from "@/lib/custom-host";
+import { SkydevLanding } from "@/components/skydev/landing";
+import { currentBrand } from "@/server/brand";
 import PublicBusinessPage from "@/app/(public)/[slug]/page";
 import { businessSlugForDomain } from "@/server/site-builder";
 
-export const metadata: Metadata = {
+const BRANSHEE_META: Metadata = {
   title: { absolute: "Agenda en ligne et prise de rendez-vous 24 h/24 | Branshee" },
   description: "Agenda en ligne : réservations 24 h/24, rappels anti-absence, 0 % de commission, widget pour votre site. 30 jours d'essai gratuit, puis 23 €/mois TVAC sans engagement.",
   alternates: { canonical: "/" },
 };
+
+const SKYDEV_META: Metadata = {
+  title: { absolute: "Skydev — Site web, RDV, factures et apps sur mesure · Wavre" },
+  description: "Composez le logiciel de votre entreprise : site web, prise de rendez-vous, factures, boutique, employés, téléphone IA. Un seul abonnement, et tout le reste sur mesure. Basé à Wavre.",
+  openGraph: { siteName: "Skydev", title: "Skydev — Composez le logiciel de votre entreprise" },
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+  return (await currentBrand()).id === "skydev" ? SKYDEV_META : BRANSHEE_META;
+}
 
 const COMPARE = [
   { name: "Logiciels de réservation classiques", price: "30 à 70 €/mois", desc: "Facturés dès le premier jour, fonctionnalités clés en option payante." },
@@ -112,6 +124,7 @@ export default async function HomePage() {
     if (!slug) notFound();
     return PublicBusinessPage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
   }
+  if ((await currentBrand()).id === "skydev") return <SkydevLanding />;
   const gate = await featureStatus("home");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const featured = await featuredBusinesses(6);
