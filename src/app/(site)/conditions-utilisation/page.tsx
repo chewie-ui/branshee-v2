@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/site/legal";
+import { LEGAL, legalAddress } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Conditions d'utilisation", alternates: { canonical: "/conditions-utilisation" } };
 
@@ -8,9 +9,9 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Conditions générales d'utilisation"
-      updated="18 octobre 2026"
+      updated="26 octobre 2026"
       sections={[
-        { id: "objet", title: "Objet et champ d'application", body: <><p>Les présentes conditions générales d&apos;utilisation (CGU) régissent l&apos;accès et l&apos;utilisation de la plateforme Branshee, éditée par Branshee (Belgique).</p><p>En utilisant la plateforme, vous acceptez les présentes CGU. Elles s&apos;appliquent à tous les utilisateurs : les <strong>clients</strong> (personnes qui prennent rendez-vous) et les <strong>professionnels</strong> (qui proposent leurs services et gèrent leur agenda).</p></> },
+        { id: "objet", title: "Objet et champ d'application", body: <><p>Les présentes conditions générales d&apos;utilisation (CGU) régissent l&apos;accès et l&apos;utilisation de la plateforme Branshee, éditée par {LEGAL.owner}, entreprise personne physique exerçant sous la dénomination {LEGAL.trade}.</p><p><strong>Éditeur</strong> : {LEGAL.owner} ({LEGAL.trade}), {legalAddress} · N° d&apos;entreprise (BCE) {LEGAL.bce} · TVA {LEGAL.vat} · <a href={`mailto:${LEGAL.email}`}>{LEGAL.email}</a></p><p>En utilisant la plateforme, vous acceptez les présentes CGU. Elles s&apos;appliquent à tous les utilisateurs : les <strong>clients</strong> (personnes qui prennent rendez-vous) et les <strong>professionnels</strong> (qui proposent leurs services et gèrent leur agenda).</p></> },
         { id: "acces", title: "Accès à la plateforme", body: <><p>La plateforme est accessible 24 h/24, 7 j/7, sous réserve des opérations de maintenance et des cas de force majeure.</p><p>Branshee peut suspendre, modifier ou interrompre tout ou partie de la plateforme, notamment pour des raisons de maintenance, de sécurité ou d&apos;évolution technique. Certaines fonctionnalités sont réservées aux utilisateurs disposant d&apos;un compte.</p></> },
         { id: "compte", title: "Création de compte", body: <><h3>Conditions d&apos;inscription</h3><ul><li>Être âgé(e) d&apos;au moins 16 ans.</li><li>Fournir des informations exactes et à jour, et une adresse email valide.</li><li>Accepter les présentes CGU et la <Link href="/confidentialite">politique de confidentialité</Link>.</li></ul><h3>Sécurité du compte</h3><p>Vous êtes responsable de la confidentialité de vos identifiants : ne partagez pas votre mot de passe, prévenez-nous de toute utilisation non autorisée, déconnectez-vous sur un appareil partagé. Nous recommandons d&apos;activer la double authentification.</p><h3>Unicité</h3><p>La création de comptes multiples pour contourner les règles ou les limites des forfaits est interdite.</p></> },
         { id: "services", title: "Description des services", body: <><h3>Pour les clients</h3><ul><li>Trouver des professionnels et consulter leurs disponibilités en temps réel.</li><li>Prendre, déplacer et annuler des rendez-vous selon les règles du professionnel.</li><li>Recevoir confirmations et rappels.</li></ul><h3>Pour les professionnels</h3><ul><li>Une page de réservation, un agenda, des fiches et dossiers clients.</li><li>La gestion des horaires, congés, prestations, équipe et permissions.</li><li>Les rappels automatiques, le paiement en ligne, la synchronisation Google Agenda, selon le forfait.</li></ul></> },

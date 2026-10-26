@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { METIERS } from "@/lib/seo-landing";
+import { LEGAL } from "@/lib/legal";
 
 const COLS = [
   { title: "Produit", links: [{ href: "/#fonctionnalites", label: "Fonctionnalités" }, { href: "/tarifs", label: "Tarifs" }, { href: "/inscription", label: "Créer mon agenda" }, { href: "/connexion", label: "Connexion" }] },
@@ -29,7 +30,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap gap-x-4 gap-y-2 px-4 py-5 text-xs text-muted sm:px-6">
-          <span>© {new Date().getFullYear()} Branshee</span>
+          <span>© {new Date().getFullYear()} {LEGAL.trade} — {LEGAL.owner} · BCE {LEGAL.bce} · TVA {LEGAL.vat}</span>
           {METIERS.slice(0, 6).map((m) => (
             <Link key={m.slug} href={`/logiciel-rendez-vous/${m.slug}-bruxelles`} className="hover:text-text">Logiciel {m.nom}</Link>
           ))}

@@ -8,6 +8,7 @@ import { activityLogs, businesses, notificationSettings, smsWallets } from "@/db
 import { getOrCreateCustomer, vatRate } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { stripe } from "@/server/payments";
+import { invoiceFooter } from "@/lib/legal";
 
 type Result = { ok: true; message?: string; url?: string } | { ok: false; error: string };
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
@@ -50,7 +51,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
     cancel_url: `${appUrl()}/app/reglages/sms`,
     locale: "fr",
     // Facture Stripe numérotée (comme pour les abonnements), envoyée au pro avec ses coordonnées de facturation.
-    invoice_creation: { enabled: true, invoice_data: { description: "Crédit SMS / WhatsApp Branshee", metadata: { type: "sms_topup", userId: ctx.user.id } } },
+    invoice_creation: { enabled: true, invoice_data: { description: "Crédit SMS / WhatsApp Branshee", footer: invoiceFooter, metadata: { type: "sms_topup", userId: ctx.user.id } } },
     billing_address_collection: "auto",
     tax_id_collection: { enabled: true },
     customer_update: { name: "auto", address: "auto" },

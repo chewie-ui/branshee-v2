@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { businessPlans, formQuestions, members, notificationSettings, promoCampaigns, promoCodes, promoRedemptions, services, subscriptions, users } from "@/db/schema";
 import { LIMITS, PLANS, collaboratorLimit, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
+import { invoiceFooter } from "@/lib/legal";
 
 /**
  * Abonnements Branshee (le pro paie Branshee), portés par l'établissement.
@@ -34,9 +35,13 @@ export async function getOrCreateCustomer(user: { id: string; email: string; ful
   const [row] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id));
   if (row?.stripeCustomerId) {
     const c = await s.customers.retrieve(row.stripeCustomerId).catch(() => null);
-    if (c && !("deleted" in c && c.deleted)) return row.stripeCustomerId;
+    if (c && !("deleted" in c && c.deleted)) {
+      if (c.invoice_settings?.footer !== invoiceFooter) await s.customers.update(row.stripeCustomerId, { invoice_settings: { footer: invoiceFooter } }).catch(() => {});
+      return row.stripeCustomerId;
+    }
   }
-  const c = await s.customers.create({ email: user.email, name: user.fullName, metadata: { userId: user.id } });
+  // Pied de facture légal (identité, adresse, BCE, TVA) sur toutes les factures de ce client.
+  const c = await s.customers.create({ email: user.email, name: user.fullName, metadata: { userId: user.id }, invoice_settings: { footer: invoiceFooter } });
   await db.insert(subscriptions).values({ userId: user.id, stripeCustomerId: c.id }).onConflictDoUpdate({ target: subscriptions.userId, set: { stripeCustomerId: c.id } });
   return c.id;
 }
