@@ -2,10 +2,14 @@ import "server-only";
 import type Stripe from "stripe";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { businessPlans, formQuestions, members, notificationSettings, promoCampaigns, promoCodes, promoRedemptions, services, subscriptions, users } from "@/db/schema";
+import { businessModules, businessPlans, businesses, formQuestions, members, notificationSettings, promoCampaigns, promoCodes, promoRedemptions, services, subscriptions, users } from "@/db/schema";
 import { LIMITS, PLANS, collaboratorLimit, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 import { invoiceFooter } from "@/lib/legal";
+import type { BrandId } from "@/lib/brand";
+import { MODULE_ADDONS, SKYDEV_ADDONS, type ModuleAddon } from "@/lib/skydev-plans";
+import { sendEmail } from "@/server/email/mailer";
+import { emails } from "@/server/email/templates";
 
 /**
  * Abonnements Branshee (le pro paie Branshee), portés par l'établissement.
@@ -14,21 +18,49 @@ import { invoiceFooter } from "@/lib/legal";
 type Interval = "month" | "year";
 const env = (k: string) => process.env[k] || null;
 
-export function priceFor(plan: Exclude<Plan, "free">, interval: Interval) {
-  const key = `STRIPE_PRICE_${plan === "pro" ? "PRO" : "PROPLUS"}_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
-  // Pas de prix annuel configuré : on facture le mensuel plutôt que de bloquer (comme l'ancien).
-  return env(key) ?? env(`STRIPE_PRICE_${plan === "pro" ? "PRO" : "PROPLUS"}_MONTHLY`);
-}
-export const addonPrice = { customUrl: () => env("STRIPE_PRICE_CUSTOM_URL"), seat: () => env("STRIPE_PRICE_EXTRA_SEAT") };
+/** Variables d'environnement des prix de forfait, par marque (Skydev : Solo = pro, Équipe = pro_plus). */
+const PLAN_KEYS: Record<BrandId, Record<Exclude<Plan, "free">, string>> = {
+  branshee: { pro: "PRO", pro_plus: "PROPLUS" },
+  skydev: { pro: "SKYDEV_SOLO", pro_plus: "SKYDEV_EQUIPE" },
+};
+const planKey = (brand: BrandId, plan: Exclude<Plan, "free">, interval: Interval) => `STRIPE_PRICE_${PLAN_KEYS[brand][plan]}_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
 
-export function planFromPrice(priceId: string | undefined | null): { plan: Exclude<Plan, "free">; interval: Interval } | null {
+export function priceFor(plan: Exclude<Plan, "free">, interval: Interval, brand: BrandId = "branshee") {
+  // Pas de prix annuel configuré : on facture le mensuel plutôt que de bloquer (comme l'ancien).
+  return env(planKey(brand, plan, interval)) ?? env(planKey(brand, plan, "month"));
+}
+
+/** Options en lignes d'abonnement : prix Branshee et prix Skydev reconnus tous les deux. */
+const ADDON_KEYS = {
+  customUrl: { branshee: "STRIPE_PRICE_CUSTOM_URL", skydev: "STRIPE_PRICE_SKYDEV_DOMAIN" },
+  seat: { branshee: "STRIPE_PRICE_EXTRA_SEAT", skydev: "STRIPE_PRICE_SKYDEV_SEAT" },
+} as const;
+export type AddonKey = keyof typeof ADDON_KEYS;
+/** Prix à utiliser pour ajouter une option (celui de la marque, sinon celui de Branshee). */
+export const addonPriceFor = (addon: AddonKey, brand: BrandId = "branshee") => env(ADDON_KEYS[addon][brand]) ?? env(ADDON_KEYS[addon].branshee);
+export const isAddonPrice = (addon: AddonKey, priceId: string) => Object.values(ADDON_KEYS[addon]).some((k) => env(k) === priceId);
+/** Compatibilité : prix Branshee des options. */
+export const addonPrice = { customUrl: () => addonPriceFor("customUrl"), seat: () => addonPriceFor("seat") };
+
+/** Apps en option (Tél IA…) : un prix Stripe par module, STRIPE_PRICE_MODULE_<CLÉ>. */
+export const modulePrice = (key: ModuleAddon) => env(`STRIPE_PRICE_MODULE_${key.toUpperCase()}`);
+export const moduleFromPrice = (priceId: string): ModuleAddon | null => MODULE_ADDONS.find((k) => modulePrice(k) === priceId) ?? null;
+
+export function planFromPrice(priceId: string | undefined | null): { plan: Exclude<Plan, "free">; interval: Interval; brand: BrandId } | null {
   if (!priceId) return null;
-  for (const plan of ["pro", "pro_plus"] as const)
-    for (const interval of ["month", "year"] as const) if (env(`STRIPE_PRICE_${plan === "pro" ? "PRO" : "PROPLUS"}_${interval === "year" ? "YEARLY" : "MONTHLY"}`) === priceId) return { plan, interval };
+  for (const brand of ["branshee", "skydev"] as const)
+    for (const plan of ["pro", "pro_plus"] as const)
+      for (const interval of ["month", "year"] as const) if (env(planKey(brand, plan, interval)) === priceId) return { plan, interval, brand };
   return null;
 }
 
-export const billingEnabled = () => !!stripe() && !!priceFor("pro", "month");
+export const billingEnabled = (brand: BrandId = "branshee") => !!stripe() && !!priceFor("pro", "month", brand);
+
+/** Adresse de retour après Stripe (paiement, portail) : celle de la marque où le client se trouve. */
+export function brandOrigin(brand: BrandId) {
+  const raw = brand === "skydev" ? (process.env.SKYDEV_APP_URL ?? "https://client.skydev.be") : (process.env.APP_URL ?? "https://branshee.com");
+  return raw.replace(/\/$/, "");
+}
 
 export async function getOrCreateCustomer(user: { id: string; email: string; fullName: string }) {
   const s = stripe()!;
@@ -66,6 +98,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   }
   if (!businessId) return null;
   let base: { plan: Exclude<Plan, "free">; interval: Interval } | null = null;
+  const moduleItems = new Map<ModuleAddon, string>();
   let seats = 0;
   let customUrl = false;
   let periodEnd: number | null = null;
@@ -73,8 +106,10 @@ export async function syncSubscription(sub: Stripe.Subscription) {
     const id = item.price.id;
     const found = planFromPrice(id);
     if (found) base = found;
-    if (id === addonPrice.seat()) seats = item.quantity ?? 0;
-    if (id === addonPrice.customUrl()) customUrl = true;
+    if (isAddonPrice("seat", id)) seats = item.quantity ?? 0;
+    if (isAddonPrice("customUrl", id)) customUrl = true;
+    const mod = moduleFromPrice(id);
+    if (mod) moduleItems.set(mod, item.id);
     const end = (item as unknown as { current_period_end?: number }).current_period_end;
     if (end) periodEnd = Math.max(periodEnd ?? 0, end);
   }
@@ -97,6 +132,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   const [before] = await db.select({ plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   await db.insert(businessPlans).values({ businessId, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
   if (!ended) await countReferral(sub.metadata?.userId);
+  await syncModules(businessId, ended ? new Map() : moduleItems);
   // Passage du gratuit au payant : les rappels SMS (quota inclus dans le forfait) s'allument d'office.
   // Le pro peut toujours les couper dans Réglages › SMS et WhatsApp.
   if (!ended && rank(values.plan) > 0 && (!before || rank(before.plan) === 0)) {
@@ -105,6 +141,40 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   // Forfait inférieur : on désactive ce qui dépasse (jamais de suppression).
   if (before && rank(values.plan) < rank(before.plan)) await enforceLimits(businessId, values.plan, values.extraSeats);
   return { businessId, ...values };
+}
+
+/**
+ * Apps en option : une ligne business_modules par module payé sur l'abonnement, retirée quand la ligne
+ * Stripe disparaît. Une nouvelle activation prévient l'équipe (le Tél IA se configure avec le client).
+ */
+async function syncModules(businessId: string, items: Map<ModuleAddon, string>) {
+  const rows = await db.select({ key: businessModules.moduleKey }).from(businessModules).where(and(eq(businessModules.businessId, businessId), inArray(businessModules.moduleKey, [...MODULE_ADDONS])));
+  const had = new Set(rows.map((r) => r.key));
+  const gone = [...had].filter((k) => !items.has(k as ModuleAddon));
+  if (gone.length) await db.delete(businessModules).where(and(eq(businessModules.businessId, businessId), inArray(businessModules.moduleKey, gone)));
+  for (const [key, itemId] of items) {
+    await db.insert(businessModules).values({ businessId, moduleKey: key, stripeSubscriptionItemId: itemId }).onConflictDoUpdate({ target: [businessModules.businessId, businessModules.moduleKey], set: { stripeSubscriptionItemId: itemId } });
+    if (!had.has(key)) await notifyModuleActivated(businessId, key).catch((e) => console.error("[billing] alerte module :", e));
+  }
+}
+
+async function notifyModuleActivated(businessId: string, key: ModuleAddon) {
+  const [b] = await db.select({ name: businesses.name, email: users.email, owner: users.fullName }).from(businesses).innerJoin(users, eq(users.id, businesses.ownerId)).where(eq(businesses.id, businessId));
+  if (!b) return;
+  const to = process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be";
+  const label = SKYDEV_ADDONS[key].label;
+  await sendEmail({
+    to,
+    ...emails.skydevTeamAlert({
+      subject: `${label} activé : ${b.name}`,
+      title: `${label} à configurer`,
+      intro: `${b.name} vient d'ajouter l'option ${label} à son abonnement. Contactez le client pour la configurer.`,
+      details: [{ label: "Établissement", value: b.name }, { label: "Titulaire", value: b.owner }, { label: "Email", value: b.email }],
+    }),
+    template: "module_activated",
+    businessId,
+    replyTo: b.email,
+  });
 }
 
 const rank = (p: Plan) => ({ free: 0, pro: 1, pro_plus: 2 })[p];

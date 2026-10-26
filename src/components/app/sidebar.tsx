@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Blocks, CalendarDays, FileText, LayoutGrid, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
+  Blocks, CalendarDays, CreditCard, FileText, LayoutGrid, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
 } from "lucide-react";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -30,6 +30,7 @@ const ICONS: Record<NavItem["icon"], typeof Sun> = {
   help: LifeBuoy,
   apps: LayoutGrid,
   file: FileText,
+  card: CreditCard,
 };
 
 type Props = {

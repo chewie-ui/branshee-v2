@@ -11,6 +11,9 @@ import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
 
 import { ensureReferralCode } from "@/server/referral";
+import { SkydevBillingPanel } from "@/components/settings/skydev-billing-panel";
+import { businessModules } from "@/db/schema";
+import { currentBrand } from "@/server/brand";
 
 export const metadata: Metadata = { title: "Abonnement · Réglages" };
 
@@ -32,6 +35,21 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     activeCampaign(),
     db.select().from(promoCodes).where(and(eq(promoCodes.isDefaultOffer, true), eq(promoCodes.isActive, true), sql`(${promoCodes.expiresAt} is null or ${promoCodes.expiresAt} > now())`, sql`(${promoCodes.maxUses} is null or ${promoCodes.usedCount} < ${promoCodes.maxUses})`)).limit(1),
   ]);
+  const brand = (await currentBrand()).id;
+  if (brand === "skydev") {
+    const mods = await db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id));
+    const notice = NOTICES[(await searchParams).paiement ?? ""];
+    return (
+      <div className="space-y-6">
+        {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.ok ? "Merci ! Votre abonnement Skydev est actif." : notice.text}</p> : null}
+        <SkydevBillingPanel
+          canManage={canManage}
+          enabled={billingEnabled("skydev")}
+          current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key) }}
+        />
+      </div>
+    );
+  }
   const offer = offerRow ? { code: offerRow.code, label: describePromo(offerRow) } : null;
   const notice = NOTICES[(await searchParams).paiement ?? ""];
   const code = canManage ? await referralCode(ctx.user.id, ctx.user.name) : "";

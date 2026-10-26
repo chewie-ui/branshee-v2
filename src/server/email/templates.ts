@@ -497,6 +497,13 @@ export const emails = {
     };
   },
 
+  /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
+  skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
+    return {
+      subject: `[Skydev] ${p.subject}`,
+      ...render({ preheader: p.intro.slice(0, 90), title: p.title, intro: p.intro, details: p.details, note: "Répondez directement à cet email pour écrire au client.", footer: "Skydev — alerte interne" }),
+    };
+  },
   contactMessage(p: { name: string; email: string; subject: string; message: string }) {
     return {
       subject: `[Contact Branshee] ${p.subject}`,

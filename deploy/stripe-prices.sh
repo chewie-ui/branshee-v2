@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Crée (ou retrouve) dans Stripe les prix TVAC des forfaits Branshee et les écrit dans la config de l'app.
+# Crée (ou retrouve) dans Stripe les prix TVAC des forfaits Branshee et Skydev et les écrit dans la config de l'app.
 # Usage : bash deploy/stripe-prices.sh /var/www/branshee-prod     (ou le dossier de la version de test)
 # Idempotent : relancé, il réutilise les prix existants (lookup_key). Aucun secret n'est affiché.
 set -euo pipefail
@@ -21,12 +21,20 @@ node -e '
     ["STRIPE_PRICE_PROPLUS_YEARLY", "Branshee Pro+", 57000, "year"],
     ["STRIPE_PRICE_CUSTOM_URL", "Branshee — URL personnalisée", 600, "month"],
     ["STRIPE_PRICE_EXTRA_SEAT", "Branshee — Siège collaborateur", 1200, "month"],
+    // Offre Skydev (src/lib/skydev-plans.ts) : Solo, Équipe et options.
+    ["STRIPE_PRICE_SKYDEV_SOLO_MONTHLY", "Skydev Solo", 2900, "month"],
+    ["STRIPE_PRICE_SKYDEV_SOLO_YEARLY", "Skydev Solo", 29000, "year"],
+    ["STRIPE_PRICE_SKYDEV_EQUIPE_MONTHLY", "Skydev Équipe", 5900, "month"],
+    ["STRIPE_PRICE_SKYDEV_EQUIPE_YEARLY", "Skydev Équipe", 59000, "year"],
+    ["STRIPE_PRICE_SKYDEV_DOMAIN", "Skydev — Nom de domaine", 600, "month"],
+    ["STRIPE_PRICE_SKYDEV_SEAT", "Skydev — Utilisateur en plus", 1200, "month"],
+    ["STRIPE_PRICE_MODULE_TEL_IA", "Skydev — Tél IA", 3900, "month"],
   ];
   (async () => {
     const products = {};
     const lines = [];
     for (const [key, name, amount, interval] of want) {
-      const lookup = "branshee_ttc_" + key.toLowerCase().replace("stripe_price_", "");
+      const lookup = "branshee_ttc_" + key.toLowerCase().replace("stripe_price_", "");  // clé unique par prix (Skydev compris)
       let price = (await s.prices.list({ lookup_keys: [lookup], limit: 1 })).data[0];
       if (!price) {
         products[name] ??= (await s.products.search({ query: `metadata["branshee_name"]:"${name}"` })).data[0]?.id ?? (await s.products.create({ name, metadata: { branshee_name: name } })).id;

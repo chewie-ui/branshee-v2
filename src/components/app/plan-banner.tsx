@@ -2,6 +2,7 @@ import { CalendarOff, Sparkles } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import type { EffectivePlan } from "@/server/plan";
+import type { BrandId } from "@/lib/brand";
 
 /** Jours restants, arrondis au jour supérieur (minimum 1 : « dernier jour »). */
 function daysUntil(d: Date) {
@@ -12,16 +13,17 @@ function daysUntil(d: Date) {
  * Bandeau d'abonnement en haut de l'espace pro : jours d'essai restants, ou réservation fermée
  * faute d'abonnement. Rien n'est affiché pour un établissement abonné.
  */
-export function PlanBanner({ plan, canManage, timezone }: { plan: EffectivePlan; canManage: boolean; timezone: string }) {
+export function PlanBanner({ plan, canManage, timezone, brand = "branshee" }: { plan: EffectivePlan; canManage: boolean; timezone: string; brand?: BrandId }) {
+  const sky = brand === "skydev";
   if (plan.plan === "free") {
     return (
       <div role="alert" className="mb-6 flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft p-4 sm:flex-row sm:items-center">
         <CalendarOff className="size-5 shrink-0 text-danger" aria-hidden="true" />
         <div className="flex-1 text-sm">
-          <p className="font-medium text-danger">Réservation en ligne fermée</p>
-          <p className="text-text">Votre établissement n&apos;a pas d&apos;abonnement actif : vos clients ne peuvent plus réserver en ligne. Vos rendez-vous et votre fichier restent consultables.</p>
+          <p className="font-medium text-danger">{sky ? "Vos apps sont en pause" : "Réservation en ligne fermée"}</p>
+          <p className="text-text">{sky ? "Aucun abonnement Skydev actif : vos clients ne peuvent plus réserver en ligne. Toutes vos données restent consultables." : <>Votre établissement n&apos;a pas d&apos;abonnement actif : vos clients ne peuvent plus réserver en ligne. Vos rendez-vous et votre fichier restent consultables.</>}</p>
         </div>
-        {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm">S&apos;abonner</ButtonLink> : null}
+        {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm">{sky ? "Choisir un abonnement" : <>S&apos;abonner</>}</ButtonLink> : null}
       </div>
     );
   }
@@ -34,11 +36,11 @@ export function PlanBanner({ plan, canManage, timezone }: { plan: EffectivePlan;
       <Sparkles className={cn("size-5 shrink-0", soon ? "text-warning" : "text-accent")} aria-hidden="true" />
       <div className="flex-1 text-sm">
         <p className={cn("font-medium", soon ? "text-warning" : "text-accent-soft-foreground")}>
-          Essai gratuit du forfait Pro : {days === 1 ? "dernier jour" : `encore ${days} jours`}
+          {sky ? "Essai gratuit de Skydev" : "Essai gratuit du forfait Pro"} : {days === 1 ? "dernier jour" : `encore ${days} jours`}
         </p>
-        <p className="text-text">Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné.</p>
+        <p className="text-text">{sky ? `Toutes les apps sont ouvertes jusqu'au ${until}. Ensuite, choisissez Solo ou Équipe pour continuer.` : <>Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné.</>}</p>
       </div>
-      {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm" variant={soon ? "primary" : "secondary"}>Choisir mon forfait</ButtonLink> : null}
+      {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm" variant={soon ? "primary" : "secondary"}>{sky ? "Choisir mon abonnement" : "Choisir mon forfait"}</ButtonLink> : null}
     </div>
   );
 }

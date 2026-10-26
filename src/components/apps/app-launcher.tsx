@@ -4,14 +4,15 @@ import { APPS, BILLING_LABEL, type SkyApp } from "@/lib/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Badge } from "@/components/ui/badge";
 
-function StatusBadge({ app }: { app: SkyApp }) {
+function StatusBadge({ app, active }: { app: SkyApp; active: boolean }) {
+  if (active) return <Badge tone="success">Actif</Badge>;
   if (app.status === "soon") return <Badge tone="warning">Bientôt</Badge>;
   if (app.billing === "included") return <Badge tone="success">{BILLING_LABEL.included}</Badge>;
   return <Badge tone="accent">{BILLING_LABEL[app.billing]}</Badge>;
 }
 
 /** Lanceur d'apps : toutes les apps de la plateforme, accessibles depuis un seul espace. */
-export function AppLauncher() {
+export function AppLauncher({ activeAddons = [] }: { activeAddons?: string[] } = {}) {
   return (
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {APPS.map((app) => (
@@ -24,7 +25,7 @@ export function AppLauncher() {
               <span className="flex size-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
                 <AppIcon icon={app.icon} />
               </span>
-              <StatusBadge app={app} />
+              <StatusBadge app={app} active={app.billing === "addon" && activeAddons.includes(app.id)} />
             </span>
             <span className="mt-4 flex items-center gap-1.5 text-base font-semibold text-text">
               {app.name}
