@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/app/sidebar";
 import { RegisterServiceWorker } from "@/components/app/register-sw";
@@ -8,7 +9,8 @@ import { activeAdminMessages, supportUnread } from "@/server/support";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { getSessionUser } from "@/server/auth/session";
 import { featureStatus, hiddenNavHrefs } from "@/server/features";
-import { NAV_FOOTER, NAV_GROUPS } from "@/lib/navigation";
+import { NAV_FOOTER, navGroupsFor } from "@/lib/navigation";
+import { currentBrand } from "@/server/brand";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { clientWord } from "@/lib/terminology";
@@ -17,6 +19,12 @@ import { effectivePlan } from "@/server/plan";
 
 export const dynamic = "force-dynamic";
 
+/** Le titre de l'onglet suit la marque de l'adresse visitée (« … · Skydev » ou « … · Branshee »). */
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await currentBrand();
+  return { title: { default: name, template: `%s · ${name}` } };
+}
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireContext();
   // Espace pro en maintenance : le super-admin passe quand même (pour vérifier avant de rouvrir).
@@ -24,6 +32,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (gate.status !== "active" && !(await getSessionUser())?.user.isSuperadmin) return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const hidden = await hiddenNavHrefs();
   const visible = (item: { permission?: Parameters<typeof ctx.can>[0] }) => !item.permission || ctx.can(item.permission);
+  const brand = await currentBrand();
   const [pending, adminMessages, unread, plan] = await Promise.all([
     ctx.can("appointments.manage") ? listPendingRequests(ctx.business.id).then((l) => l.length) : Promise.resolve(0),
     activeAdminMessages(ctx.user.id),
@@ -31,7 +40,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     effectivePlan(ctx.business.id),
   ]);
   const clients = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
-  const groups = NAV_GROUPS.map((g) => ({
+  const groups = navGroupsFor(brand.id).map((g) => ({
     ...g,
     items: g.items
       .filter(visible)
@@ -44,7 +53,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
       {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
-      <Sidebar groups={groups} footer={NAV_FOOTER.filter(visible)} business={ctx.business} businesses={ctx.businesses} user={ctx.user} pendingCount={pending} supportUnread={unread} />
+      <Sidebar brand={brand.id} groups={groups} footer={NAV_FOOTER.filter(visible)} business={ctx.business} businesses={ctx.businesses} user={ctx.user} pendingCount={pending} supportUnread={unread} />
       <RegisterServiceWorker />
       <GuidedTour />
       <main className="lg:pl-64">

@@ -1,4 +1,6 @@
-/** Domaine personnalisé (« Mon site ») : tout hôte qui n'est ni celui de l'app, ni localhost, ni une adresse IP. */
+import { skydevHosts } from "@/lib/brand";
+
+/** Domaine personnalisé (« Mon site ») : tout hôte qui n'est ni celui de l'app (Branshee ou Skydev), ni localhost, ni une adresse IP. */
 export function customHostOf(rawHost: string | null | undefined): string | null {
   const host = (rawHost ?? "").split(":")[0]!.toLowerCase();
   const bare = host.replace(/^www\./, "");
@@ -8,6 +10,6 @@ export function customHostOf(rawHost: string | null | undefined): string | null 
   } catch {
     /* valeur par défaut */
   }
-  if (!bare || bare === app || bare === "localhost" || bare.endsWith(".localhost") || /^[\d.]+$/.test(bare) || bare.includes("[")) return null;
+  if (!bare || bare === app || skydevHosts().includes(bare) || bare === "localhost" || bare.endsWith(".localhost") || /^[\d.]+$/.test(bare) || bare.includes("[")) return null;
   return host;
 }

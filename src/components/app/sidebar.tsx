@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Blocks, CalendarDays, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
+  Blocks, CalendarDays, FileText, LayoutGrid, Check, History, Inbox, ChevronsUpDown, Building2, Clock, Globe, LayoutTemplate, LifeBuoy, LogOut, Menu, Plus, Scissors, Settings, Sun, UserRound, Users, X,
 } from "lucide-react";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
 import { cn } from "@/lib/cn";
 import type { NavItem } from "@/lib/navigation";
 import { Avatar } from "@/components/ui/avatar";
+import { Brand } from "@/components/brand";
+import type { BrandId } from "@/lib/brand";
 
 const ICONS: Record<NavItem["icon"], typeof Sun> = {
   today: Sun,
@@ -26,9 +28,12 @@ const ICONS: Record<NavItem["icon"], typeof Sun> = {
   blocks: Blocks,
   settings: Settings,
   help: LifeBuoy,
+  apps: LayoutGrid,
+  file: FileText,
 };
 
 type Props = {
+  brand: BrandId;
   groups: { label: string | null; items: NavItem[] }[];
   footer: NavItem[];
   business: { id: string; name: string; businessType: string | null };
@@ -114,10 +119,13 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
   );
 }
 
-function SidebarContent({ groups, footer, business, businesses, user, pendingCount, supportUnread = 0, pathname }: Props & { pathname: string }) {
+function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, pathname }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="p-3">
+      <div className="space-y-3 p-3">
+        <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label="Accueil">
+          <Brand brand={brand} small />
+        </Link>
         <BusinessSwitcher current={business} all={businesses} />
       </div>
 
