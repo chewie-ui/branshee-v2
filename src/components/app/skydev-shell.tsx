@@ -12,18 +12,42 @@ import { AppIcon } from "@/components/apps/app-icon";
 import { BrandMark } from "@/components/brand";
 import { Avatar } from "@/components/ui/avatar";
 import { NAV_ICONS } from "@/components/app/nav-icons";
+import { Sidebar } from "@/components/app/sidebar";
+import type { NavItem } from "@/lib/navigation";
 
 export type ShellApp = { id: string; name: string; icon: AppIconName; href: string; nav: AppNavItem[]; match?: string[] };
 type Biz = { id: string; name: string; businessType: string | null };
+
+/** Barre latérale Branshee, gardée telle quelle dans l'app RDV. */
+export type RdvSidebar = { groups: { label: string | null; items: NavItem[] }[]; footer: NavItem[] };
+
+const starts = (path: string, prefix: string) => path === prefix || path.startsWith(prefix + "/");
 
 /**
  * Espace client Skydev : barre du haut avec le bouton « toutes les apps », le nom de l'app ouverte
  * et ses menus en onglets. Sur l'accueil (/app), aucune app n'est ouverte : la grille des apps s'affiche.
  */
-export function SkydevShell({ apps, business, businesses, user, badges, children }: { apps: ShellApp[]; business: Biz; businesses: Biz[]; user: { name: string; email: string; avatarUrl: string | null }; badges: Record<string, number>; children: ReactNode }) {
+export function SkydevShell({ apps, rdv, business, businesses, user, badges, children }: { apps: ShellApp[]; rdv: RdvSidebar; business: Biz; businesses: Biz[]; user: { name: string; email: string; avatarUrl: string | null }; badges: Record<string, number>; children: ReactNode }) {
   const pathname = usePathname();
-  const app = pathname === "/app" ? null : appForPath(apps, pathname);
+  const found = pathname === "/app" ? null : appForPath(apps, pathname);
+  // L'app RDV garde l'interface Branshee : ses liens (Patients, Équipe, Site web…) restent dans RDV
+  // quand on les ouvre depuis RDV, au lieu de basculer vers l'app correspondante.
+  const [last, setLast] = useState<string | null>(found?.id ?? null);
+  const inRdvSidebar = [...rdv.groups.flatMap((g) => g.items), ...rdv.footer].some((i) => i.href !== "/app" && starts(pathname, i.href));
+  const app = last === "rdv" && found?.id !== "rdv" && inRdvSidebar ? (apps.find((a) => a.id === "rdv") ?? found) : found;
+  if ((app?.id ?? null) !== last) setLast(app?.id ?? null);
   const active = app ? activeNavHref(app.nav, pathname) : null;
+
+  if (app?.id === "rdv") {
+    return (
+      <div className="min-h-dvh">
+        <Sidebar brand="skydev" groups={rdv.groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} />
+        <main className="lg:pl-64">
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh">

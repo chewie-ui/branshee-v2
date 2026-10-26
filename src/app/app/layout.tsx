@@ -9,7 +9,7 @@ import { activeAdminMessages, supportUnread } from "@/server/support";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { getSessionUser } from "@/server/auth/session";
 import { featureStatus, hiddenNavHrefs } from "@/server/features";
-import { NAV_FOOTER, navGroupsFor } from "@/lib/navigation";
+import { NAV_FOOTER, NAV_GROUPS, navGroupsFor } from "@/lib/navigation";
 import { currentBrand } from "@/server/brand";
 import { visibleApps } from "@/server/apps";
 import { SkydevShell, type ShellApp } from "@/components/app/skydev-shell";
@@ -63,14 +63,31 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (brand.id === "skydev") {
     // Une app = ses menus uniquement (filtrés par permissions) ; une app sans menu accessible n'apparaît pas.
     const apps: ShellApp[] = await visibleApps(ctx, { pending });
+    // App RDV : la barre latérale Branshee à l'identique, avec un retour vers toutes les apps en tête.
+    const rdvSidebar = {
+      groups: [
+        { label: null, items: [{ href: "/app", label: "Toutes les apps", icon: "apps" as const }] },
+        ...NAV_GROUPS.map((g) => ({
+          ...g,
+          items: g.items
+            .filter(visible)
+            .filter((i) => !hidden.has(i.href))
+            .filter((i) => i.href !== "/app/demandes" || pending > 0)
+            .filter((i) => i.href !== "/app/apps")
+            .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: clients } : i)),
+        })).filter((g) => g.items.length > 0),
+      ],
+      footer: NAV_FOOTER.filter(visible),
+    };
     return (
       <>
         {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
-        <SkydevShell apps={apps} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
+        <SkydevShell apps={apps} rdv={rdvSidebar} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
           {banners}
           {children}
         </SkydevShell>
         <RegisterServiceWorker />
+        <GuidedTour />
       </>
     );
   }
