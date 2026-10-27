@@ -2,16 +2,20 @@ import "server-only";
 import { and, asc, desc, eq, ilike, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, businessPlans, businesses, jobTitles, users } from "@/db/schema";
-import { PROFESSIONS, professionKey } from "@/lib/professions";
+import { BUSINESS_ACTIVITIES, PROFESSIONS, professionKey } from "@/lib/professions";
 
 export const siteUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
-/** Métiers proposés à l'inscription : liste officielle + métiers validés par l'équipe. */
-export async function professionList() {
+/**
+ * Métiers proposés à l'inscription : liste officielle + métiers validés par l'équipe.
+ * Skydev (`allActivities`) : toutes les activités d'entreprise en plus (commerce, horeca, construction, ASBL…).
+ */
+export async function professionList(opts: { allActivities?: boolean } = {}) {
   const approved = await db.select({ name: jobTitles.name }).from(jobTitles).where(eq(jobTitles.status, "approved"));
-  const seen = new Set(PROFESSIONS.map(professionKey));
+  const base = opts.allActivities ? [...PROFESSIONS.filter((p) => p !== "Autre"), ...BUSINESS_ACTIVITIES] : [...PROFESSIONS];
+  const seen = new Set(base.map(professionKey));
   const extra = approved.map((a) => a.name).filter((n) => !seen.has(professionKey(n)));
-  return [...PROFESSIONS, ...extra].sort((a, b) => a.localeCompare(b, "fr"));
+  return [...base, ...extra].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 /** Établissements visibles publiquement : ni supprimés, ni en pause, propriétaire actif. */

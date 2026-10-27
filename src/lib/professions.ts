@@ -146,6 +146,125 @@ export const PROFESSIONS: readonly string[] = [
   "Autre"
 ];
 
+/**
+ * Skydev est ouvert à toutes les entreprises (pas seulement les indépendants sur rendez-vous) :
+ * activités proposées en plus des métiers ci-dessus.
+ */
+export const BUSINESS_ACTIVITIES: readonly string[] = [
+  // Commerce
+  "Commerce de détail / Boutique",
+  "Magasin de vêtements",
+  "Magasin de chaussures",
+  "Bijouterie",
+  "Fleuriste",
+  "Librairie / Papeterie",
+  "Épicerie",
+  "Supermarché / Supérette",
+  "Boulangerie / Pâtisserie",
+  "Boucherie / Charcuterie",
+  "Fromagerie",
+  "Caviste",
+  "Pharmacie",
+  "Parapharmacie",
+  "Magasin de sport",
+  "Magasin de jouets",
+  "Magasin de meubles / Décoration",
+  "Magasin de bricolage",
+  "Magasin d'électroménager",
+  "Magasin de vélos",
+  "Animalerie",
+  "E-commerce / Boutique en ligne",
+  "Grossiste / Distribution",
+  "Import / Export",
+  // Horeca et tourisme
+  "Restaurant",
+  "Café / Bar",
+  "Brasserie",
+  "Snack / Friterie",
+  "Food truck",
+  "Hôtel",
+  "Chambres d'hôtes / Gîte",
+  "Camping",
+  "Agence de voyages",
+  "Guide touristique",
+  // Construction et services techniques
+  "Entreprise de construction",
+  "Entrepreneur général",
+  "Toiturier / Couvreur",
+  "Plafonneur",
+  "Installateur de panneaux solaires",
+  "Installateur de pompes à chaleur",
+  "Entreprise de rénovation",
+  "Entreprise de nettoyage",
+  "Société de déménagement",
+  "Géomètre",
+  "Bureau d'études",
+  "Ingénieur",
+  // Industrie et artisanat
+  "Industrie / Production",
+  "Atelier / Artisan",
+  "Imprimerie",
+  "Couturier / Retoucheur",
+  "Cordonnier",
+  "Ébéniste",
+  "Ferronnier / Soudeur",
+  "Brasseur",
+  "Producteur / Agriculteur",
+  // Transport et logistique
+  "Transport de marchandises",
+  "Taxi / VTC",
+  "Coursier / Livraison",
+  "Logistique / Entrepôt",
+  "Location de véhicules",
+  "Concession automobile",
+  // Services aux entreprises
+  "Agence web / digitale",
+  "Agence de communication",
+  "Agence marketing",
+  "Société informatique / IT",
+  "Éditeur de logiciels",
+  "Bureau comptable / Fiduciaire",
+  "Secrétariat social",
+  "Courtier en assurances",
+  "Agence d'intérim / Recrutement",
+  "Société de sécurité / Gardiennage",
+  "Centre d'appels",
+  "Traduction / Interprétariat",
+  "Société de conseil",
+  "Centre de formation",
+  "Espace de coworking",
+  // Santé et social (structures)
+  "Cabinet médical / Maison médicale",
+  "Centre de kinésithérapie",
+  "Laboratoire d'analyses",
+  "Maison de repos / Résidence services",
+  "Crèche / Accueil de l'enfance",
+  "Service d'aide à domicile",
+  // Sport, culture et loisirs
+  "Club de sport",
+  "Centre de loisirs",
+  "Salle de jeux / Escape game",
+  "École de musique",
+  "Studio d'enregistrement",
+  "Galerie d'art",
+  "Théâtre / Salle de spectacle",
+  "Location de matériel",
+  "Location de salles",
+  // Immobilier
+  "Agence immobilière",
+  "Promoteur immobilier",
+  "Syndic d'immeubles",
+  // Associations et public
+  "ASBL / Association",
+  "Mouvement de jeunesse",
+  "École / Établissement scolaire",
+  "Administration / Commune",
+  // Divers
+  "Indépendant (autre)",
+  "PME (autre)",
+  "Grande entreprise",
+];
+
 /** Clé de comparaison d’un métier (sans accents, casse ni espaces superflus) — identique à l’ancien `JobTitle.toKey`. */
 export const professionKey = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
-export const isOfficialProfession = (s: string) => { const k = professionKey(s); return PROFESSIONS.some((p) => professionKey(p) === k); };
+export const isOfficialProfession = (s: string) => { const k = professionKey(s); return PROFESSIONS.some((p) => professionKey(p) === k) || BUSINESS_ACTIVITIES.some((p) => professionKey(p) === k); };

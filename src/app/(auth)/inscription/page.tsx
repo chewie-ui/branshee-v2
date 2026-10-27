@@ -24,6 +24,19 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     <>
       <h1 className="text-center text-2xl font-semibold tracking-tight">{client ? "Créer votre compte client" : "Créer votre compte"}</h1>
       <p className="mt-1 text-center text-sm text-muted">{client ? "Retrouvez, déplacez ou annulez vos rendez-vous en un clic." : brand.id === "skydev" ? "Toutes les apps de votre entreprise, dans un seul espace." : "Vos clients réservent en ligne, vous gardez la main."}</p>
+      {brand.id === "skydev" && !sp.ref ? (
+        <nav aria-label="Type de compte" className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1">
+          {[
+            { href: sp.suite ? `/inscription?suite=${encodeURIComponent(sp.suite)}` : "/inscription", on: !client, title: "Entreprise", text: "Gérer mon activité" },
+            { href: `/inscription?client=1${sp.suite ? `&suite=${encodeURIComponent(sp.suite)}` : ""}`, on: client, title: "Particulier", text: "Suivre mes rendez-vous" },
+          ].map((t) => (
+            <Link key={t.title} href={t.href} aria-current={t.on ? "page" : undefined} className={`rounded-lg px-3 py-2.5 text-center transition-colors focus-visible:outline-2 focus-visible:outline-accent ${t.on ? "bg-surface shadow-sm" : "text-muted hover:text-text"}`}>
+              <span className="block text-sm font-semibold">{t.title}</span>
+              <span className="block text-xs text-muted">{t.text}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur {brand.name}.</p> : null}
       <Card className="mt-6 p-6">
         {googleConfigured() && !sp.ref ? <GoogleButton suite={sp.suite ?? (client ? "/espace-client" : undefined)} label="S'inscrire avec Google" /> : null}
@@ -35,7 +48,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           Se connecter
         </Link>
       </p>
-      {!client ? (
+      {!client && brand.id !== "skydev" ? (
         <p className="mt-2 text-center text-sm text-muted">
           Vous voulez juste prendre rendez-vous ?{" "}
           <Link href="/inscription?client=1" className="font-medium text-accent hover:text-accent-hover">Compte client</Link>

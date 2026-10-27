@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { currentBrand } from "@/server/brand";
 import Link from "next/link";
 import { CalendarDays, Clock, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
 import { AddToCalendar } from "@/components/booking/add-to-calendar";
@@ -9,7 +10,10 @@ import { Card } from "@/components/ui/card";
 import { formatDay, formatTime } from "@/lib/time";
 import { listClientAppointments, listMyReviews, requireClient } from "@/server/client-account";
 
-export const metadata: Metadata = { title: "Mes rendez-vous" };
+// Page du même segment que le layout : le modèle de titre du layout ne s'applique pas, on donne le titre complet.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: { absolute: `Mes rendez-vous · ${(await currentBrand()).name}` } };
+}
 
 type Appt = Awaited<ReturnType<typeof listClientAppointments>>[number];
 
