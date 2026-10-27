@@ -3,6 +3,7 @@ import { cache } from "react";
 import { and, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, businessPlans, businesses, members, subscriptions } from "@/db/schema";
+import { MAX_USERS } from "@/lib/skydev-plans";
 import { canCreateBusiness, collaboratorLimit, hasFeature, limitOf, planLabel, type Feature, type Plan, LIMITS } from "@/lib/plans";
 
 export type EffectivePlan = {
@@ -18,9 +19,11 @@ export type EffectivePlan = {
   extraSeats: number;
   customUrlAddon: boolean;
   stripeSubscriptionId: string | null;
+  /** Abonnement Skydev par utilisateur : nombre d'utilisateurs facturés (null = forfait classique). */
+  billedUsers: number | null;
 };
 
-const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, isTrial: false, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null };
+const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, isTrial: false, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null, billedUsers: null };
 
 /**
  * Forfait effectif d'un établissement. Un accès offert expiré ne débloque jamais rien ;
@@ -30,7 +33,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   const now = new Date();
   const [row] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, businessId));
   if (row && row.plan !== "free") {
-    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, isTrial: row.isTrial, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status };
+    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, isTrial: row.isTrial, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status, billedUsers: row.billedUsers };
     if (row.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(row.status)) return { ...base, plan: row.plan, source: "stripe" };
     if (!row.stripeSubscriptionId && (!row.grantedUntil || row.grantedUntil > now) && row.status === "active") return { ...base, plan: row.plan, source: "granted" };
   }
@@ -40,7 +43,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   if (sub && sub.plan !== "free" && ["active", "trialing", "past_due"].includes(sub.status)) {
     const grantExpired = sub.grantedUntil && sub.grantedUntil <= now;
     if (!grantExpired || sub.stripeSubscriptionId) {
-      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, isTrial: false, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId };
+      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, isTrial: false, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId, billedUsers: null };
     }
   }
   return { ...FREE, extraSeats: row?.extraSeats ?? 0, customUrlAddon: row?.customUrlAddon ?? false };
@@ -69,7 +72,9 @@ export async function collaboratorUsage(businessId: string) {
     .select({ n: count() })
     .from(members)
     .where(and(eq(members.businessId, businessId), eq(members.isOwner, false), inArray(members.status, ["active", "invited"]), eq(members.isActive, true)));
-  return { used: n, max: collaboratorLimit(p.plan, p.extraSeats), plan: p.plan };
+  // Abonnement Skydev par utilisateur : pas de limite, chaque personne ajoutée est facturée (prix dégressif).
+  const max = p.source === "stripe" && p.billedUsers != null ? MAX_USERS - 1 : collaboratorLimit(p.plan, p.extraSeats);
+  return { used: n, max, plan: p.plan, perUser: p.source === "stripe" && p.billedUsers != null };
 }
 
 /** RDV en ligne reçus ce mois-ci (pour la confirmation automatique du forfait gratuit). */

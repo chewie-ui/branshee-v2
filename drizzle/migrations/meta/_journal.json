@@ -141,6 +141,13 @@
       "when": 1793096044990,
       "tag": "0019_skydev_modules",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793127998744,
+      "tag": "0020_skydev_per_user",
+      "breakpoints": true
     }
   ]
 }

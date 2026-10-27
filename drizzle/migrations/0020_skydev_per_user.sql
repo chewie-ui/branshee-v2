@@ -1,0 +1,1 @@
+ALTER TABLE "business_plans" ADD COLUMN "billed_users" integer;

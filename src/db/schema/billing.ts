@@ -64,6 +64,8 @@ export const businessPlans = pgTable("business_plans", {
   customUrlAddon: boolean("custom_url_addon").notNull().default(false),
   /** Tarif garanti à vie du forfait Pro mensuel (TVAC, en centimes), fixé par le super-admin. Null = prix normal. */
   lockedPriceCents: integer("locked_price_cents"),
+  /** Abonnement Skydev facturé par utilisateur (prix dégressif) : nombre d'utilisateurs facturés. Null = forfait classique. */
+  billedUsers: integer("billed_users"),
   /** Relance avant la fin d'un accès offert : échéance couverte et palier (1 = J-7, 2 = J-1, 3 = terminé). */
   grantReminder: jsonb("grant_reminder").$type<{ sentFor?: string; stage?: number }>().notNull().default({}),
   ...timestamps,

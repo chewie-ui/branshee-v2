@@ -7,7 +7,7 @@ import { LIMITS, PLANS, collaboratorLimit, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 import { invoiceFooter } from "@/lib/legal";
 import type { BrandId } from "@/lib/brand";
-import { MODULE_ADDONS, SKYDEV_ADDONS, type ModuleAddon } from "@/lib/skydev-plans";
+import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLAN, type ModuleAddon } from "@/lib/skydev-plans";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 
@@ -18,16 +18,22 @@ import { emails } from "@/server/email/templates";
 type Interval = "month" | "year";
 const env = (k: string) => process.env[k] || null;
 
-/** Variables d'environnement des prix de forfait, par marque (Skydev : Solo = pro, Équipe = pro_plus). */
-const PLAN_KEYS: Record<BrandId, Record<Exclude<Plan, "free">, string>> = {
-  branshee: { pro: "PRO", pro_plus: "PROPLUS" },
-  skydev: { pro: "SKYDEV_SOLO", pro_plus: "SKYDEV_EQUIPE" },
-};
-const planKey = (brand: BrandId, plan: Exclude<Plan, "free">, interval: Interval) => `STRIPE_PRICE_${PLAN_KEYS[brand][plan]}_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
+/** Variables d'environnement des prix de forfait Branshee (Pro, Pro+). */
+const PLAN_KEYS: Record<Exclude<Plan, "free">, string> = { pro: "PRO", pro_plus: "PROPLUS" };
+const planKey = (plan: Exclude<Plan, "free">, interval: Interval) => `STRIPE_PRICE_${PLAN_KEYS[plan]}_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
+
+/**
+ * Skydev : un seul prix Stripe « gradué » par période (quantité = nombre d'utilisateurs, prix dégressif par palier).
+ * Pas de prix annuel configuré : on facture le mensuel plutôt que de bloquer.
+ */
+const skydevKey = (interval: Interval) => `STRIPE_PRICE_SKYDEV_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
+export const skydevPriceFor = (interval: Interval) => env(skydevKey(interval)) ?? env(skydevKey("month"));
+export const isSkydevPrice = (priceId: string | null | undefined) => !!priceId && (env(skydevKey("month")) === priceId || env(skydevKey("year")) === priceId);
 
 export function priceFor(plan: Exclude<Plan, "free">, interval: Interval, brand: BrandId = "branshee") {
+  if (brand === "skydev") return skydevPriceFor(interval);
   // Pas de prix annuel configuré : on facture le mensuel plutôt que de bloquer (comme l'ancien).
-  return env(planKey(brand, plan, interval)) ?? env(planKey(brand, plan, "month"));
+  return env(planKey(plan, interval)) ?? env(planKey(plan, "month"));
 }
 
 /** Options en lignes d'abonnement : prix Branshee et prix Skydev reconnus tous les deux. */
@@ -48,9 +54,9 @@ export const moduleFromPrice = (priceId: string): ModuleAddon | null => MODULE_A
 
 export function planFromPrice(priceId: string | undefined | null): { plan: Exclude<Plan, "free">; interval: Interval; brand: BrandId } | null {
   if (!priceId) return null;
-  for (const brand of ["branshee", "skydev"] as const)
-    for (const plan of ["pro", "pro_plus"] as const)
-      for (const interval of ["month", "year"] as const) if (env(planKey(brand, plan, interval)) === priceId) return { plan, interval, brand };
+  for (const interval of ["month", "year"] as const) if (env(skydevKey(interval)) === priceId) return { plan: SKYDEV_PLAN, interval, brand: "skydev" };
+  for (const plan of ["pro", "pro_plus"] as const)
+    for (const interval of ["month", "year"] as const) if (env(planKey(plan, interval)) === priceId) return { plan, interval, brand: "branshee" };
   return null;
 }
 
@@ -81,6 +87,31 @@ export async function lockedProPrice(cents: number): Promise<string | null> {
 }
 
 export const billingEnabled = (brand: BrandId = "branshee") => !!stripe() && !!priceFor("pro", "month", brand);
+
+/** Utilisateurs facturés sur Skydev : propriétaire et membres actifs ou invités (pas les demandes en attente). */
+export async function countBilledUsers(businessId: string) {
+  const [row] = await db.execute<{ n: number }>(sql`select count(*)::int as n from members where business_id = ${businessId} and is_active and status in ('active', 'invited')`);
+  return Math.max(1, Number(row?.n ?? 1));
+}
+
+/**
+ * Skydev : après un changement d'équipe, la quantité de l'abonnement suit le nombre d'utilisateurs
+ * (ajout ou retrait au prorata). Ne fait rien pour un abonnement Branshee ou sans abonnement Skydev.
+ */
+export async function syncSkydevUsers(businessId: string) {
+  const s = stripe();
+  if (!s) return;
+  const [row] = await db.select({ sub: businessPlans.stripeSubscriptionId, billed: businessPlans.billedUsers }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
+  if (!row?.sub || row.billed == null) return;
+  const sub = await s.subscriptions.retrieve(row.sub).catch(() => null);
+  if (!sub || !["active", "trialing", "past_due"].includes(sub.status)) return;
+  const item = sub.items.data.find((i) => isSkydevPrice(i.price.id));
+  if (!item) return;
+  const users = Math.min(await countBilledUsers(businessId), MAX_USERS);
+  if (item.quantity === users) return;
+  await s.subscriptionItems.update(item.id, { quantity: users, proration_behavior: "create_prorations" });
+  await syncSubscription(await s.subscriptions.retrieve(sub.id));
+}
 
 /** Adresse de retour après Stripe (paiement, portail) : celle de la marque où le client se trouve. */
 export function brandOrigin(brand: BrandId) {
@@ -127,11 +158,13 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   const moduleItems = new Map<ModuleAddon, string>();
   let seats = 0;
   let customUrl = false;
+  let billedUsers: number | null = null;
   let periodEnd: number | null = null;
   for (const item of sub.items.data) {
     const id = item.price.id;
     const found = planFromStripePrice(item.price);
     if (found) base = found;
+    if (isSkydevPrice(id)) billedUsers = item.quantity ?? 1;
     if (isAddonPrice("seat", id)) seats = item.quantity ?? 0;
     if (isAddonPrice("customUrl", id)) customUrl = true;
     const mod = moduleFromPrice(id);
@@ -151,6 +184,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
     cancelAtPeriodEnd: !!sub.cancel_at_period_end,
     extraSeats: ended ? 0 : seats,
     customUrlAddon: ended ? false : customUrl,
+    billedUsers: ended ? null : billedUsers,
     // L'essai gratuit s'arrête dès qu'un abonnement existe (ses jours restants sont repris par Stripe).
     isTrial: false,
     ...(ended ? { grantedUntil: null } : {}),

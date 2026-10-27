@@ -1,36 +1,56 @@
 /**
- * Offre Skydev : un abonnement unique donne accès à toutes les apps incluses, plus des options.
- * Les forfaits Skydev réutilisent les droits internes existants : Solo = « pro », Équipe = « pro_plus ».
- * Prix TVA comprise ; ils doivent correspondre aux prix Stripe (STRIPE_PRICE_SKYDEV_*, voir deploy/stripe-prices.sh).
+ * Offre Skydev : un seul abonnement pour toutes les apps incluses, facturé par utilisateur avec un prix dégressif
+ * (le 1er utilisateur 29 €, puis chaque personne ajoutée coûte un peu moins, jamais moins de 15 €), plus des options.
+ * Prix TVA comprise ; ils doivent correspondre aux prix Stripe gradués (STRIPE_PRICE_SKYDEV_MONTHLY / _YEARLY,
+ * voir deploy/stripe-prices.sh). En interne, l'abonnement Skydev donne les droits du forfait « pro_plus ».
  */
 import type { Plan } from "@/lib/plans";
 
 export type PaidPlan = Exclude<Plan, "free">;
 
-export const SKYDEV_PLANS: Record<PaidPlan, { label: string; monthly: number; yearly: number; tagline: string; features: string[] }> = {
-  pro: {
-    label: "Solo",
-    monthly: 29,
-    yearly: 290,
-    tagline: "Pour un indépendant",
-    features: ["Site web et RDV, puis Factures et Boutique dès leur sortie", "Réservation en ligne illimitée", "Rappels automatiques, 10 SMS par mois", "Jusqu'à 2 collaborateurs"],
-  },
-  pro_plus: {
-    label: "Équipe",
-    monthly: 59,
-    yearly: 590,
-    tagline: "Cabinet, salon, PME",
-    features: ["Tout Solo", "Employés (bientôt) : planning, horaires, congés", "Jusqu'à 10 collaborateurs, grades et journal d'activité", "30 SMS par mois, votre site sans mention Skydev"],
-  },
-};
+/** Forfait interne donné par l'abonnement Skydev (toutes les fonctionnalités). */
+export const SKYDEV_PLAN: PaidPlan = "pro_plus";
+export const SKYDEV_NAME = "Skydev";
 
-/** Options facturées sur le même abonnement. `kind: "module"` = app en option (table business_modules). */
-export type SkydevAddonKey = "tel_ia" | "domain" | "seat";
+/** Prix mensuel TVAC du n-ième utilisateur (1er, 2e, 3e…). Le dernier palier vaut pour tous les suivants. */
+export const USER_TIERS = [29, 25, 22, 20, 18, 16, 15] as const;
+export const MIN_USER_PRICE = USER_TIERS[USER_TIERS.length - 1];
+/** Paiement annuel : 10 mois payés, 2 offerts. */
+export const YEARLY_MONTHS = 10;
+export const MAX_USERS = 200;
 
-export const SKYDEV_ADDONS: Record<SkydevAddonKey, { label: string; monthly: number; description: string; unit?: string }> = {
+export const userPrice = (n: number) => USER_TIERS[Math.min(Math.max(n, 1), USER_TIERS.length) - 1];
+
+/** Détail du prix pour `users` utilisateurs : prix de chacun, total mensuel et annuel (TVAC, en euros). */
+export function skydevPrice(users: number) {
+  const n = Math.min(Math.max(Math.round(users) || 1, 1), MAX_USERS);
+  const lines = Array.from({ length: n }, (_, i) => userPrice(i + 1));
+  const monthly = lines.reduce((a, b) => a + b, 0);
+  return { users: n, lines, monthly, yearly: monthly * YEARLY_MONTHS, perUser: monthly / n };
+}
+
+/** Paliers groupés pour l'affichage : « 1er : 29 € », « 2e : 25 € »… « 7e et suivants : 15 € ». */
+export function tierLabels() {
+  return USER_TIERS.map((price, i) => ({
+    label: i === USER_TIERS.length - 1 ? `${i + 1}e et suivants` : i === 0 ? "1er utilisateur" : `${i + 1}e`,
+    price,
+  }));
+}
+
+export const SKYDEV_FEATURES = [
+  "Toutes les apps : RDV, Clients, Site web, Factures, Employés…",
+  "Réservation en ligne et rendez-vous illimités",
+  "Rappels automatiques, 30 SMS par mois inclus",
+  "Grades, accès et journal d'activité",
+  "Les nouvelles apps incluses dès leur sortie",
+];
+
+/** Options facturées sur le même abonnement. `tel_ia` est une app en option (table business_modules). */
+export type SkydevAddonKey = "tel_ia" | "domain";
+
+export const SKYDEV_ADDONS: Record<SkydevAddonKey, { label: string; monthly: number; description: string }> = {
   tel_ia: { label: "Tél IA", monthly: 39, description: "Une IA répond à vos appels manqués et vous envoie le résumé. 100 minutes par mois incluses." },
   domain: { label: "Votre nom de domaine", monthly: 6, description: "Votre site et votre page de réservation sur votre propre adresse (ex. votre-cabinet.be)." },
-  seat: { label: "Utilisateur en plus", monthly: 12, description: "Un collaborateur de plus que ce que votre forfait inclut.", unit: "utilisateur" },
 };
 
 /** Clé de module (table `modules`) des options qui sont des apps. */
