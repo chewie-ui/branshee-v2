@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
+
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Ban, GitMerge, Link2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ import {
 const Saved = ({ state }: { state: CustomerState }) => (state?.ok ? <span className="text-sm text-success" role="status">Enregistré.</span> : state?.error ? <span className="text-sm text-danger" role="alert">{state.error}</span> : null);
 
 export function ContactForm({ customerId, c, hasAccount = false }: { customerId: string; c: { firstName: string; lastName: string; email: string; phone: string }; hasAccount?: boolean }) {
+  const brandName = useBrandName();
   const [state, action, pending] = useActionState<CustomerState, FormData>(saveContact.bind(null, customerId), undefined);
   const err = state?.fieldErrors ?? {};
   return (
@@ -30,7 +33,7 @@ export function ContactForm({ customerId, c, hasAccount = false }: { customerId:
         title="Coordonnées"
         description={
           hasAccount
-            ? "Ce patient a un compte Branshee : ces coordonnées ne concernent que votre fiche. Son compte, son email de connexion et ses autres rendez-vous ne changent pas."
+            ? `Ce patient a un compte ${brandName} : ces coordonnées ne concernent que votre fiche. Son compte, son email de connexion et ses autres rendez-vous ne changent pas.`
             : "L'email et le téléphone rattachent les futurs rendez-vous à cette fiche. Ils ne concernent que votre établissement."
         }
       />

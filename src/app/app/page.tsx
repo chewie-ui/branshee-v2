@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TodayPage } from "@/components/app/today";
 import { AppHome } from "@/components/apps/app-home";
-import { visibleApps } from "@/server/apps";
+import { appsSetupDone, visibleApps } from "@/server/apps";
 import { currentBrand } from "@/server/brand";
 import { requireContext } from "@/server/context";
 import { eq } from "drizzle-orm";
@@ -18,11 +18,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Branshee : l'accueil reste « Aujourd'hui » (app RDV). Skydev : l'accueil est le lanceur de toutes les apps. */
-export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; pret?: string }> }) {
   const brand = await currentBrand();
   if (brand.id !== "skydev") return TodayPage({ searchParams });
-  if ((await searchParams).bienvenue) redirect("/app/rdv?bienvenue=1");
   const ctx = await requireContext();
+  const canEdit = ctx.member.isOwner || ctx.can("settings.manage");
+  // Première visite du responsable : questionnaire de départ pour choisir les apps de l'accueil.
+  if (canEdit && !(await appsSetupDone(ctx.business.id))) redirect("/app/demarrer");
+  const ready = !!(await searchParams).pret;
   const firstName = ctx.user.name.split(" ")[0];
   const [plan, mods, apps] = await Promise.all([
     effectivePlan(ctx.business.id),
@@ -35,9 +38,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     <>
       <div className="mt-2 mb-10 text-center">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
-        <p className="mt-1 text-sm text-muted">Toutes les apps de {ctx.business.name}.</p>
+        <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps de ${ctx.business.name}.`}</p>
       </div>
-      <AppHome apps={apps} activeAddons={active} />
+      <AppHome apps={apps} activeAddons={active} canEdit={canEdit} />
       {/* Essai ou abonnement absent : le bandeau du haut le dit déjà. */}
       {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? (
         <div className="mx-auto mt-12 max-w-3xl">

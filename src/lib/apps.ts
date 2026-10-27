@@ -9,9 +9,25 @@ import type { NavItem } from "@/lib/navigation";
  * - `quote`    : sur devis (sites et apps sur mesure).
  * - `system`   : app de la plateforme (Réglages), sans prix.
  */
-export type AppId = "rdv" | "clients" | "site" | "factures" | "employes" | "boutique" | "tel-ia" | "sur-mesure" | "reglages";
+export type AppId =
+  | "rdv" | "clients" | "site" | "factures" | "employes" | "boutique" | "tel-ia" | "sur-mesure" | "reglages"
+  // Apps à venir (page « bientôt » commune : /app/bientot/<id>)
+  | "horaires" | "paie" | "ventes" | "projets" | "interventions" | "stock" | "caisse" | "depenses" | "compta"
+  | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie";
 
-export type AppIcon = "calendar" | "globe" | "file" | "users" | "bag" | "phone" | "wand" | "contacts" | "settings";
+export type AppIcon = NavItem["icon"];
+
+/** Rangement des apps sur l'accueil et dans « Ajouter des apps ». */
+export type AppCategory = "clients" | "finance" | "equipe" | "operations" | "marketing" | "services" | "systeme";
+export const CATEGORY_LABEL: Record<AppCategory, string> = {
+  clients: "Clients et ventes",
+  finance: "Finances",
+  equipe: "Équipe",
+  operations: "Opérations",
+  marketing: "Marketing",
+  services: "Services",
+  systeme: "Réglages",
+};
 
 export type AppNavItem = NavItem & { soon?: boolean };
 
@@ -24,6 +40,7 @@ export type SkyApp = {
   href: string;
   status: "active" | "soon";
   billing: "included" | "addon" | "quote" | "system";
+  category: AppCategory;
   features: string[];
   /** Menus de l'app (onglets en haut de l'écran). */
   nav: AppNavItem[];
@@ -31,9 +48,42 @@ export type SkyApp = {
   match?: string[];
 };
 
+const soon = (id: AppId, category: AppCategory, name: string, icon: AppIcon, tagline: string, features: string[]): SkyApp => ({
+  id,
+  category,
+  name,
+  tagline,
+  icon,
+  href: `/app/bientot/${id}`,
+  status: "soon",
+  billing: "included",
+  features,
+  nav: [{ href: `/app/bientot/${id}`, label: name, icon }],
+});
+
+/** Apps prévues : visibles dans le catalogue avec le badge « Bientôt ». */
+const UPCOMING: SkyApp[] = [
+  soon("horaires", "equipe", "Horaires", "planning", "Le planning de votre équipe, partout.", ["Planning semaine et mois, par personne", "Export Excel et impression", "Synchro Google Agenda, Outlook et téléphone", "Pointage des heures et heures supplémentaires"]),
+  soon("paie", "equipe", "Paie", "wallet", "Salaires et fiches de paie, sans tableur.", ["Salaires, primes et heures prestées", "Fiches de paie en PDF pour chaque employé", "Export vers votre secrétariat social", "Coût total par employé et par mois"]),
+  soon("ventes", "clients", "Ventes", "target", "Suivez vos prospects jusqu'à la signature.", ["Pistes et opportunités en colonnes", "Relances et rappels automatiques", "Devis envoyés depuis Factures", "Prévisions de chiffre d'affaires"]),
+  soon("projets", "operations", "Projets", "kanban", "Projets, chantiers et tâches de l'équipe.", ["Tâches en colonnes ou en liste", "Échéances et responsables", "Temps passé par projet", "Facturation du temps en un clic"]),
+  soon("interventions", "operations", "Interventions", "truck", "Vos techniciens sur le terrain.", ["Planning des interventions", "Bon d'intervention signé sur téléphone", "Photos avant et après", "Facture créée automatiquement"]),
+  soon("stock", "operations", "Stock", "boxes", "Vos produits et vos quantités, à jour.", ["Inventaire et alertes de stock bas", "Entrées, sorties et fournisseurs", "Code-barres avec le téléphone", "Lié à Boutique et Caisse"]),
+  soon("caisse", "clients", "Caisse", "store", "Encaissez au comptoir, carte ou cash.", ["Caisse sur tablette ou ordinateur", "Paiement par carte et Bancontact", "Tickets et clôture de caisse", "Stock mis à jour à chaque vente"]),
+  soon("depenses", "finance", "Dépenses", "receipt", "Vos tickets et factures d'achat, rangés.", ["Photo du ticket, montant lu automatiquement", "Notes de frais de l'équipe", "TVA récupérable calculée", "Export pour le comptable"]),
+  soon("compta", "finance", "Comptabilité", "calculator", "Préparez la TVA et le bilan sans stress.", ["Recettes et dépenses au même endroit", "Aide à la déclaration TVA", "Export pour votre comptable", "Tableau de trésorerie"]),
+  soon("marketing", "marketing", "Marketing", "megaphone", "Emails et SMS à vos clients.", ["Newsletters et campagnes SMS", "Relance des clients inactifs", "Modèles prêts à l'emploi", "Statistiques d'ouverture"]),
+  soon("avis", "marketing", "Avis Google", "star", "Plus d'avis, une meilleure note.", ["Demande d'avis après chaque rendez-vous", "Suivi de votre note Google", "Réponses aux avis au même endroit", "Avis affichés sur votre site"]),
+  soon("fidelite", "marketing", "Fidélité", "gift", "Cartes cadeaux et points fidélité.", ["Cartes cadeaux vendues en ligne", "Points à chaque visite ou achat", "Offres d'anniversaire automatiques", "Lié à RDV, Boutique et Caisse"]),
+  soon("signature", "services", "Signature", "signature", "Faites signer devis et contrats en ligne.", ["Signature électronique valable en Belgique", "Devis signé, facture prête", "Rappels aux signataires", "Documents archivés"]),
+  soon("documents", "services", "Documents", "folder", "Tous vos fichiers, partagés avec l'équipe.", ["Dossiers par client ou par projet", "Partage sécurisé avec vos clients", "Recherche dans les documents", "Lié aux fiches clients"]),
+  soon("messagerie", "equipe", "Messagerie", "message", "Discutez avec votre équipe, sans WhatsApp.", ["Discussions d'équipe et privées", "Fichiers et photos", "Notifications sur téléphone", "Lié aux rendez-vous et projets"]),
+];
+
 export const APPS: SkyApp[] = [
   {
     id: "rdv",
+    category: "clients",
     name: "RDV",
     tagline: "Vos clients réservent en ligne, 24 h/24.",
     icon: "calendar",
@@ -53,6 +103,7 @@ export const APPS: SkyApp[] = [
   },
   {
     id: "clients",
+    category: "clients",
     name: "Clients",
     tagline: "Votre fichier clients, partagé par toutes les apps.",
     icon: "contacts",
@@ -64,6 +115,7 @@ export const APPS: SkyApp[] = [
   },
   {
     id: "site",
+    category: "marketing",
     name: "Site web",
     tagline: "Votre site, relié à vos rendez-vous.",
     icon: "globe",
@@ -75,6 +127,7 @@ export const APPS: SkyApp[] = [
   },
   {
     id: "factures",
+    category: "finance",
     name: "Factures",
     tagline: "Devis et factures conformes en quelques clics.",
     icon: "file",
@@ -87,25 +140,27 @@ export const APPS: SkyApp[] = [
       { href: "/app/factures/liste", label: "Factures", icon: "file", permission: "invoices.view" },
       { href: "/app/factures/devis", label: "Devis", icon: "quote", permission: "invoices.view" },
       { href: "/app/factures/catalogue", label: "Catalogue", icon: "package", permission: "invoices.view" },
-      { href: "/app/factures/reglages", label: "Réglages", icon: "settings", permission: "invoices.view" },
+      { href: "/app/factures/reglages", label: "Paramètres", icon: "settings", permission: "invoices.view" },
     ],
   },
   {
     id: "employes",
+    category: "equipe",
     name: "Employés",
-    tagline: "Votre équipe, ses accès et bientôt son planning.",
+    tagline: "Votre équipe, ses accès, ses congés.",
     icon: "users",
     href: "/app/equipe",
     status: "active",
     billing: "included",
-    features: ["Collaborateurs, invitations et accès", "Planning de la semaine (bientôt)", "Demandes de congés (bientôt)", "Lié à l'agenda RDV"],
+    features: ["Collaborateurs, invitations et accès", "Fiches employés et contrats (bientôt)", "Demandes et soldes de congés (bientôt)", "Lié aux apps Horaires et Paie"],
     nav: [
       { href: "/app/equipe", label: "Équipe", icon: "team", permission: "team.view" },
-      { href: "/app/employes", label: "Planning", icon: "calendar", soon: true },
+      { href: "/app/employes", label: "Congés", icon: "plane", soon: true },
     ],
   },
   {
     id: "boutique",
+    category: "clients",
     name: "Boutique",
     tagline: "Vendez vos produits en ligne.",
     icon: "bag",
@@ -117,6 +172,7 @@ export const APPS: SkyApp[] = [
   },
   {
     id: "tel-ia",
+    category: "services",
     name: "Tél IA",
     tagline: "Une IA répond quand vous ne pouvez pas décrocher.",
     icon: "phone",
@@ -128,6 +184,7 @@ export const APPS: SkyApp[] = [
   },
   {
     id: "sur-mesure",
+    category: "services",
     name: "Sur mesure",
     tagline: "Tout ce dont vous avez besoin, construit pour vous.",
     icon: "wand",
@@ -137,8 +194,10 @@ export const APPS: SkyApp[] = [
     features: ["Sites et boutiques sur mesure", "Apps web et mobiles, logiciels métier, CRM", "Automatisations et outils avec de l'IA", "Maquette, puis prix fixe annoncé à l'avance"],
     nav: [{ href: "/app/sur-mesure", label: "Sur mesure", icon: "wand" }],
   },
+  ...UPCOMING,
   {
     id: "reglages",
+    category: "systeme",
     name: "Réglages",
     tagline: "Établissement, abonnement, compte et aide.",
     icon: "settings",
@@ -183,4 +242,38 @@ export function appForPath<T extends Pick<SkyApp, "nav" | "match">>(apps: T[], p
 /** Menu actif dans une app : le plus long début d'adresse qui correspond. */
 export function activeNavHref(nav: { href: string }[], path: string) {
   return nav.filter((n) => starts(path, n.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
+}
+
+/* ───────── Questionnaire de départ : ce que l'entreprise veut faire → apps mises sur l'accueil ───────── */
+
+export type TeamSize = "solo" | "small" | "large";
+export const TEAM_SIZES: { value: TeamSize; label: string; hint: string }[] = [
+  { value: "solo", label: "Seul", hint: "Indépendant, sans employé" },
+  { value: "small", label: "En petite équipe", hint: "De 2 à 10 personnes" },
+  { value: "large", label: "Plus de 10 personnes", hint: "PME ou grande entreprise" },
+];
+
+export type NeedId = "rdv" | "factures" | "site" | "vendre" | "equipe" | "telephone" | "projets" | "marketing";
+export const NEEDS: { id: NeedId; label: string; hint: string; apps: AppId[] }[] = [
+  { id: "rdv", label: "Prendre des rendez-vous", hint: "Réservation en ligne, agenda, rappels", apps: ["rdv"] },
+  { id: "factures", label: "Faire des devis et des factures", hint: "Et suivre les paiements et les dépenses", apps: ["factures", "depenses", "compta"] },
+  { id: "site", label: "Avoir un site internet", hint: "Prêt à l'emploi, ou sur mesure", apps: ["site"] },
+  { id: "vendre", label: "Vendre des produits", hint: "En ligne ou au comptoir, avec le stock", apps: ["boutique", "caisse", "stock"] },
+  { id: "equipe", label: "Gérer mon équipe", hint: "Accès, horaires, congés, paie", apps: ["employes", "horaires", "paie", "messagerie"] },
+  { id: "telephone", label: "Ne plus rater d'appels", hint: "Une IA répond quand vous êtes occupé", apps: ["tel-ia"] },
+  { id: "projets", label: "Suivre des projets ou chantiers", hint: "Tâches, interventions, documents", apps: ["projets", "interventions", "documents", "signature"] },
+  { id: "marketing", label: "Trouver plus de clients", hint: "Prospects, emails, avis Google, fidélité", apps: ["ventes", "marketing", "avis", "fidelite"] },
+];
+
+/** Apps toujours sur l'accueil, quelles que soient les réponses. */
+export const ALWAYS_SHOWN: AppId[] = ["clients", "sur-mesure", "reglages"];
+
+/** Apps à ranger hors de l'accueil selon les réponses (seul : pas d'apps d'équipe sauf si demandées). */
+export function hiddenAppsFor(teamSize: TeamSize, needs: NeedId[]): AppId[] {
+  // Rien de coché : tout reste sur l'accueil (sauf les apps d'équipe pour un indépendant seul).
+  if (needs.length === 0) return teamSize === "solo" ? [...NEEDS.find((n) => n.id === "equipe")!.apps] : [];
+  const shown = new Set<AppId>(ALWAYS_SHOWN);
+  for (const n of NEEDS) if (needs.includes(n.id)) n.apps.forEach((a) => shown.add(a));
+  if (teamSize !== "solo") shown.add("employes");
+  return APPS.map((a) => a.id).filter((id) => !shown.has(id));
 }

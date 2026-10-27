@@ -60,8 +60,11 @@ export const businesses = pgTable(
     boostPosition: integer("boost_position").notNull().default(0),
     /** Mois (AAAA-MM) où le pro a été prévenu que la limite de confirmations automatiques est atteinte. */
     limitNoticeMonth: text("limit_notice_month"),
-    /** Checklist « Bien démarrer » : lien partagé, checklist masquée. */
-    onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string }>().notNull().default({}),
+    /**
+     * Checklist « Bien démarrer » : lien partagé, checklist masquée.
+     * Skydev : questionnaire de départ (taille d'équipe, besoins) et apps rangées hors de l'accueil.
+     */
+    onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string; appsSetupAt?: string; teamSize?: string; needs?: string[]; hiddenApps?: string[] }>().notNull().default({}),
 
     legacyId: legacyId(),
     ...timestamps,

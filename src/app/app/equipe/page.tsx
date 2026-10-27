@@ -48,7 +48,7 @@ export default async function TeamPage() {
       ) : null}
       {requests.length ? (
         <Card className="mb-6">
-          <CardHeader title="Demandes pour rejoindre l'équipe" description="Ces personnes ont un compte Branshee et souhaitent rejoindre votre établissement." />
+          <CardHeader title="Demandes pour rejoindre l'équipe" description={`Ces personnes ont un compte ${(await currentBrand()).name} et souhaitent rejoindre votre établissement.`} />
           <ul className="divide-y divide-border">
             {requests.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-4">

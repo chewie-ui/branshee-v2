@@ -45,7 +45,7 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   }
   (await cookies()).set(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   // Sur Skydev, l'accueil est le lanceur d'apps : la carte de bienvenue (étapes RDV) s'affiche dans l'app RDV.
-  redirect((await currentBrand()).id === "skydev" ? "/app/rdv?bienvenue=1" : "/app?bienvenue=1");
+  redirect((await currentBrand()).id === "skydev" ? "/app/demarrer" : "/app?bienvenue=1");
 }
 
 /** Change l'établissement actif (uniquement parmi ceux dont l'utilisateur est membre actif). */

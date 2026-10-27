@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
+
 import { useState, useTransition } from "react";
 import { CheckCircle2, CreditCard } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -30,6 +32,7 @@ const FEES = [
 ] as const;
 
 export function StripeCard({ p }: { p: P }) {
+  const brandName = useBrandName();
   const [manual, setManual] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -52,7 +55,7 @@ export function StripeCard({ p }: { p: P }) {
             <p className="text-sm text-muted">{p.stripe.status === "pending" ? "Inscription commencée : il reste quelques informations à donner à Stripe." : "5 minutes : identité, IBAN. Gratuit, Stripe prend une commission par paiement."}</p>
           </div>
           <details className="text-sm">
-            <summary className="cursor-pointer font-medium text-accent">J&apos;ai déjà un compte Stripe relié à Branshee</summary>
+            <summary className="cursor-pointer font-medium text-accent">J&apos;ai déjà un compte Stripe relié à {brandName}</summary>
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <Field label="Identifiant du compte" htmlFor="acct">
                 <Input id="acct" value={manual} onChange={(e) => setManual(e.target.value)} placeholder="acct_…" className="w-64" />
@@ -68,6 +71,7 @@ export function StripeCard({ p }: { p: P }) {
 }
 
 export function PaymentsForm({ p }: { p: P }) {
+  const brandName = useBrandName();
   const [mode, setMode] = useState<Mode>(p.prepaymentEnabled && p.prepaymentRequired ? "strict" : p.cancellationRule !== "free" ? "guarantee" : "none");
   const [fee, setFee] = useState<"half_24h" | "full_12h">(p.cancellationRule === "full_12h" ? "full_12h" : "half_24h");
   const [prepay, setPrepay] = useState(p.prepaymentEnabled);
@@ -182,7 +186,7 @@ export function PaymentsForm({ p }: { p: P }) {
           </Section>
 
           {p.stripe.status !== "active" ? (
-            <Section title="Reversement" description="Sans compte Stripe connecté, Branshee encaisse les paiements en ligne et vous les reverse.">
+            <Section title="Reversement" description={`Sans compte Stripe connecté, ${brandName} encaisse les paiements en ligne et vous les reverse.`}>
               <Field label="Moyen de reversement" htmlFor="payoutMethod">
                 <Select id="payoutMethod" name="payoutMethod" value={payout} onChange={(e) => setPayout(e.target.value)} className="sm:max-w-xs">
                   <option value="">Non renseigné</option>

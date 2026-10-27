@@ -91,7 +91,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
                 {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName}</Link> : <p>{a.contactName}</p>}
                 {a.contactPhone ? <a href={`tel:${a.contactPhone}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Phone className="size-4" aria-hidden="true" />{a.contactPhone}</a> : null}
                 {a.contactEmail ? <a href={`mailto:${a.contactEmail}`} className="flex items-center gap-1.5 break-all text-accent hover:text-accent-hover"><Mail className="size-4 shrink-0" aria-hidden="true" />{a.contactEmail}</a> : null}
-                {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte Branshee : {account.email}</p> : null}
+                {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte {(await currentBrand()).name} : {account.email}</p> : null}
               </dd>
             </div>
             {a.policyConsent ? (

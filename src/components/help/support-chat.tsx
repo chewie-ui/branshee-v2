@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
+
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Send, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,7 @@ const time = (iso: string) => new Date(iso).toLocaleString("fr-BE", { day: "nume
 
 /** Discussion directe avec l'équipe Branshee (rafraîchie toutes les 10 s tant que la page est ouverte). */
 export function SupportChat({ initial, firstName }: { initial: { thread: Thread; messages: SupportMessageView[] }; firstName: string }) {
+  const brandName = useBrandName();
   const [data, setData] = useState(initial);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export function SupportChat({ initial, firstName }: { initial: { thread: Thread;
           data.messages.map((m) => (
             <div key={m.id} className={cn("flex", m.sender === "user" ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[85%] rounded-2xl px-3.5 py-2 text-sm", m.sender === "user" ? "rounded-br-sm bg-accent text-accent-foreground" : "rounded-bl-sm bg-surface-muted text-text")}>
-                {m.sender === "admin" ? <p className="mb-0.5 text-xs font-semibold text-accent">Équipe Branshee</p> : null}
+                {m.sender === "admin" ? <p className="mb-0.5 text-xs font-semibold text-accent">Équipe {brandName}</p> : null}
                 <p className="whitespace-pre-line break-words">{m.body}</p>
                 <p className={cn("mt-1 text-[11px]", m.sender === "user" ? "text-accent-foreground/70" : "text-muted")}>{time(m.createdAt)}</p>
               </div>

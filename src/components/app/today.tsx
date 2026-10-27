@@ -1,3 +1,4 @@
+import { currentBrand } from "@/server/brand";
 import Link from "next/link";
 import { CalendarCheck, CalendarDays, Check, Clock, Inbox, Plus, UserPlus } from "lucide-react";
 import { and, count, desc, eq, gte, isNull, lt, ne } from "drizzle-orm";
@@ -110,7 +111,7 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
         <Card className="mb-6 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-semibold">Bien démarrer sur Branshee</h2>
+              <h2 className="font-semibold">Bien démarrer sur {(await currentBrand()).name}</h2>
               <p className="text-sm text-muted">{doneCount} sur {steps.length} étapes terminées</p>
             </div>
             <DismissOnboarding />

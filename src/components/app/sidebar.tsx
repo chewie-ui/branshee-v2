@@ -24,15 +24,17 @@ type Props = {
   user: { name: string; email: string; avatarUrl: string | null };
   pendingCount: number;
   supportUnread?: number;
+  /** Menu actif imposé (apps Skydev : le plus long début d'adresse), sinon actif par début d'adresse. */
+  activeHref?: string | null;
 };
 
 function isActive(pathname: string, href: string) {
   return href === "/app" ? pathname === "/app" : pathname === href || pathname.startsWith(href + "/");
 }
 
-function NavLink({ item, pathname, badge }: { item: NavItem; pathname: string; badge?: number }) {
+function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathname: string; badge?: number; activeHref?: string | null }) {
   const Icon = ICONS[item.icon];
-  const active = isActive(pathname, item.href);
+  const active = activeHref !== undefined && item.href !== "/app" ? item.href === activeHref : isActive(pathname, item.href);
   return (
     <Link
       href={item.href}
@@ -53,8 +55,9 @@ function NavLink({ item, pathname, badge }: { item: NavItem; pathname: string; b
   );
 }
 
-function BusinessSwitcher({ current, all }: { current: Props["business"]; all: Props["businesses"] }) {
+function BusinessSwitcher({ current, all, brand }: { current: Props["business"]; all: Props["businesses"]; brand: BrandId }) {
   const [open, setOpen] = useState(false);
+  const sky = brand === "skydev";
   return (
     <div className="relative">
       <button
@@ -77,7 +80,7 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
         <>
           <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} aria-label="Fermer" tabIndex={-1} />
           <div role="menu" className="absolute inset-x-0 top-full z-20 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg">
-            <p className="px-2 py-1.5 text-xs font-medium text-muted">Vos établissements</p>
+            <p className="px-2 py-1.5 text-xs font-medium text-muted">{sky ? "Vos entreprises" : "Vos établissements"}</p>
             {all.map((b) => (
               <form key={b.id} action={switchBusiness.bind(null, b.id)}>
                 <button type="submit" role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted">
@@ -89,11 +92,11 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
             <div className="my-1 border-t border-border" />
             <Link href="/app/etablissements" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Building2 className="size-4" aria-hidden="true" />
-              Mes établissements
+              {sky ? "Mes entreprises" : "Mes établissements"}
             </Link>
             <Link href="/bienvenue" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Plus className="size-4" aria-hidden="true" />
-              Ajouter un établissement
+              {sky ? "Ajouter une entreprise" : "Ajouter un établissement"}
             </Link>
           </div>
         </>
@@ -102,14 +105,14 @@ function BusinessSwitcher({ current, all }: { current: Props["business"]; all: P
   );
 }
 
-function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, pathname }: Props & { pathname: string }) {
+function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 p-3">
         <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label="Accueil">
           <Brand brand={brand} small />
         </Link>
-        <BusinessSwitcher current={business} all={businesses} />
+        <BusinessSwitcher current={business} all={businesses} brand={brand} />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-3" aria-label="Navigation principale">
@@ -119,7 +122,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
             <ul className="space-y-0.5">
               {group.items.map((item) => (
                 <li key={item.href}>
-                  <NavLink item={item} pathname={pathname} badge={item.href === "/app/demandes" ? pendingCount : undefined} />
+                  <NavLink item={item} pathname={pathname} badge={item.href === "/app/demandes" ? pendingCount : undefined} activeHref={activeHref} />
                 </li>
               ))}
             </ul>

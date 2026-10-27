@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
+
 import { useRouter } from "next/navigation";
 import { Info, Play } from "lucide-react";
 import { startTour } from "@/components/app/guided-tour";
@@ -8,10 +10,11 @@ import { Button } from "@/components/ui/button";
 /** Écran de bienvenue juste après la création de l'établissement : propose la visite guidée. */
 export function WelcomeCard({ firstName }: { firstName: string }) {
   const router = useRouter();
+  const brand = useBrandName();
   return (
     <div className="mb-6 rounded-2xl border border-accent/30 bg-accent-soft/50 px-6 py-8 text-center">
       <p className="text-4xl" aria-hidden="true">🎉</p>
-      <h2 className="mt-2 text-xl font-semibold tracking-tight">Bienvenue sur Branshee, {firstName} !</h2>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight">Bienvenue sur {brand}, {firstName} !</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">On configure votre établissement ensemble : on vous montre exactement où cliquer, étape par étape. Ça prend moins de 5 minutes.</p>
       <div className="mt-5 flex flex-col items-center gap-3">
         <Button icon={<Play className="size-4" aria-hidden="true" />} onClick={() => { router.replace("/app"); startTour("onboarding"); }}>

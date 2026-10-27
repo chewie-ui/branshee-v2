@@ -1,5 +1,7 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
+
 import { useState, useTransition } from "react";
 import { CalendarDays, CheckCircle2 } from "lucide-react";
 import { CopyLink } from "@/components/app/copy-link";
@@ -8,10 +10,11 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { disconnectGoogleCalendar, regenerateCalendarFeed } from "@/server/actions/integrations";
 
 export function GoogleCalendarCard({ configured, allowed, connectedEmail }: { configured: boolean; allowed: boolean; connectedEmail: string | null }) {
+  const brandName = useBrandName();
   const [pending, start] = useTransition();
   return (
     <Card>
-      <CardHeader title="Google Agenda" description="Vos rendez-vous Branshee apparaissent dans votre Google Agenda, et vos événements personnels bloquent les créneaux en ligne." />
+      <CardHeader title="Google Agenda" description={`Vos rendez-vous ${brandName} apparaissent dans votre Google Agenda, et vos événements personnels bloquent les créneaux en ligne.`} />
       <div className="p-5">
         {!configured ? (
           <p className="text-sm text-muted">La connexion Google n&apos;est pas encore configurée sur ce serveur.</p>

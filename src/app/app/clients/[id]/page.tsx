@@ -107,7 +107,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           </h1>
           <p className="text-sm text-muted">
             {history.length} rendez-vous · fiche créée le {formatDay(customer.createdAt, tz, "d MMMM yyyy")}
-            {row.account ? " · a un compte Branshee" : ""}
+            {row.account ? ` · a un compte ${(await currentBrand()).name}` : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

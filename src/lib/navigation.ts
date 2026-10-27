@@ -4,7 +4,8 @@ import type { PermissionKey } from "@/lib/permissions";
 export type NavItem = {
   href: string;
   label: string;
-  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand" | "chart" | "quote" | "package";
+  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand" | "chart" | "quote" | "package"
+    | "contacts" | "planning" | "wallet" | "plane" | "boxes" | "store" | "target" | "kanban" | "receipt" | "calculator" | "megaphone" | "signature" | "folder" | "gift" | "message" | "truck" | "star" | "timer";
   /** Permission requise pour voir l'entrée (absente = visible par tous les membres). */
   permission?: PermissionKey;
 };
@@ -33,7 +34,7 @@ export const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
     items: [
       { href: "/app/page-de-reservation", label: "Page de réservation", icon: "globe", permission: "customization.manage" },
       { href: "/app/site", label: "Site web", icon: "layout", permission: "customization.manage" },
-      { href: "/app/apps", label: "Toutes les apps", icon: "apps" },
+      { href: "/app/modules", label: "Modules", icon: "blocks", permission: "billing.manage" },
     ],
   },
 ];

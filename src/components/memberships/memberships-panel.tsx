@@ -8,7 +8,7 @@ import { CancelRequestButton, InvitationButtons, JoinSearch, LeaveButton, OwnerC
 type Rows = Awaited<ReturnType<typeof listMemberships>>;
 
 /** Invitations reçues + demandes envoyées + recherche pour rejoindre (partagé entre Bienvenue et Mes établissements). */
-export function InvitationsAndJoin({ rows }: { rows: Rows }) {
+export function InvitationsAndJoin({ rows, brandName = "Branshee" }: { rows: Rows; brandName?: string }) {
   const invitations = rows.filter((r) => r.status === "invited");
   const requests = rows.filter((r) => r.status === "requested");
   return (
@@ -44,7 +44,7 @@ export function InvitationsAndJoin({ rows }: { rows: Rows }) {
         </Card>
       ) : null}
       <Card>
-        <CardHeader title="Rejoindre un établissement" description="Vous travaillez dans un cabinet déjà sur Branshee ? Envoyez une demande au responsable." />
+        <CardHeader title="Rejoindre un établissement" description={`Vous travaillez dans une équipe déjà sur ${brandName} ? Envoyez une demande au responsable.`} />
         <div className="p-5"><JoinSearch /></div>
       </Card>
     </div>

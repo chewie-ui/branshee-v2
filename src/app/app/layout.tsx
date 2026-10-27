@@ -17,6 +17,7 @@ import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { clientWord } from "@/lib/terminology";
 import { PlanBanner } from "@/components/app/plan-banner";
+import { BrandNameProvider } from "@/components/brand-context";
 import { effectivePlan } from "@/server/plan";
 
 export const dynamic = "force-dynamic";
@@ -73,14 +74,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .filter(visible)
             .filter((i) => !hidden.has(i.href))
             .filter((i) => i.href !== "/app/demandes" || pending > 0)
-            .filter((i) => i.href !== "/app/apps")
+            .filter((i) => i.href !== "/app/apps" && i.href !== "/app/modules")
             .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: clients } : i)),
         })).filter((g) => g.items.length > 0),
       ],
       footer: NAV_FOOTER.filter(visible),
     };
     return (
-      <>
+      <BrandNameProvider name={brand.name}>
         {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
         <SkydevShell apps={apps} rdv={rdvSidebar} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
           {banners}
@@ -88,7 +89,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </SkydevShell>
         <RegisterServiceWorker />
         <GuidedTour />
-      </>
+      </BrandNameProvider>
     );
   }
 
