@@ -183,6 +183,13 @@
       "when": 1793143354163,
       "tag": "0025_commandes",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793144089094,
+      "tag": "0026_ventes",
+      "breakpoints": true
     }
   ]
 }

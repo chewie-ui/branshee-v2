@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, gt, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, articles, businessPlans, businesses, members, notificationSettings, services, users } from "@/db/schema";
+import { appointments, articles, businessPlans, businesses, deals, members, notificationSettings, services, users } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { indexNow } from "@/server/indexnow";
@@ -230,4 +230,29 @@ export async function reconcileSkydevUsers() {
     if (before[0]?.n !== after[0]?.n) fixed++;
   }
   return fixed;
+}
+
+/**
+ * App Ventes : chaque matin, à chaque responsable de piste, la liste de ses relances du jour et en retard.
+ * Un seul email par personne, seulement s'il y a quelque chose à faire.
+ */
+export async function sendSalesFollowUps(now = new Date()) {
+  const rows = await db
+    .select({ title: deals.title, next: deals.nextActionDate, what: deals.nextAction, company: deals.companyName, tz: businesses.timezone, businessId: businesses.id, biz: businesses.name, email: users.email, name: members.displayName, memberId: members.id })
+    .from(deals)
+    .innerJoin(businesses, eq(businesses.id, deals.businessId))
+    .innerJoin(members, eq(members.id, deals.ownerMemberId))
+    .innerJoin(users, eq(users.id, members.userId))
+    .where(and(isNotNull(deals.nextActionDate), lte(deals.nextActionDate, sql`(now() at time zone coalesce(${businesses.timezone}, 'Europe/Brussels'))::date`), sql`${deals.stage} not in ('won','lost')`, isNull(businesses.deletedAt), eq(members.status, "active"), eq(members.isActive, true)))
+    .limit(5000);
+  const byMember = new Map<string, typeof rows>();
+  for (const r of rows) byMember.set(r.memberId, [...(byMember.get(r.memberId) ?? []), r]);
+  let sent = 0;
+  for (const list of byMember.values()) {
+    const first = list[0]!;
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: first.tz || "Europe/Brussels" }).format(now);
+    const mail = emails.salesFollowUps({ businessName: first.biz, name: firstName(first.name), items: list.slice(0, 30).map((r) => ({ title: r.title, detail: [r.what, r.company].filter(Boolean).join(" · "), late: !!r.next && r.next < today })), more: Math.max(0, list.length - 30), url: `${(process.env.SKYDEV_APP_URL ?? appUrl()).replace(/\/$/, "")}/app/ventes/relances?moi=1` });
+    if (await sendEmail({ to: first.email, ...mail, template: "sales_follow_ups", businessId: first.businessId })) sent++;
+  }
+  return sent;
 }

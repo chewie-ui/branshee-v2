@@ -527,6 +527,22 @@ export const emails = {
     };
   },
 
+  /** Ventes : relances du jour et en retard, pour le responsable des pistes. */
+  salesFollowUps(p: { businessName: string; name: string; items: { title: string; detail: string; late: boolean }[]; more: number; url: string }) {
+    const n = p.items.length + p.more;
+    return {
+      subject: `${n} relance${n > 1 ? "s" : ""} à faire aujourd'hui`,
+      ...render({
+        preheader: p.items.map((i) => i.title).slice(0, 3).join(", "),
+        title: "Vos relances du jour",
+        intro: `Bonjour ${p.name}, voici les pistes à relancer aujourd'hui.`,
+        details: [...p.items.map((i) => ({ label: i.late ? "En retard" : "Aujourd'hui", value: [i.title, i.detail].filter(Boolean).join(" — ") })), ...(p.more ? [{ label: "Et encore", value: `${p.more} autre${p.more > 1 ? "s" : ""}` }] : [])],
+        cta: { label: "Voir mes relances", url: p.url },
+        footer: `Skydev — ${p.businessName}`,
+      }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

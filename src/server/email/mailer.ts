@@ -1,7 +1,8 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/db";
-import { emailLogs } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { businesses, emailLogs } from "@/db/schema";
 import { isStaging } from "@/lib/staging";
 import { brandForHost, visitedHost } from "@/lib/brand";
 
@@ -38,8 +39,17 @@ async function requestBrand() {
     const { headers } = await import("next/headers");
     return brandForHost(visitedHost(await headers()));
   } catch {
-    return "branshee" as const;
+    return process.env.FORCE_BRAND === "skydev" ? ("skydev" as const) : ("branshee" as const);
   }
+}
+
+/** La marque de l'établissement concerné passe avant l'adresse visitée (tâches planifiées, emails à l'équipe). */
+async function mailBrand(businessId?: string | null) {
+  if (businessId) {
+    const [b] = await db.select({ brand: businesses.brand }).from(businesses).where(eq(businesses.id, businessId)).catch(() => []);
+    if (b?.brand === "skydev" || b?.brand === "branshee") return b.brand;
+  }
+  return requestBrand();
 }
 
 /** Emails déclenchés depuis Skydev : le nom « Branshee » devient « Skydev » (les liens restent ceux de l'app). */
@@ -49,7 +59,7 @@ function asSkydev(mail: OutgoingEmail): OutgoingEmail {
 }
 
 export async function sendEmail(input: OutgoingEmail): Promise<boolean> {
-  const skydev = (await requestBrand()) === "skydev";
+  const skydev = (await mailBrand(input.businessId)) === "skydev";
   const mail = skydev ? asSkydev(input) : input;
   const from = skydev ? (process.env.MAIL_FROM_SKYDEV ?? "Skydev <no-reply@branshee.com>") : (process.env.MAIL_FROM ?? "Branshee <no-reply@branshee.com>");
   const transport = getTransport();
