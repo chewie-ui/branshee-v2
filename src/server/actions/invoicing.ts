@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { isDay } from "@/lib/planning";
 import { db } from "@/db";
 import { activityLogs, appointments, customers, invoiceProducts, invoiceSettings, salesDocuments, type SalesLine } from "@/db/schema";
 import { addDays, bceValid, cleanLines, formatNumber, ibanValid, money, newLine, num, settingsMissing, structComm, todayIso, totals, type DocType } from "@/lib/invoicing";
@@ -12,7 +13,8 @@ import { getDocument, getSellerSettings } from "@/server/invoicing";
 type Result = { ok: true; id?: string; message?: string } | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
 const uuid = z.uuid();
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isoDate = z.string().refine(isDay, "Date invalide.");
+const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
 const log = (ctx: AppContext, action: string, description: string) => db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action, description });
 const refresh = () => revalidatePath("/app/factures", "layout");
 
@@ -56,6 +58,7 @@ async function ownCustomer(businessId: string, id: string | null | undefined) {
  */
 export async function saveDocument(input: DocInput): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const parsed = docSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Vérifiez les champs du document." };
   const v = parsed.data;
@@ -111,7 +114,9 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     refresh();
     return { ok: true, id: row.id, message: `Devis ${row.number} enregistré.` };
   }
-  const relatedId = v.docType === "credit" && v.relatedId ? ((await getDocument(ctx.business.id, v.relatedId))?.id ?? null) : null;
+  // Une note de crédit ne se rattache qu'à une facture émise de cet établissement.
+  const rel = v.docType === "credit" && v.relatedId ? await getDocument(ctx.business.id, v.relatedId) : null;
+  const relatedId = rel && rel.docType === "invoice" && rel.number ? rel.id : null;
   const appointmentId = v.appointmentId ? ((await db.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, ctx.business.id), eq(appointments.id, v.appointmentId))))[0]?.id ?? null) : null;
   const [row] = await db.insert(salesDocuments).values({ businessId: ctx.business.id, docType: v.docType, status: "draft", relatedId, appointmentId, createdById: ctx.user.id, ...values }).returning({ id: salesDocuments.id });
   await log(ctx, "invoice.draft", v.docType === "credit" ? "Brouillon de note de crédit créé" : "Brouillon de facture créé");
@@ -129,6 +134,7 @@ function sellerSnapshot(s: Awaited<ReturnType<typeof getSellerSettings>>) {
  */
 export async function issueDocument(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType === "quote") return { ok: false, error: "Document introuvable." };
   if (d.status !== "draft") return { ok: false, error: "Ce document est déjà émis." };
@@ -143,6 +149,7 @@ export async function issueDocument(id: string): Promise<Result> {
   if (d.docType === "invoice" && d.dueDate && d.dueDate < d.issueDate) return { ok: false, error: "L'échéance ne peut pas être avant la date d'émission." };
   const t = totals(lines, seller.vatRegime);
   if (t.ht === 0) return { ok: false, error: "Le montant total est de 0 €. Vérifiez les prix." };
+  if (t.ht < 0) return { ok: false, error: "Le total est négatif : pour rembourser, faites une note de crédit sur la facture." };
   const year = Number(d.issueDate.slice(0, 4));
   const type = d.docType as Exclude<DocType, "quote">;
 
@@ -157,7 +164,7 @@ export async function issueDocument(id: string): Promise<Result> {
     if (last && last.issueDate > d.issueDate) return { error: `La date ne peut pas être antérieure à celle de ${last.number} (${last.issueDate.split("-").reverse().join("/")}). La numérotation doit rester chronologique.` };
     const seq = (last?.seq ?? 0) + 1;
     const number = formatNumber(type, year, seq, seller.prefix);
-    await tx
+    const done = await tx
       .update(salesDocuments)
       .set({
         status: "sent",
@@ -175,11 +182,14 @@ export async function issueDocument(id: string): Promise<Result> {
         issuedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(and(eq(salesDocuments.id, d.id), eq(salesDocuments.status, "draft")));
+      .where(and(eq(salesDocuments.id, d.id), eq(salesDocuments.status, "draft")))
+      .returning({ id: salesDocuments.id });
+    // Déjà émis entre-temps (double clic, deux onglets) : on n'utilise pas ce numéro.
+    if (!done.length) return { error: "Ce document vient d'être émis." };
     // Note de crédit qui couvre tout le montant de la facture d'origine : la facture passe en « annulée ».
     if (type === "credit" && d.relatedId) {
       const [inv] = await tx.select().from(salesDocuments).where(and(eq(salesDocuments.businessId, ctx.business.id), eq(salesDocuments.id, d.relatedId)));
-      if (inv && inv.status !== "cancelled") {
+      if (inv && inv.docType === "invoice" && inv.status !== "cancelled") {
         const [cr] = await tx.select({ s: sql<number>`coalesce(sum(${salesDocuments.ttcCents}), 0)::int` }).from(salesDocuments).where(and(eq(salesDocuments.relatedId, inv.id), eq(salesDocuments.docType, "credit"), isNotNull(salesDocuments.seq)));
         if ((cr?.s ?? 0) >= inv.ttcCents) await tx.update(salesDocuments).set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() }).where(eq(salesDocuments.id, inv.id));
       }
@@ -194,6 +204,7 @@ export async function issueDocument(id: string): Promise<Result> {
 
 export async function markPaid(id: string, input: { date: string; method: string }): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "invoice" || d.status !== "sent") return { ok: false, error: "Seule une facture émise et non payée peut être encaissée." };
   const date = isoDate.safeParse(input.date);
@@ -206,6 +217,7 @@ export async function markPaid(id: string, input: { date: string; method: string
 
 export async function unmarkPaid(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.status !== "paid") return { ok: false, error: "Cette facture n'est pas marquée comme payée." };
   await db.update(salesDocuments).set({ status: "sent", paidDate: null, paidMethod: null, updatedAt: new Date() }).where(eq(salesDocuments.id, d.id));
@@ -217,6 +229,7 @@ export async function unmarkPaid(id: string): Promise<Result> {
 /** Prépare une note de crédit (brouillon) qui reprend les lignes de la facture : à ajuster si l'annulation est partielle. */
 export async function createCreditNote(invoiceId: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, invoiceId);
   if (!d || d.docType !== "invoice" || !d.number || d.status === "cancelled") return { ok: false, error: "Une note de crédit ne peut être faite que sur une facture émise." };
   const [row] = await db
@@ -231,6 +244,7 @@ export async function createCreditNote(invoiceId: string): Promise<Result> {
 /** Nouveau brouillon à partir d'un document existant (une note de crédit redevient une facture). */
 export async function duplicateDocument(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d) return { ok: false, error: "Document introuvable." };
   const type = d.docType === "quote" ? "quote" : "invoice";
@@ -241,6 +255,7 @@ export async function duplicateDocument(id: string): Promise<Result> {
 
 export async function setQuoteStatus(id: string, status: "sent" | "accepted" | "refused"): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "quote" || d.status === "invoiced") return { ok: false, error: "Devis introuvable ou déjà facturé." };
   if (!["sent", "accepted", "refused"].includes(status)) return { ok: false, error: "Statut invalide." };
@@ -253,12 +268,21 @@ export async function setQuoteStatus(id: string, status: "sent" | "accepted" | "
 /** Devis accepté → brouillon de facture avec les mêmes lignes ; le devis passe en « facturé ». */
 export async function quoteToInvoice(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "quote") return { ok: false, error: "Devis introuvable." };
-  if (d.status === "invoiced" && d.relatedId) return { ok: true, id: d.relatedId };
-  const r = await saveDocument({ docType: "invoice", customerId: d.customerId, issueDate: todayIso(ctx.business.timezone), notes: d.notes, lines: d.lines });
+  // Verrou par devis : deux clics ne créent jamais deux factures.
+  const r = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`quote:${d.id}`}))`);
+    const [cur] = await tx.select({ status: salesDocuments.status, relatedId: salesDocuments.relatedId }).from(salesDocuments).where(eq(salesDocuments.id, d.id));
+    if (cur?.status === "invoiced" && cur.relatedId) return { ok: true as const, id: cur.relatedId, existing: true };
+    const created = await saveDocument({ docType: "invoice", customerId: d.customerId, issueDate: todayIso(ctx.business.timezone), notes: d.notes, lines: d.lines });
+    if (!created.ok || !created.id) return created;
+    await tx.update(salesDocuments).set({ status: "invoiced", relatedId: created.id, updatedAt: new Date() }).where(eq(salesDocuments.id, d.id));
+    return created;
+  });
   if (!r.ok || !r.id) return r;
-  await db.update(salesDocuments).set({ status: "invoiced", relatedId: r.id, updatedAt: new Date() }).where(eq(salesDocuments.id, d.id));
+  if ("existing" in r) return { ok: true, id: r.id };
   await log(ctx, "invoice.from-quote", `Devis ${d.number} transformé en facture`);
   refresh();
   return { ok: true, id: r.id, message: "Brouillon de facture créé à partir du devis." };
@@ -267,6 +291,7 @@ export async function quoteToInvoice(id: string): Promise<Result> {
 /** Seuls les brouillons et les devis non facturés se suppriment (une facture émise reste, la loi l'exige). */
 export async function deleteDocument(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d) return { ok: false, error: "Document introuvable." };
   const deletable = d.docType === "quote" ? d.status !== "invoiced" : d.status === "draft";
@@ -283,6 +308,7 @@ const productSchema = z.object({ name: z.string().trim().min(1, "Indiquez un nom
 
 export async function saveProduct(id: string | null, input: { name: string; unit: string; price: number | string; vat: number | string }): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const p = productSchema.safeParse(input);
   if (!p.success) return { ok: false, error: p.error.issues[0]?.message ?? "Vérifiez les champs." };
   const values = { name: p.data.name, unit: p.data.unit || "forfait", priceCents: Math.round(p.data.price * 100), vatRate: p.data.vat, updatedAt: new Date() };
@@ -297,6 +323,7 @@ export async function saveProduct(id: string | null, input: { name: string; unit
 
 export async function deleteProduct(id: string): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const ok = uuid.safeParse(id);
   if (!ok.success) return { ok: false, error: "Élément introuvable." };
   await db.delete(invoiceProducts).where(and(eq(invoiceProducts.id, ok.data), eq(invoiceProducts.businessId, ctx.business.id)));
@@ -331,6 +358,7 @@ const settingsSchema = z.object({
 
 export async function saveInvoiceSettings(input: z.input<typeof settingsSchema>): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const p = settingsSchema.safeParse(input);
   if (!p.success) {
     const fe: Record<string, string> = {};
@@ -367,6 +395,7 @@ const clientSchema = z.object({
 /** Crée (ou complète) une fiche client depuis l'app Factures : elle est aussitôt visible dans Clients et RDV. */
 export async function saveBillingClient(id: string | null, input: z.input<typeof clientSchema>): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const p = clientSchema.safeParse(input);
   if (!p.success) {
     const fe: Record<string, string> = {};
@@ -403,6 +432,7 @@ const billingSchema = clientSchema.pick({ company: true, vatNumber: true, street
 /** Coordonnées de facturation d'une fiche client (société, TVA, adresse), sans toucher au nom ni aux contacts. */
 export async function saveCustomerBilling(customerId: string, input: z.input<typeof billingSchema>): Promise<Result> {
   const ctx = await requireContext("invoices.manage");
+  if (ctx.impersonating) return SUPERVISION;
   const c = await ownCustomer(ctx.business.id, uuid.safeParse(customerId).success ? customerId : null);
   if (!c) return { ok: false, error: "Client introuvable." };
   const p = billingSchema.safeParse(input);

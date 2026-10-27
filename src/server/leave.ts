@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { leaveAllowances, leaveRequests, members } from "@/db/schema";
+import { addDays } from "@/lib/planning";
 import { LEAVE_KINDS, leaveHalfDays, type LeaveKind, type LeavePeriod, type LeaveStatus } from "@/lib/leave";
 import type { AppContext } from "@/server/context";
 
@@ -74,14 +75,21 @@ export async function leaveBalances(ctx: AppContext, year: number, today: string
   return team.map((m) => {
     const mine = list.filter((l) => l.memberId === m.id && LEAVE_KINDS[l.kind].counted);
     // Demande à cheval sur deux années : seuls les jours de l'année comptent.
-    const inYear = (l: LeaveView) => leaveHalfDays(l.start < `${year}-01-01` ? `${year}-01-01` : l.start, l.end > `${year}-12-31` ? `${year}-12-31` : l.end, l.period);
-    const sum = (f: (l: LeaveView) => boolean) => mine.filter(f).reduce((a, l) => a + inYear(l), 0);
+    // Partie d'une absence entre deux dates (bornée à l'année) ; une absence en cours est coupée : passé = pris, reste = prévu.
+    const part = (l: LeaveView, from: string, to: string) => {
+      const a = l.start > from ? l.start : from;
+      const b = l.end < to ? l.end : to;
+      return a > b ? 0 : leaveHalfDays(a, b, a === l.start && b === l.end ? l.period : "full");
+    };
+    const yearStart = `${year}-01-01`, yearEnd = `${year}-12-31`;
+    const yesterday = addDays(today, -1);
+    const approved = mine.filter((l) => l.status === "approved");
     return {
       memberId: m.id,
       allowance: allow.find((a) => a.memberId === m.id)?.halfDays ?? null,
-      taken: sum((l) => l.status === "approved" && l.start < today),
-      planned: sum((l) => l.status === "approved" && l.start >= today),
-      pending: sum((l) => l.status === "pending"),
+      taken: approved.reduce((s, l) => s + part(l, yearStart, yesterday < yearEnd ? yesterday : yearEnd), 0),
+      planned: approved.reduce((s, l) => s + part(l, today > yearStart ? today : yearStart, yearEnd), 0),
+      pending: mine.filter((l) => l.status === "pending").reduce((s, l) => s + part(l, yearStart, yearEnd), 0),
     };
   });
 }

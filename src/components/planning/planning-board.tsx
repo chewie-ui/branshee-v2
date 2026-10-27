@@ -11,7 +11,7 @@ import { Field, Input } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 import { cn } from "@/lib/cn";
 import { DAY_LABELS, DAY_SHORT, addDays, dayLabel, dayNum, fmtHours, overnight, shiftMinutes } from "@/lib/planning";
-import { clearWeek, copyPreviousWeek, deleteShift, planningFeedToken, saveShift } from "@/server/actions/planning";
+import { clearWeek, copyPreviousWeek, deleteShift, planningFeedToken, regenerateFeedToken, saveShift } from "@/server/actions/planning";
 import type { PlanningAbsence, PlanningMember, ShiftView } from "@/server/planning";
 
 type R = { ok: true; message?: string; token?: string } | { ok: false; error: string };
@@ -141,10 +141,11 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
       {feed ? (
         <Card className="p-4">
           <p className="font-medium">Votre planning dans Google Agenda, Apple ou Outlook</p>
-          <p className="mt-1 text-sm text-muted">Copiez ce lien, puis dans Google Agenda : « Autres agendas » › « + » › « À partir de l&apos;URL ». Vos horaires s&apos;y mettent à jour tout seuls{members.length > 1 && canManage ? " (ceux de toute l'équipe, avec le nom de chacun)" : ""}.</p>
+          <p className="mt-1 text-sm text-muted">Copiez ce lien, puis dans Google Agenda : « Autres agendas » › « + » › « À partir de l&apos;URL ». Vos horaires s&apos;y mettent à jour tout seuls{members.length > 1 && canManage ? " (ceux de toute l'équipe, avec le nom de chacun)" : ""}. Ce lien est personnel : ne le partagez pas. « Changer le lien » coupe l&apos;ancien.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Input readOnly value={feed} onFocus={(e) => e.currentTarget.select()} aria-label="Lien de l'agenda" />
             <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(feed).then(() => setMsg({ ok: true, text: "Lien copié." }))}>Copier</Button>
+            <Button variant="ghost" onClick={() => run(regenerateFeedToken, (r) => { if (r.ok && r.token) setFeed(`${origin}/ical/horaires/${r.token}`); })}>Changer le lien</Button>
           </div>
         </Card>
       ) : null}

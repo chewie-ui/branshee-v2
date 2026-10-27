@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { DAY_SHORT, fmtHours, isDay, isoWeek, mondayOf, shiftMinutes, weekDays } from "@/lib/planning";
+import { DAY_SHORT, fmtHours, isDay, isoWeek, mondayOf, shiftMinutes, todayIn, weekDays } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { weekPlanning } from "@/server/planning";
 
@@ -9,7 +9,7 @@ const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 export async function GET(req: Request) {
   const ctx = await requireContext();
   const q = new URL(req.url).searchParams.get("semaine");
-  const monday = mondayOf(isDay(q) ? q : new Date().toISOString().slice(0, 10));
+  const monday = mondayOf(isDay(q) ? q : todayIn(ctx.business.timezone));
   const days = weekDays(monday);
   const { members, shifts } = await weekPlanning(ctx, monday);
 

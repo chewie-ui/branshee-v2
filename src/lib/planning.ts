@@ -7,7 +7,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const toDate = (s: string) => new Date(`${s}T12:00:00Z`);
 const toStr = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 
-export const isDay = (s: unknown): s is string => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toDate(s).getTime());
+/** Date AAAA-MM-JJ qui existe vraiment (le 31 février est refusé). */
+export const isDay = (s: unknown): s is string => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toDate(s).getTime()) && toStr(toDate(s)) === s;
 export const isTime = (s: unknown): s is string => typeof s === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
 export function addDays(day: string, n: number) {
@@ -60,3 +61,6 @@ export function weekRangeLabel(monday: string) {
 
 export const dayLabel = (day: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(toDate(day));
 export const dayNum = (day: string) => toDate(day).getUTCDate();
+
+/** Date du jour (AAAA-MM-JJ) dans le fuseau de l'établissement. */
+export const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz || "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

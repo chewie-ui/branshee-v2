@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PrintToolbar } from "@/components/invoicing/print-toolbar";
-import { DAY_SHORT, dayNum, fmtHours, isDay, isoWeek, mondayOf, shiftMinutes, weekDays, weekRangeLabel } from "@/lib/planning";
+import { DAY_SHORT, dayNum, fmtHours, isDay, isoWeek, mondayOf, shiftMinutes, todayIn, weekDays, weekRangeLabel } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { weekPlanning } from "@/server/planning";
 
@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 export default async function PrintPlanning({ searchParams }: { searchParams: Promise<{ semaine?: string }> }) {
   const ctx = await requireContext();
   const q = (await searchParams).semaine;
-  const monday = mondayOf(isDay(q) ? q : new Date().toISOString().slice(0, 10));
+  const monday = mondayOf(isDay(q) ? q : todayIn(ctx.business.timezone));
   const days = weekDays(monday);
   const { members, shifts } = await weekPlanning(ctx, monday);
   return (

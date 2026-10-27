@@ -7,6 +7,7 @@ import { emails } from "@/server/email/templates";
 import { indexNow } from "@/server/indexnow";
 import { effectivePlan } from "@/server/plan";
 import { trialValues } from "@/server/business";
+import { syncSkydevUsers } from "@/server/billing";
 
 /**
  * Tâches planifiées (appelées par la crontab du VPS via /api/cron/*).
@@ -213,4 +214,20 @@ export async function startTrialsForExisting(now = new Date()) {
     if (await sendEmail({ to: r.ownerEmail, ...mail, template: "trial_started", businessId: r.id })) emailed++;
   }
   return { started, emailed };
+}
+
+/**
+ * Skydev : rattrape chaque jour les abonnements par utilisateur dont la quantité Stripe ne suit plus l'équipe
+ * (Stripe indisponible au moment d'un ajout, membre désactivé hors de l'app…).
+ */
+export async function reconcileSkydevUsers() {
+  const rows = await db.select({ id: businessPlans.businessId }).from(businessPlans).where(and(isNotNull(businessPlans.billedUsers), isNotNull(businessPlans.stripeSubscriptionId)));
+  let fixed = 0;
+  for (const r of rows) {
+    const before = await db.select({ n: businessPlans.billedUsers }).from(businessPlans).where(eq(businessPlans.businessId, r.id));
+    await syncSkydevUsers(r.id).catch((e) => console.error("[cron] utilisateurs Skydev", r.id, e));
+    const after = await db.select({ n: businessPlans.billedUsers }).from(businessPlans).where(eq(businessPlans.businessId, r.id));
+    if (before[0]?.n !== after[0]?.n) fixed++;
+  }
+  return fixed;
 }

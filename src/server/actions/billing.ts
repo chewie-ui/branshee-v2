@@ -6,8 +6,8 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
-import { currentBrand } from "@/server/brand";
+import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { businessBrand } from "@/server/brand";
 import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, skydevPrice, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
@@ -43,7 +43,8 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = planSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Forfait invalide." };
-  const brand = (await currentBrand()).id;
+  // Prix selon la marque de l'établissement (fixée à sa création), jamais selon l'adresse visitée.
+  const brand = businessBrand(ctx.business);
   if (!billingEnabled(brand)) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   // Skydev : un seul abonnement (toutes les apps), facturé au nombre d'utilisateurs de l'équipe.
   const plan = brand === "skydev" ? SKYDEV_PLAN : parsed.data.plan;
@@ -62,6 +63,9 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     // Ligne du forfait (Branshee, Skydev ou tarif garanti) ; les options et apps en option restent telles quelles.
     const baseItem = live.items.data.find((i) => planFromStripePrice(i.price));
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
+    // Jamais de passage d'une famille de prix à l'autre (Branshee ↔ Skydev) sur un abonnement en cours.
+    const family = planFromPrice(baseItem.price.id)?.brand ?? (baseItem.price.metadata?.branshee_plan ? "branshee" : null);
+    if (family && family !== brand) return { ok: false, error: "Cet abonnement ne peut pas être changé ici : contactez le support." };
     const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price, quantity: users }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan, brand } });
     await syncSubscription(updated);
     await log(ctx, "billing.change", `Forfait changé : ${planName} (${interval === "year" ? "annuel" : "mensuel"})`);
@@ -156,7 +160,7 @@ export async function openBillingPortal(): Promise<Result> {
   const ctx = await requireContext("billing.manage");
   if (!stripe()) return { ok: false, error: "Facturation non configurée." };
   const customer = await getOrCreateCustomer({ id: ctx.user.id, email: ctx.user.email, fullName: ctx.user.name });
-  const portal = await stripe()!.billingPortal.sessions.create({ customer, return_url: `${brandOrigin((await currentBrand()).id)}/app/reglages/abonnement`, locale: "fr" });
+  const portal = await stripe()!.billingPortal.sessions.create({ customer, return_url: `${brandOrigin(businessBrand(ctx.business))}/app/reglages/abonnement`, locale: "fr" });
   return { ok: true, url: portal.url };
 }
 
@@ -165,7 +169,7 @@ export async function setCustomUrlAddon(on: boolean): Promise<Result> {
   const ctx = await requireContext("billing.manage");
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const live = await liveSubscription(ctx);
-  const price = addonPriceFor("customUrl", (await currentBrand()).id);
+  const price = addonPriceFor("customUrl", businessBrand(ctx.business));
   if (!live || !price) return { ok: false, error: "Option disponible avec un abonnement actif." };
   const item = live.items.data.find((i) => isAddonPrice("customUrl", i.price.id));
   const s = stripe()!;
@@ -183,7 +187,7 @@ export async function setExtraSeats(n: number): Promise<Result> {
   const seats = z.number().int().min(0).max(50).safeParse(n);
   if (!seats.success) return { ok: false, error: "Nombre de sièges invalide." };
   const live = await liveSubscription(ctx);
-  const price = addonPriceFor("seat", (await currentBrand()).id);
+  const price = addonPriceFor("seat", businessBrand(ctx.business));
   if (!live || !price) return { ok: false, error: "Disponible avec un abonnement actif." };
   const item = live.items.data.find((i) => isAddonPrice("seat", i.price.id));
   const s = stripe()!;
@@ -194,7 +198,7 @@ export async function setExtraSeats(n: number): Promise<Result> {
   await log(ctx, "billing.seats", `Sièges collaborateurs : ${seats.data}`);
   revalidatePath("/app", "layout");
   const pl = seats.data > 1 ? "s" : "";
-  if ((await currentBrand()).id === "skydev") return { ok: true, message: seats.data ? `${seats.data} utilisateur${pl} en plus sur votre abonnement.` : "Plus d'utilisateur en option sur votre abonnement." };
+  if (businessBrand(ctx.business) === "skydev") return { ok: true, message: seats.data ? `${seats.data} utilisateur${pl} en plus sur votre abonnement.` : "Plus d'utilisateur en option sur votre abonnement." };
   return { ok: true, message: `${seats.data} siège${pl} supplémentaire${pl}.` };
 }
 

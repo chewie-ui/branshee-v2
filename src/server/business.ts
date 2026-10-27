@@ -22,10 +22,10 @@ async function freeSlug(name: string) {
  * le propriétaire comme membre réservable, et des horaires du lundi au vendredi 9h–18h.
  * Avec `trial`, l'établissement démarre avec 30 jours du forfait Pro (rappels SMS compris).
  */
-export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }, opts: { trial?: boolean; trialPlan?: "pro" | "pro_plus" } = {}) {
+export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }, opts: { trial?: boolean; trialPlan?: "pro" | "pro_plus"; brand?: "skydev" | "branshee" } = {}) {
   const slug = await freeSlug(input.name);
   return db.transaction(async (tx) => {
-    const [biz] = await tx.insert(businesses).values({ ownerId: owner.id, name: input.name, slug, businessType: input.businessType, city: input.city }).returning();
+    const [biz] = await tx.insert(businesses).values({ ownerId: owner.id, name: input.name, slug, businessType: input.businessType, city: input.city, brand: opts.brand ?? null }).returning();
     const bid = biz!.id;
     await tx.insert(bookingSettings).values({ businessId: bid });
     await tx.insert(paymentSettings).values({ businessId: bid });

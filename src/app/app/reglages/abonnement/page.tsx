@@ -13,7 +13,7 @@ import { effectivePlan } from "@/server/plan";
 import { ensureReferralCode } from "@/server/referral";
 import { SkydevBillingPanel } from "@/components/settings/skydev-billing-panel";
 import { businessModules } from "@/db/schema";
-import { currentBrand } from "@/server/brand";
+import { businessBrand } from "@/server/brand";
 
 export const metadata: Metadata = { title: "Abonnement · Réglages" };
 
@@ -35,7 +35,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     activeCampaign(),
     db.select().from(promoCodes).where(and(eq(promoCodes.isDefaultOffer, true), eq(promoCodes.isActive, true), sql`(${promoCodes.expiresAt} is null or ${promoCodes.expiresAt} > now())`, sql`(${promoCodes.maxUses} is null or ${promoCodes.usedCount} < ${promoCodes.maxUses})`)).limit(1),
   ]);
-  const brand = (await currentBrand()).id;
+  // Offre affichée = celle de la marque de l'établissement (c'est aussi elle qui fixe les prix).
+  const brand = businessBrand(ctx.business);
   if (brand === "skydev") {
     const [mods, teamUsers] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id)]);
     const notice = NOTICES[(await searchParams).paiement ?? ""];

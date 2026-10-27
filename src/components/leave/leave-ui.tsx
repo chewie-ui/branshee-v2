@@ -151,7 +151,7 @@ export function LeaveList({ items, me, canApprove, today, showName }: { items: L
       <ul className="divide-y divide-border">
         {items.map((l) => {
           const st = LEAVE_STATUS[l.status];
-          const cancellable = (l.status === "pending" || l.status === "approved") && (canApprove || (l.memberId === me && l.end >= today));
+          const cancellable = (l.status === "pending" || l.status === "approved") && (canApprove || (l.memberId === me && (l.status === "pending" || l.start > today)));
           return (
             <li key={l.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
               <div className="min-w-0 flex-1 basis-56">

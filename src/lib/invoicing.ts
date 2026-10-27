@@ -26,7 +26,7 @@ export const pad = (n: number, l = 3) => String(n).padStart(l, "0");
 export const fdate = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—");
 
 export function todayIso(tz = "Europe/Brussels") {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "numeric" }).format(new Date());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 export function addDays(iso: string, n: number) {
   const d = new Date(iso + "T12:00:00Z");

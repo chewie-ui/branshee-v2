@@ -60,21 +60,26 @@ export async function requestLeave(input: z.input<typeof requestSchema>): Promis
   if (d.end < d.start) return { ok: false, error: "La date de fin est avant la date de début." };
   if (datesBetween(d.start, d.end).length > 366) return { ok: false, error: "Une absence ne peut pas dépasser un an." };
   const period: LeavePeriod = d.start === d.end ? d.period : "full";
-  const [m] = await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id)));
+  const [m] = await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id), eq(members.isActive, true), inArray(members.status, ["active", "invited"])));
   if (!m) return { ok: false, error: "Membre introuvable." };
-  const [overlap] = await db
-    .select({ id: leaveRequests.id })
-    .from(leaveRequests)
-    .where(and(eq(leaveRequests.memberId, memberId), inArray(leaveRequests.status, ["pending", "approved"]), sql`${leaveRequests.startDate} <= ${d.end} and ${leaveRequests.endDate} >= ${d.start}`));
-  if (overlap) return { ok: false, error: "Une absence existe déjà sur ces dates." };
-
   // Celui qui valide les congés n'a pas besoin de se demander l'autorisation (ni de la demander pour un autre).
   const status = approve ? "approved" : "pending";
-  const [row] = await db
-    .insert(leaveRequests)
-    .values({ businessId: ctx.business.id, memberId, kind: d.kind, startDate: d.start, endDate: d.end, period, status, note: d.note || null, createdById: ctx.user.id, ...(approve ? { decidedById: ctx.user.id, decidedAt: new Date() } : {}) })
-    .returning();
-  if (status === "approved") await closeAgenda(row!);
+  // Vérification du chevauchement et création dans la même transaction, verrouillée par membre (double clic, deux onglets).
+  const row = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`leave:${memberId}`}))`);
+    const [overlap] = await tx
+      .select({ id: leaveRequests.id })
+      .from(leaveRequests)
+      .where(and(eq(leaveRequests.memberId, memberId), inArray(leaveRequests.status, ["pending", "approved"]), sql`${leaveRequests.startDate} <= ${d.end} and ${leaveRequests.endDate} >= ${d.start}`));
+    if (overlap) return null;
+    const [created] = await tx
+      .insert(leaveRequests)
+      .values({ businessId: ctx.business.id, memberId, kind: d.kind, startDate: d.start, endDate: d.end, period, status, note: d.note || null, createdById: ctx.user.id, ...(approve ? { decidedById: ctx.user.id, decidedAt: new Date() } : {}) })
+      .returning();
+    return created!;
+  });
+  if (!row) return { ok: false, error: "Une absence existe déjà sur ces dates." };
+  if (status === "approved") await closeAgenda(row);
   const label = LEAVE_KINDS[d.kind as keyof typeof LEAVE_KINDS].label;
   const when = fmtRange(d.start, d.end, period);
   await log(ctx, "leave.request", `${label} ${when} : ${m.name}${status === "approved" ? " (validé)" : " (demande)"}`);
@@ -121,7 +126,11 @@ export async function cancelLeave(id: string): Promise<Result> {
   if (!parsed.success) return { ok: false, error: "Absence introuvable." };
   const [row] = await db.select().from(leaveRequests).where(and(eq(leaveRequests.id, parsed.data), eq(leaveRequests.businessId, ctx.business.id)));
   if (!row || row.status === "cancelled" || row.status === "refused") return { ok: false, error: "Absence introuvable." };
-  if (row.memberId !== ctx.member.id && !leaveRights(ctx).approve) return { ok: false, error: "Vous ne pouvez annuler que vos propres absences." };
+  const approver = leaveRights(ctx).approve;
+  if (row.memberId !== ctx.member.id && !approver) return { ok: false, error: "Vous ne pouvez annuler que vos propres absences." };
+  // Un membre annule une demande en attente, ou une absence validée pas encore commencée (jamais des jours déjà pris).
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: ctx.business.timezone || "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  if (!approver && row.status === "approved" && row.startDate <= today) return { ok: false, error: "Cette absence a déjà commencé : demandez à votre responsable de la modifier." };
   await db.update(leaveRequests).set({ status: "cancelled", updatedAt: new Date() }).where(eq(leaveRequests.id, row.id));
   await reopenAgenda(row.id);
   await log(ctx, "leave.cancel", `Absence annulée ${fmtRange(row.startDate, row.endDate, row.period as LeavePeriod)}`);
@@ -132,6 +141,7 @@ export async function cancelLeave(id: string): Promise<Result> {
 /** Jours de congé par an d'un membre (vide = pas de solde suivi). */
 export async function setAllowance(memberId: string, year: number, days: number | null): Promise<Result> {
   const ctx = await requireContext();
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!leaveRights(ctx).approve) return { ok: false, error: "Seul le responsable peut modifier les soldes." };
   const v = z.object({ memberId: z.uuid(), year: z.number().int().min(2000).max(2100), days: z.number().min(0).max(366).multipleOf(0.5).nullable() }).safeParse({ memberId, year, days });
   if (!v.success) return { ok: false, error: "Nombre de jours invalide (demi-journées acceptées)." };
@@ -146,6 +156,7 @@ export async function setAllowance(memberId: string, year: number, days: number 
 /** Appliquer le même nombre de jours à toute l'équipe qui n'a pas encore de solde cette année. */
 export async function setAllowanceForAll(year: number, days: number): Promise<Result> {
   const ctx = await requireContext();
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!leaveRights(ctx).approve) return { ok: false, error: "Seul le responsable peut modifier les soldes." };
   const v = z.object({ year: z.number().int().min(2000).max(2100), days: z.number().min(0).max(366).multipleOf(0.5) }).safeParse({ year, days });
   if (!v.success) return { ok: false, error: "Nombre de jours invalide." };

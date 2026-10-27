@@ -23,3 +23,11 @@ test("heures d'une plage", () => {
   assert.equal(fmtHours(450), "7 h 30");
   assert.equal(fmtHours(2280), "38 h");
 });
+
+test("dates impossibles refusées", async () => {
+  const { isDay } = await import("./planning");
+  assert.equal(isDay("2026-02-31"), false);
+  assert.equal(isDay("2026-13-01"), false);
+  assert.equal(isDay("2026-11-05"), true);
+  assert.equal(isDay("2026-11-5"), false);
+});

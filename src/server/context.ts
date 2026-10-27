@@ -11,7 +11,7 @@ import { apiAuth } from "@/server/api/als";
 
 export type AppContext = {
   user: { id: string; name: string; email: string; avatarUrl: string | null };
-  business: { id: string; name: string; slug: string; businessType: string | null; timezone: string };
+  business: { id: string; name: string; slug: string; businessType: string | null; timezone: string; brand: string | null };
   member: { id: string; isOwner: boolean };
   /** Tous les établissements dont l'utilisateur est membre actif (pour le sélecteur). */
   businesses: { id: string; name: string; businessType: string | null }[];
@@ -53,7 +53,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
     kind: "ok",
     ctx: {
       user,
-      business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone },
+      business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone, brand: row.business.brand },
       member: { id: row.member.id, isOwner },
       businesses: rows.map((r) => ({ id: r.business.id, name: r.business.name, businessType: r.business.businessType })),
       permissions,

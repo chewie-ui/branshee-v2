@@ -66,6 +66,12 @@ export const businesses = pgTable(
      */
     onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string; appsSetupAt?: string; teamSize?: string; needs?: string[]; hiddenApps?: string[] }>().notNull().default({}),
 
+    /**
+     * Marque de l'établissement (« skydev » ou « branshee »), fixée à la création. C'est elle, et jamais
+     * l'adresse visitée, qui décide des prix et des droits. Null = marque par défaut du serveur (FORCE_BRAND).
+     */
+    brand: text("brand"),
+
     legacyId: legacyId(),
     ...timestamps,
   },

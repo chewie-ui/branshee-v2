@@ -162,6 +162,20 @@
       "when": 1793141166836,
       "tag": "0022_conges",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793142150158,
+      "tag": "0023_depenses",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793142371355,
+      "tag": "0024_business_brand",
+      "breakpoints": true
     }
   ]
 }

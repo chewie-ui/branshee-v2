@@ -107,3 +107,29 @@ export const invoiceProducts = pgTable(
   },
   (t) => [index("invoice_products_business_idx").on(t.businessId)],
 );
+
+/** App Dépenses (Skydev) : achats et frais professionnels, avec leur justificatif chiffré. */
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    supplier: text("supplier"),
+    category: text("category").notNull(),
+    description: text("description"),
+    /** Montant payé, TVA comprise, en centimes. */
+    amountCents: integer("amount_cents").notNull(),
+    /** Dont TVA, en centimes (0 en franchise ou sans TVA). */
+    vatCents: integer("vat_cents").notNull().default(0),
+    /** Justificatif (photo ou PDF) : référence du fichier chiffré, nom et type d'origine. */
+    proofRef: text("proof_ref"),
+    proofName: text("proof_name"),
+    proofType: text("proof_type"),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("expenses_business_date_idx").on(t.businessId, t.date)],
+);

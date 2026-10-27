@@ -44,3 +44,8 @@ test("QR de paiement EPC", () => {
   assert.ok(p?.includes("EUR121.00"));
   assert.equal(epcPayload({ iban: "faux" }, 10, ""), null);
 });
+
+test("date du jour toujours sur 2 chiffres", async () => {
+  const { todayIso } = await import("./invoicing");
+  assert.match(todayIso(), /^\d{4}-\d{2}-\d{2}$/);
+});
