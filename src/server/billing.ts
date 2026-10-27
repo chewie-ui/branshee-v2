@@ -130,7 +130,7 @@ export async function getOrCreateCustomer(user: { id: string; email: string; ful
     }
   }
   // Pied de facture légal (identité, adresse, BCE, TVA) sur toutes les factures de ce client.
-  const c = await s.customers.create({ email: user.email, name: user.fullName, metadata: { userId: user.id }, invoice_settings: { footer: invoiceFooter } });
+  const c = await s.customers.create({ email: user.email, name: user.fullName, preferred_locales: ["fr"], metadata: { userId: user.id }, invoice_settings: { footer: invoiceFooter } });
   await db.insert(subscriptions).values({ userId: user.id, stripeCustomerId: c.id }).onConflictDoUpdate({ target: subscriptions.userId, set: { stripeCustomerId: c.id } });
   return c.id;
 }
