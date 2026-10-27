@@ -14,7 +14,7 @@ export default async function Page() {
     <AppPlaceholder
       app={{ ...app, status: "soon" }}
       title="Les congés arrivent bientôt"
-      text="Demandes de congés, validation en un clic et soldes de chaque employé, liés aux apps Horaires et Paie. En attendant, gérez vos collaborateurs et leurs accès dans Équipe."
+      text="Demandes de congés, validation en un clic et soldes de chaque employé, liés aux apps Planning et Paie. En attendant, gérez vos collaborateurs et leurs accès dans Équipe."
       action={ctx.can("team.view") ? <ButtonLink href="/app/equipe" variant="secondary">Ouvrir Équipe</ButtonLink> : undefined}
     />
   );

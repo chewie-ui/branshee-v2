@@ -63,7 +63,18 @@ const soon = (id: AppId, category: AppCategory, name: string, icon: AppIcon, tag
 
 /** Apps prévues : visibles dans le catalogue avec le badge « Bientôt ». */
 const UPCOMING: SkyApp[] = [
-  soon("horaires", "equipe", "Horaires", "planning", "Le planning de votre équipe, partout.", ["Planning semaine et mois, par personne", "Export Excel et impression", "Synchro Google Agenda, Outlook et téléphone", "Pointage des heures et heures supplémentaires"]),
+  {
+    id: "horaires",
+    category: "equipe",
+    name: "Planning",
+    tagline: "Les horaires de votre équipe, semaine par semaine.",
+    icon: "planning",
+    href: "/app/planning",
+    status: "active",
+    billing: "included",
+    features: ["Planning de la semaine, par personne ou jour par jour", "Plusieurs personnes et plusieurs jours d'un coup", "Export Excel et impression (PDF)", "Dans Google Agenda, Apple ou Outlook"],
+    nav: [{ href: "/app/planning", label: "Semaine", icon: "planning" }],
+  },
   soon("paie", "equipe", "Paie", "wallet", "Salaires et fiches de paie, sans tableur.", ["Salaires, primes et heures prestées", "Fiches de paie en PDF pour chaque employé", "Export vers votre secrétariat social", "Coût total par employé et par mois"]),
   soon("ventes", "clients", "Ventes", "target", "Suivez vos prospects jusqu'à la signature.", ["Pistes et opportunités en colonnes", "Relances et rappels automatiques", "Devis envoyés depuis Factures", "Prévisions de chiffre d'affaires"]),
   soon("projets", "operations", "Projets", "kanban", "Projets, chantiers et tâches de l'équipe.", ["Tâches en colonnes ou en liste", "Échéances et responsables", "Temps passé par projet", "Facturation du temps en un clic"]),
@@ -152,7 +163,7 @@ export const APPS: SkyApp[] = [
     href: "/app/equipe",
     status: "active",
     billing: "included",
-    features: ["Collaborateurs, invitations et accès", "Fiches employés et contrats (bientôt)", "Demandes et soldes de congés (bientôt)", "Lié aux apps Horaires et Paie"],
+    features: ["Collaborateurs, invitations et accès", "Fiches employés et contrats (bientôt)", "Demandes et soldes de congés (bientôt)", "Lié aux apps Planning et Paie"],
     nav: [
       { href: "/app/equipe", label: "Équipe", icon: "team", permission: "team.view" },
       { href: "/app/employes", label: "Congés", icon: "plane", soon: true },
