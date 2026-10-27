@@ -112,7 +112,9 @@ export const scheduleExceptions = pgTable(
     isClosed: boolean("is_closed").notNull().default(true),
     hours: jsonb("hours").$type<TimeRange[]>().notNull().default([]),
     reason: text("reason"),
+    /** Congé validé dans l'app Congés (Skydev) qui a créé ce jour fermé ; null = saisi à la main. */
+    leaveRequestId: uuid("leave_request_id"),
     ...timestamps,
   },
-  (t) => [index("schedule_exceptions_lookup_idx").on(t.businessId, t.date)],
+  (t) => [index("schedule_exceptions_lookup_idx").on(t.businessId, t.date), index("schedule_exceptions_leave_idx").on(t.leaveRequestId)],
 );

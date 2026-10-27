@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 import { cn } from "@/lib/cn";
 import { DAY_LABELS, DAY_SHORT, addDays, dayLabel, dayNum, fmtHours, overnight, shiftMinutes } from "@/lib/planning";
 import { clearWeek, copyPreviousWeek, deleteShift, planningFeedToken, saveShift } from "@/server/actions/planning";
-import type { PlanningMember, ShiftView } from "@/server/planning";
+import type { PlanningAbsence, PlanningMember, ShiftView } from "@/server/planning";
 
 type R = { ok: true; message?: string; token?: string } | { ok: false; error: string };
 type Draft = { id?: string; memberIds: string[]; days: string[]; start: string; end: string; breakMinutes: string; label: string; note: string };
@@ -28,7 +28,7 @@ const PRESETS = [
  * Planning de la semaine : vue « Équipe » (une ligne par personne) ou « Jour par jour ».
  * Le responsable ajoute, modifie et recopie ; chacun voit ses horaires et peut les mettre dans son agenda.
  */
-export function PlanningBoard({ monday, today, members, shifts, canManage, origin }: { monday: string; today: string; members: PlanningMember[]; shifts: ShiftView[]; canManage: boolean; origin: string }) {
+export function PlanningBoard({ monday, today, members, shifts, absences = [], canManage, origin }: { monday: string; today: string; members: PlanningMember[]; shifts: ShiftView[]; absences?: PlanningAbsence[]; canManage: boolean; origin: string }) {
   const router = useRouter();
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday]);
   const [view, setView] = useState<"team" | "days">("team");
@@ -186,9 +186,15 @@ export function PlanningBoard({ monday, today, members, shifts, canManage, origi
                     </th>
                     {days.map((d) => {
                       const list = mine.filter((s) => s.day === d);
+                      const off = absences.find((a) => a.memberId === m.id && a.day === d);
                       return (
                         <td key={d} className="px-1.5 py-2 align-top">
                           <div className="flex min-h-14 flex-col gap-1">
+                            {off ? (
+                              <span className={cn("rounded-md px-2 py-1 text-xs font-medium", off.pending ? "border border-dashed border-warning bg-warning-soft text-warning" : "bg-surface-muted text-muted")}>
+                                {off.label}{off.period === "am" ? " (matin)" : off.period === "pm" ? " (après-midi)" : ""}{off.pending ? " · en attente" : ""}
+                              </span>
+                            ) : null}
                             {list.map((s) => chip(s))}
                             {canManage ? (
                               <button type="button" onClick={() => openNew(m.id, d)} className={cn("flex items-center justify-center rounded-md border border-dashed border-border text-muted transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent", list.length ? "h-6" : "min-h-12 flex-1")} aria-label={`Ajouter un horaire pour ${m.name}, ${dayLabel(d)}`}>
@@ -217,6 +223,9 @@ export function PlanningBoard({ monday, today, members, shifts, canManage, origi
                   <span className="text-xs text-muted">{list.length ? `${new Set(list.map((s) => s.memberId)).size} pers. · ${fmtHours(minutesOf(list))}` : "Personne"}</span>
                 </div>
                 <div className="mt-3 space-y-1.5">
+                  {absences.filter((a) => a.day === d).map((a) => (
+                    <p key={a.memberId} className="rounded-md bg-surface-muted px-2 py-1 text-xs text-muted">{name.get(a.memberId)} · {a.label}{a.pending ? " (en attente)" : ""}</p>
+                  ))}
                   {list.map((s) => chip(s, true))}
                   {canManage ? (
                     <button type="button" onClick={() => openNew(undefined, d)} className="flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-border text-xs text-muted hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">

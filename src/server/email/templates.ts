@@ -497,6 +497,36 @@ export const emails = {
     };
   },
 
+  /** Congés : nouvelle demande, pour le responsable. */
+  leaveRequested(p: { businessName: string; name: string; kind: string; when: string; days: string; note: string | null; url: string }) {
+    return {
+      subject: `Demande de ${p.kind.toLowerCase()} : ${p.name}`,
+      ...render({
+        preheader: `${p.name} demande ${p.when}`,
+        title: "Nouvelle demande d'absence",
+        intro: `${p.name} demande un ${p.kind.toLowerCase()} ${p.when} (${p.days}).`,
+        details: p.note ? [{ label: "Message", value: p.note }] : undefined,
+        cta: { label: "Valider ou refuser", url: p.url },
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
+  /** Congés : réponse du responsable, pour l'employé. */
+  leaveDecided(p: { businessName: string; name: string; kind: string; when: string; approved: boolean; note: string | null; url: string }) {
+    return {
+      subject: `${p.kind} ${p.approved ? "validé" : "refusé"} ${p.when}`,
+      ...render({
+        preheader: p.approved ? "Votre demande est validée" : "Votre demande est refusée",
+        title: p.approved ? "Demande validée" : "Demande refusée",
+        intro: `Bonjour ${p.name}, votre demande de ${p.kind.toLowerCase()} ${p.when} a été ${p.approved ? "validée" : "refusée"}.`,
+        details: p.note ? [{ label: "Message du responsable", value: p.note }] : undefined,
+        cta: { label: "Voir mes congés", url: p.url },
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

@@ -12,7 +12,7 @@ import type { NavItem } from "@/lib/navigation";
 export type AppId =
   | "rdv" | "clients" | "site" | "factures" | "employes" | "boutique" | "tel-ia" | "sur-mesure" | "reglages"
   // Apps à venir (page « bientôt » commune : /app/bientot/<id>)
-  | "horaires" | "paie" | "ventes" | "projets" | "interventions" | "stock" | "caisse" | "depenses" | "compta"
+  | "horaires" | "conges" | "commandes" | "paie" | "ventes" | "projets" | "interventions" | "stock" | "caisse" | "depenses" | "compta"
   | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie";
 
 export type AppIcon = NavItem["icon"];
@@ -75,6 +75,23 @@ const UPCOMING: SkyApp[] = [
     features: ["Planning de la semaine, par personne ou jour par jour", "Plusieurs personnes et plusieurs jours d'un coup", "Export Excel et impression (PDF)", "Dans Google Agenda, Apple ou Outlook"],
     nav: [{ href: "/app/planning", label: "Semaine", icon: "planning" }],
   },
+  {
+    id: "conges",
+    category: "equipe",
+    name: "Congés",
+    tagline: "Demandes, validation et soldes de congés.",
+    icon: "plane",
+    href: "/app/conges",
+    status: "active",
+    billing: "included",
+    features: ["Demande en ligne, validation en un clic", "Soldes par personne, jours ouvrables et fériés belges", "Calendrier des absences de l'équipe", "Jours fermés dans l'agenda RDV et visibles dans le Planning"],
+    nav: [
+      { href: "/app/conges", label: "Congés", icon: "plane" },
+      { href: "/app/conges/calendrier", label: "Calendrier", icon: "calendar" },
+      { href: "/app/conges/soldes", label: "Soldes", icon: "chart", permission: "availability.manageOthersTimeOff" },
+    ],
+  },
+  soon("commandes", "clients", "Commande à table", "qr", "Vos clients commandent en scannant un QR code.", ["Un QR code par table, à imprimer", "Menu en ligne avec photos et options", "Commandes reçues en cuisine en direct", "Paiement sur le téléphone ou au comptoir"]),
   soon("paie", "equipe", "Paie", "wallet", "Salaires et fiches de paie, sans tableur.", ["Salaires, primes et heures prestées", "Fiches de paie en PDF pour chaque employé", "Export vers votre secrétariat social", "Coût total par employé et par mois"]),
   soon("ventes", "clients", "Ventes", "target", "Suivez vos prospects jusqu'à la signature.", ["Pistes et opportunités en colonnes", "Relances et rappels automatiques", "Devis envoyés depuis Factures", "Prévisions de chiffre d'affaires"]),
   soon("projets", "operations", "Projets", "kanban", "Projets, chantiers et tâches de l'équipe.", ["Tâches en colonnes ou en liste", "Échéances et responsables", "Temps passé par projet", "Facturation du temps en un clic"]),
@@ -158,16 +175,13 @@ export const APPS: SkyApp[] = [
     id: "employes",
     category: "equipe",
     name: "Employés",
-    tagline: "Votre équipe, ses accès, ses congés.",
+    tagline: "Votre équipe, ses accès et ses grades.",
     icon: "users",
     href: "/app/equipe",
     status: "active",
     billing: "included",
-    features: ["Collaborateurs, invitations et accès", "Fiches employés et contrats (bientôt)", "Demandes et soldes de congés (bientôt)", "Lié aux apps Planning et Paie"],
-    nav: [
-      { href: "/app/equipe", label: "Équipe", icon: "team", permission: "team.view" },
-      { href: "/app/employes", label: "Congés", icon: "plane", soon: true },
-    ],
+    features: ["Collaborateurs, invitations et accès", "Grades et permissions", "Fiches employés et contrats (bientôt)", "Lié aux apps Planning, Congés et Paie"],
+    nav: [{ href: "/app/equipe", label: "Équipe", icon: "team", permission: "team.view" }],
   },
   {
     id: "boutique",
@@ -269,8 +283,8 @@ export const NEEDS: { id: NeedId; label: string; hint: string; apps: AppId[] }[]
   { id: "rdv", label: "Prendre des rendez-vous", hint: "Réservation en ligne, agenda, rappels", apps: ["rdv"] },
   { id: "factures", label: "Faire des devis et des factures", hint: "Et suivre les paiements et les dépenses", apps: ["factures", "depenses", "compta"] },
   { id: "site", label: "Avoir un site internet", hint: "Prêt à l'emploi, ou sur mesure", apps: ["site"] },
-  { id: "vendre", label: "Vendre des produits", hint: "En ligne ou au comptoir, avec le stock", apps: ["boutique", "caisse", "stock"] },
-  { id: "equipe", label: "Gérer mon équipe", hint: "Accès, horaires, congés, paie", apps: ["employes", "horaires", "paie", "messagerie"] },
+  { id: "vendre", label: "Vendre des produits", hint: "En ligne, au comptoir ou à table, avec le stock", apps: ["boutique", "caisse", "commandes", "stock"] },
+  { id: "equipe", label: "Gérer mon équipe", hint: "Accès, horaires, congés, paie", apps: ["employes", "horaires", "conges", "paie", "messagerie"] },
   { id: "telephone", label: "Ne plus rater d'appels", hint: "Une IA répond quand vous êtes occupé", apps: ["tel-ia"] },
   { id: "projets", label: "Suivre des projets ou chantiers", hint: "Tâches, interventions, documents", apps: ["projets", "interventions", "documents", "signature"] },
   { id: "marketing", label: "Trouver plus de clients", hint: "Prospects, emails, avis Google, fidélité", apps: ["ventes", "marketing", "avis", "fidelite"] },

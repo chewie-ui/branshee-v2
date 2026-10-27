@@ -15,12 +15,12 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
   const q = (await searchParams).semaine;
   const monday = mondayOf(isDay(q) ? q : today);
-  const [{ members, shifts }, rights] = [await weekPlanning(ctx, monday), planningRights(ctx)];
+  const [{ members, shifts, absences }, rights] = [await weekPlanning(ctx, monday), planningRights(ctx)];
   const origin = (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
   return (
     <>
       <PageHeader title="Planning" description={`Semaine ${isoWeek(monday)} · ${weekRangeLabel(monday)}${rights.seeAll ? "" : " · vos horaires"}`} />
-      <PlanningBoard monday={monday} today={today} members={members} shifts={shifts} canManage={rights.manage} origin={origin} />
+      <PlanningBoard monday={monday} today={today} members={members} shifts={shifts} absences={absences} canManage={rights.manage} origin={origin} />
     </>
   );
 }
