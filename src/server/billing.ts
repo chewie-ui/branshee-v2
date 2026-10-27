@@ -54,6 +54,32 @@ export function planFromPrice(priceId: string | undefined | null): { plan: Exclu
   return null;
 }
 
+/** Ligne de forfait reconnue par son prix : prix de la config, ou prix « tarif garanti » (métadonnées Stripe). */
+export function planFromStripePrice(price: { id: string; metadata?: Record<string, string> | null } | null | undefined): { plan: Exclude<Plan, "free">; interval: Interval } | null {
+  if (!price) return null;
+  const known = planFromPrice(price.id);
+  if (known) return known;
+  const p = price.metadata?.branshee_plan;
+  return p === "pro" || p === "pro_plus" ? { plan: p, interval: price.metadata?.branshee_interval === "year" ? "year" : "month" } : null;
+}
+
+/**
+ * Prix Stripe du tarif garanti à vie (Pro mensuel, TVAC) : retrouvé par sa clé, sinon créé une fois
+ * sur le même produit que le Pro normal. Exemple : 19 € promis aux premières clientes.
+ */
+export async function lockedProPrice(cents: number): Promise<string | null> {
+  const s = stripe();
+  const base = priceFor("pro", "month");
+  if (!s || !base) return null;
+  const lookup = `branshee_ttc_pro_monthly_locked_${cents}`;
+  const found = (await s.prices.list({ lookup_keys: [lookup], limit: 1 })).data[0];
+  if (found) return found.id;
+  const ref = await s.prices.retrieve(base);
+  const product = typeof ref.product === "string" ? ref.product : ref.product.id;
+  const created = await s.prices.create({ currency: "eur", unit_amount: cents, recurring: { interval: "month" }, tax_behavior: "inclusive", lookup_key: lookup, product, nickname: `Pro — tarif garanti ${(cents / 100).toFixed(2).replace(".", ",")} €`, metadata: { branshee_plan: "pro", branshee_interval: "month", locked: "1" } });
+  return created.id;
+}
+
 export const billingEnabled = (brand: BrandId = "branshee") => !!stripe() && !!priceFor("pro", "month", brand);
 
 /** Adresse de retour après Stripe (paiement, portail) : celle de la marque où le client se trouve. */
@@ -104,7 +130,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   let periodEnd: number | null = null;
   for (const item of sub.items.data) {
     const id = item.price.id;
-    const found = planFromPrice(id);
+    const found = planFromStripePrice(item.price);
     if (found) base = found;
     if (isAddonPrice("seat", id)) seats = item.quantity ?? 0;
     if (isAddonPrice("customUrl", id)) customUrl = true;

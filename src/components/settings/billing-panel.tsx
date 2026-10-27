@@ -32,6 +32,7 @@ export function BillingPanel({
   campaign,
   canManage,
   offer = null,
+  lockedCents = null,
 }: {
   current: Current;
   enabled: boolean;
@@ -39,6 +40,8 @@ export function BillingPanel({
   canManage: boolean;
   /** Code promo mis en avant par l'équipe (pré-rempli). */
   offer?: { code: string; label: string } | null;
+  /** Tarif Pro garanti à vie (centimes TVAC), fixé par l'équipe. */
+  lockedCents?: number | null;
 }) {
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
   const [promo, setPromo] = useState(offer?.code ?? "");
@@ -117,18 +120,19 @@ export function BillingPanel({
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {(["pro", "pro_plus"] as const).map((p) => {
-              const price = interval === "year" ? Math.round((PLANS[p].yearly / 12) * 100) / 100 : PLANS[p].monthly;
+              const locked = p === "pro" && lockedCents ? lockedCents / 100 : null;
+              const price = locked ?? (interval === "year" ? Math.round((PLANS[p].yearly / 12) * 100) / 100 : PLANS[p].monthly);
               // Pendant l'essai ou un accès offert, le forfait affiché n'est pas encore payé : on peut s'y abonner.
               const isCurrent = current.plan === p && paid;
               return (
                 <div key={p} className={cn("flex flex-col rounded-xl border p-5", isCurrent ? "border-accent ring-1 ring-accent" : "border-border")}>
-                  <p className="font-semibold">{PLANS[p].label}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-semibold">{PLANS[p].label}{locked ? <span className="rounded-md bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Tarif garanti à vie</span> : null}</p>
                   <p className="mt-1 text-sm text-muted">{PLANS[p].tagline}</p>
                   <p className="mt-4">
                     <span className="text-3xl font-semibold">{eur(price)}</span>
                     <span className="text-sm text-muted"> TVAC / mois</span>
                   </p>
-                  <p className="text-xs text-muted">{interval === "year" ? `Facturé ${eur(PLANS[p].yearly)} TVAC par an · ` : ""}{excludingVat(price)} HTVA / mois</p>
+                  <p className="text-xs text-muted">{locked ? "Facturé chaque mois · " : interval === "year" ? `Facturé ${eur(PLANS[p].yearly)} TVAC par an · ` : ""}{excludingVat(price)} HTVA / mois</p>
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                     {FEATURES.map((f) => {
                       const v = f[p];

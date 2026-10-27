@@ -7,6 +7,8 @@ import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businessPlans, businesses, notificationSettings, sessions, users } from "@/db/schema";
 import { requireSuperadmin } from "@/server/admin";
+import { lockedProPrice, planFromStripePrice, syncSubscription } from "@/server/billing";
+import { stripe } from "@/server/payments";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -49,6 +51,37 @@ export async function grantPlan(businessId: string, input: { plan: string; until
   }
   revalidatePath("/admin", "layout");
   return { ok: true, message: grantedUntil ? "Forfait offert enregistré." : "Accès offert retiré." };
+}
+
+/**
+ * Tarif garanti à vie du forfait Pro mensuel (ex. 19 € promis aux premières clientes).
+ * Appliqué à leur prochain paiement ; si elles sont déjà abonnées en Pro, leur abonnement passe tout de suite à ce prix.
+ */
+export async function setLockedPrice(businessId: string, euros: number | null): Promise<Result> {
+  const admin = await requireSuperadmin();
+  const id = z.uuid().parse(businessId);
+  const cents = euros == null ? null : Math.round(Number(euros) * 100);
+  if (cents != null && (!Number.isFinite(cents) || cents < 100 || cents > 100000)) return { ok: false, error: "Indiquez un prix entre 1 € et 1 000 €." };
+  const [b] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, id));
+  if (!b) return { ok: false, error: "Établissement introuvable." };
+  await db.insert(businessPlans).values({ businessId: id, lockedPriceCents: cents }).onConflictDoUpdate({ target: businessPlans.businessId, set: { lockedPriceCents: cents } });
+  let applied = "";
+  const [cur] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, id));
+  const s = stripe();
+  if (cents && s && cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status) && cur.plan === "pro") {
+    const sub = await s.subscriptions.retrieve(cur.stripeSubscriptionId).catch(() => null);
+    const item = sub?.items.data.find((i) => planFromStripePrice(i.price)?.plan === "pro");
+    const price = await lockedProPrice(cents);
+    if (sub && item && price && item.price.id !== price) {
+      const updated = await s.subscriptions.update(sub.id, { items: [{ id: item.id, price }], proration_behavior: "none" });
+      await syncSubscription(updated);
+      applied = " L'abonnement en cours est passé à ce prix dès la prochaine facture.";
+    }
+  }
+  const label = cents ? `${(cents / 100).toFixed(2).replace(".", ",")} €` : "";
+  await db.insert(activityLogs).values({ businessId: id, userId: admin.id, actorName: "Équipe Branshee", action: "admin.locked-price", description: cents ? `Tarif Pro garanti à vie : ${label}/mois TVAC` : "Tarif garanti à vie retiré" });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: cents ? `Tarif garanti enregistré : ${label}/mois TVAC, à vie.${applied}` : "Tarif garanti retiré : le prix normal s'appliquera aux prochains abonnements (un abonnement en cours garde son prix)." };
 }
 
 /** Désactive un compte (connexion impossible, sessions fermées) ou le réactive. */

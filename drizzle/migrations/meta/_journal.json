@@ -124,15 +124,22 @@
     {
       "idx": 17,
       "version": "7",
-      "when": 1793053969141,
-      "tag": "0017_skydev_modules",
+      "when": 1793094169538,
+      "tag": "0017_locked_price",
       "breakpoints": true
     },
     {
       "idx": 18,
       "version": "7",
-      "when": 1793093845642,
+      "when": 1793096043671,
       "tag": "0018_invoicing",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793096044990,
+      "tag": "0019_skydev_modules",
       "breakpoints": true
     }
   ]

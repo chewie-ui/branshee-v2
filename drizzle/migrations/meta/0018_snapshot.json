@@ -1,6 +1,6 @@
 {
-  "id": "d7c73b88-c0cc-46bb-814f-9ea820ad10b5",
-  "prevId": "3e8e5e09-839f-4f7f-a4ab-2605cd94bae0",
+  "id": "5da56d44-5e73-4f3e-917c-69ee062bddaa",
+  "prevId": "0f074ae1-b508-402c-932b-552c4f102142",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4832,6 +4832,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "locked_price_cents": {
+          "name": "locked_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "grant_reminder": {
           "name": "grant_reminder",

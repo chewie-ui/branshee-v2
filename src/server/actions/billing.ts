@@ -5,8 +5,8 @@ import { and, count, eq, isNotNull } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, modulePrice, monthlyPriceCents, planFromPrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
+import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { currentBrand } from "@/server/brand";
 import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLANS, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
@@ -45,15 +45,20 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (!parsed.success) return { ok: false, error: "Forfait invalide." };
   const brand = (await currentBrand()).id;
   if (!billingEnabled(brand)) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
-  const { plan, interval } = parsed.data;
-  const price = priceFor(plan, interval, brand)!;
+  const { plan } = parsed.data;
+  // Tarif garanti à vie (Pro, Branshee) : toujours le prix mensuel bloqué, jamais le prix public.
+  const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id));
+  const locked = brand === "branshee" && plan === "pro" && lock?.cents ? lock.cents : null;
+  const interval = locked ? "month" : parsed.data.interval;
+  const price = locked ? await lockedProPrice(locked) : priceFor(plan, interval, brand);
+  if (!price) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   const planName = brand === "skydev" ? SKYDEV_PLANS[plan].label : plan === "pro" ? "Pro" : "Pro+";
   const s = stripe()!;
 
   const live = await liveSubscription(ctx);
   if (live) {
-    // Ligne du forfait (Branshee ou Skydev) ; les options et apps en option restent telles quelles.
-    const baseItem = live.items.data.find((i) => planFromPrice(i.price.id));
+    // Ligne du forfait (Branshee, Skydev ou tarif garanti) ; les options et apps en option restent telles quelles.
+    const baseItem = live.items.data.find((i) => planFromStripePrice(i.price));
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
     const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan, brand } });
     await syncSubscription(updated);
@@ -103,7 +108,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   } else if (brand === "branshee" && !(await hadSubscriptionBefore(ctx.user.id))) {
     // Offre de lancement : première période à prix cassé, une seule fois par compte.
     const campaign = await activeCampaign();
-    if (campaign && campaign.plan === plan && interval === "month") {
+    if (!locked && campaign && campaign.plan === plan && interval === "month") {
       const off = monthlyPriceCents(plan) - campaign.firstPeriodCents;
       if (off > 0) {
         const coupon = await s.coupons.create({ duration: "once", amount_off: off, currency: "eur", name: `Offre de lancement — ${(campaign.firstPeriodCents / 100).toFixed(2).replace(".", ",")} € le premier mois` });

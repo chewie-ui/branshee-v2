@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { grantPlan, setBusinessPaused, setUserDisabled } from "@/server/actions/admin";
+import { grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled } from "@/server/actions/admin";
 
 export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
   const [confirm, setConfirm] = useState(false);
@@ -50,6 +50,39 @@ export function GrantPlanForm({ businessId, plan, until }: { businessId: string;
       </div>
       {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
       <Button type="submit" loading={pending}>Enregistrer</Button>
+    </form>
+  );
+}
+
+/** Tarif Pro garanti à vie (ex. 19 €/mois promis aux premières clientes). */
+export function LockedPriceForm({ businessId, cents }: { businessId: string; cents: number | null }) {
+  const [pending, start] = useTransition();
+  const [value, setValue] = useState(cents ? String(cents / 100).replace(".", ",") : "19");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const run = (euros: number | null) =>
+    start(async () => {
+      const r = await setLockedPrice(businessId, euros);
+      setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Enregistré.") : (r.error ?? "Erreur.") });
+    });
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(Number(value.replace(",", ".")));
+      }}
+      className="space-y-4"
+    >
+      <Field label="Prix du forfait Pro, par mois, TVAC" htmlFor="locked-price" hint="Remplace le prix public pour cet établissement, à vie (abonnement mensuel).">
+        <div className="flex items-center gap-2">
+          <Input id="locked-price" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="w-28" aria-describedby="locked-price-unit" />
+          <span id="locked-price-unit" className="text-sm text-muted">€ / mois TVAC</span>
+        </div>
+      </Field>
+      {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={pending}>{cents ? "Modifier le tarif garanti" : "Garantir ce tarif à vie"}</Button>
+        {cents ? <Button type="button" variant="ghost" disabled={pending} onClick={() => run(null)}>Retirer</Button> : null}
+      </div>
     </form>
   );
 }

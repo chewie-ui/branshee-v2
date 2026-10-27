@@ -31,7 +31,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const canManage = ctx.can("billing.manage");
   const [current, [row], campaign, [offerRow]] = await Promise.all([
     effectivePlan(ctx.business.id),
-    db.select({ interval: businessPlans.interval }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id)),
+    db.select({ interval: businessPlans.interval, lockedCents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id)),
     activeCampaign(),
     db.select().from(promoCodes).where(and(eq(promoCodes.isDefaultOffer, true), eq(promoCodes.isActive, true), sql`(${promoCodes.expiresAt} is null or ${promoCodes.expiresAt} > now())`, sql`(${promoCodes.maxUses} is null or ${promoCodes.usedCount} < ${promoCodes.maxUses})`)).limit(1),
   ]);
@@ -61,6 +61,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.text}</p> : null}
       <BillingPanel
+        lockedCents={row?.lockedCents ?? null}
         canManage={canManage}
         offer={offer}
         enabled={billingEnabled()}
