@@ -77,7 +77,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     success_url: `${appUrl()}/app/reglages/abonnement/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/app/reglages/abonnement`,
     locale: "fr",
-    billing_address_collection: "auto",
+    billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     customer_update: { name: "auto", address: "auto" },
   };
