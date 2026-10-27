@@ -39,7 +39,7 @@ export function priceFor(plan: Exclude<Plan, "free">, interval: Interval, brand:
 /** Options en lignes d'abonnement : prix Branshee et prix Skydev reconnus tous les deux. */
 const ADDON_KEYS = {
   customUrl: { branshee: "STRIPE_PRICE_CUSTOM_URL", skydev: "STRIPE_PRICE_SKYDEV_DOMAIN" },
-  seat: { branshee: "STRIPE_PRICE_EXTRA_SEAT", skydev: "STRIPE_PRICE_SKYDEV_SEAT" },
+  seat: { branshee: "STRIPE_PRICE_EXTRA_SEAT", skydev: "STRIPE_PRICE_EXTRA_SEAT" },
 } as const;
 export type AddonKey = keyof typeof ADDON_KEYS;
 /** Prix à utiliser pour ajouter une option (celui de la marque, sinon celui de Branshee). */

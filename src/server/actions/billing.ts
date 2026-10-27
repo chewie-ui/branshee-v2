@@ -6,9 +6,9 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { currentBrand } from "@/server/brand";
-import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLANS, type ModuleAddon } from "@/lib/skydev-plans";
+import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, skydevPrice, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { effectivePlan } from "@/server/plan";
@@ -45,14 +45,16 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (!parsed.success) return { ok: false, error: "Forfait invalide." };
   const brand = (await currentBrand()).id;
   if (!billingEnabled(brand)) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
-  const { plan } = parsed.data;
+  // Skydev : un seul abonnement (toutes les apps), facturé au nombre d'utilisateurs de l'équipe.
+  const plan = brand === "skydev" ? SKYDEV_PLAN : parsed.data.plan;
+  const users = brand === "skydev" ? Math.min(await countBilledUsers(ctx.business.id), MAX_USERS) : 1;
   // Tarif garanti à vie (Pro, Branshee) : toujours le prix mensuel bloqué, jamais le prix public.
   const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id));
   const locked = brand === "branshee" && plan === "pro" && lock?.cents ? lock.cents : null;
   const interval = locked ? "month" : parsed.data.interval;
   const price = locked ? await lockedProPrice(locked) : priceFor(plan, interval, brand);
   if (!price) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
-  const planName = brand === "skydev" ? SKYDEV_PLANS[plan].label : plan === "pro" ? "Pro" : "Pro+";
+  const planName = brand === "skydev" ? SKYDEV_NAME : plan === "pro" ? "Pro" : "Pro+";
   const s = stripe()!;
 
   const live = await liveSubscription(ctx);
@@ -60,11 +62,11 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     // Ligne du forfait (Branshee, Skydev ou tarif garanti) ; les options et apps en option restent telles quelles.
     const baseItem = live.items.data.find((i) => planFromStripePrice(i.price));
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
-    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan, brand } });
+    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price, quantity: users }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan, brand } });
     await syncSubscription(updated);
     await log(ctx, "billing.change", `Forfait changé : ${planName} (${interval === "year" ? "annuel" : "mensuel"})`);
     revalidatePath("/app", "layout");
-    return { ok: true, message: `${brand === "skydev" ? `Vous êtes passé à ${planName}` : "Forfait mis à jour"}. La différence est calculée au prorata.` };
+    return { ok: true, message: `${brand === "skydev" ? `Abonnement ${planName} mis à jour (${interval === "year" ? "annuel" : "mensuel"})` : "Forfait mis à jour"}. La différence est calculée au prorata.` };
   }
 
   const customer = await getOrCreateCustomer({ id: ctx.user.id, email: ctx.user.email, fullName: ctx.user.name });
@@ -74,7 +76,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     mode: "subscription",
     customer,
     client_reference_id: ctx.user.id,
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: users }],
     metadata,
     // TVA belge 21 % ajoutée aux prix (hors TVA) ; vaut aussi pour les options ajoutées plus tard.
     subscription_data: { metadata, default_tax_rates: [await vatRate()] },
@@ -99,7 +101,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
       // Annuel + pourcentage : la remise vaut un mois, pas une année entière (comme l'ancien).
       const coupon = await s.coupons.create(
         promo.discountType === "percent" && interval === "year"
-          ? { duration: "once", amount_off: Math.round((monthlyPriceCents(plan) * promo.discountValue) / 100), currency: "eur" }
+          ? { duration: "once", amount_off: Math.round(((brand === "skydev" ? skydevPrice(users).monthly * 100 : monthlyPriceCents(plan)) * promo.discountValue) / 100), currency: "eur" }
           : promo.discountType === "percent"
             ? { duration: "once", percent_off: Math.min(promo.discountValue, 99) }
             : { duration: "once", amount_off: promo.discountValue, currency: "eur" },

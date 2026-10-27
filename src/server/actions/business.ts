@@ -1,5 +1,6 @@
 "use server";
 
+import { SKYDEV_PLAN } from "@/lib/skydev-plans";
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { notifyWelcomePro } from "@/server/notifications";
@@ -35,7 +36,7 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   const [owner] = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(eq(users.id, user.id));
   // Essai gratuit de 30 jours : seulement pour le premier établissement du compte (même supprimé depuis).
   const firstBusiness = (await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, user.id)).limit(1)).length === 0;
-  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null }, { trial: firstBusiness });
+  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null }, { trial: firstBusiness, trialPlan: (await currentBrand()).id === "skydev" ? SKYDEV_PLAN : "pro" });
   if (firstBusiness) after(() => notifyWelcomePro(user.id, business.name));
   // Métier hors liste : proposé à l'équipe (page Métiers du super-admin).
   const type = parsed.data.businessType;

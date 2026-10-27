@@ -21,13 +21,11 @@ node -e '
     ["STRIPE_PRICE_PROPLUS_YEARLY", "Branshee Pro+", 57000, "year"],
     ["STRIPE_PRICE_CUSTOM_URL", "Branshee — URL personnalisée", 600, "month"],
     ["STRIPE_PRICE_EXTRA_SEAT", "Branshee — Siège collaborateur", 1200, "month"],
-    // Offre Skydev (src/lib/skydev-plans.ts) : Solo, Équipe et options.
-    ["STRIPE_PRICE_SKYDEV_SOLO_MONTHLY", "Skydev Solo", 2900, "month"],
-    ["STRIPE_PRICE_SKYDEV_SOLO_YEARLY", "Skydev Solo", 29000, "year"],
-    ["STRIPE_PRICE_SKYDEV_EQUIPE_MONTHLY", "Skydev Équipe", 5900, "month"],
-    ["STRIPE_PRICE_SKYDEV_EQUIPE_YEARLY", "Skydev Équipe", 59000, "year"],
+    // Offre Skydev (src/lib/skydev-plans.ts) : un abonnement par utilisateur, prix dégressif (montant = tableau de paliers).
+    // Annuel = 10 mois. Une fois créé, un prix Stripe ne change plus : nouveaux paliers = nouvelle clé (suffixe _v2…).
+    ["STRIPE_PRICE_SKYDEV_MONTHLY", "Skydev", [2900, 2500, 2200, 2000, 1800, 1600, 1500], "month"],
+    ["STRIPE_PRICE_SKYDEV_YEARLY", "Skydev", [29000, 25000, 22000, 20000, 18000, 16000, 15000], "year"],
     ["STRIPE_PRICE_SKYDEV_DOMAIN", "Skydev — Nom de domaine", 600, "month"],
-    ["STRIPE_PRICE_SKYDEV_SEAT", "Skydev — Utilisateur en plus", 1200, "month"],
     ["STRIPE_PRICE_MODULE_TEL_IA", "Skydev — Tél IA", 3900, "month"],
   ];
   (async () => {
@@ -38,10 +36,13 @@ node -e '
       let price = (await s.prices.list({ lookup_keys: [lookup], limit: 1 })).data[0];
       if (!price) {
         products[name] ??= (await s.products.search({ query: `metadata["branshee_name"]:"${name}"` })).data[0]?.id ?? (await s.products.create({ name, metadata: { branshee_name: name } })).id;
-        price = await s.prices.create({ currency: "eur", unit_amount: amount, recurring: { interval }, tax_behavior: "inclusive", lookup_key: lookup, product: products[name] });
+        price = Array.isArray(amount)
+          ? await s.prices.create({ currency: "eur", billing_scheme: "tiered", tiers_mode: "graduated", tiers: amount.map((a, i) => ({ up_to: i === amount.length - 1 ? "inf" : i + 1, unit_amount: a })), recurring: { interval, usage_type: "licensed" }, tax_behavior: "inclusive", lookup_key: lookup, product: products[name] })
+          : await s.prices.create({ currency: "eur", unit_amount: amount, recurring: { interval }, tax_behavior: "inclusive", lookup_key: lookup, product: products[name] });
       }
       lines.push(key + "=" + price.id);
-      console.log("  ✔ " + name + " : " + (price.unit_amount / 100).toFixed(2).replace(".", ",") + " € TVAC / " + (interval === "year" ? "an" : "mois") + (price.livemode ? "" : " (test)"));
+      const shown = Array.isArray(amount) ? amount.map((a) => a / 100).join(" / ") + " € par utilisateur (dégressif)" : (price.unit_amount / 100).toFixed(2).replace(".", ",") + " €";
+      console.log("  ✔ " + name + " : " + shown + " TVAC / " + (interval === "year" ? "an" : "mois") + (price.livemode ? "" : " (test)"));
     }
     fs.writeFileSync(process.env.OUT, lines.join("\n") + "\n");
   })().catch((e) => { console.error("✖ Stripe : " + e.message); process.exit(1); });

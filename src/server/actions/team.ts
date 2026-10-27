@@ -10,6 +10,7 @@ import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions
 import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, collaboratorUsage } from "@/server/plan";
+import { syncSkydevUsers } from "@/server/billing";
 import { emails } from "@/server/email/templates";
 
 export type TeamState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
@@ -78,6 +79,7 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
     await sendEmail({ ...mail, to: v.email, template: "team_invitation", businessId: ctx.business.id });
   }
   await log(ctx, "team.add", `Membre ajouté : ${v.displayName}`);
+  await syncSkydevUsers(ctx.business.id).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
   revalidatePath("/app/equipe");
   redirect("/app/equipe");
 }
@@ -141,6 +143,7 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
     })
     .where(eq(members.id, m.id));
   await log(ctx, "team.update", `Membre modifié : ${v.displayName}`);
+  if (v.isActive !== m.isActive) await syncSkydevUsers(ctx.business.id).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
   revalidatePath("/app/equipe");
   return { ok: true };
 }
@@ -155,6 +158,7 @@ export async function removeMember(memberId: string): Promise<{ ok: boolean; err
   // Ses RDV restent dans l'historique (le praticien y apparaît alors comme non renseigné).
   await db.delete(members).where(eq(members.id, m.id));
   await log(ctx, "team.remove", `Membre retiré : ${m.displayName}`);
+  await syncSkydevUsers(ctx.business.id).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
   revalidatePath("/app/equipe");
   redirect("/app/equipe");
 }

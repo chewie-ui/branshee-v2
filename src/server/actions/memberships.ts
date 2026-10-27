@@ -13,6 +13,10 @@ import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { collaboratorUsage } from "@/server/plan";
+import { syncSkydevUsers } from "@/server/billing";
+
+/** Skydev : l'abonnement suit le nombre d'utilisateurs (sans effet ailleurs). */
+const syncUsers = (businessId: string) => syncSkydevUsers(businessId).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
 import { isImpersonating } from "@/server/context";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
@@ -49,8 +53,9 @@ export async function declineInvitation(memberId: string): Promise<Result> {
     .update(members)
     .set({ status: "rejected", userId: null })
     .where(and(eq(members.id, uuid(memberId)), eq(members.userId, u.id), eq(members.status, "invited")))
-    .returning({ id: members.id });
+    .returning({ id: members.id, businessId: members.businessId });
   if (!updated.length) return { ok: false, error: "Invitation introuvable." };
+  await syncUsers(updated[0]!.businessId);
   revalidatePath("/", "layout");
   return { ok: true, message: "Invitation refusée." };
 }
@@ -106,6 +111,7 @@ export async function decideJoinRequest(memberId: string, accept: boolean): Prom
     await db.update(members).set({ status: "active", joinedAt: new Date(), gradeId: grade?.id ?? null, isBookable: true }).where(eq(members.id, m.id));
   } else await db.delete(members).where(eq(members.id, m.id));
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: accept ? "team.request_accept" : "team.request_refuse", description: `${accept ? "Demande acceptée" : "Demande refusée"} : ${m.displayName}` });
+  if (accept) await syncUsers(ctx.business.id);
   revalidatePath("/app/equipe");
   return { ok: true, message: accept ? `${m.displayName} a rejoint l'équipe.` : "Demande refusée." };
 }
@@ -117,6 +123,7 @@ export async function leaveBusiness(businessId: string): Promise<Result> {
   if (!m) return { ok: false, error: "Introuvable." };
   if (m.isOwner) return { ok: false, error: "Le propriétaire ne peut pas quitter son établissement : supprimez-le ou transférez-le." };
   await db.update(members).set({ userId: null, status: "rejected", isActive: false }).where(eq(members.id, m.id));
+  await syncUsers(m.businessId);
   await db.insert(activityLogs).values({ businessId: m.businessId, userId: u.id, actorName: u.fullName, action: "team.leave", description: `${u.fullName} a quitté l'équipe` });
   revalidatePath("/", "layout");
   return { ok: true, message: "Vous avez quitté l'établissement." };

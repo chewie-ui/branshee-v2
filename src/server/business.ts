@@ -22,7 +22,7 @@ async function freeSlug(name: string) {
  * le propriétaire comme membre réservable, et des horaires du lundi au vendredi 9h–18h.
  * Avec `trial`, l'établissement démarre avec 30 jours du forfait Pro (rappels SMS compris).
  */
-export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }, opts: { trial?: boolean } = {}) {
+export async function createBusiness(owner: { id: string; fullName: string }, input: { name: string; businessType: string | null; city: string | null }, opts: { trial?: boolean; trialPlan?: "pro" | "pro_plus" } = {}) {
   const slug = await freeSlug(input.name);
   return db.transaction(async (tx) => {
     const [biz] = await tx.insert(businesses).values({ ownerId: owner.id, name: input.name, slug, businessType: input.businessType, city: input.city }).returning();
@@ -30,7 +30,7 @@ export async function createBusiness(owner: { id: string; fullName: string }, in
     await tx.insert(bookingSettings).values({ businessId: bid });
     await tx.insert(paymentSettings).values({ businessId: bid });
     await tx.insert(notificationSettings).values({ businessId: bid, smsReminders: !!opts.trial });
-    if (opts.trial) await tx.insert(businessPlans).values({ businessId: bid, ...trialValues() });
+    if (opts.trial) await tx.insert(businessPlans).values({ businessId: bid, ...trialValues(new Date(), opts.trialPlan) });
     await tx.insert(bookingPageSettings).values({ businessId: bid });
     await tx.insert(grades).values(BUILT_IN_GRADES.map((g) => ({ businessId: bid, name: g.name, isBuiltIn: true, permissions: g.permissions })));
     const [member] = await tx
@@ -43,6 +43,6 @@ export async function createBusiness(owner: { id: string; fullName: string }, in
 }
 
 /** Valeurs d'un essai Pro qui démarre maintenant. */
-export function trialValues(now = new Date()) {
-  return { plan: "pro" as const, status: "active" as const, isTrial: true, grantedUntil: new Date(now.getTime() + TRIAL_DAYS * 86400_000), stripeSubscriptionId: null, grantReminder: {} };
+export function trialValues(now = new Date(), plan: "pro" | "pro_plus" = "pro") {
+  return { plan, status: "active" as const, isTrial: true, grantedUntil: new Date(now.getTime() + TRIAL_DAYS * 86400_000), stripeSubscriptionId: null, grantReminder: {} };
 }

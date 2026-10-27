@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, Globe, MessageSquareText, Minus, PhoneCall, Plus, UserPlus, WandSparkles } from "lucide-react";
+import { Check, Globe, MessageSquareText, Minus, PhoneCall, Plus, WandSparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { eur, excludingVat, type Plan } from "@/lib/plans";
-import { SKYDEV_ADDONS, SKYDEV_PLANS, type PaidPlan } from "@/lib/skydev-plans";
-import { cancelPlan, choosePlan, openBillingPortal, resumePlan, setCustomUrlAddon, setExtraSeats, setModuleAddon } from "@/server/actions/billing";
+import { SKYDEV_ADDONS, SKYDEV_FEATURES, SKYDEV_NAME, USER_TIERS, skydevPrice, tierLabels, userPrice } from "@/lib/skydev-plans";
+import { cancelPlan, choosePlan, openBillingPortal, resumePlan, setCustomUrlAddon, setModuleAddon } from "@/server/actions/billing";
 
 export type SkydevCurrent = {
   plan: Plan;
@@ -23,16 +23,22 @@ export type SkydevCurrent = {
   customUrlAddon: boolean;
   interval: "month" | "year" | null;
   modules: string[];
+  /** Utilisateurs facturés sur l'abonnement Skydev (null = pas d'abonnement par utilisateur). */
+  billedUsers: number | null;
 };
 type R = { ok: true; message?: string; url?: string } | { ok: false; error: string };
 
 const fmtDate = (iso: string | null) => (iso ? new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso)) : "");
 const daysLeft = (iso: string) => Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
 
-/** Abonnement Skydev : un forfait (Solo ou Équipe) pour toutes les apps incluses, et des options sur le même abonnement. */
-export function SkydevBillingPanel({ current, enabled, canManage }: { current: SkydevCurrent; enabled: boolean; canManage: boolean }) {
+/**
+ * Abonnement Skydev : un seul abonnement pour toutes les apps, payé par utilisateur (prix dégressif), et des options
+ * sur le même abonnement. `teamUsers` = personnes de l'équipe aujourd'hui (base de l'abonnement).
+ */
+export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: { current: SkydevCurrent; enabled: boolean; canManage: boolean; teamUsers: number }) {
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
-  const [seats, setSeats] = useState(current.extraSeats);
+  const [users, setUsers] = useState(teamUsers);
+  const price = skydevPrice(users);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [, start] = useTransition();
@@ -52,9 +58,10 @@ export function SkydevBillingPanel({ current, enabled, canManage }: { current: S
 
   const paid = current.source === "stripe" || current.source === "account";
   const trial = !paid && current.isTrial && current.source === "granted" && current.grantedUntil;
-  const planName = current.plan === "free" ? null : SKYDEV_PLANS[current.plan].label;
+  const planName = current.plan === "free" ? null : SKYDEV_NAME;
+  const isCurrent = paid && current.billedUsers != null && (current.interval ?? "month") === interval;
   const telIa = current.modules.includes("tel_ia");
-  const lockedReason = !paid ? "Les options s'ajoutent à votre abonnement : choisissez d'abord Solo ou Équipe." : null;
+  const lockedReason = !paid ? "Les options s'ajoutent à votre abonnement : abonnez-vous d'abord." : null;
 
   return (
     <div className="space-y-6">
@@ -77,7 +84,7 @@ export function SkydevBillingPanel({ current, enabled, canManage }: { current: S
                     ? `Votre abonnement reste actif jusqu'au ${fmtDate(current.periodEnd)}, puis s'arrête.`
                     : current.status === "past_due"
                       ? "Le dernier paiement n'est pas passé : mettez à jour votre carte pour garder vos apps."
-                      : `${current.interval === "year" ? "Annuel" : "Mensuel"}${current.periodEnd ? `, prochain renouvellement le ${fmtDate(current.periodEnd)}` : ""}.`
+                      : `${current.billedUsers ? `${current.billedUsers} utilisateur${current.billedUsers > 1 ? "s" : ""} · ${eur(skydevPrice(current.billedUsers)[current.interval === "year" ? "yearly" : "monthly"])} TVAC ${current.interval === "year" ? "par an" : "par mois"}` : current.interval === "year" ? "Annuel" : "Mensuel"}${current.periodEnd ? `, prochain renouvellement le ${fmtDate(current.periodEnd)}` : ""}.`
                   : current.source === "granted"
                     ? current.grantedUntil
                       ? `Accès offert jusqu'au ${fmtDate(current.grantedUntil)}.`
@@ -99,51 +106,88 @@ export function SkydevBillingPanel({ current, enabled, canManage }: { current: S
         {msg ? <p className={cn("border-t border-border px-5 py-3 text-sm", msg.ok ? "text-success" : "text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
       </Card>
 
-      {/* Forfaits */}
+      {/* Abonnement unique, prix par utilisateur dégressif */}
       <Card>
-        <CardHeader title={paid ? "Changer d'abonnement" : "Choisir votre abonnement"} description="Un seul abonnement pour toutes les apps incluses. Sans engagement, résiliable en un clic. Un changement en cours de mois est calculé au prorata." />
-        <div className="space-y-5 p-5">
-          {!enabled ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-warning">Le paiement n&apos;est pas encore configuré sur ce serveur (prix Stripe Skydev).</p> : null}
-          <div className="inline-flex rounded-lg bg-surface-muted p-1" role="radiogroup" aria-label="Période">
-            {(["month", "year"] as const).map((i) => (
-              <button key={i} type="button" role="radio" aria-checked={interval === i} onClick={() => setInterval_(i)} className={cn("h-9 rounded-md px-4 text-sm font-medium transition-colors", interval === i ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
-                {i === "month" ? "Mensuel" : "Annuel · 2 mois offerts"}
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {(["pro", "pro_plus"] as const).map((p: PaidPlan) => {
-              const def = SKYDEV_PLANS[p];
-              const monthly = interval === "year" ? Math.round((def.yearly / 12) * 100) / 100 : def.monthly;
-              const isCurrent = paid && current.plan === p && (current.interval ?? "month") === interval;
-              const label = isCurrent ? "Votre abonnement" : paid ? (p === "pro_plus" && current.plan === "pro" ? "Passer à Équipe" : `Passer à ${def.label}`) : `Choisir ${def.label}`;
-              return (
-                <div key={p} className={cn("flex flex-col rounded-xl border p-5", isCurrent ? "border-accent ring-1 ring-accent" : p === "pro_plus" ? "border-border-strong" : "border-border")}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-lg font-semibold">{def.label}</p>
-                    {isCurrent ? <Badge tone="accent">Actuel</Badge> : null}
-                  </div>
-                  <p className="text-sm text-muted">{def.tagline}</p>
-                  <p className="mt-4">
-                    <span className="text-3xl font-semibold tracking-tight">{eur(monthly)}</span>
-                    <span className="text-sm text-muted"> TVAC / mois</span>
-                  </p>
-                  <p className="text-xs text-muted">{interval === "year" ? `Facturé ${eur(def.yearly)} TVAC par an · ` : ""}{excludingVat(monthly)} HTVA / mois</p>
-                  <ul className="mt-4 flex-1 space-y-2 text-sm">
-                    {def.features.map((f) => (
-                      <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{f}</li>
-                    ))}
-                  </ul>
-                  {canManage ? (
-                    <Button className="mt-5 w-full" variant={isCurrent ? "secondary" : "primary"} disabled={isCurrent || !enabled} loading={busy === `plan-${p}`} onClick={() => run(`plan-${p}`, () => choosePlan({ plan: p, interval }))}>
-                      {label}
-                    </Button>
-                  ) : null}
+        <CardHeader
+          title={paid ? "Votre tarif" : "Un abonnement pour toutes les apps"}
+          description="Vous payez par personne de l'équipe, et chaque personne ajoutée coûte moins cher que la précédente. Sans engagement, résiliable en un clic."
+        />
+        <div className="grid gap-6 p-5 lg:grid-cols-[1fr_minmax(0,320px)]">
+          <div className="space-y-5">
+            {!enabled ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-warning">Le paiement n&apos;est pas encore configuré sur ce serveur (prix Stripe Skydev).</p> : null}
+            <div className="inline-flex rounded-lg bg-surface-muted p-1" role="radiogroup" aria-label="Période">
+              {(["month", "year"] as const).map((i) => (
+                <button key={i} type="button" role="radio" aria-checked={interval === i} onClick={() => setInterval_(i)} className={cn("h-9 rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent", interval === i ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
+                  {i === "month" ? "Mensuel" : "Annuel · 2 mois offerts"}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <p className="text-sm font-medium" id="users-label">Personnes dans votre équipe</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="inline-flex items-center rounded-lg border border-border-strong" role="group" aria-labelledby="users-label">
+                  <button type="button" className="flex size-11 items-center justify-center text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Une personne de moins" disabled={users <= 1} onClick={() => setUsers((n) => Math.max(1, n - 1))}><Minus className="size-4" aria-hidden="true" /></button>
+                  <span className="w-10 text-center text-lg font-semibold tabular-nums" aria-live="polite">{users}</span>
+                  <button type="button" className="flex size-11 items-center justify-center text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Une personne de plus" disabled={users >= 50} onClick={() => setUsers((n) => Math.min(50, n + 1))}><Plus className="size-4" aria-hidden="true" /></button>
                 </div>
-              );
-            })}
+                {users !== teamUsers ? (
+                  <button type="button" className="text-sm font-medium text-accent hover:text-accent-hover" onClick={() => setUsers(teamUsers)}>Revenir à mon équipe ({teamUsers})</button>
+                ) : (
+                  <span className="text-sm text-muted">{teamUsers === 1 ? "Vous seul pour l'instant" : `Votre équipe actuelle`}</span>
+                )}
+              </div>
+            </div>
+
+            <ol className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+              {tierLabels().map((t, i) => {
+                const used = i < USER_TIERS.length - 1 ? users > i : users >= USER_TIERS.length;
+                const count = i < USER_TIERS.length - 1 ? (users > i ? 1 : 0) : Math.max(0, users - (USER_TIERS.length - 1));
+                return (
+                  <li key={t.label} className={cn("rounded-lg border px-3 py-2", used ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border text-muted")}>
+                    <span className="block text-xs">{t.label}</span>
+                    <span className="font-semibold tabular-nums">{eur(t.price)}</span>
+                    {i === USER_TIERS.length - 1 && count > 1 ? <span className="text-xs"> × {count}</span> : null}
+                  </li>
+                );
+              })}
+            </ol>
+            <ul className="space-y-2 text-sm">
+              {SKYDEV_FEATURES.map((f) => (
+                <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{f}</li>
+              ))}
+            </ul>
           </div>
-          {!canManage ? <p className="text-sm text-muted">Seul le titulaire du compte peut gérer l&apos;abonnement.</p> : null}
+
+          <div className="flex flex-col rounded-xl border border-border-strong p-5">
+            <p className="text-sm text-muted">{price.users} utilisateur{price.users > 1 ? "s" : ""}</p>
+            <p className="mt-1">
+              <span className="text-3xl font-semibold tracking-tight tabular-nums">{eur(interval === "year" ? price.yearly / 12 : price.monthly)}</span>
+              <span className="text-sm text-muted"> TVAC / mois</span>
+            </p>
+            <p className="text-xs text-muted">
+              {interval === "year" ? `Facturé ${eur(price.yearly)} TVAC par an · ` : ""}
+              {excludingVat(interval === "year" ? price.yearly / 12 : price.monthly)} HTVA / mois
+            </p>
+            {price.users > 1 ? <p className="mt-2 text-sm text-muted">Soit {eur(price.perUser)} par personne en moyenne.</p> : null}
+            <p className="mt-3 text-sm text-muted">
+              Prochaine personne ajoutée : <span className="font-medium text-text">{eur(userPrice(price.users + 1))} / mois</span>.
+            </p>
+            <div className="mt-auto pt-5">
+              {canManage ? (
+                <Button className="w-full" variant={isCurrent ? "secondary" : "primary"} disabled={isCurrent || !enabled} loading={busy === "plan"} onClick={() => run("plan", () => choosePlan({ plan: "pro_plus", interval }))}>
+                  {isCurrent ? "Votre abonnement" : paid ? (interval === "year" ? "Passer à l'annuel" : "Passer au mensuel") : `S'abonner pour ${teamUsers} utilisateur${teamUsers > 1 ? "s" : ""}`}
+                </Button>
+              ) : (
+                <p className="text-sm text-muted">Seul le titulaire du compte peut gérer l&apos;abonnement.</p>
+              )}
+              <p className="mt-3 text-xs text-muted">
+                {paid
+                  ? "Quand vous ajoutez ou retirez quelqu'un dans Équipe, l'abonnement s'adapte tout seul, au prorata."
+                  : `L'abonnement se base sur votre équipe actuelle (${teamUsers} personne${teamUsers > 1 ? "s" : ""}). Ensuite, il suit les ajouts et retraits dans Équipe, au prorata.`}
+              </p>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -164,28 +208,9 @@ export function SkydevBillingPanel({ current, enabled, canManage }: { current: S
             icon={<Globe />}
             title={SKYDEV_ADDONS.domain.label}
             price={`${eur(SKYDEV_ADDONS.domain.monthly)} TVAC / mois`}
-            text={current.plan === "pro_plus" ? "Déjà inclus dans Équipe." : SKYDEV_ADDONS.domain.description}
-            active={current.customUrlAddon || current.plan === "pro_plus"}
-            action={canManage && current.plan !== "pro_plus" ? <Button size="sm" variant={current.customUrlAddon ? "ghost" : "secondary"} disabled={!paid} loading={busy === "domain"} onClick={() => run("domain", () => setCustomUrlAddon(!current.customUrlAddon))}>{current.customUrlAddon ? "Retirer" : "Ajouter"}</Button> : null}
-          />
-          <AddonRow
-            icon={<UserPlus />}
-            title={SKYDEV_ADDONS.seat.label}
-            price={`${eur(SKYDEV_ADDONS.seat.monthly)} TVAC / mois par utilisateur`}
-            text={SKYDEV_ADDONS.seat.description}
-            active={current.extraSeats > 0}
-            action={
-              canManage ? (
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center rounded-lg border border-border-strong">
-                    <button type="button" className="flex size-9 items-center justify-center text-muted hover:text-text disabled:opacity-40" aria-label="Un utilisateur de moins" disabled={!paid || seats <= 0} onClick={() => setSeats((n) => Math.max(0, n - 1))}><Minus className="size-4" aria-hidden="true" /></button>
-                    <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{seats}</span>
-                    <button type="button" className="flex size-9 items-center justify-center text-muted hover:text-text disabled:opacity-40" aria-label="Un utilisateur de plus" disabled={!paid || seats >= 50} onClick={() => setSeats((n) => Math.min(50, n + 1))}><Plus className="size-4" aria-hidden="true" /></button>
-                  </div>
-                  {seats !== current.extraSeats ? <Button size="sm" loading={busy === "seats"} onClick={() => run("seats", () => setExtraSeats(seats))}>Enregistrer</Button> : null}
-                </div>
-              ) : null
-            }
+            text={SKYDEV_ADDONS.domain.description}
+            active={current.customUrlAddon}
+            action={canManage ? <Button size="sm" variant={current.customUrlAddon ? "ghost" : "secondary"} disabled={!paid} loading={busy === "domain"} onClick={() => run("domain", () => setCustomUrlAddon(!current.customUrlAddon))}>{current.customUrlAddon ? "Retirer" : "Ajouter"}</Button> : null}
           />
           <AddonRow icon={<MessageSquareText />} title="Rappels SMS" price="Packs de crédits" text="Des SMS en plus de ceux inclus dans votre abonnement, achetés quand vous en avez besoin." action={<ButtonLink href="/app/reglages/sms" size="sm" variant="secondary">Gérer les SMS</ButtonLink>} />
         </div>

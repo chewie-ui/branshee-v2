@@ -38,7 +38,7 @@ export function PlanBanner({ plan, canManage, timezone, brand = "branshee" }: { 
         <p className={cn("font-medium", soon ? "text-warning" : "text-accent-soft-foreground")}>
           {sky ? "Essai gratuit de Skydev" : "Essai gratuit du forfait Pro"} : {days === 1 ? "dernier jour" : `encore ${days} jours`}
         </p>
-        <p className="text-text">{sky ? `Toutes les apps sont ouvertes jusqu'au ${until}. Ensuite, choisissez Solo ou Équipe pour continuer.` : <>Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné.</>}</p>
+        <p className="text-text">{sky ? `Toutes les apps sont ouvertes jusqu'au ${until}. Ensuite, abonnez-vous pour continuer (dès 29 € par mois, toutes les apps).` : <>Jusqu&apos;au {until}. Ensuite, la réservation en ligne se ferme si vous n&apos;êtes pas abonné.</>}</p>
       </div>
       {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm" variant={soon ? "primary" : "secondary"}>{sky ? "Choisir mon abonnement" : "Choisir mon forfait"}</ButtonLink> : null}
     </div>

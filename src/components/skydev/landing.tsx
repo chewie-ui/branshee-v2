@@ -203,14 +203,14 @@ export function SkydevLanding() {
 
       <section className="block" id="tarifs">
         <div className="wrap">
-          <div className="head"><span className="eyebrow">Tarifs</span><h2>Un abonnement, toutes les apps.</h2><p>Pas un abonnement par app : vous payez une fois, vous utilisez tout ce qui est inclus. Les options s&apos;ajoutent quand vous en avez besoin.</p></div>
+          <div className="head"><span className="eyebrow">Tarifs</span><h2>Un abonnement, toutes les apps.</h2><p>Pas un abonnement par app : vous payez par personne de l&apos;équipe, et vous utilisez tout ce qui est inclus. Plus l&apos;équipe grandit, moins chaque personne coûte.</p></div>
           <div className="prices">
-            <div className="price"><span className="lbl">Solo</span><b>29 €</b><small>par mois, TVAC · pour un indépendant</small>
-              <ul className="pl"><li>Site web prêt à l&apos;emploi</li><li>RDV, Factures, Boutique</li><li>1 utilisateur</li></ul>
-              <Link className="btn btn-ghost" href="/inscription">Commencer</Link></div>
-            <div className="price hl"><span className="lbl">Équipe</span><b>59 €</b><small>par mois, TVAC · cabinet, salon, PME</small>
-              <ul className="pl"><li>Tout Solo</li><li>Employés et plusieurs agendas</li><li>Plusieurs utilisateurs</li></ul>
+            <div className="price hl"><span className="lbl">Toutes les apps</span><b>29 €</b><small>par mois, TVAC · pour vous, le 1er utilisateur</small>
+              <ul className="pl"><li>RDV, Clients, Site web, Factures, Employés</li><li>Les nouvelles apps incluses</li><li>30 jours d&apos;essai gratuit</li></ul>
               <Link className="btn btn-primary" href="/inscription">Commencer</Link></div>
+            <div className="price"><span className="lbl">Votre équipe</span><b>dès 15 €</b><small>par personne ajoutée, TVAC · le prix baisse à chaque ajout</small>
+              <ul className="pl"><li>2e personne : 25 €, 3e : 22 €, 4e : 20 €</li><li>Puis 18 €, 16 €, et 15 € pour toutes les suivantes</li><li>Exemple : équipe de 3, 76 € par mois</li></ul>
+              <Link className="btn btn-ghost" href="/inscription">Commencer</Link></div>
             <div className="price"><span className="lbl">Sur mesure</span><b>Sur devis</b><small>prix fixe annoncé avant de commencer</small>
               <ul className="pl"><li>Sites sur mesure, dès 600 €</li><li>Apps web et mobiles, logiciels, CRM</li><li>Automatisations et outils IA</li></ul>
               <a className="btn btn-ghost" href="#contact">Demander un devis</a></div>
@@ -220,7 +220,6 @@ export function SkydevLanding() {
             <span className="addon">Tél IA <small>forfait de minutes</small></span>
             <span className="addon">Rappels SMS <small>packs de crédits</small></span>
             <span className="addon">Votre nom de domaine</span>
-            <span className="addon">Utilisateur en plus</span>
           </div>
         </div>
       </section>

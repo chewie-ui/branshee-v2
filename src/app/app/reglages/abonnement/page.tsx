@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { businessPlans, promoCodes, users } from "@/db/schema";
 import { BillingPanel, ReferralCard } from "@/components/settings/billing-panel";
 import { referralStatus } from "@/server/actions/billing";
-import { activeCampaign, billingEnabled, describePromo } from "@/server/billing";
+import { activeCampaign, billingEnabled, countBilledUsers, describePromo } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
 
@@ -37,7 +37,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   ]);
   const brand = (await currentBrand()).id;
   if (brand === "skydev") {
-    const mods = await db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id));
+    const [mods, teamUsers] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id)]);
     const notice = NOTICES[(await searchParams).paiement ?? ""];
     return (
       <div className="space-y-6">
@@ -45,7 +45,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <SkydevBillingPanel
           canManage={canManage}
           enabled={billingEnabled("skydev")}
-          current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key) }}
+          teamUsers={teamUsers}
+          current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key), billedUsers: current.billedUsers }}
         />
       </div>
     );

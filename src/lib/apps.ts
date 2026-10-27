@@ -4,7 +4,7 @@ import type { NavItem } from "@/lib/navigation";
  * Catalogue des apps de la plateforme Skydev. Ajouter une app = une entrée ici + ses pages sous /app.
  * Sur Skydev, l'accueil affiche toutes les apps ; dans une app, seuls ses menus (`nav`) sont visibles.
  *
- * - `included` : comprise dans l'abonnement unique (Solo / Équipe).
+ * - `included` : comprise dans l'abonnement unique Skydev (prix par utilisateur).
  * - `addon`    : option payante en plus de l'abonnement (coûts à l'usage : minutes de téléphone…).
  * - `quote`    : sur devis (sites et apps sur mesure).
  * - `system`   : app de la plateforme (Réglages), sans prix.
