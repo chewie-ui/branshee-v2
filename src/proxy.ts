@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
-const PROTECTED = [/^\/app(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
+const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
 
 /**
  * 1) www.branshee.com → branshee.com (une seule adresse pour Google). Seulement en GET/HEAD :

@@ -127,6 +127,13 @@
       "when": 1793053969141,
       "tag": "0017_skydev_modules",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793093845642,
+      "tag": "0018_invoicing",
+      "breakpoints": true
     }
   ]
 }

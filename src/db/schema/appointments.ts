@@ -34,6 +34,13 @@ export const customers = pgTable(
     altName: text("alt_name"),
     altEmail: text("alt_email"),
     altPhone: text("alt_phone"),
+    /** Coordonnées de facturation (app Factures) : société, TVA / n° d'entreprise, adresse. */
+    companyName: text("company_name"),
+    vatNumber: text("vat_number"),
+    street: text("street"),
+    postalCode: text("postal_code"),
+    city: text("city"),
+    country: text("country"),
     /** Informations générales du dossier — chiffrées côté application. */
     generalInfoEnc: text("general_info_enc"),
     createdManually: boolean("created_manually").notNull().default(false),

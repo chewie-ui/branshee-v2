@@ -16,6 +16,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { clientWord } from "@/lib/terminology";
 import { formatDay, formatPrice, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { currentBrand } from "@/server/brand";
+import { salesDocuments } from "@/db/schema";
+import { ButtonLink } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Rendez-vous" };
 
@@ -161,6 +164,22 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
               <PaymentForm id={a.id} initial={{ method: pay?.method ?? "none", status: pay?.status ?? "none", amount: pay?.amountCents ? euros(pay.amountCents) : priceCents ? euros(priceCents) : "" }} />
             </div>
           </Card>
+        ) : null}
+
+        {/* Skydev : facturer ce rendez-vous dans l'app Factures (client, prestation, prix et date repris). */}
+        {(await currentBrand()).id === "skydev" && ctx.can("invoices.manage") ? (
+          await (async () => {
+            const [inv] = await db.select({ id: salesDocuments.id, number: salesDocuments.number }).from(salesDocuments).where(and(eq(salesDocuments.businessId, ctx.business.id), eq(salesDocuments.appointmentId, a.id))).limit(1);
+            return (
+              <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium">Facture</p>
+                  <p className="text-sm text-muted">{inv ? `Facture ${inv.number ?? "en brouillon"} liée à ce rendez-vous.` : "Créez la facture de ce rendez-vous en un clic."}</p>
+                </div>
+                <ButtonLink href={inv ? `/app/factures/${inv.id}` : `/app/factures/nouvelle?rdv=${a.id}`} variant="secondary">{inv ? "Voir la facture" : "Facturer ce rendez-vous"}</ButtonLink>
+              </Card>
+            );
+          })()
         ) : null}
 
         {a.status === "cancelled" && canManage ? <RestoreButton id={a.id} /> : null}

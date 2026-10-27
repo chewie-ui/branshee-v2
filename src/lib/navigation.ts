@@ -4,7 +4,7 @@ import type { PermissionKey } from "@/lib/permissions";
 export type NavItem = {
   href: string;
   label: string;
-  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand";
+  icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand" | "chart" | "quote" | "package";
   /** Permission requise pour voir l'entrée (absente = visible par tous les membres). */
   permission?: PermissionKey;
 };
@@ -67,7 +67,7 @@ export const SKYDEV_NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
       { href: "/app/clients", label: "Clients", icon: "users", permission: "customers.view" },
       { href: "/app/equipe", label: "Équipe", icon: "team", permission: "team.view" },
       { href: "/app/site", label: "Site web", icon: "layout", permission: "customization.manage" },
-      { href: "/app/factures", label: "Factures", icon: "file" },
+      { href: "/app/factures", label: "Factures", icon: "file", permission: "invoices.view" },
       { href: "/app/reglages/abonnement", label: "Abonnement", icon: "card", permission: "billing.manage" },
     ],
   },

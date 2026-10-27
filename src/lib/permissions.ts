@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   grades: { label: "Grades", actions: { view: "Voir", manage: "Créer et modifier" } },
   logs: { label: "Journal", actions: { view: "Voir le journal d'activité" } },
   billing: { label: "Abonnement", actions: { manage: "Gérer l'abonnement et les modules" } },
+  invoices: { label: "Factures et devis", actions: { view: "Voir les factures et devis", manage: "Créer, émettre et encaisser" } },
   business: { label: "Établissement", actions: { manage: "Modifier les infos", delete: "Supprimer l'établissement" } },
 } as const;
 

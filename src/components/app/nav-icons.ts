@@ -1,4 +1,4 @@
-import { Blocks, CalendarDays, Clock, CreditCard, FileText, Globe, History, Inbox, LayoutGrid, LayoutTemplate, LifeBuoy, PhoneCall, Scissors, Settings, ShoppingBag, Sun, UserRound, Users, WandSparkles } from "lucide-react";
+import { ChartColumn, FilePen, Package, Blocks, CalendarDays, Clock, CreditCard, FileText, Globe, History, Inbox, LayoutGrid, LayoutTemplate, LifeBuoy, PhoneCall, Scissors, Settings, ShoppingBag, Sun, UserRound, Users, WandSparkles } from "lucide-react";
 import type { NavItem } from "@/lib/navigation";
 
 /** Icônes des menus de l'espace pro (barre latérale Branshee, onglets d'app Skydev). */
@@ -22,4 +22,7 @@ export const NAV_ICONS: Record<NavItem["icon"], typeof Sun> = {
   phone: PhoneCall,
   bag: ShoppingBag,
   wand: WandSparkles,
+  chart: ChartColumn,
+  quote: FilePen,
+  package: Package,
 };
