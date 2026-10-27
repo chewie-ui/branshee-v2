@@ -77,6 +77,8 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     success_url: `${appUrl()}/app/reglages/abonnement/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/app/reglages/abonnement`,
     locale: "fr",
+    // Mentions légales : nom, adresse complète et n° de TVA (entreprises) repris sur la facture.
+    custom_text: { submit: { message: "Indiquez le nom et l'adresse complète à mettre sur la facture. Si vous êtes une entreprise assujettie à la TVA, cochez « J'achète en tant qu'entreprise » et ajoutez votre numéro de TVA. En payant, vous acceptez les conditions d'utilisation de Branshee (branshee.com/conditions-utilisation)." } },
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     customer_update: { name: "auto", address: "auto" },
