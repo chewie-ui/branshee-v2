@@ -8,7 +8,8 @@ import { db } from "@/db";
 import { activityLogs, appointments, bookingPageSettings, businesses, members, services, subscriptions, users } from "@/db/schema";
 import { AdminEmbedCode } from "@/components/admin/embed-code";
 import { resolveTheme } from "@/lib/booking-theme";
-import { GrantPlanForm, PauseToggle } from "@/components/admin/admin-actions";
+import { GrantPlanForm, LockedPriceForm, PauseToggle } from "@/components/admin/admin-actions";
+import { businessPlans } from "@/db/schema";
 import { BusinessInfoForm, TypeToDelete } from "@/components/admin/platform";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
   ]);
 
   const eff = await effectivePlan(b.id);
+  const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, b.id));
   const granted = eff.source === "granted" ? eff.grantedUntil : null;
   const plan = eff.plan;
 
@@ -99,6 +101,13 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
           <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${eff.source === "granted" ? (granted ? ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})` : " (offert)") : eff.source === "stripe" ? " (Stripe)" : eff.source === "account" ? " (ancien abonnement du compte)" : ""}`} />
           <div className="p-5">
             <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} />
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Tarif garanti à vie" description={lock?.cents ? `Pro à ${(lock.cents / 100).toFixed(2).replace(".", ",")} €/mois TVAC, à vie, au lieu du prix public.` : "Aucun : le prix public s'applique."} />
+          <div className="p-5">
+            <LockedPriceForm businessId={b.id} cents={lock?.cents ?? null} />
           </div>
         </Card>
 

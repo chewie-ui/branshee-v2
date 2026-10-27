@@ -16,7 +16,10 @@ let client: Stripe | null | undefined;
 export function stripe(): Stripe | null {
   if (client !== undefined) return client;
   const key = process.env.STRIPE_SECRET_KEY;
-  client = key ? new Stripe(key) : null;
+  // STRIPE_API_BASE : uniquement pour les tests locaux (faux serveur Stripe), jamais défini en production.
+  const base = process.env.NODE_ENV !== "production" || process.env.STRIPE_API_BASE_ALLOW === "1" ? process.env.STRIPE_API_BASE : undefined;
+  const url = base ? new URL(base) : null;
+  client = key ? new Stripe(key, url ? { host: url.hostname, port: url.port || undefined, protocol: url.protocol.replace(":", "") as "http" | "https" } : undefined) : null;
   return client;
 }
 export const stripeEnabled = () => !!process.env.STRIPE_SECRET_KEY && !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;

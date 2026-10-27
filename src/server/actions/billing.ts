@@ -5,8 +5,8 @@ import { and, count, eq, isNotNull } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPrice, billingEnabled, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, monthlyPriceCents, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
+import { activeCampaign, addonPrice, billingEnabled, lockedProPrice, planFromStripePrice, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, monthlyPriceCents, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { effectivePlan } from "@/server/plan";
@@ -43,13 +43,18 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   const parsed = planSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Forfait invalide." };
   if (!billingEnabled()) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
-  const { plan, interval } = parsed.data;
-  const price = priceFor(plan, interval)!;
+  const { plan } = parsed.data;
+  // Tarif garanti à vie (Pro) : toujours le prix mensuel bloqué, jamais le prix public.
+  const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id));
+  const locked = plan === "pro" && lock?.cents ? lock.cents : null;
+  const interval = locked ? "month" : parsed.data.interval;
+  const price = locked ? await lockedProPrice(locked) : priceFor(plan, interval);
+  if (!price) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   const s = stripe()!;
 
   const live = await liveSubscription(ctx);
   if (live) {
-    const baseItem = live.items.data.find((i) => i.price.id !== addonPrice.seat() && i.price.id !== addonPrice.customUrl());
+    const baseItem = live.items.data.find((i) => planFromStripePrice(i.price)) ?? live.items.data.find((i) => i.price.id !== addonPrice.seat() && i.price.id !== addonPrice.customUrl());
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
     const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan } });
     await syncSubscription(updated);
@@ -98,7 +103,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   } else if (!(await hadSubscriptionBefore(ctx.user.id))) {
     // Offre de lancement : première période à prix cassé, une seule fois par compte.
     const campaign = await activeCampaign();
-    if (campaign && campaign.plan === plan && interval === "month") {
+    if (!locked && campaign && campaign.plan === plan && interval === "month") {
       const off = monthlyPriceCents(plan) - campaign.firstPeriodCents;
       if (off > 0) {
         const coupon = await s.coupons.create({ duration: "once", amount_off: off, currency: "eur", name: `Offre de lancement — ${(campaign.firstPeriodCents / 100).toFixed(2).replace(".", ",")} € le premier mois` });
