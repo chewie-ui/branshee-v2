@@ -573,6 +573,22 @@ export const emails = {
     };
   },
 
+  /** Stock : produits passés sous leur seuil d'alerte. */
+  lowStock(p: { businessName: string; items: { name: string; qty: number; min: number }[]; more: number; url: string }) {
+    const n = p.items.length + p.more;
+    return {
+      subject: `Stock bas : ${n} produit${n > 1 ? "s" : ""} à recommander`,
+      ...render({
+        preheader: p.items.map((i) => i.name).slice(0, 3).join(", "),
+        title: "Produits à recommander",
+        intro: `Ces produits sont passés sous leur seuil d'alerte.`,
+        details: [...p.items.map((i) => ({ label: i.name, value: `${i.qty} en stock (seuil ${i.min})` })), ...(p.more ? [{ label: "Et encore", value: `${p.more} autre${p.more > 1 ? "s" : ""}` }] : [])],
+        cta: { label: "Voir le stock", url: p.url },
+        footer: `Branshee — ${p.businessName}`,
+      }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

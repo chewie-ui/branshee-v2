@@ -55,7 +55,8 @@ export async function sessionTotals(businessId: string, sessionId: string) {
   };
 }
 
-export async function salesToday(businessId: string, since: Date) {
+export async function salesToday(businessId: string, days: number) {
+  const since = new Date(Date.now() - days * 86400_000);
   return db.select().from(posSales).where(and(eq(posSales.businessId, businessId), gte(posSales.createdAt, since))).orderBy(desc(posSales.createdAt)).limit(300);
 }
 

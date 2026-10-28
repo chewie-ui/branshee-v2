@@ -1,7 +1,7 @@
 import "server-only";
-import { and, count, eq, gt, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, articles, businessPlans, businesses, deals, emailLogs, members, notificationSettings, reviewSettings, services, users } from "@/db/schema";
+import { appointments, articles, businessPlans, businesses, deals, emailLogs, members, products, notificationSettings, reviewSettings, services, users } from "@/db/schema";
 import { deliverReviewRequest } from "@/server/google-reviews";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
@@ -295,6 +295,30 @@ export async function sendAutoReviewRequests(now = new Date()) {
     if (seen.has(key)) continue;
     seen.add(key);
     if (await deliverReviewRequest(r.businessId, { email: r.email!, name: r.name, customerId: r.customerId, appointmentId: r.id }).catch((e) => (console.error("[cron] avis :", e), false))) sent++;
+  }
+  return sent;
+}
+
+/** App Stock : un email au responsable quand des produits passent sous leur seuil (une fois, jusqu'au réassort). */
+export async function sendLowStockAlerts() {
+  const rows = await db
+    .select({ id: products.id, name: products.name, qty: products.stockQty, min: products.minQty, businessId: products.businessId, biz: businesses.name, email: users.email })
+    .from(products)
+    .innerJoin(businesses, eq(businesses.id, products.businessId))
+    .innerJoin(members, and(eq(members.businessId, products.businessId), eq(members.isOwner, true)))
+    .innerJoin(users, eq(users.id, members.userId))
+    .where(and(eq(products.active, true), eq(products.trackStock, true), isNotNull(products.minQty), sql`"products"."stock_qty" <= "products"."min_qty"`, isNull(products.lowNotifiedAt), isNull(businesses.deletedAt)))
+    .limit(2000);
+  const byBiz = new Map<string, typeof rows>();
+  for (const r of rows) byBiz.set(r.businessId, [...(byBiz.get(r.businessId) ?? []), r]);
+  let sent = 0;
+  for (const list of byBiz.values()) {
+    const f = list[0]!;
+    const mail = emails.lowStock({ businessName: f.biz, items: list.slice(0, 40).map((r) => ({ name: r.name, qty: r.qty, min: r.min ?? 0 })), more: Math.max(0, list.length - 40), url: `${(process.env.SKYDEV_APP_URL ?? appUrl()).replace(/\/$/, "")}/app/stock` });
+    if (await sendEmail({ to: f.email, ...mail, template: "low_stock", businessId: f.businessId })) {
+      sent++;
+      await db.update(products).set({ lowNotifiedAt: new Date() }).where(inArray(products.id, list.map((r) => r.id)));
+    }
   }
   return sent;
 }

@@ -5,7 +5,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { posSales, products, stockMoves } from "@/db/schema";
-import { MOVE_REASONS, VAT_RATES, parseEuros } from "@/lib/stock";
+import { VAT_RATES, parseEuros } from "@/lib/stock";
+
+const DONE = { in: "réception enregistrée", out: "sortie enregistrée", count: "inventaire enregistré" } as const;
 import { requireContext } from "@/server/context";
 import { stockRights } from "@/server/stock";
 import { deletePublicImage, savePublicImage } from "@/server/storage";
@@ -125,6 +127,6 @@ export async function moveStock(input: z.input<typeof moveSchema>): Promise<Resu
     await tx.update(products).set({ stockQty: next, ...(delta > 0 ? { lowNotifiedAt: null } : {}), updatedAt: new Date() }).where(eq(products.id, d.productId));
     await tx.insert(stockMoves).values({ businessId: ctx.business.id, productId: d.productId, delta, reason: d.reason, note: d.note || null, memberId: ctx.member.id });
     refresh();
-    return { ok: true as const, message: `${p.name} : ${MOVE_REASONS[d.reason].toLowerCase()} enregistrée, stock ${next}.` };
+    return { ok: true as const, message: `${p.name} : ${DONE[d.reason]}, stock ${next}.` };
   });
 }

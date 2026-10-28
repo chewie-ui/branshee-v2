@@ -1,5 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
-import { reconcileSkydevUsers, sendCreateBusinessNudges, sendSalesFollowUps, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
+import { reconcileSkydevUsers, sendCreateBusinessNudges, sendSalesFollowUps, sendLowStockAlerts, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,5 +18,6 @@ export async function POST(req: Request) {
     planEnded: await run("réservation fermée (fin d’essai)", sendPlanEndedNotices),
     skydevUsers: await run("utilisateurs Skydev", reconcileSkydevUsers),
     salesFollowUps: await run("relances Ventes", sendSalesFollowUps),
+    lowStock: await run("stock bas", sendLowStockAlerts),
   });
 }
