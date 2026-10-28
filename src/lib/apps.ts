@@ -218,7 +218,18 @@ const UPCOMING: SkyApp[] = [
       { href: "/app/factures/devis", label: "Devis", icon: "quote", permission: "invoices.view" },
     ],
   },
-  soon("documents", "services", "Documents", "folder", "Tous vos fichiers, partagés avec l'équipe.", ["Dossiers par client ou par projet", "Partage sécurisé avec vos clients", "Recherche dans les documents", "Lié aux fiches clients"]),
+  {
+    id: "documents",
+    category: "services",
+    name: "Documents",
+    tagline: "Tous vos fichiers, partagés avec l'équipe.",
+    icon: "folder",
+    href: "/app/documents",
+    status: "active",
+    billing: "included",
+    features: ["Dossiers et sous-dossiers, glisser-déposer", "Fichiers chiffrés sur nos serveurs (2 Go)", "Partage par lien, avec date d'expiration", "Recherche dans tous les dossiers"],
+    nav: [{ href: "/app/documents", label: "Documents", icon: "folder" }],
+  },
   soon("messagerie", "equipe", "Messagerie", "message", "Discutez avec votre équipe, sans WhatsApp.", ["Discussions d'équipe et privées", "Fichiers et photos", "Notifications sur téléphone", "Lié aux rendez-vous et projets"]),
 ];
 
