@@ -12,6 +12,7 @@ import { requireContext } from "@/server/context";
 import { customerOptions, getDocument, getSellerSettings, paymentQr, relatedDocuments } from "@/server/invoicing";
 import { SignPanel, type SigView } from "@/components/signature/sign-panel";
 import { signOrigin, signaturesOfDoc } from "@/server/signatures";
+import { ublMissing } from "@/lib/ubl";
 
 export const metadata: Metadata = { title: "Document" };
 
@@ -65,6 +66,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           ) : state === "expired" ? (
             <p className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Ce devis a dépassé sa date de validité. Relancez le client ou dupliquez-le avec une nouvelle date.</span></p>
           ) : null}
+          {!isQuote && d.number && d.seller && d.client ? (() => {
+            const missing = ublMissing({ docType: d.docType as "invoice" | "credit", number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, serviceDate: d.serviceDate, comm: d.comm, notes: d.notes, lines: d.lines, seller: d.seller, client: d.client });
+            return (
+              <Card>
+                <CardHeader title="Facture électronique (Peppol)" description="Obligatoire entre entreprises assujetties en Belgique depuis 2026." />
+                <div className="space-y-2 px-5 pb-5 text-sm">
+                  {missing.includes("n° de TVA ou d'entreprise du client") ? <p className="text-muted">Client sans n° de TVA ni n° d&apos;entreprise : s&apos;il s&apos;agit d&apos;un particulier, pas de Peppol, le PDF suffit.</p> : missing.length ? <p className="text-warning">Il manque : {missing.join(", ")}. Complétez la fiche du client et les réglages de Factures, puis refaites une facture.</p> : <a href={`/app/factures/${d.id}/ubl`} download className="inline-flex h-9 items-center rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted">Télécharger le fichier UBL</a>}
+                  <p className="text-xs text-muted">Fichier au format Peppol BIS 3.0, à déposer chez votre point d&apos;accès Peppol (l&apos;envoi direct depuis Skydev arrive bientôt). Pour un client particulier, le PDF suffit.</p>
+                </div>
+              </Card>
+            );
+          })() : null}
           {isQuote ? <SignPanel documentId={d.id} defaultEmail={String(client?.email ?? "")} current={sig} canManage={ctx.can("invoices.manage")} editable={d.status !== "invoiced" && d.status !== "refused"} /> : null}
           <Card>
             <CardHeader title="Détails" />
