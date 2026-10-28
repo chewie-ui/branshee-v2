@@ -32,6 +32,8 @@ const productSchema = z.object({
   stockQty: z.string().trim().regex(/^-?\d{0,6}$/, "Quantité invalide.").optional(),
   supplier: z.string().trim().max(120),
   removePhoto: z.literal("1").optional(),
+  onlineEnabled: z.literal("1").optional(),
+  description: z.string().trim().max(1000).optional(),
 });
 
 /** Ajouter ou modifier un produit (photo facultative). La quantité de départ crée un mouvement « Inventaire ». */
@@ -51,7 +53,7 @@ export async function saveProduct(fd: FormData): Promise<Result> {
     if (file.size > 5 * 1024 * 1024) return { ok: false, error: "Photo trop lourde (5 Mo maximum)." };
     try { photoUrl = await savePublicImage(Buffer.from(await file.arrayBuffer())); } catch { return { ok: false, error: "Photo : JPG, PNG, WebP ou GIF." }; }
   }
-  const values = { name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, updatedAt: new Date() };
+  const values = { name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, onlineEnabled: !!d.onlineEnabled, description: d.description || null, updatedAt: new Date() };
   try {
     if (d.id) {
       const [old] = await db.select({ photo: products.photoUrl }).from(products).where(and(eq(products.id, d.id), eq(products.businessId, ctx.business.id)));

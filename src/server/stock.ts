@@ -7,11 +7,11 @@ import type { AppContext } from "@/server/context";
 /** Tout le monde vend et réceptionne. Prix, fiches produits, remboursements : le responsable ou qui gère les réglages. */
 export const stockRights = (ctx: AppContext) => ({ manage: ctx.member.isOwner || ctx.can("settings.manage") });
 
-export type ProductView = { id: string; name: string; sku: string | null; barcode: string | null; category: string | null; priceCents: number; vatRate: number; costCents: number | null; trackStock: boolean; stockQty: number; minQty: number | null; supplier: string | null; photoUrl: string | null; active: boolean };
+export type ProductView = { id: string; name: string; sku: string | null; barcode: string | null; category: string | null; priceCents: number; vatRate: number; costCents: number | null; trackStock: boolean; stockQty: number; minQty: number | null; supplier: string | null; photoUrl: string | null; active: boolean; onlineEnabled: boolean; description: string | null };
 
 export async function productsOf(businessId: string, opts: { activeOnly?: boolean } = {}): Promise<ProductView[]> {
   return db
-    .select({ id: products.id, name: products.name, sku: products.sku, barcode: products.barcode, category: products.category, priceCents: products.priceCents, vatRate: products.vatRate, costCents: products.costCents, trackStock: products.trackStock, stockQty: products.stockQty, minQty: products.minQty, supplier: products.supplier, photoUrl: products.photoUrl, active: products.active })
+    .select({ id: products.id, name: products.name, sku: products.sku, barcode: products.barcode, category: products.category, priceCents: products.priceCents, vatRate: products.vatRate, costCents: products.costCents, trackStock: products.trackStock, stockQty: products.stockQty, minQty: products.minQty, supplier: products.supplier, photoUrl: products.photoUrl, active: products.active, onlineEnabled: products.onlineEnabled, description: products.description })
     .from(products)
     .where(and(eq(products.businessId, businessId), opts.activeOnly ? eq(products.active, true) : undefined))
     .orderBy(asc(products.category), asc(products.name))

@@ -666,6 +666,35 @@ export const emails = {
     };
   },
 
+  /** Boutique : confirmation de commande au client. */
+  shopOrderConfirm(p: { shopName: string; number: number; total: string; lines: string[]; pay: string; fulfilment: string; url: string }) {
+    return {
+      subject: `Commande n° ${p.number} — ${p.shopName}`,
+      ...render({
+        preheader: `Total ${p.total}`,
+        title: "Merci pour votre commande !",
+        intro: `${p.shopName} a bien reçu votre commande n° ${p.number}. ${p.pay === "online" ? "Le paiement est confirmé." : p.pay === "transfer" ? "Elle sera préparée dès réception de votre virement (détails sur la page de suivi)." : "Vous payerez au retrait."} ${p.fulfilment === "delivery" ? "Elle vous sera livrée." : "Vous serez prévenu quand elle sera prête."}`,
+        details: [{ label: "Articles", value: p.lines.join(", ") }, { label: "Total TVAC", value: p.total }],
+        cta: { label: "Suivre ma commande", url: p.url },
+        footer: p.shopName,
+      }),
+    };
+  },
+
+  shopOrderNew(p: { shopName: string; number: number; total: string; name: string; url: string }) {
+    return {
+      subject: `Nouvelle commande n° ${p.number} (${p.total})`,
+      ...render({ preheader: p.name, title: "Nouvelle commande en ligne", intro: `${p.name} vient de commander sur votre boutique (${p.total}).`, cta: { label: "Voir la commande", url: p.url }, footer: `Branshee — ${p.shopName}` }),
+    };
+  },
+
+  shopOrderStatus(p: { shopName: string; number: number; status: string; url: string }) {
+    return {
+      subject: `Commande n° ${p.number} : ${p.status.toLowerCase()}`,
+      ...render({ preheader: p.status, title: `Commande n° ${p.number}`, intro: p.status === "Prête" ? `Votre commande est prête : vous pouvez venir la chercher chez ${p.shopName}.` : p.status === "Expédiée" ? `Votre commande est en route.` : `Statut de votre commande : ${p.status.toLowerCase()}.`, cta: { label: "Suivre ma commande", url: p.url }, footer: p.shopName }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

@@ -384,10 +384,13 @@ export const APPS: SkyApp[] = [
     tagline: "Vendez vos produits en ligne.",
     icon: "bag",
     href: "/app/boutique",
-    status: "soon",
+    status: "active",
     billing: "included",
-    features: ["Catalogue de produits", "Paiement Bancontact et carte", "Suivi des commandes", "Intégrée à votre site"],
-    nav: [{ href: "/app/boutique", label: "Boutique", icon: "bag" }],
+    features: ["Vos produits du Stock en vente en ligne", "Retrait ou livraison, frais au choix", "Paiement Bancontact et carte, virement ou sur place", "Commandes et stock suivis en direct"],
+    nav: [
+      { href: "/app/boutique", label: "Commandes", icon: "bag" },
+      { href: "/app/boutique/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
+    ],
   },
   {
     id: "tel-ia",

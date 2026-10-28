@@ -28,6 +28,9 @@ export const products = pgTable(
     supplier: text("supplier"),
     photoUrl: text("photo_url"),
     active: boolean("active").notNull().default(true),
+    /** App Boutique : produit visible dans la boutique en ligne, avec sa description. */
+    onlineEnabled: boolean("online_enabled").notNull().default(false),
+    description: text("description"),
     /** Alerte « stock bas » déjà envoyée (remise à zéro au réassort). */
     lowNotifiedAt: timestamp("low_notified_at", { withTimezone: true }),
     ...timestamps,

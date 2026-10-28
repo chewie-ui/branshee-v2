@@ -19,3 +19,4 @@ export * from "./interventions";
 export * from "./marketing";
 export * from "./loyalty";
 export * from "./payroll";
+export * from "./shop";

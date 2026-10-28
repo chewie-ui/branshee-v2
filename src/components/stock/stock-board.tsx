@@ -220,6 +220,12 @@ function ProductDialog({ product, barcode, categories, onClose, onDone }: { prod
             </div>
           ) : <p className="mt-2 text-xs text-muted">Pour un service ou un produit sans stock (ex. : carte cadeau, prestation).</p>}
         </fieldset>
+        <fieldset className="mt-4 rounded-xl border border-border p-4">
+          <legend className="px-1 text-sm font-medium">Boutique en ligne</legend>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="onlineEnabled" value="1" defaultChecked={product?.onlineEnabled ?? false} className="size-4" />En vente sur la boutique en ligne</label>
+          <label htmlFor="pr-desc" className="mt-3 block text-sm">Description (facultatif)</label>
+          <textarea id="pr-desc" name="description" rows={2} maxLength={1000} defaultValue={product?.description ?? ""} className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm" />
+        </fieldset>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <label htmlFor="pr-photo" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted focus-within:outline-2 focus-within:outline-accent"><ImagePlus className="size-4" aria-hidden="true" />{product?.photoUrl || file ? "Changer la photo" : "Ajouter une photo"}</label>
           <input id="pr-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(e) => { setFile(e.target.files?.[0]?.name ?? null); setRemovePhoto(false); }} />
