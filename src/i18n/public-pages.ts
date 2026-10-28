@@ -26,6 +26,18 @@ const fr = {
     declined: "Vous avez refusé ce devis.", expired: "Ce lien a expiré. Demandez un nouveau lien à votre fournisseur.", changed: "Le devis a changé depuis l'envoi. Demandez un nouveau lien à votre fournisseur.", quote: "Devis {n}",
   },
   loyalty: { card: "Carte de fidélité", reward: "Récompense débloquée : {reward}. Demandez-la à votre prochain passage !", left: "Encore {n} passage(s) pour : {reward}", earned: "{n} récompense(s) déjà obtenue(s). Merci de votre fidélité !", stamps: "{n} tampons sur {goal}" },
+  shop: {
+    online: "Boutique en ligne", categories: "Catégories", all: "Tout", empty: "Aucun produit en vente pour l'instant.", soldOut: "Épuisé", add: "Ajouter", addAria: "Ajouter {name} au panier",
+    lessAria: "Un {name} de moins", moreAria: "Un {name} de plus", cart: "Panier ({n})", close: "Fermer", yourOrder: "Votre commande", howGet: "Retrait ou livraison", pickupFree: "Retrait sur place (gratuit)",
+    delivery: "Livraison ({fee})", free: "gratuite", name: "Nom", phone: "Téléphone", email: "Email", address: "Adresse de livraison", note: "Un mot pour le vendeur (facultatif)", payment: "Paiement",
+    payOnline: "Carte ou Bancontact (en ligne)", payOnDelivery: "À la livraison", payOnPickup: "Au retrait", payTransfer: "Virement bancaire",
+    terms: "J'accepte les conditions de vente et je confirme ma commande avec obligation de paiement.", sending: "Envoi…", orderPay: "Commander et payer", order: "Commander", sendError: "Envoi impossible. Vérifiez votre connexion.",
+    vatIncl: "Prix TVA comprise. Droit de rétractation de 14 jours pour les achats en ligne (sauf produits périssables ou personnalisés) : contactez le vendeur.", vat: "TVA", bce: "BCE",
+    myOrder: "Ma commande", orderNo: "Commande n° {n}", payCancelled: "Paiement annulé", payPending: "Paiement en cours de confirmation…", cancelIfUnpaid: "Votre commande sera annulée si le paiement n'est pas fait.",
+    backShop: "Retour à la boutique", deliveryLine: "Livraison", total: "Total TVAC", deliverTo: "Livraison : {address}", pickupInfo: "Retrait sur place : vous recevrez un email quand elle sera prête.",
+    transfer: "Virement de {amount} à {name}", comm: "Communication", commValue: "Commande {n}", payLater: "Paiement {when}.", atDelivery: "à la livraison", atPickup: "au retrait",
+    status: { pending_payment: "Paiement en attente", new: "Commande reçue", ready: "Prête à retirer", shipped: "Expédiée", done: "Terminée", cancelled: "Annulée" },
+  },
   unsub: { title: "Emails de {name}", text: "Vous ne voulez plus recevoir les actualités et offres par email ? Vos rendez-vous et factures continueront de vous être envoyés.", button: "Me désabonner", done: "Vous êtes déjà désabonné : vous ne recevrez plus ces emails." },
 };
 export type PublicTexts = typeof fr;
@@ -52,6 +64,18 @@ const nl: PublicTexts = {
     declined: "Je hebt deze offerte geweigerd.", expired: "Deze link is verlopen. Vraag een nieuwe link aan je leverancier.", changed: "De offerte is gewijzigd sinds het versturen. Vraag een nieuwe link aan je leverancier.", quote: "Offerte {n}",
   },
   loyalty: { card: "Klantenkaart", reward: "Beloning vrijgespeeld: {reward}. Vraag ernaar bij je volgende bezoek!", left: "Nog {n} bezoek(en) voor: {reward}", earned: "Al {n} beloning(en) ontvangen. Bedankt voor je trouw!", stamps: "{n} stempels op {goal}" },
+  shop: {
+    online: "Webshop", categories: "Categorieën", all: "Alles", empty: "Nog geen producten te koop.", soldOut: "Uitverkocht", add: "Toevoegen", addAria: "{name} aan winkelmandje toevoegen",
+    lessAria: "Eén {name} minder", moreAria: "Eén {name} meer", cart: "Winkelmandje ({n})", close: "Sluiten", yourOrder: "Je bestelling", howGet: "Afhalen of levering", pickupFree: "Afhalen ter plaatse (gratis)",
+    delivery: "Levering ({fee})", free: "gratis", name: "Naam", phone: "Telefoon", email: "E-mail", address: "Leveringsadres", note: "Een woordje voor de verkoper (optioneel)", payment: "Betaling",
+    payOnline: "Kaart of Bancontact (online)", payOnDelivery: "Bij levering", payOnPickup: "Bij afhaling", payTransfer: "Overschrijving",
+    terms: "Ik aanvaard de verkoopvoorwaarden en bevestig mijn bestelling met betalingsverplichting.", sending: "Versturen…", orderPay: "Bestellen en betalen", order: "Bestellen", sendError: "Versturen mislukt. Controleer je verbinding.",
+    vatIncl: "Prijzen incl. btw. Herroepingsrecht van 14 dagen voor online aankopen (behalve bederfelijke of gepersonaliseerde producten): neem contact op met de verkoper.", vat: "Btw", bce: "KBO",
+    myOrder: "Mijn bestelling", orderNo: "Bestelling nr. {n}", payCancelled: "Betaling geannuleerd", payPending: "Betaling wordt bevestigd…", cancelIfUnpaid: "Je bestelling wordt geannuleerd als de betaling niet gebeurt.",
+    backShop: "Terug naar de webshop", deliveryLine: "Levering", total: "Totaal incl. btw", deliverTo: "Levering: {address}", pickupInfo: "Afhalen ter plaatse: je krijgt een e-mail zodra ze klaar is.",
+    transfer: "Overschrijving van {amount} aan {name}", comm: "Mededeling", commValue: "Bestelling {n}", payLater: "Betaling {when}.", atDelivery: "bij levering", atPickup: "bij afhaling",
+    status: { pending_payment: "Betaling in afwachting", new: "Bestelling ontvangen", ready: "Klaar om af te halen", shipped: "Verzonden", done: "Afgerond", cancelled: "Geannuleerd" },
+  },
   unsub: { title: "E-mails van {name}", text: "Wil je geen nieuws en aanbiedingen meer per e-mail ontvangen? Je afspraken en facturen blijven we je wel sturen.", button: "Uitschrijven", done: "Je bent al uitgeschreven: je ontvangt deze e-mails niet meer." },
 };
 
@@ -77,6 +101,18 @@ const en: PublicTexts = {
     declined: "You declined this quote.", expired: "This link has expired. Ask your supplier for a new one.", changed: "The quote changed since it was sent. Ask your supplier for a new link.", quote: "Quote {n}",
   },
   loyalty: { card: "Loyalty card", reward: "Reward unlocked: {reward}. Ask for it on your next visit!", left: "{n} more visit(s) for: {reward}", earned: "{n} reward(s) already earned. Thanks for your loyalty!", stamps: "{n} stamps out of {goal}" },
+  shop: {
+    online: "Online shop", categories: "Categories", all: "All", empty: "No products for sale yet.", soldOut: "Sold out", add: "Add", addAria: "Add {name} to cart",
+    lessAria: "One less {name}", moreAria: "One more {name}", cart: "Cart ({n})", close: "Close", yourOrder: "Your order", howGet: "Pickup or delivery", pickupFree: "Pickup in store (free)",
+    delivery: "Delivery ({fee})", free: "free", name: "Name", phone: "Phone", email: "Email", address: "Delivery address", note: "A note for the seller (optional)", payment: "Payment",
+    payOnline: "Card or Bancontact (online)", payOnDelivery: "On delivery", payOnPickup: "On pickup", payTransfer: "Bank transfer",
+    terms: "I accept the terms of sale and confirm my order with an obligation to pay.", sending: "Sending…", orderPay: "Order and pay", order: "Order", sendError: "Couldn't send. Check your connection.",
+    vatIncl: "Prices include VAT. 14-day right of withdrawal for online purchases (except perishable or personalised products): contact the seller.", vat: "VAT", bce: "Company no.",
+    myOrder: "My order", orderNo: "Order no. {n}", payCancelled: "Payment cancelled", payPending: "Confirming payment…", cancelIfUnpaid: "Your order will be cancelled if payment isn't made.",
+    backShop: "Back to the shop", deliveryLine: "Delivery", total: "Total incl. VAT", deliverTo: "Delivery: {address}", pickupInfo: "Pickup in store: you'll get an email when it's ready.",
+    transfer: "Transfer {amount} to {name}", comm: "Reference", commValue: "Order {n}", payLater: "Payment {when}.", atDelivery: "on delivery", atPickup: "on pickup",
+    status: { pending_payment: "Awaiting payment", new: "Order received", ready: "Ready for pickup", shipped: "Shipped", done: "Completed", cancelled: "Cancelled" },
+  },
   unsub: { title: "Emails from {name}", text: "Don't want news and offers by email anymore? You'll still receive your appointment and invoice emails.", button: "Unsubscribe", done: "You're already unsubscribed: you won't receive these emails anymore." },
 };
 
