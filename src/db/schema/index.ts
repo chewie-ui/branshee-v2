@@ -20,3 +20,4 @@ export * from "./marketing";
 export * from "./loyalty";
 export * from "./payroll";
 export * from "./shop";
+export * from "./assistant";

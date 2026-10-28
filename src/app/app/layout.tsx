@@ -19,6 +19,8 @@ import { clientWord } from "@/lib/terminology";
 import { PlanBanner } from "@/components/app/plan-banner";
 import { BrandNameProvider } from "@/components/brand-context";
 import { effectivePlan } from "@/server/plan";
+import { AssistantPanel } from "@/components/assistant/assistant-panel";
+import { assistantAllowed, assistantEnabled } from "@/server/assistant";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +65,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   if (brand.id === "skydev") {
     // Une app = ses menus uniquement (filtrés par permissions) ; une app sans menu accessible n'apparaît pas.
-    const apps: ShellApp[] = await visibleApps(ctx, { pending });
+    const [apps, ai]: [ShellApp[], boolean] = await Promise.all([visibleApps(ctx, { pending }), assistantAllowed(ctx) ? assistantEnabled(ctx.business.id) : Promise.resolve(false)]);
     // App RDV : la barre latérale Branshee à l'identique, avec un retour vers toutes les apps en tête.
     const rdvSidebar = {
       groups: [
@@ -87,6 +89,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           {banners}
           {children}
         </SkydevShell>
+        {ai ? <AssistantPanel /> : null}
         <RegisterServiceWorker />
         <GuidedTour />
       </BrandNameProvider>

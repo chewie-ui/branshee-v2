@@ -15,11 +15,11 @@ export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/journal", label: "Journal d'activité", ready: true },
 ];
 
-export function SettingsNav() {
+export function SettingsNav({ extra = [] }: { extra?: { href: string; label: string }[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Sections des réglages" className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
-      {SETTINGS_SECTIONS.map((s) =>
+      {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].map((s) =>
         s.ready ? (
           <Link
             key={s.href}

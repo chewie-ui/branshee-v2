@@ -281,6 +281,13 @@
       "when": 1793152277641,
       "tag": "0039_paie_figee",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793152900863,
+      "tag": "0040_assistant",
+      "breakpoints": true
     }
   ]
 }
