@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, ImagePlus, Package, Plus, ScanLine, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, FileUp, ImagePlus, Package, Plus, ScanLine, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -62,7 +63,8 @@ export function StockBoard({ products, canManage }: { products: ProductView[]; c
         <div className="inline-flex rounded-lg bg-surface-muted p-1" role="group" aria-label="Produits affichés">
           {([["all", "Tous"], ["low", `Stock bas (${low.length})`], ["archived", "Archivés"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} className={cn("h-8 rounded-md px-3 text-sm font-medium", filter === k ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>{l}</button>)}
         </div>
-        {canManage ? <Button className="ml-auto" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => { setNewBarcode(""); setMsg(null); setEdit("new"); }}>Nouveau produit</Button> : null}
+        {canManage ? <Link href="/app/stock/importer" className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted hover:bg-surface-muted hover:text-text"><FileUp className="size-4" aria-hidden="true" />Importer</Link> : null}
+        {canManage ? <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => { setNewBarcode(""); setMsg(null); setEdit("new"); }}>Nouveau produit</Button> : null}
       </div>
       {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-warning-soft text-warning")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
 

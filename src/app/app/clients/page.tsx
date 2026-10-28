@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Search, UserPlus } from "lucide-react";
+import { FileUp, Search, UserPlus } from "lucide-react";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { clientWord } from "@/lib/terminology";
 import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { currentBrand } from "@/server/brand";
 
 export const metadata: Metadata = { title: "Clients" };
 
@@ -60,12 +61,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
     .limit(300);
 
   const filtered = !!(q || periode || statut);
+  // Skydev : import depuis un autre logiciel (CSV / Excel).
+  const canImport = ctx.can("customers.manage") && (await currentBrand()).id === "skydev";
   return (
     <>
       <PageHeader
         title={clientWord(ctx.business.businessType, { plural: true, capitalize: true })}
         description={filtered ? `${rows.length} résultat${rows.length > 1 ? "s" : ""}` : `${rows.length}${rows.length === 300 ? "+" : ""} ${rows.length > 1 ? terms : term}`}
-        action={ctx.can("customers.manage") ? <ButtonLink href="/app/clients?nouveau=1" variant="secondary" icon={<UserPlus className="size-4" aria-hidden="true" />}>Ajouter un {term}</ButtonLink> : null}
+        action={ctx.can("customers.manage") ? <div className="flex flex-wrap gap-2">{canImport ? <ButtonLink href="/app/clients/importer" variant="ghost" icon={<FileUp className="size-4" aria-hidden="true" />}>Importer</ButtonLink> : null}<ButtonLink href="/app/clients?nouveau=1" variant="secondary" icon={<UserPlus className="size-4" aria-hidden="true" />}>Ajouter un {term}</ButtonLink></div> : null}
       />
       {sp.nouveau && ctx.can("customers.manage") ? <NewCustomerForm key="new" term={term} initialOpen /> : null}
 
