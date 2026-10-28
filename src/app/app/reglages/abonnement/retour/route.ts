@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { brandOrigin, completeCheckout } from "@/server/billing";
+import { brandOrigin, completeCheckout, metaBusiness } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { currentBrand } from "@/server/brand";
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const s = stripe();
   if (!s || !/^cs_\w+$/.test(id)) return NextResponse.redirect(`${appUrl()}/app/reglages/abonnement?paiement=non-verifie`);
   const session = await s.checkout.sessions.retrieve(id).catch(() => null);
-  if (!session || session.metadata?.businessId !== ctx.business.id) return NextResponse.redirect(`${appUrl()}/app/reglages/abonnement?paiement=non-verifie`);
+  if (!session || metaBusiness(session.metadata) !== ctx.business.id) return NextResponse.redirect(`${appUrl()}/app/reglages/abonnement?paiement=non-verifie`);
   const done = await completeCheckout(session);
   return NextResponse.redirect(`${appUrl()}/app/reglages/abonnement?paiement=${done ? "ok" : "non-verifie"}`);
 }

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
 import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, skydevPrice, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
@@ -67,7 +67,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     // Jamais de passage d'une famille de prix à l'autre (Branshee ↔ Skydev) sur un abonnement en cours.
     const family = planFromPrice(baseItem.price.id)?.brand ?? (baseItem.price.metadata?.branshee_plan ? "branshee" : null);
     if (family && family !== brand) return { ok: false, error: "Cet abonnement ne peut pas être changé ici : contactez le support." };
-    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price, quantity: users }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, businessId: ctx.business.id, userId: ctx.user.id, plan, brand } });
+    const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price, quantity: users }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, [META.business()]: ctx.business.id, [META.user()]: ctx.user.id, plan, brand } });
     await syncSubscription(updated);
     await log(ctx, "billing.change", `Forfait changé : ${planName} (${interval === "year" ? "annuel" : "mensuel"})`);
     revalidatePath("/app", "layout");
@@ -75,7 +75,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   }
 
   const customer = await getOrCreateCustomer({ id: ctx.user.id, email: ctx.user.email, fullName: ctx.user.name });
-  const metadata = { businessId: ctx.business.id, userId: ctx.user.id, plan, brand };
+  const metadata = { [META.business()]: ctx.business.id, [META.user()]: ctx.user.id, plan, brand };
   const origin = brandOrigin(brand);
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",

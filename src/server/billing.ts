@@ -147,8 +147,25 @@ const STATUS: Record<string, "active" | "trialing" | "past_due" | "cancelled" | 
 };
 
 /** Recopie l'état d'un abonnement Stripe sur l'établissement (appelé au retour du paiement et par le webhook). */
+/**
+ * Compte Stripe partagé avec Branshee : sur le serveur Skydev, nos métadonnées portent leurs propres noms
+ * (skyBusinessId, skyUserId…). Branshee ne les reconnaît pas et ignore proprement les paiements Skydev ;
+ * Skydev lit les deux (les abonnements Branshee migrés gardent « businessId »).
+ */
+const onSkydev = () => process.env.FORCE_BRAND === "skydev";
+export const META = { business: () => (onSkydev() ? "skyBusinessId" : "businessId"), user: () => (onSkydev() ? "skyUserId" : "userId"), smsType: () => (onSkydev() ? "sky_sms_topup" : "sms_topup") };
+type Meta = Record<string, string> | null | undefined;
+export const metaBusiness = (m: Meta) => m?.skyBusinessId || m?.businessId || null;
+export const metaUser = (m: Meta) => m?.skyUserId || m?.userId || undefined;
+export const isSmsTopup = (m: Meta) => m?.type === "sms_topup" || m?.type === "sky_sms_topup";
+
 export async function syncSubscription(sub: Stripe.Subscription) {
-  let businessId = sub.metadata?.businessId || null;
+  let businessId = metaBusiness(sub.metadata);
+  // Événement d'un autre serveur (même compte Stripe) : entreprise inconnue ici, on l'ignore sans erreur.
+  if (businessId) {
+    const [known] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId));
+    if (!known) businessId = null;
+  }
   if (!businessId) {
     const [row] = await db.select({ id: businessPlans.businessId }).from(businessPlans).where(eq(businessPlans.stripeSubscriptionId, sub.id));
     businessId = row?.id ?? null;
@@ -191,7 +208,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   };
   const [before] = await db.select({ plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   await db.insert(businessPlans).values({ businessId, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
-  if (!ended) await countReferral(sub.metadata?.userId);
+  if (!ended) await countReferral(metaUser(sub.metadata));
   await syncModules(businessId, ended ? new Map() : moduleItems);
   // Passage du gratuit au payant : les rappels SMS (quota inclus dans le forfait) s'allument d'office.
   // Le pro peut toujours les couper dans Réglages › SMS et WhatsApp.
@@ -304,11 +321,11 @@ export async function completeCheckout(session: Stripe.Checkout.Session) {
   if (session.mode !== "subscription" || !["paid", "no_payment_required"].includes(session.payment_status) || !session.subscription) return null;
   const s = stripe()!;
   const sub = typeof session.subscription === "string" ? await s.subscriptions.retrieve(session.subscription) : session.subscription;
-  if (!sub.metadata?.businessId && session.metadata?.businessId) await s.subscriptions.update(sub.id, { metadata: { ...sub.metadata, businessId: session.metadata.businessId, userId: session.metadata.userId ?? "" } });
+  if (!metaBusiness(sub.metadata) && metaBusiness(session.metadata)) await s.subscriptions.update(sub.id, { metadata: { ...sub.metadata, [META.business()]: metaBusiness(session.metadata)!, [META.user()]: metaUser(session.metadata) ?? "" } });
   const synced = await syncSubscription({ ...sub, metadata: { ...sub.metadata, ...(session.metadata ?? {}) } } as Stripe.Subscription);
   const promoId = session.metadata?.promoCodeId;
-  const userId = session.metadata?.userId;
-  if (promoId && userId) {
+  const userId = metaUser(session.metadata);
+  if (synced && promoId && userId) {
     const inserted = await db.insert(promoRedemptions).values({ promoCodeId: promoId, userId }).onConflictDoNothing().returning({ id: promoRedemptions.promoCodeId });
     if (inserted.length) await db.update(promoCodes).set({ usedCount: sql`${promoCodes.usedCount} + 1` }).where(eq(promoCodes.id, promoId));
   }

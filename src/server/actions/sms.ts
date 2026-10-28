@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { activityLogs, businesses, notificationSettings, smsWallets } from "@/db/schema";
-import { getOrCreateCustomer, vatRate } from "@/server/billing";
+import { META, getOrCreateCustomer, vatRate } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { invoiceFooter } from "@/lib/legal";
@@ -45,13 +45,13 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
     customer,
     line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: `Crédit SMS / WhatsApp — ${amount.data} €` } }, quantity: 1, tax_rates: [await vatRate()] }],
     // La carte est gardée pour la recharge automatique.
-    payment_intent_data: { setup_future_usage: "off_session", metadata: { type: "sms_topup", userId: ctx.user.id } },
-    metadata: { type: "sms_topup", userId: ctx.user.id, creditCents: String(cents) },
+    payment_intent_data: { setup_future_usage: "off_session", metadata: { type: META.smsType(), [META.user()]: ctx.user.id } },
+    metadata: { type: META.smsType(), [META.user()]: ctx.user.id, creditCents: String(cents) },
     success_url: `${appUrl()}/app/reglages/sms/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/app/reglages/sms`,
     locale: "fr",
     // Facture Stripe numérotée (comme pour les abonnements), envoyée au pro avec ses coordonnées de facturation.
-    invoice_creation: { enabled: true, invoice_data: { description: "Crédit SMS / WhatsApp Branshee", footer: invoiceFooter, metadata: { type: "sms_topup", userId: ctx.user.id } } },
+    invoice_creation: { enabled: true, invoice_data: { description: process.env.FORCE_BRAND === "skydev" ? "Crédit SMS / WhatsApp Skydev" : "Crédit SMS / WhatsApp Branshee", footer: invoiceFooter, metadata: { type: META.smsType(), [META.user()]: ctx.user.id } } },
     // Mentions légales : nom, adresse complète et n° de TVA (entreprises) repris sur la facture.
     custom_text: { submit: { message: "Indiquez le nom et l'adresse complète à mettre sur la facture. Si vous êtes une entreprise assujettie à la TVA, cochez « J'achète en tant qu'entreprise » et ajoutez votre numéro de TVA. En payant, vous acceptez les conditions d'utilisation de Branshee (branshee.com/conditions-utilisation)." } },
     billing_address_collection: "required",

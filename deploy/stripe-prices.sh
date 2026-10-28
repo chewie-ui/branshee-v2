@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Crée (ou retrouve) dans Stripe les prix TVAC des forfaits Branshee et Skydev et les écrit dans la config de l'app.
 # Usage : bash deploy/stripe-prices.sh /var/www/branshee-prod     (ou le dossier de la version de test)
+#         ONLY=skydev bash deploy/stripe-prices.sh /var/www/skydev   (prix Skydev seulement : rien n'est créé ni modifié pour Branshee)
 # Idempotent : relancé, il réutilise les prix existants (lookup_key). Aucun secret n'est affiché.
 set -euo pipefail
 DIR="${1:?Dossier de l’application, ex. /var/www/branshee-prod}"
@@ -9,7 +10,8 @@ ENV_FILE="$DIR/.env.production"
 OUT=$(mktemp); chmod 600 "$OUT"
 cd "$DIR"
 SK="$(grep -E "^STRIPE_SECRET_KEY=" "$ENV_FILE" | tail -1 | cut -d= -f2-)"
-export SK OUT
+ONLY="${ONLY:-}"
+export SK OUT ONLY
 node -e '
   const S = require("stripe"); const s = new S(process.env.SK);
   const fs = require("fs");
@@ -31,7 +33,8 @@ node -e '
   (async () => {
     const products = {};
     const lines = [];
-    for (const [key, name, amount, interval] of want) {
+    const keep = process.env.ONLY === "skydev" ? want.filter(([k]) => /SKYDEV|MODULE/.test(k)) : want;
+    for (const [key, name, amount, interval] of keep) {
       const lookup = "branshee_ttc_" + key.toLowerCase().replace("stripe_price_", "");  // clé unique par prix (Skydev compris)
       let price = (await s.prices.list({ lookup_keys: [lookup], limit: 1 })).data[0];
       if (!price) {
@@ -47,6 +50,6 @@ node -e '
     fs.writeFileSync(process.env.OUT, lines.join("\n") + "\n");
   })().catch((e) => { console.error("✖ Stripe : " + e.message); process.exit(1); });
 '
-sed -i '/^STRIPE_PRICE_/d' "$ENV_FILE"
+if [ "$ONLY" = skydev ]; then sed -i -E '/^STRIPE_PRICE_(SKYDEV|MODULE)_/d' "$ENV_FILE"; else sed -i '/^STRIPE_PRICE_/d' "$ENV_FILE"; fi
 cat "$OUT" >> "$ENV_FILE"; rm -f "$OUT"; chmod 600 "$ENV_FILE"
 echo "✔ Prix enregistrés dans $ENV_FILE (relancer l'app pour les prendre en compte)."

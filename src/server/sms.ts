@@ -1,12 +1,12 @@
 import "server-only";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { adminMessages, processedPayments, smsWallets, subscriptions } from "@/db/schema";
+import { adminMessages, processedPayments, smsWallets, subscriptions, users } from "@/db/schema";
 import { hiddenFeatureOn } from "@/server/features";
 import { LIMITS, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 import { isStaging } from "@/lib/staging";
-import { vatRate } from "@/server/billing";
+import { isSmsTopup, metaUser, vatRate } from "@/server/billing";
 import { invoiceFooter } from "@/lib/legal";
 
 /**
@@ -242,9 +242,11 @@ export async function usageThisMonth(ownerId: string) {
 
 /** Recharge payée (Checkout) : crédit une seule fois, que l'on vienne du retour ou du webhook. */
 export async function completeSmsTopup(session: { id: string; mode: string | null; payment_status: string; amount_total: number | null; metadata: Record<string, string> | null }) {
-  if (session.mode !== "payment" || session.payment_status !== "paid" || session.metadata?.type !== "sms_topup") return false;
-  const userId = session.metadata.userId;
-  const cents = Number(session.metadata.creditCents || session.amount_total || 0);
+  if (session.mode !== "payment" || session.payment_status !== "paid" || !isSmsTopup(session.metadata)) return false;
+  const userId = metaUser(session.metadata);
+  // Achat fait sur l'autre serveur (même compte Stripe) : compte inconnu ici, ignoré.
+  if (userId && !(await db.select({ id: users.id }).from(users).where(eq(users.id, userId))).length) return false;
+  const cents = Number(session.metadata?.creditCents || session.amount_total || 0);
   if (!userId || !cents) return false;
   const first = await db.insert(processedPayments).values({ id: session.id, userId, kind: "sms_topup", amountCents: cents }).onConflictDoNothing().returning({ id: processedPayments.id });
   if (!first.length) return true;
