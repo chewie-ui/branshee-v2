@@ -625,6 +625,21 @@ export const emails = {
     };
   },
 
+  /** Interventions : rapport envoyé au client après signature sur place. */
+  interventionReport(p: { sellerName: string; number: number; title: string; report: string | null; signer: string }) {
+    return {
+      subject: `Rapport d'intervention n° ${p.number} — ${p.sellerName}`,
+      ...render({
+        preheader: p.title,
+        title: "Rapport d'intervention",
+        intro: `Voici le rapport de l'intervention « ${p.title} », signé sur place par ${p.signer}.`,
+        details: p.report ? [{ label: "Travaux réalisés", value: p.report }] : undefined,
+        note: "Pour toute question, répondez simplement à cet email.",
+        footer: p.sellerName,
+      }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {
