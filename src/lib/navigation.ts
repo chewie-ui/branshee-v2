@@ -5,7 +5,7 @@ export type NavItem = {
   href: string;
   label: string;
   icon: "today" | "inbox" | "history" | "calendar" | "users" | "scissors" | "team" | "clock" | "globe" | "layout" | "blocks" | "settings" | "help" | "apps" | "file" | "card" | "phone" | "bag" | "wand" | "chart" | "quote" | "package"
-    | "contacts" | "planning" | "wallet" | "plane" | "boxes" | "store" | "target" | "kanban" | "receipt" | "calculator" | "megaphone" | "signature" | "folder" | "gift" | "message" | "truck" | "star" | "timer" | "qr";
+    | "contacts" | "planning" | "wallet" | "plane" | "boxes" | "store" | "target" | "kanban" | "receipt" | "calculator" | "megaphone" | "signature" | "folder" | "gift" | "message" | "truck" | "star" | "timer" | "qr" | "checklist" | "upcoming";
   /** Permission requise pour voir l'entrée (absente = visible par tous les membres). */
   permission?: PermissionKey;
 };

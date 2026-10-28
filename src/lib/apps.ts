@@ -13,7 +13,7 @@ export type AppId =
   | "rdv" | "clients" | "site" | "factures" | "employes" | "boutique" | "tel-ia" | "sur-mesure" | "reglages"
   // Apps à venir (page « bientôt » commune : /app/bientot/<id>)
   | "horaires" | "conges" | "commandes" | "paie" | "ventes" | "projets" | "interventions" | "stock" | "caisse" | "depenses" | "compta"
-  | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie";
+  | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie" | "taches";
 
 export type AppIcon = NavItem["icon"];
 
@@ -289,6 +289,23 @@ const UPCOMING: SkyApp[] = [
     nav: [{ href: "/app/documents", label: "Documents", icon: "folder" }],
   },
   {
+    id: "taches",
+    category: "equipe",
+    name: "Tâches",
+    tagline: "Vos to-do et celles de l'équipe, au même endroit.",
+    icon: "checklist",
+    href: "/app/taches/aujourdhui",
+    status: "active",
+    billing: "included",
+    features: ["Ajout rapide : « Appeler Marc demain 14h #Chantier @Lucas »", "Listes communes ou privées, sous-tâches, priorités", "Tâches confiées à un collègue, prévenu par email", "Récurrences : chaque lundi, chaque mois…"],
+    nav: [
+      { href: "/app/taches/aujourdhui", label: "Aujourd'hui", icon: "today" },
+      { href: "/app/taches/a-venir", label: "À venir", icon: "upcoming" },
+      { href: "/app/taches", label: "Boîte de réception", icon: "inbox" },
+      { href: "/app/taches/listes", label: "Listes", icon: "checklist" },
+    ],
+  },
+  {
     id: "messagerie",
     category: "equipe",
     name: "Messagerie",
@@ -481,7 +498,7 @@ export const NEEDS: { id: NeedId; label: string; hint: string; apps: AppId[] }[]
   { id: "factures", label: "Faire des devis et des factures", hint: "Et suivre les paiements et les dépenses", apps: ["factures", "depenses", "compta"] },
   { id: "site", label: "Avoir un site internet", hint: "Prêt à l'emploi, ou sur mesure", apps: ["site"] },
   { id: "vendre", label: "Vendre des produits", hint: "En ligne, au comptoir ou à table, avec le stock", apps: ["boutique", "caisse", "commandes", "stock"] },
-  { id: "equipe", label: "Gérer mon équipe", hint: "Accès, horaires, congés, paie", apps: ["employes", "horaires", "conges", "paie", "messagerie"] },
+  { id: "equipe", label: "Gérer mon équipe", hint: "Accès, horaires, congés, paie", apps: ["employes", "horaires", "conges", "paie", "messagerie", "taches"] },
   { id: "telephone", label: "Ne plus rater d'appels", hint: "Une IA répond quand vous êtes occupé", apps: ["tel-ia"] },
   { id: "projets", label: "Suivre des projets ou chantiers", hint: "Tâches, interventions, documents", apps: ["projets", "interventions", "documents", "signature"] },
   { id: "marketing", label: "Trouver plus de clients", hint: "Prospects, emails, avis Google, fidélité", apps: ["ventes", "marketing", "avis", "fidelite"] },

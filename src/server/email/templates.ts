@@ -593,6 +593,13 @@ export const emails = {
   },
 
   /** Signature : devis à signer en ligne, pour le client. */
+  /** App Tâches : une tâche vous est confiée. */
+  todoAssigned(p: { from: string; title: string; due: string | null; url: string; business: string }) {
+    return {
+      subject: `${p.from} vous a confié une tâche`,
+      ...render({ preheader: p.title, title: "Nouvelle tâche pour vous", intro: `${p.from} vous a confié une tâche dans ${p.business}.`, quote: p.title, details: p.due ? [{ label: "Échéance", value: new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", dateStyle: "long" }).format(new Date(`${p.due}T12:00:00Z`)) }] : undefined, cta: { label: "Voir mes tâches", url: p.url }, footer: p.business }),
+    };
+  },
   /** Sur mesure : nouvelle demande ou réponse d'un client (pour l'équipe Skydev). */
   customRequestAdmin(p: { business: string; title: string; text: string; event: string; url: string }) {
     return {
