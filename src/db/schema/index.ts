@@ -22,3 +22,4 @@ export * from "./payroll";
 export * from "./shop";
 export * from "./assistant";
 export * from "./invoice-mailing";
+export * from "./custom-work";

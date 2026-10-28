@@ -593,6 +593,20 @@ export const emails = {
   },
 
   /** Signature : devis à signer en ligne, pour le client. */
+  /** Sur mesure : nouvelle demande ou réponse d'un client (pour l'équipe Skydev). */
+  customRequestAdmin(p: { business: string; title: string; text: string; event: string; url: string }) {
+    return {
+      subject: `Sur mesure · ${p.event} · ${p.business}`,
+      ...render({ preheader: p.title, title: p.event, intro: `${p.business} : « ${p.title} »`, quote: p.text.slice(0, 2000), cta: { label: "Ouvrir la demande", url: p.url }, footer: "Skydev" }),
+    };
+  },
+  /** Sur mesure : réponse de Skydev au client (prix proposé, avancement, livraison). */
+  customRequestUpdate(p: { title: string; status: string; reply: string | null; price: string | null; url: string }) {
+    return {
+      subject: `Votre demande sur mesure : ${p.status}`,
+      ...render({ preheader: p.title, title: p.status, intro: `Votre demande « ${p.title} » a avancé.`, quote: p.reply ?? undefined, details: p.price ? [{ label: "Prix proposé", value: p.price }] : undefined, cta: { label: "Voir ma demande", url: p.url }, footer: "Skydev" }),
+    };
+  },
   /** Facture envoyée au client depuis Skydev (lien pour la voir, la télécharger et la payer). */
   invoiceSent(p: { sellerName: string; number: string; amount: string; due: string | null; url: string; credit: boolean }) {
     return {

@@ -10,7 +10,7 @@ const GROUPS: { label: string; items: { href: string; label: string; badge?: key
   { label: "Vue d'ensemble", items: [{ href: "/admin", label: "Tableau de bord" }, { href: "/admin/acquisition", label: "Acquisition" }, { href: "/admin/journal", label: "Journal" }] },
   { label: "Comptes", items: [{ href: "/admin/etablissements", label: "Établissements" }, { href: "/admin/utilisateurs", label: "Utilisateurs" }, { href: "/admin/parrainages", label: "Parrainages" }, { href: "/admin/metiers", label: "Métiers", badge: "jobs" }, { href: "/admin/mise-en-avant", label: "Mise en avant" }] },
   { label: "Relation pros", items: [{ href: "/admin/support", label: "Support", badge: "support" }, { href: "/admin/messages", label: "Messages aux pros" }, { href: "/admin/signalements", label: "Avis signalés", badge: "reports" }, { href: "/admin/aide", label: "Centre d'aide" }] },
-  { label: "Ventes", items: [{ href: "/admin/factures", label: "Factures" }, { href: "/admin/promotions", label: "Codes promo" }, { href: "/admin/liens-acces", label: "Liens d'accès" }] },
+  { label: "Ventes", items: [{ href: "/admin/factures", label: "Factures" }, { href: "/admin/sur-mesure", label: "Sur mesure" }, { href: "/admin/promotions", label: "Codes promo" }, { href: "/admin/liens-acces", label: "Liens d'accès" }] },
   { label: "Plateforme", items: [{ href: "/admin/fonctionnalites", label: "Fonctionnalités" }, { href: "/admin/blog", label: "Blog" }] },
 ];
 

@@ -1,14 +1,24 @@
 import type { Metadata } from "next";
-import { ButtonLink } from "@/components/ui/button";
-import { AppPlaceholder } from "@/components/apps/app-placeholder";
-import { appById } from "@/lib/apps";
+import { RequestBoard } from "@/components/custom-work/request-board";
+import { APPS, appById } from "@/lib/apps";
+import { CUSTOM_FEATURES } from "@/lib/custom-work";
 import { requireContext } from "@/server/context";
+import { featuresOf, requestsOf } from "@/server/custom-work";
 
 const app = appById("sur-mesure");
-
 export const metadata: Metadata = { title: app.name };
 
+/** Sur mesure : demandes de modifs et d'outils propres à l'entreprise, avec prix et suivi. */
 export default async function Page() {
-  await requireContext();
-  return <AppPlaceholder app={app} title="Dites-nous exactement ce que vous voulez" text="Pas seulement des sites : une app mobile, un logiciel pour votre métier, un CRM, une automatisation, un outil avec de l'IA… Si vous pouvez le décrire, on peut le construire. On en parle 15 minutes, vous voyez une maquette, puis vous recevez un prix fixe. Ce qui est construit rejoint vos autres apps, sur la même facture." action={<><ButtonLink href="mailto:info@skydev.be?subject=Projet%20sur%20mesure">Décrire mon projet</ButtonLink><ButtonLink href="tel:+32477443988" variant="secondary">0477 44 39 88</ButtonLink></>} />;
+  const ctx = await requireContext();
+  const [reqs, feats] = await Promise.all([requestsOf(ctx.business.id), featuresOf(ctx.business.id)]);
+  const names = new Map(APPS.map((a) => [a.id, a.name] as const));
+  return (
+    <RequestBoard
+      canRequest={ctx.member.isOwner || ctx.can("settings.manage")}
+      apps={APPS.filter((a) => a.billing === "included" && a.status === "active").map((a) => ({ id: a.id, name: a.name }))}
+      features={feats.map((x) => ({ label: CUSTOM_FEATURES[x.key]?.label ?? x.key, monthly: x.monthlyCents }))}
+      requests={reqs.map((r) => ({ id: r.id, title: r.title, description: r.description, app: r.appId ? (names.get(r.appId as never) ?? null) : null, status: r.status, setupCents: r.setupCents, monthlyCents: r.monthlyCents, reply: r.reply, createdAt: r.createdAt.toISOString() }))}
+    />
+  );
 }
