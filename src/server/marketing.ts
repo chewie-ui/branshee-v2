@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { businesses, campaignRecipients, campaigns, customers, invoiceSettings, type CampaignAudience } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
-import { effectivePlan } from "@/server/plan";
+import { effectivePlan, isLocked } from "@/server/plan";
 import type { AppContext } from "@/server/context";
 
 export const marketingRights = (ctx: AppContext) => ({ manage: ctx.member.isOwner || ctx.can("settings.manage") });
@@ -80,6 +80,8 @@ export async function processCampaignQueue(limit = 300) {
   let sent = 0;
   for (const { r, subject, body, bizName, deleted, tradeName, replyTo } of rows) {
     if (deleted) { await db.update(campaignRecipients).set({ status: "skipped" }).where(eq(campaignRecipients.id, r.id)); continue; }
+    // Espace en lecture seule (essai terminé) : l'envoi attend l'abonnement.
+    if (await isLocked(r.businessId)) { await db.update(campaignRecipients).set({ status: "pending", sentAt: null }).where(eq(campaignRecipients.id, r.id)); continue; }
     if (!budget.has(r.businessId)) budget.set(r.businessId, (await dailyCap(r.businessId)) - (await sentToday(r.businessId, ids)));
     if ((budget.get(r.businessId) ?? 0) <= 0) { await db.update(campaignRecipients).set({ status: "pending", sentAt: null }).where(eq(campaignRecipients.id, r.id)); continue; }
     // Désabonné ou bloqué entre-temps (sur n'importe quelle fiche avec cette adresse) : on saute.

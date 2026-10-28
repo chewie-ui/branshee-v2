@@ -62,14 +62,14 @@ export async function switchBusiness(businessId: string) {
 
 /** Checklist « Bien démarrer » : le lien a été copié / partagé. */
 export async function markLinkShared() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { allowLocked: true });
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ linkSharedAt: new Date().toISOString() })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app");
 }
 
 /** Masque la checklist « Bien démarrer ». */
 export async function dismissOnboarding() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { allowLocked: true });
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ dismissedAt: new Date().toISOString() })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app");
 }

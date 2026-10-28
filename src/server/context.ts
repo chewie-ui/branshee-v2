@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -8,6 +8,7 @@ import { businesses, grades, members } from "@/db/schema";
 import { can, type PermissionKey, type Permissions } from "@/lib/permissions";
 import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
 import { apiAuth } from "@/server/api/als";
+import { isLocked } from "@/server/plan";
 
 export type AppContext = {
   user: { id: string; name: string; email: string; avatarUrl: string | null };
@@ -76,11 +77,24 @@ export async function requireUser() {
  * - connecté sans établissement → création d'établissement
  * - permission manquante → page « accès refusé » (la navigation masque déjà ces liens)
  */
-export async function requireContext(permission?: PermissionKey): Promise<AppContext> {
+/** Une seule vérification par requête : celle de l'action elle-même (pas le rendu qui suit). */
+const actionGate = cache(() => ({ checked: false }));
+
+/**
+ * Contexte obligatoire. Pendant une action (envoi de formulaire, bouton…), un espace Skydev en lecture seule
+ * (essai terminé sans abonnement) est renvoyé vers l'abonnement, sauf pour les actions marquées `allowLocked`
+ * (s'abonner, choisir un établissement…). Sûr par défaut : toute nouvelle action est bloquée.
+ */
+export async function requireContext(permission?: PermissionKey, opts: { allowLocked?: boolean } = {}): Promise<AppContext> {
   const r = await resolveContext();
   if (r.kind === "anonymous") redirect("/connexion");
   if (r.kind === "no-business") redirect("/bienvenue");
   if (permission && !r.ctx.can(permission)) redirect("/app/acces-refuse");
+  const gate = actionGate();
+  if (!gate.checked && (await headers()).has("next-action")) {
+    gate.checked = true;
+    if (!opts.allowLocked && (await isLocked(r.ctx.business.id, r.ctx.business.brand))) redirect("/app/reglages/abonnement?bloque=1");
+  }
   return r.ctx;
 }
 

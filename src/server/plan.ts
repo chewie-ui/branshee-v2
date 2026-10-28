@@ -49,6 +49,17 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   return { ...FREE, extraSeats: row?.extraSeats ?? 0, customUrlAddon: row?.customUrlAddon ?? false };
 });
 
+/**
+ * Skydev : essai terminé sans abonnement → l'espace passe en lecture seule (tout reste consultable et exportable,
+ * plus rien ne se crée ni ne se modifie, les pages publiques de vente sont fermées). Branshee garde son fonctionnement.
+ */
+export const isLocked = cache(async (businessId: string, brand?: string | null): Promise<boolean> => {
+  let b = brand;
+  if (b === undefined) [{ b = null } = {}] = await db.select({ b: businesses.brand }).from(businesses).where(eq(businesses.id, businessId));
+  if (b !== "skydev") return false;
+  return (await effectivePlan(businessId)).source === "free";
+});
+
 export async function businessHas(businessId: string, feature: Feature) {
   const p = await effectivePlan(businessId);
   return hasFeature(p.plan, feature, { customUrl: p.customUrlAddon });

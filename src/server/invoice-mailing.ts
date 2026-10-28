@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { isLocked } from "@/server/plan";
 import { businesses, invoiceMailings, invoiceReminderSettings, salesDocuments } from "@/db/schema";
 import { DEFAULT_RULE, reminderDue, type ReminderRule } from "@/lib/invoice-reminders";
 import { todayIn } from "@/lib/planning";
@@ -68,6 +69,7 @@ export async function sendInvoiceReminders() {
     const tz = r.tz || "Europe/Brussels";
     const today = todayIn(tz);
     const lastDay = r.m.lastReminderAt ? new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(r.m.lastReminderAt) : null;
+    if (await isLocked(r.d.businessId)) continue;
     if (!reminderDue({ dueDate: r.d.dueDate, remindersSent: r.m.remindersSent, lastReminderDay: lastDay }, r.s, today)) continue;
     const claimed = await db
       .update(invoiceMailings)

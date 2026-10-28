@@ -17,7 +17,7 @@ const setupSchema = z.object({
 
 /** Questionnaire de départ : range hors de l'accueil les apps dont l'entreprise n'a pas besoin. */
 export async function saveAppSetup(input: { teamSize: string; needs: string[] }): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { allowLocked: true });
   if (!ctx.member.isOwner && !ctx.can("settings.manage")) return { ok: false, error: "Seul le responsable peut choisir les apps de l'entreprise." };
   const v = setupSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Réponses invalides." };
@@ -30,7 +30,7 @@ export async function saveAppSetup(input: { teamSize: string; needs: string[] })
 
 /** Mettre une app sur l'accueil, ou l'en retirer (elle reste accessible dans « Toutes les apps »). */
 export async function setAppPinned(appId: string, pinned: boolean): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { allowLocked: true });
   if (!ctx.member.isOwner && !ctx.can("settings.manage")) return { ok: false, error: "Seul le responsable peut changer les apps de l'accueil." };
   if (!APPS.some((a) => a.id === appId) || appId === "reglages") return { ok: false, error: "App inconnue." };
   const [b] = await db.select({ o: businesses.onboarding }).from(businesses).where(eq(businesses.id, ctx.business.id));

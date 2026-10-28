@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { isLocked } from "@/server/plan";
 import { businesses, invoiceSettings, members, paymentSettings, products, shopOrders, shopSettings, stockMoves, users } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
@@ -28,7 +29,7 @@ export async function publicShop(slug: string) {
   const [b] = await db.select({ id: businesses.id, name: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl, city: businesses.city }).from(businesses).where(and(eq(businesses.slug, slug), isNull(businesses.deletedAt), isNull(businesses.pausedAt)));
   if (!b) return null;
   const s = await shopSettingsOf(b.id);
-  if (!s.enabled) return null;
+  if (!s.enabled || (await isLocked(b.id))) return null;
   const [items, [seller], dest] = await Promise.all([
     db.select({ id: products.id, name: products.name, description: products.description, category: products.category, priceCents: products.priceCents, photoUrl: products.photoUrl, trackStock: products.trackStock, stockQty: products.stockQty }).from(products).where(and(eq(products.businessId, b.id), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(asc(products.category), asc(products.name)),
     db.select({ iban: invoiceSettings.iban, legalName: invoiceSettings.legalName, street: invoiceSettings.street, zip: invoiceSettings.zip, city: invoiceSettings.city, vat: invoiceSettings.vatNumber, bce: invoiceSettings.bce, email: invoiceSettings.email }).from(invoiceSettings).where(eq(invoiceSettings.businessId, b.id)),

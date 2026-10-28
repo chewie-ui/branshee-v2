@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import { isLocked } from "@/server/plan";
 import { businesses, diningTables, menuCategories, menuItems, tableOrders } from "@/db/schema";
 
 export type MenuCategoryView = { id: string; name: string; position: number };
@@ -27,7 +28,9 @@ export async function tableByToken(token: string) {
     .from(diningTables)
     .innerJoin(businesses, eq(businesses.id, diningTables.businessId))
     .where(and(eq(diningTables.token, token), eq(diningTables.active, true), isNull(businesses.deletedAt), isNull(businesses.pausedAt)));
-  return row ?? null;
+  // Espace Skydev en lecture seule (essai terminé) : la commande à table est fermée.
+  if (!row || (await isLocked(row.business.id))) return null;
+  return row;
 }
 
 /** Commandes des dernières 24 heures (tableau de la cuisine). */

@@ -6,7 +6,7 @@ import { deliverReviewRequest } from "@/server/google-reviews";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { indexNow } from "@/server/indexnow";
-import { effectivePlan } from "@/server/plan";
+import { effectivePlan, isLocked } from "@/server/plan";
 import { trialValues } from "@/server/business";
 import { syncSkydevUsers } from "@/server/billing";
 
@@ -292,7 +292,7 @@ export async function sendAutoReviewRequests(now = new Date()) {
   const seen = new Set<string>();
   for (const r of rows) {
     const key = `${r.businessId}:${r.email!.toLowerCase()}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key) || (await isLocked(r.businessId))) continue;
     seen.add(key);
     if (await deliverReviewRequest(r.businessId, { email: r.email!, name: r.name, customerId: r.customerId, appointmentId: r.id }).catch((e) => (console.error("[cron] avis :", e), false))) sent++;
   }

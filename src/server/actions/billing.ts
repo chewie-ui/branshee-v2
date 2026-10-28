@@ -27,7 +27,7 @@ async function liveSubscription(ctx: AppContext) {
 }
 
 export async function checkPromo(input: { code: string; plan: string; interval: string }): Promise<{ ok: true; label: string } | { ok: false; error: string }> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   const v = planSchema.safeParse({ plan: input.plan, interval: input.interval });
   if (!v.success) return { ok: false, error: "Forfait invalide." };
   const promo = await findPromo(input.code, ctx.user.id, v.data.plan, v.data.interval);
@@ -39,7 +39,7 @@ export async function checkPromo(input: { code: string; plan: string; interval: 
  * Code promo (essai, % ou montant), campagne de lancement ou offre par défaut appliqués une seule fois.
  */
 export async function choosePlan(input: { plan: string; interval: string; promo?: string }): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = planSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Forfait invalide." };
@@ -132,7 +132,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
 }
 
 export async function cancelPlan(): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const live = await liveSubscription(ctx);
   if (!live) return { ok: false, error: "Aucun abonnement payant à résilier." };
@@ -144,7 +144,7 @@ export async function cancelPlan(): Promise<Result> {
 }
 
 export async function resumePlan(): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const live = await liveSubscription(ctx);
   if (!live) return { ok: false, error: "Aucun abonnement à reprendre." };
@@ -157,7 +157,7 @@ export async function resumePlan(): Promise<Result> {
 
 /** Cartes, factures PDF, adresse de facturation : portail sécurisé de Stripe. */
 export async function openBillingPortal(): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (!stripe()) return { ok: false, error: "Facturation non configurée." };
   const customer = await getOrCreateCustomer({ id: ctx.user.id, email: ctx.user.email, fullName: ctx.user.name });
   const portal = await stripe()!.billingPortal.sessions.create({ customer, return_url: `${brandOrigin(businessBrand(ctx.business))}/app/reglages/abonnement`, locale: "fr" });
@@ -166,7 +166,7 @@ export async function openBillingPortal(): Promise<Result> {
 
 /** Options : URL personnalisée (Pro) et sièges collaborateurs (Pro et Pro+), ajoutées à l'abonnement en cours. */
 export async function setCustomUrlAddon(on: boolean): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const live = await liveSubscription(ctx);
   const price = addonPriceFor("customUrl", businessBrand(ctx.business));
@@ -182,7 +182,7 @@ export async function setCustomUrlAddon(on: boolean): Promise<Result> {
 }
 
 export async function setExtraSeats(n: number): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const seats = z.number().int().min(0).max(50).safeParse(n);
   if (!seats.success) return { ok: false, error: "Nombre de sièges invalide." };
@@ -204,7 +204,7 @@ export async function setExtraSeats(n: number): Promise<Result> {
 
 /** Apps en option (Tél IA…) : une ligne de plus sur l'abonnement en cours, au prorata. */
 export async function setModuleAddon(key: string, on: boolean): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!(MODULE_ADDONS as readonly string[]).includes(key)) return { ok: false, error: "Option inconnue." };
   const mod = key as ModuleAddon;
@@ -235,7 +235,7 @@ export async function referralStatus(userId: string) {
 }
 
 export async function claimReferral(): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const st = await referralStatus(ctx.user.id);
   if (st.claimable <= 0) return { ok: false, error: "Aucun mois à réclamer pour le moment." };

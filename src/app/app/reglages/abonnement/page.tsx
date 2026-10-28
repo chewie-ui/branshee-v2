@@ -24,7 +24,7 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
 
 const referralCode = ensureReferralCode;
 
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ paiement?: string; bloque?: string }> }) {
   const gate = await featureStatus("subscription");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const ctx = await requireContext();
@@ -39,9 +39,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const brand = businessBrand(ctx.business);
   if (brand === "skydev") {
     const [mods, teamUsers] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id)]);
-    const notice = NOTICES[(await searchParams).paiement ?? ""];
+    const sp = await searchParams;
+    const notice = NOTICES[sp.paiement ?? ""];
     return (
       <div className="space-y-6">
+        {sp.bloque && current.source === "free" ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert"><b>Votre essai gratuit est terminé.</b> Votre espace est en lecture seule : choisissez votre abonnement ci-dessous pour continuer à créer et modifier. Toutes vos données sont conservées.{canManage ? null : " Demandez au responsable de l'entreprise de s'abonner."}</p> : null}
         {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.ok ? "Merci ! Votre abonnement Skydev est actif." : notice.text}</p> : null}
         <SkydevBillingPanel
           canManage={canManage}

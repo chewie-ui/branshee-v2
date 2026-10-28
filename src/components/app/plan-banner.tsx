@@ -20,8 +20,8 @@ export function PlanBanner({ plan, canManage, timezone, brand = "branshee" }: { 
       <div role="alert" className="mb-6 flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft p-4 sm:flex-row sm:items-center">
         <CalendarOff className="size-5 shrink-0 text-danger" aria-hidden="true" />
         <div className="flex-1 text-sm">
-          <p className="font-medium text-danger">{sky ? "Vos apps sont en pause" : "Réservation en ligne fermée"}</p>
-          <p className="text-text">{sky ? "Aucun abonnement Skydev actif : vos clients ne peuvent plus réserver en ligne. Toutes vos données restent consultables." : <>Votre établissement n&apos;a pas d&apos;abonnement actif : vos clients ne peuvent plus réserver en ligne. Vos rendez-vous et votre fichier restent consultables.</>}</p>
+          <p className="font-medium text-danger">{sky ? "Votre essai est terminé : espace en lecture seule" : "Réservation en ligne fermée"}</p>
+          <p className="text-text">{sky ? "Vos données sont conservées et restent consultables, mais plus rien ne peut être créé ni modifié, et vos pages publiques (réservation, boutique, commande à table) sont fermées. Abonnez-vous pour tout rouvrir, en une minute." : <>Votre établissement n&apos;a pas d&apos;abonnement actif : vos clients ne peuvent plus réserver en ligne. Vos rendez-vous et votre fichier restent consultables.</>}</p>
         </div>
         {canManage ? <ButtonLink href="/app/reglages/abonnement" size="sm">{sky ? "Choisir un abonnement" : <>S&apos;abonner</>}</ButtonLink> : null}
       </div>
