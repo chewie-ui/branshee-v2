@@ -11,7 +11,7 @@ type Answer = { ok: true; text: string; links: string[] } | { ok: false; error: 
 
 /** Pose une question à l'assistant (historique gardé dans le navigateur, textes seulement). */
 export async function askAssistant(history: unknown): Promise<Answer> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   if (!(await assistantAllowed(ctx))) return { ok: false, error: "L'assistant n'est pas disponible pour cette entreprise." };
   if (!(await assistantEnabled(ctx.business.id))) return { ok: false, error: "L'assistant n'est pas encore activé : le responsable peut l'activer dans Réglages." };
   const turns = cleanHistory(history);
@@ -29,7 +29,7 @@ export async function askAssistant(history: unknown): Promise<Answer> {
 
 /** Le responsable active ou coupe l'assistant pour toute l'entreprise. */
 export async function setAssistantEnabled(on: boolean, notHealth = false): Promise<{ ok: boolean; error?: string; message?: string }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   if (!(ctx.member.isOwner || ctx.can("settings.manage"))) return { ok: false, error: "Réservé au responsable." };
   if (ctx.impersonating) return { ok: false, error: "Lecture seule pendant la supervision." };
   if (!(await assistantAllowed(ctx))) return { ok: false, error: "L'assistant n'est pas disponible pour cette entreprise." };

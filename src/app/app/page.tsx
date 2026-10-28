@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TodayPage } from "@/components/app/today";
 import { AppHome } from "@/components/apps/app-home";
+import AccessDeniedPage from "./acces-refuse/page";
 import { appsSetupDone, visibleApps } from "@/server/apps";
 import { currentBrand } from "@/server/brand";
 import { requireContext } from "@/server/context";
@@ -23,7 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Branshee : l'accueil reste « Aujourd'hui » (app RDV). Skydev : l'accueil est le lanceur de toutes les apps. */
 export default async function Page({ searchParams }: { searchParams: Promise<{ bienvenue?: string; pret?: string }> }) {
   const brand = await currentBrand();
-  if (brand.id !== "skydev") return TodayPage({ searchParams });
+  if (brand.id !== "skydev") {
+    // Accueil RDV : refusé à un grade Skydev qui n'a pas l'app RDV (même en passant par l'autre adresse).
+    const c = await requireContext();
+    if (!c.canApp("rdv")) return <AccessDeniedPage />;
+    return TodayPage({ searchParams });
+  }
   const ctx = await requireContext();
   const canEdit = ctx.member.isOwner || ctx.can("settings.manage");
   // Première visite du responsable : questionnaire de départ pour choisir les apps de l'accueil.

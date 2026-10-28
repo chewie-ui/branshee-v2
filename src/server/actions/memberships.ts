@@ -100,7 +100,7 @@ export async function cancelJoinRequest(memberId: string): Promise<Result> {
 }
 
 export async function decideJoinRequest(memberId: string, accept: boolean): Promise<Result> {
-  const ctx = await requireContext("team.manage");
+  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, uuid(memberId)), eq(members.businessId, ctx.business.id), eq(members.status, "requested")));
   if (!m) return { ok: false, error: "Demande introuvable." };

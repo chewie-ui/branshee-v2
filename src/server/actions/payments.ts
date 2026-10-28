@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export async function savePaymentSettings(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { write: true });
   const parsed = schema.safeParse({
     prepaymentEnabled: on(fd, "prepaymentEnabled"),
     prepaymentRequired: on(fd, "prepaymentRequired"),
@@ -88,7 +88,7 @@ export async function savePaymentSettings(_prev: SettingsState, fd: FormData): P
 }
 
 export async function disconnectStripe(): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { write: true });
   await db.update(paymentSettings).set({ stripeAccountId: null, stripeStatus: "not_connected", stripeAccountEmail: null }).where(eq(paymentSettings.businessId, ctx.business.id));
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "stripe.disconnect", description: "Compte Stripe déconnecté" });
   revalidatePath("/app/reglages/paiements");
@@ -97,7 +97,7 @@ export async function disconnectStripe(): Promise<{ ok: boolean }> {
 
 /** Compte Stripe existant saisi à la main (acct_…), vérifié auprès de Stripe. */
 export async function linkStripeAccount(accountId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { write: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!/^acct_[A-Za-z0-9]{8,}$/.test(accountId.trim())) return { ok: false, error: "L'identifiant doit commencer par acct_." };
   const s = stripe();

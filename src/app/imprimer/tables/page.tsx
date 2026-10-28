@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: { absolute: "QR codes des tables" }, 
 
 /** Planche A4 des QR codes (6 par page), à découper et poser sur les tables. */
 export default async function PrintTables() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "commandes" });
   const origin = tableOrigin();
   const tables = (await tablesOf(ctx.business.id)).filter((t) => t.active);
   const cards = await Promise.all(tables.map(async (t) => ({ id: t.id, label: t.label, qr: await QRCode.toDataURL(`${origin}/t/${t.token}`, { margin: 1, width: 480, errorCorrectionLevel: "M" }) })));

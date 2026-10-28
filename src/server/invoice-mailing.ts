@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, sql, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { isLocked } from "@/server/plan";
 import { businesses, invoiceMailings, invoiceReminderSettings, salesDocuments } from "@/db/schema";
@@ -41,6 +41,10 @@ export async function invoiceByToken(token: string) {
  * La réservation (remindersSent = valeur lue) empêche deux passages simultanés d'envoyer deux fois.
  */
 export async function sendInvoiceReminders() {
+  // Espaces en lecture seule : exclus de la sélection (ils ne restent pas en tête de file).
+  const enabled = await db.select({ id: invoiceReminderSettings.businessId }).from(invoiceReminderSettings).where(eq(invoiceReminderSettings.enabled, true));
+  const locked: string[] = [];
+  for (const { id } of enabled) if (await isLocked(id)) locked.push(id);
   const rows = await db
     .select({ m: invoiceMailings, d: salesDocuments, s: invoiceReminderSettings, tz: businesses.timezone, biz: businesses.name })
     .from(invoiceMailings)
@@ -50,6 +54,7 @@ export async function sendInvoiceReminders() {
     .where(
       and(
         eq(invoiceReminderSettings.enabled, true),
+        locked.length ? notInArray(invoiceMailings.businessId, locked) : undefined,
         eq(invoiceMailings.remindersOff, false),
         lt(invoiceMailings.remindersSent, invoiceReminderSettings.maxReminders),
         eq(salesDocuments.docType, "invoice"),

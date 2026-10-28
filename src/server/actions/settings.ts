@@ -27,7 +27,7 @@ const businessSchema = z.object({
 });
 
 export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
-  const ctx = await requireContext("business.manage");
+  const ctx = await requireContext("business.manage", { write: true });
   const parsed = businessSchema.safeParse({
     name: str(fd, "name"),
     businessType: str(fd, "businessType"),
@@ -77,7 +77,7 @@ const rulesSchema = z.object({
 });
 
 export async function saveBookingRules(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
-  const ctx = await requireContext("settings.manage");
+  const ctx = await requireContext("settings.manage", { write: true });
   const parsed = rulesSchema.safeParse({
     slotMode: str(fd, "slotMode"),
     slotIntervalMin: str(fd, "slotIntervalMin"),
@@ -139,7 +139,7 @@ const notifSchema = z.object({
 });
 
 export async function saveNotifications(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
-  const ctx = await requireContext("settings.manage");
+  const ctx = await requireContext("settings.manage", { write: true });
   const parsed = notifSchema.safeParse({
     reminderDelayHours: str(fd, "reminderDelayHours"),
     confirmationMessage: str(fd, "confirmationMessage"),

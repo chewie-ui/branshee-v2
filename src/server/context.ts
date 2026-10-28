@@ -84,15 +84,12 @@ export async function requireUser() {
  * - connecté sans établissement → création d'établissement
  * - permission manquante → page « accès refusé » (la navigation masque déjà ces liens)
  */
-/** Une seule vérification par requête : celle de l'action elle-même (pas le rendu qui suit). */
-const actionGate = cache(() => ({ checked: false }));
-
 /**
  * Contexte obligatoire. Pendant une action (envoi de formulaire, bouton…), un espace Skydev en lecture seule
  * (essai terminé sans abonnement) est renvoyé vers l'abonnement, sauf pour les actions marquées `allowLocked`
  * (s'abonner, choisir un établissement…). Sûr par défaut : toute nouvelle action est bloquée.
  */
-export async function requireContext(permission?: PermissionKey, opts: { allowLocked?: boolean; app?: string } = {}): Promise<AppContext> {
+export async function requireContext(permission?: PermissionKey, opts: { allowLocked?: boolean; app?: string; write?: boolean } = {}): Promise<AppContext> {
   const r = await resolveContext();
   if (r.kind === "anonymous") redirect("/connexion");
   if (r.kind === "no-business") redirect("/bienvenue");
@@ -105,10 +102,11 @@ export async function requireContext(permission?: PermissionKey, opts: { allowLo
     const app = path.startsWith("/app/") && path !== "/app/acces-refuse" ? appForPath(APPS, path) : null;
     if (app && app.id !== "reglages" && !r.ctx.canApp(app.id)) redirect("/app/acces-refuse");
   }
-  const gate = actionGate();
-  if (!gate.checked && (await headers()).has("next-action")) {
-    gate.checked = true;
-    if (!opts.allowLocked && (await isLocked(r.ctx.business.id, r.ctx.business.brand))) redirect("/app/reglages/abonnement?bloque=1");
+  // Lecture seule (essai Skydev terminé) : toute action d'app ou d'écriture (`app` ou `write`) envoyée en POST est refusée,
+  // qu'elle vienne d'un bouton, d'un formulaire sans JavaScript ou de l'API. Les pages (GET et rendu après une action) passent.
+  if ((opts.app || opts.write) && !opts.allowLocked) {
+    const method = (await headers()).get("x-method") ?? "POST";
+    if (method !== "GET" && method !== "HEAD" && (await isLocked(r.ctx.business.id, r.ctx.business.brand))) redirect("/app/reglages/abonnement?bloque=1");
   }
   return r.ctx;
 }

@@ -27,6 +27,8 @@ export function proxy(request: NextRequest) {
   // Chemin demandé, pour que l'espace pro sache quelle app est ouverte (toujours réécrit : jamais celui du navigateur).
   const headers = new Headers(request.headers);
   headers.set("x-pathname", path);
+  // Méthode réelle (une action = POST, avec ou sans JavaScript) : sert à la lecture seule, jamais fournie par le navigateur.
+  headers.set("x-method", request.method);
   return NextResponse.next({ request: { headers } });
 }
 

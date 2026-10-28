@@ -56,7 +56,9 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
 export const isLocked = cache(async (businessId: string, brand?: string | null): Promise<boolean> => {
   let b = brand;
   if (b === undefined) [{ b = null } = {}] = await db.select({ b: businesses.brand }).from(businesses).where(eq(businesses.id, businessId));
-  if (b !== "skydev") return false;
+  // Marque vide = celle du serveur (FORCE_BRAND), comme pour les prix.
+  const brandOf = b === "skydev" || b === "branshee" ? b : process.env.FORCE_BRAND === "skydev" ? "skydev" : "branshee";
+  if (brandOf !== "skydev") return false;
   return (await effectivePlan(businessId)).source === "free";
 });
 

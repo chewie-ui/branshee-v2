@@ -96,7 +96,7 @@ export async function reportReview(reviewId: string, input: { reason: string; me
 
 /** Le pro demande la suppression d'un avis sur son établissement ; l'équipe Branshee décide. */
 export async function requestReviewRemoval(reviewId: string, input: { reason: string; message: string }): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { write: true });
   const parsed = reportSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const id = z.uuid().safeParse(reviewId);

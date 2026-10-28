@@ -13,7 +13,7 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 
 /** Bon d'intervention A4 : client, travaux, fournitures, photos (nombre), signature. */
 export default async function PrintIntervention({ params }: { params: Promise<{ id: string }> }) {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   const r = await interventionOf(ctx.business.id, (await params).id);
   if (!r) notFound();
   const i = r.i;

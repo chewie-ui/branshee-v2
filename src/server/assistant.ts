@@ -130,7 +130,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "chiffres",
-    app: "factures",
+    app: "compta",
     description: "Chiffre d'affaires HTVA, TVA due et dépenses d'une période : « 2026-10 » (mois), « 2026-T4 » (trimestre) ou « 2026 » (année).",
     input_schema: { type: "object", properties: { periode: { type: "string" } }, required: ["periode"] },
     async run(ctx, i) {

@@ -15,7 +15,7 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 export default async function PrintZ({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   const [s] = await db.select().from(posSessions).where(and(eq(posSessions.id, id), eq(posSessions.businessId, ctx.business.id)));
   if (!s) notFound();
   const t = (s.totals as Awaited<ReturnType<typeof sessionTotals>> | null) ?? (await sessionTotals(ctx.business.id, s.id));

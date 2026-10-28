@@ -59,11 +59,17 @@ export async function campaignsOf(businessId: string) {
 export async function processCampaignQueue(limit = 300) {
   // Réservations abandonnées (serveur arrêté en plein envoi) : remises en attente après 3 heures.
   await db.execute(sql`update campaign_recipients set status = 'pending', sent_at = null where status = 'sending' and sent_at < now() - interval '3 hours'`);
+  // Entreprises à laisser de côté pour ce passage (lecture seule ou plafond du jour atteint) : exclues dès la sélection,
+  // pour qu'elles ne bloquent jamais les envois des autres en tête de file.
+  const busy = await db.selectDistinct({ id: campaigns.businessId }).from(campaigns).where(eq(campaigns.status, "sending"));
+  const held: string[] = [];
+  for (const { id } of busy) if ((await isLocked(id)) || (await dailyCap(id)) - (await sentToday(id)) <= 0) held.push(id);
+  const heldSql = held.length ? sql`and not (c.business_id = any(${sql.raw(`array[${held.map((h) => `'${h.replace(/[^0-9a-f-]/gi, "")}'`).join(",")}]::uuid[]`)}))` : sql``;
   const claimed = await db.execute<{ id: string }>(sql`
     update campaign_recipients set status = 'sending', sent_at = now()
     where id in (
       select r.id from campaign_recipients r join campaigns c on c.id = r.campaign_id
-      where r.status = 'pending' and c.status = 'sending'
+      where r.status = 'pending' and c.status = 'sending' ${heldSql}
       order by c.queued_at limit ${limit}
       for update of r skip locked
     ) returning id`);

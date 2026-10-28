@@ -5,6 +5,7 @@ import { and, count, eq, isNotNull } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
+import { referralStatus } from "@/server/referral-status";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
 import { activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
@@ -225,14 +226,6 @@ export async function setModuleAddon(key: string, on: boolean): Promise<Result> 
 
 /* ───────── Parrainage : 3 filleuls payants = 2 mois offerts ───────── */
 
-export async function referralStatus(userId: string) {
-  const [[{ paying }], [credit]] = await Promise.all([
-    db.select({ paying: count() }).from(users).where(and(eq(users.referredById, userId), isNotNull(users.referralPaidAt))),
-    db.select().from(referralCredits).where(eq(referralCredits.userId, userId)),
-  ]);
-  const earned = Math.floor(paying / 3) * 2;
-  return { paying, claimed: credit?.monthsClaimed ?? 0, claimable: Math.max(0, earned - (credit?.monthsClaimed ?? 0)) };
-}
 
 export async function claimReferral(): Promise<Result> {
   const ctx = await requireContext("billing.manage", { allowLocked: true });

@@ -62,7 +62,7 @@ async function readRows(fd: FormData): Promise<string[][] | string> {
 
 /** Étape 1 : aperçu du fichier et colonnes devinées. */
 export async function previewImport(kind: ImportKind, fd: FormData): Promise<Preview> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   const denied = await rightsFor(ctx, kind);
   if (denied) return denied;
   const rows = await readRows(fd);
@@ -75,7 +75,7 @@ export async function previewImport(kind: ImportKind, fd: FormData): Promise<Pre
 
 /** Étape 2 : création des fiches. Les clients déjà connus (même email) et les produits au code-barres existant sont ignorés. */
 export async function runImport(kind: ImportKind, fd: FormData, mapping: Record<string, number>): Promise<Done> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   const denied = await rightsFor(ctx, kind);
   if (denied) return denied;
   const rows = await readRows(fd);

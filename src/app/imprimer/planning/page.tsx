@@ -13,7 +13,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 
 /** Planning de la semaine en A4 paysage, pour l'afficher au mur ou l'enregistrer en PDF. */
 export default async function PrintPlanning({ searchParams }: { searchParams: Promise<{ semaine?: string }> }) {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "horaires" });
   const q = (await searchParams).semaine;
   const monday = mondayOf(isDay(q) ? q : todayIn(ctx.business.timezone));
   const days = weekDays(monday);

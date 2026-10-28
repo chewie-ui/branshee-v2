@@ -3,7 +3,7 @@ import { and, count, desc, eq, isNotNull, like } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLogs, businesses, members, notificationSettings, users } from "@/db/schema";
 import { saveSmsSettings } from "@/server/actions/sms";
-import { referralStatus } from "@/server/actions/billing";
+import { referralStatus } from "@/server/referral-status";
 import { businessHas, collaboratorUsage, effectivePlan, onlineBookingsThisMonth } from "@/server/plan";
 import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, usageThisMonth, whatsappConfigured } from "@/server/sms";
 import { ensureReferralCode } from "@/server/referral";

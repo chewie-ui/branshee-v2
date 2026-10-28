@@ -471,7 +471,8 @@ export function appForPath<T extends Pick<SkyApp, "nav" | "match">>(apps: T[], p
   let len = 0;
   for (const app of apps)
     for (const prefix of [...app.nav.map((n) => n.href), ...(app.match ?? [])])
-      if (starts(path, prefix) && prefix.length > len) {
+      // À longueur égale (ex. /app/factures/devis, partagé avec Signature), l'app dont c'est le dossier gagne.
+      if (starts(path, prefix) && (prefix.length > len || (prefix.length === len && starts(prefix, app.nav[0]?.href.split("/").slice(0, 3).join("/") ?? "")))) {
         best = app;
         len = prefix.length;
       }

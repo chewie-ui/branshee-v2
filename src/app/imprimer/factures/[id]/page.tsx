@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 
 /** Le titre de la page sert de nom au PDF enregistré (« Facture SKY-2026-001 »). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const ctx = await requireContext("invoices.view");
+  const ctx = await requireContext("invoices.view", { app: "factures" });
   const d = await getDocument(ctx.business.id, (await params).id);
   return { title: { absolute: d ? `${docTitle(d.docType)} ${d.number ?? "brouillon"}` : "Document" }, robots: { index: false } };
 }
 
 /** Version imprimable (A4) : « Enregistrer en PDF » depuis la fenêtre d'impression du navigateur. */
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const ctx = await requireContext("invoices.view");
+  const ctx = await requireContext("invoices.view", { app: "factures" });
   const d = await getDocument(ctx.business.id, (await params).id);
   if (!d) notFound();
   const [settings, customers, rel, qr] = await Promise.all([getSellerSettings(ctx.business.id), customerOptions(ctx.business.id), relatedDocuments(ctx.business.id, d), paymentQr(d)]);

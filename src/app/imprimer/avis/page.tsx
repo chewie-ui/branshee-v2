@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: { absolute: "Affiche avis Google" }, 
 
 /** Affiche A5 / A4 pour le comptoir : QR code vers la page d'avis. */
 export default async function PrintReviewPoster() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "avis" });
   const s = await reviewSettingsOf(ctx.business.id);
   const qr = await QRCode.toDataURL(`${reviewOrigin()}/avis/q/${s.qrToken}`, { margin: 1, width: 640, errorCorrectionLevel: "M" });
   return (

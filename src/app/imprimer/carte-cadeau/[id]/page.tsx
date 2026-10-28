@@ -16,7 +16,9 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 export default async function PrintGiftCard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "fidelite" });
+  // Le code d'une carte cadeau vaut de l'argent : réservé au responsable (comme sa création).
+  if (!(ctx.member.isOwner || ctx.can("settings.manage"))) notFound();
   const [g] = await db.select().from(giftCards).where(and(eq(giftCards.id, id), eq(giftCards.businessId, ctx.business.id)));
   if (!g) notFound();
   const s = await getSellerSettings(ctx.business.id);

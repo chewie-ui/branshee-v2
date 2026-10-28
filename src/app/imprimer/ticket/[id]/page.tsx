@@ -16,7 +16,7 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 export default async function PrintTicket({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   const [s] = await db.select().from(posSales).where(and(eq(posSales.id, id), eq(posSales.businessId, ctx.business.id)));
   if (!s) notFound();
   const seller = await getSellerSettings(ctx.business.id);

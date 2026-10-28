@@ -5,7 +5,8 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { appointmentPayments, appointments, bookingSettings, businesses, customers, grades, members, users } from "@/db/schema";
 import { currentContext, type AppContext } from "@/server/context";
-import { effectivePlan } from "@/server/plan";
+import { effectivePlan, isLocked } from "@/server/plan";
+import { headers } from "next/headers";
 import { listMemberships } from "@/server/memberships";
 import type { Permissions, PermissionKey } from "@/lib/permissions";
 import { planLabel, type Plan } from "@/lib/plans";
@@ -22,6 +23,11 @@ export async function needCtx(permission?: PermissionKey): Promise<AppContext> {
   const ctx = await currentContext();
   if (!ctx) return fail(409, "no_establishment", "Créez ou rejoignez d'abord un établissement.");
   if (permission && !ctx.can(permission)) return forbidden();
+  // Skydev : l'application mobile couvre RDV et Clients. Un grade sans ces apps n'y a pas accès,
+  // et un espace en lecture seule (essai terminé) ne peut rien y modifier.
+  if (!ctx.canApp("rdv") || !ctx.canApp("clients")) return forbidden();
+  const method = (await headers()).get("x-method") ?? "POST";
+  if (method !== "GET" && method !== "HEAD" && (await isLocked(ctx.business.id, ctx.business.brand))) return fail(402, "read_only", "Votre essai est terminé : abonnez-vous pour continuer à modifier.");
   return ctx;
 }
 

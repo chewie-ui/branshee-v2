@@ -14,7 +14,7 @@ type Result = { ok: true; message?: string; url?: string } | { ok: false; error:
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
 export async function saveSmsSettings(input: { smsReminders: boolean; smsConfirmations: boolean; smsAllowOverage: boolean; whatsappReminders: boolean; whatsappConfirmations: boolean }): Promise<Result> {
-  const ctx = await requireContext("settings.manage");
+  const ctx = await requireContext("settings.manage", { write: true });
   const v = z.object({ smsReminders: z.boolean(), smsConfirmations: z.boolean(), smsAllowOverage: z.boolean(), whatsappReminders: z.boolean(), whatsappConfirmations: z.boolean() }).safeParse(input);
   if (!v.success) return { ok: false, error: "Réglages invalides." };
   await db.update(notificationSettings).set(v.data).where(eq(notificationSettings.businessId, ctx.business.id));
@@ -30,7 +30,7 @@ async function ownerOf(ctx: Awaited<ReturnType<typeof requireContext>>) {
 }
 
 export async function topUpSms(amountEuros: number): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { write: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const amount = z.union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)]).safeParse(amountEuros);
   if (!amount.success) return { ok: false, error: "Montant invalide." };
@@ -62,7 +62,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
 }
 
 export async function saveAutoRecharge(input: { enabled: boolean; thresholdCents: number; amountCents: number }): Promise<Result> {
-  const ctx = await requireContext("billing.manage");
+  const ctx = await requireContext("billing.manage", { write: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const v = z.object({ enabled: z.boolean(), thresholdCents: z.number().int().min(100).max(10000), amountCents: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(10000)]) }).safeParse(input);
   if (!v.success) return { ok: false, error: "Réglages invalides." };

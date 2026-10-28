@@ -25,7 +25,7 @@ const reqSchema = z.object({
 
 /** Demander une modif ou un outil sur mesure (réservé au responsable : c'est payant). */
 export async function submitCustomRequest(input: z.input<typeof reqSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   if (ctx.impersonating) return { ok: false, error: "Lecture seule pendant la supervision." };
   if (!(ctx.member.isOwner || ctx.can("settings.manage"))) return { ok: false, error: "Seul le responsable peut faire une demande sur mesure." };
   const v = reqSchema.safeParse(input);
@@ -41,7 +41,7 @@ export async function submitCustomRequest(input: z.input<typeof reqSchema>): Pro
 
 /** Le client accepte ou refuse le prix proposé, ou annule sa demande. */
 export async function answerCustomRequest(id: string, action: "accept" | "decline" | "cancel"): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { write: true });
   if (ctx.impersonating) return { ok: false, error: "Lecture seule pendant la supervision." };
   if (!(ctx.member.isOwner || ctx.can("settings.manage"))) return { ok: false, error: "Réservé au responsable." };
   if (!["accept", "decline", "cancel"].includes(action)) return { ok: false, error: "Action inconnue." };
@@ -72,6 +72,8 @@ export async function adminUpdateCustomRequest(id: string, input: z.input<typeof
   const r = await requestById(id);
   if (!r) return { ok: false, error: "Demande introuvable." };
   const d = v.data;
+  // Prix accepté par le client : figé (pas de changement après coup).
+  if (r.r.acceptedAt && (d.setupCents !== r.r.setupCents || d.monthlyCents !== r.r.monthlyCents)) return { ok: false, error: "Le client a déjà accepté ce prix : il ne peut plus changer. Faites une nouvelle proposition dans une autre demande." };
   await db.update(customRequests).set({ status: d.status, setupCents: d.setupCents, monthlyCents: d.monthlyCents, reply: d.reply || null, ...(d.status === "quoted" && r.r.status !== "quoted" ? { quotedAt: new Date() } : {}), updatedAt: new Date() }).where(eq(customRequests.id, id));
   if (d.notify) {
     // Le responsable de l'entreprise (et la personne qui a demandé) est prévenu par email.

@@ -127,8 +127,8 @@ export function nextDue(due: string, r: Recurrence, today: string): string {
     return iso(x);
   };
   let n = step(due);
-  for (let i = 0; n <= today && i < 1000; i++) n = step(n);
-  return n;
+  for (let i = 0; n <= today && i < 40000; i++) n = step(n);
+  return n <= today ? addDays(today, 1) : n;
 }
 
 /** Libellé court d'une échéance : « Aujourd'hui », « Demain », « Lundi », « 12 nov. », en retard. */

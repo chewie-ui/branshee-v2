@@ -5,7 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businessPlans, promoCodes, users } from "@/db/schema";
 import { BillingPanel, ReferralCard } from "@/components/settings/billing-panel";
-import { referralStatus } from "@/server/actions/billing";
+import { referralStatus } from "@/server/referral-status";
 import { activeCampaign, billingEnabled, countBilledUsers, describePromo } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";

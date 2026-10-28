@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, gt, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNotNull, isNull, lte, ne, sql, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, articles, businessPlans, businesses, deals, emailLogs, members, products, notificationSettings, reviewSettings, services, users } from "@/db/schema";
 import { deliverReviewRequest } from "@/server/google-reviews";
@@ -267,6 +267,10 @@ export async function sendSalesFollowUps(now = new Date()) {
  */
 export async function sendAutoReviewRequests(now = new Date()) {
   const at = sql`${now.toISOString()}::timestamptz`;
+  // Espaces en lecture seule : exclus de la sélection (ils ne prennent pas la place des autres).
+  const auto = await db.select({ id: reviewSettings.businessId }).from(reviewSettings).where(eq(reviewSettings.autoSend, true));
+  const locked: string[] = [];
+  for (const { id } of auto) if (await isLocked(id)) locked.push(id);
   const rows = await db
     .select({ id: appointments.id, businessId: appointments.businessId, email: appointments.contactEmail, name: appointments.contactName, customerId: appointments.customerId, minDays: reviewSettings.minDaysBetween })
     .from(appointments)
@@ -276,6 +280,7 @@ export async function sendAutoReviewRequests(now = new Date()) {
       and(
         eq(reviewSettings.autoSend, true),
         isNotNull(reviewSettings.googleUrl),
+        locked.length ? notInArray(appointments.businessId, locked) : undefined,
         isNull(businesses.deletedAt),
         eq(appointments.kind, "appointment"),
         eq(appointments.status, "confirmed"),

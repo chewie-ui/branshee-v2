@@ -36,7 +36,7 @@ const addSchema = z.object({
 
 /** Ajoute un membre. Avec un email, il est relié à son compte (existant ou créé plus tard). */
 export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamState> {
-  const ctx = await requireContext("team.manage");
+  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = addSchema.safeParse({ displayName: str(fd, "displayName"), email: str(fd, "email").toLowerCase(), roleLabel: str(fd, "roleLabel"), gradeId: str(fd, "gradeId"), isBookable: fd.get("isBookable") === "on" });
   if (!parsed.success) {
@@ -98,7 +98,7 @@ const updateSchema = z.object({
 });
 
 export async function updateMember(memberId: string, _prev: TeamState, fd: FormData): Promise<TeamState> {
-  const ctx = await requireContext("team.manage");
+  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, z.uuid().parse(memberId)), eq(members.businessId, ctx.business.id)));
   if (!m) return { error: "Membre introuvable." };
@@ -150,7 +150,7 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
 }
 
 export async function removeMember(memberId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("team.manage");
+  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, z.uuid().parse(memberId)), eq(members.businessId, ctx.business.id)));
   if (!m) return { ok: false, error: "Membre introuvable." };
@@ -166,11 +166,11 @@ export async function removeMember(memberId: string): Promise<{ ok: boolean; err
 
 export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: FormData): Promise<TeamState> {
   {
-    const c = await requireContext("grades.manage");
+    const c = await requireContext("grades.manage", { write: true, app: "employes" });
     if (c.impersonating) return { error: "Action réservée au titulaire du compte (session de supervision)." };
     if (!(await businessHas(c.business.id, "grades"))) return { error: "Les grades sur mesure sont inclus dans le forfait Pro+." };
   }
-  const ctx = await requireContext("grades.manage");
+  const ctx = await requireContext("grades.manage", { write: true, app: "employes" });
   const name = str(fd, "name");
   if (name.length < 2 || name.length > 40) return { error: "Vérifiez les champs indiqués.", fieldErrors: { name: "Entre 2 et 40 caractères." } };
 
@@ -184,6 +184,14 @@ export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: Fo
   const appAccess = mode === "some" ? APPS.filter((a) => a.id !== "reglages" && fd.get(`app.${a.id}`) === "on").map((a) => a.id) : null;
   const appSet = mode === "all" || mode === "some" ? { appAccess } : {};
   if (mode === "some" && !appAccess!.length) return { error: "Cochez au moins une app, ou choisissez « Toutes les apps »." };
+
+  // Pas d'élévation : hors titulaire, on ne modifie pas son propre grade, et on ne donne que ce qu'on a soi-même.
+  if (!ctx.member.isOwner) {
+    const [me] = await db.select({ gradeId: members.gradeId }).from(members).where(eq(members.id, ctx.member.id));
+    if (gradeId && me?.gradeId === gradeId) return { error: "Vous ne pouvez pas modifier votre propre grade : demandez au titulaire." };
+    for (const [domain, acts] of Object.entries(permissions)) for (const [a, on] of Object.entries(acts)) if (on && !ctx.can(`${domain}.${a}` as never)) return { error: "Vous ne pouvez pas donner une permission que vous n'avez pas vous-même." };
+    if (ctx.appAccess && "appAccess" in appSet && (!appAccess || appAccess.some((x) => !ctx.canApp(x)))) return { error: "Vous ne pouvez pas ouvrir des apps auxquelles vous n'avez pas accès." };
+  }
 
   try {
     if (gradeId) {
@@ -207,7 +215,7 @@ export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: Fo
 }
 
 export async function deleteGrade(gradeId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("grades.manage");
+  const ctx = await requireContext("grades.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const id = z.uuid().parse(gradeId);
   const [g] = await db.select().from(grades).where(and(eq(grades.id, id), eq(grades.businessId, ctx.business.id)));

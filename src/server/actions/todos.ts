@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { members, todoListMembers, todoLists, todoTasks, users } from "@/db/schema";
+import { emailLogs, members, todoListMembers, todoLists, todoTasks, users } from "@/db/schema";
 import { todayIn } from "@/lib/planning";
 import { LIST_COLORS, nextDue, parseQuickAdd, type Recurrence } from "@/lib/todos";
 import { requireContext, type AppContext } from "@/server/context";
@@ -15,7 +15,7 @@ import { canSeeTask, teamOf, visibleLists } from "@/server/todos";
 type Result = { ok: true; message?: string; id?: string } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Lecture seule pendant la supervision." };
 const RECUR = ["daily", "weekdays", "weekly", "monthly", "yearly"] as const;
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isoDate = z.string().regex(/^(20\d{2})-\d{2}-\d{2}$/, "Date invalide.");
 const refresh = () => revalidatePath("/app/taches", "layout");
 const manager = (ctx: AppContext) => ctx.member.isOwner || ctx.can("settings.manage");
 
@@ -29,6 +29,9 @@ async function activeMember(businessId: string, id: string | null | undefined) {
 /** Prévient la personne à qui l'on confie une tâche (pas soi-même). */
 async function notifyAssignee(ctx: AppContext, assigneeId: string | null, title: string, due: string | null) {
   if (!assigneeId || assigneeId === ctx.member.id) return;
+  // Pas plus de 100 emails « tâche confiée » par entreprise et par jour (contre les abus).
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(emailLogs).where(and(eq(emailLogs.businessId, ctx.business.id), eq(emailLogs.template, "todo_assigned"), sql`${emailLogs.createdAt} > now() - interval '24 hours'`));
+  if (n >= 100) return;
   const [u] = await db.select({ email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(eq(members.id, assigneeId));
   if (!u) return;
   const url = `${(process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "")}/app/taches/aujourdhui`;
@@ -56,8 +59,9 @@ export async function addTask(input: z.input<typeof addSchema>): Promise<Result>
     listId = parent.listId;
   }
   if (listId && !lists.some((l) => l.id === listId)) return { ok: false, error: "Liste introuvable." };
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(todoTasks).where(and(eq(todoTasks.businessId, ctx.business.id), isNull(todoTasks.completedAt)));
+  const [{ n, all }] = await db.select({ n: sql<number>`count(*) filter (where ${todoTasks.completedAt} is null)::int`, all: sql<number>`count(*)::int` }).from(todoTasks).where(eq(todoTasks.businessId, ctx.business.id));
   if (n >= 20000) return { ok: false, error: "Trop de tâches ouvertes : terminez-en quelques-unes." };
+  if (all >= 200000) return { ok: false, error: "Limite de tâches atteinte : supprimez d'anciennes tâches terminées." };
   const [t] = await db
     .insert(todoTasks)
     .values({ businessId: ctx.business.id, listId, parentId, title: q.title.slice(0, 300), dueDate: q.dueDate ?? v.data.dueDate ?? null, dueTime: q.dueTime, priority: q.priority, recurrence: q.recurrence, assigneeMemberId: q.assigneeId, createdByMemberId: ctx.member.id })
@@ -99,7 +103,10 @@ export async function updateTask(id: string, input: z.input<typeof updSchema>): 
     set.assigneeMemberId = a;
   }
   if (d.listId !== undefined && !t.parentId) {
-    if (d.listId && !(await visibleLists(ctx)).some((l) => l.id === d.listId)) return { ok: false, error: "Liste introuvable." };
+    const visible = await visibleLists(ctx);
+    // Une tâche d'une liste que je ne vois pas (confiée à moi) ne peut pas en être sortie par moi.
+    if (t.listId && !visible.some((l) => l.id === t.listId)) return { ok: false, error: "Seuls les membres de sa liste peuvent la déplacer." };
+    if (d.listId && !visible.some((l) => l.id === d.listId)) return { ok: false, error: "Liste introuvable." };
     set.listId = d.listId;
   }
   await db.transaction(async (tx) => {
