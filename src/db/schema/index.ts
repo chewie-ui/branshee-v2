@@ -14,3 +14,4 @@ export * from "./google-reviews";
 export * from "./stock";
 export * from "./signatures";
 export * from "./documents";
+export * from "./chat";

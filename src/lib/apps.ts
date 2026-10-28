@@ -230,7 +230,18 @@ const UPCOMING: SkyApp[] = [
     features: ["Dossiers et sous-dossiers, glisser-déposer", "Fichiers chiffrés sur nos serveurs (2 Go)", "Partage par lien, avec date d'expiration", "Recherche dans tous les dossiers"],
     nav: [{ href: "/app/documents", label: "Documents", icon: "folder" }],
   },
-  soon("messagerie", "equipe", "Messagerie", "message", "Discutez avec votre équipe, sans WhatsApp.", ["Discussions d'équipe et privées", "Fichiers et photos", "Notifications sur téléphone", "Lié aux rendez-vous et projets"]),
+  {
+    id: "messagerie",
+    category: "equipe",
+    name: "Messagerie",
+    tagline: "Discutez avec votre équipe, sans WhatsApp.",
+    icon: "message",
+    href: "/app/messagerie",
+    status: "active",
+    billing: "included",
+    features: ["Salons d'équipe et messages privés", "Messages non lus signalés", "Séparé de vos messages personnels", "Sur téléphone et ordinateur"],
+    nav: [{ href: "/app/messagerie", label: "Messagerie", icon: "message" }],
+  },
 ];
 
 export const APPS: SkyApp[] = [
