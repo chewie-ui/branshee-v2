@@ -23,6 +23,8 @@ import { formatDay, formatPrice, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { CustomerBillingForm } from "@/components/invoicing/customer-billing-form";
+import { CustomerActivity } from "@/components/customers/customer-activity";
+import { customerActivity } from "@/server/customer-activity";
 
 export const metadata: Metadata = { title: "Fiche" };
 
@@ -33,7 +35,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
   const sp = await searchParams;
-  const tab = sp.onglet === "rendez-vous" ? "rdv" : sp.onglet === "dossier" ? "dossier" : "apercu";
+  const skydev = (await currentBrand()).id === "skydev";
+  const tab = sp.onglet === "rendez-vous" ? "rdv" : sp.onglet === "dossier" ? "dossier" : sp.onglet === "tout" && skydev ? "tout" : "apercu";
   const tz = ctx.business.timezone;
   const term = clientWord(ctx.business.businessType);
   const Terms = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
@@ -89,7 +92,9 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     { key: "apercu", label: "Aperçu", href: `/app/clients/${customer.id}` },
     { key: "rdv", label: `Rendez-vous (${history.length})`, href: `/app/clients/${customer.id}?onglet=rendez-vous` },
     { key: "dossier", label: "Dossier", href: `/app/clients/${customer.id}?onglet=dossier` },
+    ...(skydev ? [{ key: "tout", label: "Toutes les apps", href: `/app/clients/${customer.id}?onglet=tout` }] : []),
   ];
+  const activity = tab === "tout" ? await customerActivity(ctx, { id: customer.id, email: customer.email }) : null;
 
   return (
     <>
@@ -131,6 +136,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           Une partie du dossier est illisible : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l&apos;enregistrement.
         </p>
       ) : null}
+
+      {activity ? <CustomerActivity a={activity} customerId={customer.id} /> : null}
 
       {tab === "apercu" ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
