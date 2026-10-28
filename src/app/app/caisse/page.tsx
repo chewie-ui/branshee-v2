@@ -16,7 +16,7 @@ export default async function PosPage() {
   return (
     <>
       <h1 className="sr-only">Caisse</h1>
-      <PosRegister products={list.map((p) => ({ ...p, costCents: null }))} expectedCash={session.openingCashCents + t.cash} sessionInfo={`Ouverte à ${since} · ${t.tickets} ticket${t.tickets > 1 ? "s" : ""}`} />
+      <PosRegister products={list.map((p) => ({ ...p, costCents: null }))} expectedCash={session.openingCashCents + t.cash - t.refundedCash} sessionInfo={`Ouverte à ${since} · ${t.tickets} ticket${t.tickets > 1 ? "s" : ""}`} />
     </>
   );
 }

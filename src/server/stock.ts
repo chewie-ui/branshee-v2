@@ -34,26 +34,38 @@ export async function openSessionOf(businessId: string) {
   return s ?? null;
 }
 
-/** Totaux d'une session de caisse (pour la clôture et le rapport Z). */
+/**
+ * Totaux d'une session de caisse (clôture et rapport Z) : ventes encaissées pendant la session,
+ * remboursements faits pendant la session (même pour un ticket d'un autre jour), espèces attendues.
+ */
 export async function sessionTotals(businessId: string, sessionId: string) {
-  const rows = await db
-    .select({ method: posSales.method, status: posSales.status, n: sql<number>`count(*)::int`, total: sql<number>`coalesce(sum(${posSales.totalCents}), 0)::int`, vat: sql<number>`coalesce(sum(${posSales.vatCents}), 0)::int` })
-    .from(posSales)
-    .where(and(eq(posSales.businessId, businessId), eq(posSales.sessionId, sessionId)))
-    .groupBy(posSales.method, posSales.status);
-  const paid = rows.filter((r) => r.status === "paid");
-  const by = (m: string) => paid.filter((r) => r.method === m).reduce((a, r) => a + r.total, 0);
+  const [sales, refunds] = await Promise.all([
+    db
+      .select({ method: posSales.method, n: sql<number>`count(*)::int`, total: sql<number>`coalesce(sum(${posSales.totalCents}), 0)::int`, vat: sql<number>`coalesce(sum(${posSales.vatCents}), 0)::int` })
+      .from(posSales)
+      .where(and(eq(posSales.businessId, businessId), eq(posSales.sessionId, sessionId)))
+      .groupBy(posSales.method),
+    db
+      .select({ method: posSales.method, total: sql<number>`coalesce(sum(${posSales.totalCents}), 0)::int`, vat: sql<number>`coalesce(sum(${posSales.vatCents}), 0)::int` })
+      .from(posSales)
+      .where(and(eq(posSales.businessId, businessId), eq(posSales.refundSessionId, sessionId)))
+      .groupBy(posSales.method),
+  ]);
+  const by = (m: string) => sales.filter((r) => r.method === m).reduce((a, r) => a + r.total, 0);
+  const refunded = refunds.reduce((a, r) => a + r.total, 0);
   return {
-    tickets: paid.reduce((a, r) => a + r.n, 0),
-    total: paid.reduce((a, r) => a + r.total, 0),
-    vat: paid.reduce((a, r) => a + r.vat, 0),
+    tickets: sales.reduce((a, r) => a + r.n, 0),
+    total: sales.reduce((a, r) => a + r.total, 0) - refunded,
+    vat: sales.reduce((a, r) => a + r.vat, 0) - refunds.reduce((a, r) => a + r.vat, 0),
     cash: by("cash"),
     card: by("card"),
     other: by("other"),
-    refunded: rows.filter((r) => r.status === "refunded").reduce((a, r) => a + r.total, 0),
-    refundedCash: rows.filter((r) => r.status === "refunded" && r.method === "cash").reduce((a, r) => a + r.total, 0),
+    refunded,
+    refundedCash: refunds.filter((r) => r.method === "cash").reduce((a, r) => a + r.total, 0),
   };
 }
+
+export type SessionTotals = Awaited<ReturnType<typeof sessionTotals>>;
 
 export async function salesToday(businessId: string, days: number) {
   const since = new Date(Date.now() - days * 86400_000);

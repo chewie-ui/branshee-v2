@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { customers, docFolders, documents } from "@/db/schema";
 import { requireContext, type AppContext } from "@/server/context";
-import { MAX_FILE, QUOTA_BYTES, docOrigin, docRights, usedBytes } from "@/server/documents";
+import { MAX_FILE, QUOTA_BYTES, docOrigin, docRights } from "@/server/documents";
 import { deletePrivateFile, isPdf, savePrivateFile, sniffImage } from "@/server/storage";
 
 type Result = { ok: true; message?: string; id?: string; url?: string } | { ok: false; error: string };
@@ -76,15 +76,25 @@ export async function uploadDocument(fd: FormData): Promise<Result> {
   const folderId = uuidOrNull.safeParse(fd.get("folderId") ?? "");
   const customerId = uuidOrNull.safeParse(fd.get("customerId") ?? "");
   if (!folderId.success || !customerId.success || !(await ownFolder(ctx.business.id, folderId.data)) || !(await ownCustomer(ctx.business.id, customerId.data))) return { ok: false, error: "Dossier introuvable." };
-  if ((await usedBytes(ctx.business.id)) + file.size > QUOTA_BYTES) return { ok: false, error: "Espace plein (2 Go) : supprimez d'anciens fichiers." };
   const data = Buffer.from(await file.arrayBuffer());
   // Le type vient du contenu (pas du nom) pour les PDF et images ; le reste est servi en téléchargement.
   const mime = isPdf(data) ? "application/pdf" : (sniffImage(data) ?? (/\.txt$/i.test(file.name) ? "text/plain" : "application/octet-stream"));
   const name = file.name.replace(/[\u0000-\u001f/\\]+/g, "_").slice(0, 200) || "fichier";
   const ref = await savePrivateFile(data);
-  const [row] = await db.insert(documents).values({ businessId: ctx.business.id, folderId: folderId.data, name, mime, sizeBytes: file.size, fileRef: ref, uploadedById: ctx.member.id, customerId: customerId.data }).returning({ id: documents.id });
+  // Quota vérifié sous verrou : des envois en parallèle ne peuvent pas dépasser 2 Go.
+  const row = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${ctx.business.id}:documents`}))`);
+    const [u] = await tx.select({ n: sql<number>`coalesce(sum(${documents.sizeBytes}), 0)::bigint` }).from(documents).where(eq(documents.businessId, ctx.business.id));
+    if (Number(u?.n ?? 0) + file.size > QUOTA_BYTES) return null;
+    const [r] = await tx.insert(documents).values({ businessId: ctx.business.id, folderId: folderId.data, name, mime, sizeBytes: file.size, fileRef: ref, uploadedById: ctx.member.id, customerId: customerId.data }).returning({ id: documents.id });
+    return r!;
+  });
+  if (!row) {
+    await deletePrivateFile(ref).catch(() => {});
+    return { ok: false, error: "Espace plein (2 Go) : supprimez d'anciens fichiers." };
+  }
   refresh();
-  return { ok: true, message: `« ${name} » ajouté.`, id: row!.id };
+  return { ok: true, message: `« ${name} » ajouté.`, id: row.id };
 }
 
 async function ownDoc(ctx: AppContext, id: string) {
@@ -100,6 +110,7 @@ export async function renameDocument(id: string, name: string): Promise<Result> 
   const d = await ownDoc(ctx, id);
   const v = z.string().trim().min(1).max(200).safeParse(name);
   if (!d || !v.success) return { ok: false, error: "Nom invalide." };
+  if (!canTouch(ctx, d)) return { ok: false, error: "Seul le responsable ou la personne qui l'a ajouté peut le renommer." };
   await db.update(documents).set({ name: v.data.replace(/[\u0000-\u001f/\\]+/g, "_") }).where(eq(documents.id, d.id));
   refresh();
   return { ok: true, message: "Fichier renommé." };

@@ -92,6 +92,8 @@ const giftSchema = z.object({
 export async function createGiftCard(input: z.input<typeof giftSchema>): Promise<Result> {
   const { ctx, error } = await member();
   if (error) return error;
+  // Une carte cadeau vaut de l'argent : seul le responsable (ou qui gère les réglages) en crée.
+  if (!loyaltyRights(ctx).manage) return { ok: false, error: "Seul le responsable peut créer une carte cadeau." };
   const v = giftSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez la carte." };
   const cents = parseEuros(v.data.amount);

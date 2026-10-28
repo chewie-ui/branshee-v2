@@ -73,6 +73,8 @@ export const posSessions = pgTable(
     countedCashCents: integer("counted_cash_cents"),
     expectedCashCents: integer("expected_cash_cents"),
     note: text("note"),
+    /** Totaux figés à la clôture (le rapport Z ne change plus ensuite). */
+    totals: jsonb("totals").$type<Record<string, number>>(),
   },
   (t) => [index("pos_sessions_business_idx").on(t.businessId, t.openedAt), uniqueIndex("pos_sessions_one_open_uq").on(t.businessId).where(sql`${t.closedAt} is null`)],
 );
@@ -103,6 +105,8 @@ export const posSales = pgTable(
     /** paid | refunded */
     status: text("status").notNull().default("paid"),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
+    /** Session de caisse pendant laquelle le remboursement a eu lieu (l'argent sort de ce tiroir-là). */
+    refundSessionId: uuid("refund_session_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("pos_sales_number_uq").on(t.businessId, t.year, t.seq), index("pos_sales_business_idx").on(t.businessId, t.createdAt), index("pos_sales_session_idx").on(t.sessionId)],

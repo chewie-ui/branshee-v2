@@ -28,18 +28,22 @@ export async function requestSignature(documentId: string, email: string): Promi
   if (!d || d.docType !== "quote") return { ok: false, error: "Devis introuvable." };
   if (d.status === "invoiced" || d.status === "refused") return { ok: false, error: "Ce devis est déjà facturé ou refusé." };
   if (!d.client || !d.seller) return { ok: false, error: "Enregistrez d'abord le devis avec un client." };
-  const [already] = await db.select({ id: quoteSignatures.id }).from(quoteSignatures).where(and(eq(quoteSignatures.documentId, d.id), sql`${quoteSignatures.signedAt} is not null`, isNull(quoteSignatures.cancelledAt)));
-  if (already) return { ok: false, error: "Ce devis est déjà signé." };
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(quoteSignatures).where(and(eq(quoteSignatures.businessId, ctx.business.id), gte(quoteSignatures.sentAt, new Date(Date.now() - 86400_000))));
   if (n >= 50) return { ok: false, error: "50 demandes de signature en 24 heures : réessayez demain." };
   const token = newSignToken();
   const expires = new Date(Date.now() + 30 * 86400_000);
-  await db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
+    // Verrou sur le devis : une signature en cours et un nouvel envoi ne peuvent pas se croiser.
+    await tx.select({ id: salesDocuments.id }).from(salesDocuments).where(eq(salesDocuments.id, d.id)).for("update");
+    const [already] = await tx.select({ id: quoteSignatures.id }).from(quoteSignatures).where(and(eq(quoteSignatures.documentId, d.id), sql`${quoteSignatures.signedAt} is not null`, isNull(quoteSignatures.cancelledAt)));
+    if (already) return false;
     await tx.update(quoteSignatures).set({ cancelledAt: new Date() }).where(and(eq(quoteSignatures.documentId, d.id), isNull(quoteSignatures.signedAt), isNull(quoteSignatures.cancelledAt)));
     await tx.insert(quoteSignatures).values({ businessId: ctx.business.id, documentId: d.id, token, email: e.data, docHash: docHash(d), expiresAt: expires });
     if (d.status === "draft") await tx.update(salesDocuments).set({ status: "sent", updatedAt: new Date() }).where(eq(salesDocuments.id, d.id));
     await tx.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "quote.sign-request", description: `Devis ${d.number} envoyé pour signature` });
+    return true;
   });
+  if (!created) return { ok: false, error: "Ce devis est déjà signé." };
   const seller = String(d.seller.tradeName || d.seller.legalName || ctx.business.name);
   const sent = await sendEmail({ to: e.data, ...emails.signRequest({ sellerName: seller, number: d.number ?? "", amount: eur(d.ttcCents), url: `${signOrigin()}/signer/${token}`, validUntil: d.validUntil }), template: "sign_request", businessId: ctx.business.id, replyTo: String(d.seller.email || "") || null });
   revalidatePath(`/app/factures/${d.id}`);
@@ -62,6 +66,7 @@ async function usable(token: string) {
   if (r.sig.signedAt) return { r, error: "Ce devis est déjà signé." };
   if (r.sig.declinedAt) return { r, error: "Ce devis a été refusé." };
   if (r.sig.expiresAt < new Date()) return { r, error: "Ce lien a expiré. Demandez un nouveau lien à votre fournisseur." };
+  if (r.doc.validUntil && r.doc.validUntil < new Date().toISOString().slice(0, 10)) return { r, error: "Ce devis a dépassé sa date de validité. Demandez une nouvelle version à votre fournisseur." };
   if (r.doc.status === "invoiced" || r.doc.status === "refused" || docHash(r.doc) !== r.sig.docHash) return { r, error: "Le devis a été modifié depuis l'envoi. Demandez un nouveau lien à votre fournisseur." };
   return { r, error: null };
 }
@@ -88,6 +93,7 @@ export async function signQuote(input: z.input<typeof signSchema>): Promise<Resu
   const { r, error } = await usable(v.data.token);
   if (error || !r) return { ok: false, error: error ?? "Lien invalide." };
   const done = await db.transaction(async (tx) => {
+    await tx.select({ id: salesDocuments.id }).from(salesDocuments).where(eq(salesDocuments.id, r.doc.id)).for("update");
     const upd = await tx.update(quoteSignatures).set({ signedAt: new Date(), signerName: v.data.name, signerIp: ip, signerAgent: (h.get("user-agent") ?? "").slice(0, 300), signaturePath: v.data.path }).where(and(eq(quoteSignatures.id, r.sig.id), isNull(quoteSignatures.signedAt), isNull(quoteSignatures.cancelledAt), isNull(quoteSignatures.declinedAt))).returning({ id: quoteSignatures.id });
     if (!upd.length) return false;
     await tx.update(salesDocuments).set({ status: "accepted", updatedAt: new Date() }).where(and(eq(salesDocuments.id, r.doc.id), sql`${salesDocuments.status} in ('draft','sent','accepted')`));

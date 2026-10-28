@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { customers, interventions, members, type InterventionPhoto } from "@/db/schema";
@@ -57,8 +57,8 @@ export async function saveIntervention(input: z.input<typeof saveSchema>): Promi
   }
   const values = { customerId: d.customerId, clientName: client.name, clientPhone: client.phone, clientEmail: client.email, address: d.address, title: d.title, description: d.description, technicianId: d.technicianId, scheduledAt: d.scheduledAt, durationMinutes: d.durationMinutes, updatedAt: new Date() };
   if (d.id) {
-    const done = await db.update(interventions).set(values).where(and(eq(interventions.id, d.id), eq(interventions.businessId, ctx.business.id))).returning({ id: interventions.id });
-    if (!done.length) return NF;
+    const done = await db.update(interventions).set(values).where(and(eq(interventions.id, d.id), eq(interventions.businessId, ctx.business.id), isNull(interventions.signedAt))).returning({ id: interventions.id });
+    if (!done.length) return { ok: false, error: "Intervention introuvable, ou déjà signée par le client (elle ne change plus)." };
     refresh();
     return { ok: true, message: "Intervention enregistrée.", id: d.id };
   }
@@ -109,6 +109,7 @@ export async function saveInterventionWork(input: z.input<typeof workSchema>): P
   if (!r) return NF;
   if (!canWork(ctx, r.i)) return { ok: false, error: "Cette intervention est confiée à quelqu'un d'autre." };
   if (r.i.invoiceId) return { ok: false, error: "Déjà facturée : modifiez la facture." };
+  if (r.i.signedAt) return { ok: false, error: "Signée par le client : le rapport ne peut plus changer." };
   await db.update(interventions).set({ report: v.data.report || null, items: v.data.items, updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
   refresh();
   return { ok: true, message: "Rapport enregistré." };
@@ -144,7 +145,8 @@ export async function removeInterventionPhoto(id: string, ref: string): Promise<
   if (!canWork(ctx, r.i)) return { ok: false, error: "Action réservée." };
   const photo = r.i.photos.find((p) => p.ref === ref);
   if (!photo) return { ok: false, error: "Photo introuvable." };
-  await db.update(interventions).set({ photos: r.i.photos.filter((p) => p.ref !== ref), updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
+  if (r.i.signedAt) return { ok: false, error: "Signée par le client : les photos ne changent plus." };
+  await db.update(interventions).set({ photos: sql`(select coalesce(jsonb_agg(p), '[]'::jsonb) from jsonb_array_elements(${interventions.photos}) p where p->>'ref' <> ${ref})`, updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
   await deletePrivateFile(ref).catch(() => {});
   refresh();
   return { ok: true, message: "Photo retirée." };
@@ -162,7 +164,8 @@ export async function signIntervention(input: z.input<typeof signSchema>): Promi
   if (!r) return NF;
   if (!canWork(ctx, r.i)) return { ok: false, error: "Cette intervention est confiée à quelqu'un d'autre." };
   if (r.i.signedAt) return { ok: false, error: "Déjà signée par le client." };
-  await db.update(interventions).set({ signerName: v.data.name, signaturePath: v.data.path, signedAt: new Date(), updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
+  const signed = await db.update(interventions).set({ signerName: v.data.name, signaturePath: v.data.path, signedAt: new Date(), updatedAt: new Date() }).where(and(eq(interventions.id, r.i.id), isNull(interventions.signedAt))).returning({ id: interventions.id });
+  if (!signed.length) return { ok: false, error: "Déjà signée par le client." };
   if (r.i.clientEmail) {
     const seller = await getSellerSettings(ctx.business.id);
     await sendEmail({ to: r.i.clientEmail, ...emails.interventionReport({ sellerName: seller.tradeName || ctx.business.name, number: r.i.number, title: r.i.title, report: r.i.report, signer: v.data.name }), template: "intervention_report", businessId: ctx.business.id, replyTo: seller.email || null }).catch(() => {});

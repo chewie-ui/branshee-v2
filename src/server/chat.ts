@@ -19,7 +19,12 @@ export async function chatChannelFor(ctx: AppContext, channelId: string) {
 /** Salons, discussions privées et nombre de messages non lus. Crée le salon « Général » au premier passage. */
 export async function chatOverview(ctx: AppContext) {
   const [general] = await db.select({ id: chatChannels.id }).from(chatChannels).where(and(eq(chatChannels.businessId, ctx.business.id), eq(chatChannels.kind, "channel"))).limit(1);
-  if (!general) await db.insert(chatChannels).values({ businessId: ctx.business.id, kind: "channel", name: "Général" });
+  if (!general)
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${ctx.business.id}:chat-general`}))`);
+      const [again] = await tx.select({ id: chatChannels.id }).from(chatChannels).where(and(eq(chatChannels.businessId, ctx.business.id), eq(chatChannels.kind, "channel"))).limit(1);
+      if (!again) await tx.insert(chatChannels).values({ businessId: ctx.business.id, kind: "channel", name: "Général" });
+    });
   const me = ctx.member.id;
   const rows = await db
     .select({

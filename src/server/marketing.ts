@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, campaignRecipients, campaigns, customers, invoiceSettings, type CampaignAudience } from "@/db/schema";
 import { sendEmail } from "@/server/email/mailer";
@@ -37,8 +37,9 @@ export async function dailyCap(businessId: string) {
   return paid ? 2000 : 50;
 }
 
-export async function sentToday(businessId: string) {
-  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(campaignRecipients).where(and(eq(campaignRecipients.businessId, businessId), sql`${campaignRecipients.sentAt} > now() - interval '24 hours'`));
+/** Emails partis (ou en cours d'envoi) sur 24 h, sans compter les lignes que ce passage vient de réserver. */
+export async function sentToday(businessId: string, exclude: string[] = []) {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(campaignRecipients).where(and(eq(campaignRecipients.businessId, businessId), inArray(campaignRecipients.status, ["sent", "failed", "sending"]), sql`${campaignRecipients.sentAt} > now() - interval '24 hours'`, exclude.length ? notInArray(campaignRecipients.id, exclude) : undefined));
   return r?.n ?? 0;
 }
 
@@ -51,33 +52,47 @@ export async function campaignsOf(businessId: string) {
     .limit(200);
 }
 
-/** Envoi en tâche de fond (toutes les 15 min) : 300 emails max par passage, plafond quotidien par entreprise respecté. */
+/**
+ * Envoi en tâche de fond (toutes les 15 min) : 300 emails max par passage, plafond quotidien par entreprise.
+ * Les lignes sont « réservées » d'abord (SKIP LOCKED) : deux passages simultanés n'envoient jamais deux fois le même email.
+ */
 export async function processCampaignQueue(limit = 300) {
+  // Réservations abandonnées (serveur arrêté en plein envoi) : remises en attente après 30 minutes.
+  await db.execute(sql`update campaign_recipients set status = 'pending', sent_at = null where status = 'sending' and sent_at < now() - interval '30 minutes'`);
+  const claimed = await db.execute<{ id: string }>(sql`
+    update campaign_recipients set status = 'sending', sent_at = now()
+    where id in (
+      select r.id from campaign_recipients r join campaigns c on c.id = r.campaign_id
+      where r.status = 'pending' and c.status = 'sending'
+      order by c.queued_at limit ${limit}
+      for update of r skip locked
+    ) returning id`);
+  const ids = [...claimed].map((r) => r.id);
+  if (!ids.length) return 0;
   const rows = await db
-    .select({ r: campaignRecipients, subject: campaigns.subject, body: campaigns.body, bizName: businesses.name, tradeName: invoiceSettings.tradeName, replyTo: invoiceSettings.email })
+    .select({ r: campaignRecipients, subject: campaigns.subject, body: campaigns.body, bizName: businesses.name, deleted: businesses.deletedAt, tradeName: invoiceSettings.tradeName, replyTo: invoiceSettings.email })
     .from(campaignRecipients)
     .innerJoin(campaigns, eq(campaigns.id, campaignRecipients.campaignId))
     .innerJoin(businesses, eq(businesses.id, campaignRecipients.businessId))
     .leftJoin(invoiceSettings, eq(invoiceSettings.businessId, campaignRecipients.businessId))
-    .where(and(eq(campaignRecipients.status, "pending"), eq(campaigns.status, "sending"), isNull(businesses.deletedAt)))
-    .orderBy(asc(campaigns.queuedAt))
-    .limit(limit);
+    .where(inArray(campaignRecipients.id, ids));
   const budget = new Map<string, number>();
   let sent = 0;
-  for (const { r, subject, body, bizName, tradeName, replyTo } of rows) {
-    if (!budget.has(r.businessId)) budget.set(r.businessId, (await dailyCap(r.businessId)) - (await sentToday(r.businessId)));
-    if ((budget.get(r.businessId) ?? 0) <= 0) continue; // reste en attente : repart demain
-    // Désabonné entre-temps (autre campagne) : on saute.
-    const [c] = r.customerId ? await db.select({ out: customers.marketingOptOutAt }).from(customers).where(eq(customers.id, r.customerId)) : [];
-    if (c?.out) { await db.update(campaignRecipients).set({ status: "skipped" }).where(eq(campaignRecipients.id, r.id)); continue; }
+  for (const { r, subject, body, bizName, deleted, tradeName, replyTo } of rows) {
+    if (deleted) { await db.update(campaignRecipients).set({ status: "skipped" }).where(eq(campaignRecipients.id, r.id)); continue; }
+    if (!budget.has(r.businessId)) budget.set(r.businessId, (await dailyCap(r.businessId)) - (await sentToday(r.businessId, ids)));
+    if ((budget.get(r.businessId) ?? 0) <= 0) { await db.update(campaignRecipients).set({ status: "pending", sentAt: null }).where(eq(campaignRecipients.id, r.id)); continue; }
+    // Désabonné ou bloqué entre-temps (sur n'importe quelle fiche avec cette adresse) : on saute.
+    const [out] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, r.businessId), sql`lower(${customers.email}) = ${r.email}`, sql`(${customers.marketingOptOutAt} is not null or ${customers.blockedAt} is not null)`)).limit(1);
+    if (out) { await db.update(campaignRecipients).set({ status: "skipped" }).where(eq(campaignRecipients.id, r.id)); continue; }
     const unsub = `${mkOrigin()}/desabonnement/${r.token}`;
     const mail = emails.campaign({ businessName: tradeName || bizName, subject, body: body.replaceAll("{prenom}", r.firstName ?? "").replace(/Bonjour\s+,/g, "Bonjour,"), unsubscribeUrl: unsub });
-    const ok = await sendEmail({ to: r.email, ...mail, template: "campaign", businessId: r.businessId, replyTo: replyTo || null, headers: { "List-Unsubscribe": `<${unsub}>` } }).catch(() => false);
+    const ok = await sendEmail({ to: r.email, ...mail, template: "campaign", businessId: r.businessId, replyTo: replyTo || null, headers: { "List-Unsubscribe": `<${unsub}/un-clic>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }).catch(() => false);
     await db.update(campaignRecipients).set({ status: ok ? "sent" : "failed", sentAt: new Date() }).where(eq(campaignRecipients.id, r.id));
     budget.set(r.businessId, (budget.get(r.businessId) ?? 0) - 1);
     if (ok) sent++;
   }
   // Campagnes terminées.
-  await db.execute(sql`update campaigns set status = 'sent', sent_at = now() where status = 'sending' and not exists (select 1 from campaign_recipients r where r.campaign_id = campaigns.id and r.status = 'pending')`);
+  await db.execute(sql`update campaigns set status = 'sent', sent_at = now() where status = 'sending' and not exists (select 1 from campaign_recipients r where r.campaign_id = campaigns.id and r.status in ('pending', 'sending'))`);
   return sent;
 }

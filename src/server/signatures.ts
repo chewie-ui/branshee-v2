@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, quoteSignatures, salesDocuments } from "@/db/schema";
 import type { SalesDoc } from "@/server/invoicing";
@@ -31,6 +31,6 @@ export async function signatureByToken(token: string) {
 }
 
 export async function signedSignature(documentId: string) {
-  const [s] = await db.select().from(quoteSignatures).where(and(eq(quoteSignatures.documentId, documentId), isNull(quoteSignatures.cancelledAt))).orderBy(desc(quoteSignatures.signedAt)).limit(1);
-  return s?.signedAt ? s : null;
+  const [s] = await db.select().from(quoteSignatures).where(and(eq(quoteSignatures.documentId, documentId), isNull(quoteSignatures.cancelledAt), isNotNull(quoteSignatures.signedAt))).limit(1);
+  return s ?? null;
 }

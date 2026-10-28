@@ -37,8 +37,8 @@ export async function closeRegister(input: { countedCashCents: number; note: str
   const s = await openSessionOf(ctx.business.id);
   if (!s) return { ok: false, error: "La caisse n'est pas ouverte." };
   const t = await sessionTotals(ctx.business.id, s.id);
-  const expected = s.openingCashCents + t.cash;
-  const done = await db.update(posSessions).set({ closedAt: new Date(), closedById: ctx.member.id, countedCashCents: input.countedCashCents, expectedCashCents: expected, note: input.note.trim().slice(0, 500) || null }).where(and(eq(posSessions.id, s.id), isNull(posSessions.closedAt))).returning({ id: posSessions.id });
+  const expected = s.openingCashCents + t.cash - t.refundedCash;
+  const done = await db.update(posSessions).set({ closedAt: new Date(), closedById: ctx.member.id, countedCashCents: input.countedCashCents, expectedCashCents: expected, totals: t, note: input.note.trim().slice(0, 500) || null }).where(and(eq(posSessions.id, s.id), isNull(posSessions.closedAt))).returning({ id: posSessions.id });
   if (!done.length) return { ok: false, error: "La caisse est déjà clôturée." };
   refresh();
   const diff = input.countedCashCents - expected;
@@ -98,6 +98,9 @@ export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
   }
   const year = Number(todayIn(ctx.business.timezone).slice(0, 4));
   const sale = await db.transaction(async (tx) => {
+    // La caisse peut avoir été fermée entre-temps : on la verrouille (la clôture attend la fin du ticket).
+    const [open] = await tx.select({ id: posSessions.id }).from(posSessions).where(and(eq(posSessions.id, session.id), isNull(posSessions.closedAt))).for("share");
+    if (!open) return null;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${ctx.business.id}:pos:${year}`}))`);
     const [m] = await tx.select({ m: sql<number>`coalesce(max(${posSales.seq}), 0)::int` }).from(posSales).where(and(eq(posSales.businessId, ctx.business.id), eq(posSales.year, year)));
     const seq = (m?.m ?? 0) + 1;
@@ -110,6 +113,7 @@ export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
     }
     return row!;
   });
+  if (!sale) return { ok: false, error: "La caisse vient d'être fermée : rouvrez-la pour encaisser." };
   refresh();
   const change = d.method === "cash" && d.cashGivenCents != null ? d.cashGivenCents - t.total : null;
   return { ok: true, id: sale.id, number: sale.number, change, message: `Ticket ${sale.number} encaissé.` };
@@ -121,11 +125,14 @@ export async function refundSale(id: string): Promise<Result> {
   if (ctx.impersonating) return SUPERVISION;
   if (!stockRights(ctx).manage) return { ok: false, error: "Seul le responsable peut rembourser un ticket." };
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Ticket introuvable." };
+  // Le remboursement sort du tiroir de la caisse ouverte : il compte dans sa clôture, pas dans celle (figée) du jour de la vente.
+  const session = await openSessionOf(ctx.business.id);
+  if (!session) return { ok: false, error: "Ouvrez la caisse pour rembourser (l'argent sort du tiroir du jour)." };
   return db.transaction(async (tx) => {
     const [s] = await tx.select().from(posSales).where(and(eq(posSales.id, id), eq(posSales.businessId, ctx.business.id))).for("update");
     if (!s) return { ok: false as const, error: "Ticket introuvable." };
     if (s.status === "refunded") return { ok: false as const, error: "Ticket déjà remboursé." };
-    await tx.update(posSales).set({ status: "refunded", refundedAt: new Date() }).where(eq(posSales.id, s.id));
+    await tx.update(posSales).set({ status: "refunded", refundedAt: new Date(), refundSessionId: session.id }).where(eq(posSales.id, s.id));
     const moves = await tx.select({ productId: stockMoves.productId, delta: stockMoves.delta }).from(stockMoves).where(and(eq(stockMoves.saleId, s.id), eq(stockMoves.reason, "sale")));
     for (const mv of moves) {
       await tx.update(products).set({ stockQty: sql`${products.stockQty} + ${-mv.delta}`, lowNotifiedAt: null, updatedAt: new Date() }).where(and(eq(products.id, mv.productId), eq(products.businessId, ctx.business.id)));

@@ -305,15 +305,17 @@ export async function sendLowStockAlerts() {
     .select({ id: products.id, name: products.name, qty: products.stockQty, min: products.minQty, businessId: products.businessId, biz: businesses.name, email: users.email })
     .from(products)
     .innerJoin(businesses, eq(businesses.id, products.businessId))
-    .innerJoin(members, and(eq(members.businessId, products.businessId), eq(members.isOwner, true)))
+    .innerJoin(members, and(eq(members.businessId, products.businessId), eq(members.isOwner, true), eq(members.status, "active"), eq(members.isActive, true)))
     .innerJoin(users, eq(users.id, members.userId))
     .where(and(eq(products.active, true), eq(products.trackStock, true), isNotNull(products.minQty), sql`"products"."stock_qty" <= "products"."min_qty"`, isNull(products.lowNotifiedAt), isNull(businesses.deletedAt)))
     .limit(2000);
   const byBiz = new Map<string, typeof rows>();
   for (const r of rows) byBiz.set(r.businessId, [...(byBiz.get(r.businessId) ?? []), r]);
   let sent = 0;
-  for (const list of byBiz.values()) {
-    const f = list[0]!;
+  for (const all of byBiz.values()) {
+    // Plusieurs titulaires : un seul email, chaque produit une seule fois.
+    const f = all[0]!;
+    const list = all.filter((r, i) => all.findIndex((x) => x.id === r.id) === i && r.email === f.email);
     const mail = emails.lowStock({ businessName: f.biz, items: list.slice(0, 40).map((r) => ({ name: r.name, qty: r.qty, min: r.min ?? 0 })), more: Math.max(0, list.length - 40), url: `${(process.env.SKYDEV_APP_URL ?? appUrl()).replace(/\/$/, "")}/app/stock` });
     if (await sendEmail({ to: f.email, ...mail, template: "low_stock", businessId: f.businessId })) {
       sent++;
