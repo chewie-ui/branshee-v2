@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { businesses } from "./businesses";
 import { members } from "./team";
@@ -55,6 +55,8 @@ export const payrollClosures = pgTable(
     month: text("month").notNull(),
     closedAt: timestamp("closed_at", { withTimezone: true }).notNull().defaultNow(),
     closedById: uuid("closed_by_id").references(() => users.id, { onDelete: "set null" }),
+    /** Prestations figées à la validation (le contrat ou le planning modifié ensuite ne change plus ce mois). */
+    snapshot: jsonb("snapshot").$type<unknown[]>(),
   },
   (t) => [primaryKey({ columns: [t.businessId, t.month] })],
 );

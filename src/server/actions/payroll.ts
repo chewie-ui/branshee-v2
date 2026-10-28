@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { members, payrollClosures, payrollEntries, payrollProfiles } from "@/db/schema";
 import { isMonth } from "@/lib/payroll";
 import { requireContext } from "@/server/context";
-import { payrollRights } from "@/server/payroll";
+import { payrollMonth, payrollRights } from "@/server/payroll";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
@@ -66,7 +66,10 @@ export async function setPayrollClosed(month: string, closed: boolean): Promise<
   const { ctx, error } = await manager();
   if (error) return error;
   if (!isMonth(month)) return { ok: false, error: "Mois invalide." };
-  if (closed) await db.insert(payrollClosures).values({ businessId: ctx.business.id, month, closedById: ctx.user.id }).onConflictDoNothing();
+  if (closed) {
+    const { rows } = await payrollMonth(ctx.business.id, month);
+    await db.insert(payrollClosures).values({ businessId: ctx.business.id, month, closedById: ctx.user.id, snapshot: rows }).onConflictDoNothing();
+  }
   else await db.delete(payrollClosures).where(and(eq(payrollClosures.businessId, ctx.business.id), eq(payrollClosures.month, month)));
   refresh();
   return { ok: true, message: closed ? "Mois validé : téléchargez l'export pour votre secrétariat social." : "Mois rouvert." };

@@ -1,0 +1,1 @@
+ALTER TABLE "payroll_closures" ADD COLUMN "snapshot" jsonb;

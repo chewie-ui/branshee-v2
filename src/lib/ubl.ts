@@ -19,10 +19,29 @@ export type UblInput = {
   relatedNumber?: string | null;
 };
 
-const x = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+// Caractères de contrôle interdits en XML 1.0 retirés, puis échappement.
+// eslint-disable-next-line no-control-regex
+const x = (v: unknown) => String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 const a = (n: number) => r2(n).toFixed(2);
 const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const s = (v: unknown) => String(v ?? "").trim();
+/** Nombre sans arrondi visible (prix unitaire : jusqu'à 6 décimales permises par Peppol). */
+const dec = (n: number) => String(Math.round(n * 1e6) / 1e6);
+
+const COUNTRIES: Record<string, string> = {
+  belgique: "BE", belgium: "BE", belgie: "BE", belgien: "BE", france: "FR", frankrijk: "FR", "pays-bas": "NL", nederland: "NL", netherlands: "NL",
+  luxembourg: "LU", luxemburg: "LU", allemagne: "DE", deutschland: "DE", germany: "DE", duitsland: "DE", espagne: "ES", espana: "ES", spain: "ES",
+  italie: "IT", italia: "IT", italy: "IT", portugal: "PT", "royaume-uni": "GB", "united kingdom": "GB", suisse: "CH", schweiz: "CH", switzerland: "CH",
+  autriche: "AT", irlande: "IE", pologne: "PL", danemark: "DK", suede: "SE", "etats-unis": "US", "united states": "US",
+};
+/** Code pays ISO 3166 à 2 lettres (Belgique par défaut quand rien n'est indiqué). */
+export function countryCode(v: unknown) {
+  const raw = s(v);
+  if (!raw) return "BE";
+  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase();
+  const k = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return COUNTRIES[k] ?? "BE";
+}
 
 /** N° d'entreprise belge (10 chiffres) tiré d'un n° de TVA « BE0123456789 » ou d'un BCE « 0123.456.789 ». */
 export function enterpriseNumber(p: Party) {
@@ -51,7 +70,7 @@ export function ublMissing(i: UblInput) {
 function party(p: Party, role: "AccountingSupplierParty" | "AccountingCustomerParty", name: string) {
   const ent = enterpriseNumber(p);
   const vat = vatId(p);
-  const country = /^(belgique|belgium|belgië)?$/i.test(s(p.country)) ? "BE" : s(p.country).slice(0, 2).toUpperCase() || "BE";
+  const country = countryCode(p.country);
   return `<cac:${role}><cac:Party>${ent ? `<cbc:EndpointID schemeID="0208">${ent}</cbc:EndpointID>` : vat ? `<cbc:EndpointID schemeID="9925">${x(vat)}</cbc:EndpointID>` : ""}<cac:PartyName><cbc:Name>${x(name)}</cbc:Name></cac:PartyName><cac:PostalAddress>${s(p.street) ? `<cbc:StreetName>${x(p.street)}</cbc:StreetName>` : ""}${s(p.city) ? `<cbc:CityName>${x(p.city)}</cbc:CityName>` : ""}${s(p.zip) ? `<cbc:PostalZone>${x(p.zip)}</cbc:PostalZone>` : ""}<cac:Country><cbc:IdentificationCode>${country}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>${vat ? `<cac:PartyTaxScheme><cbc:CompanyID>${x(vat)}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}<cac:PartyLegalEntity><cbc:RegistrationName>${x(name)}</cbc:RegistrationName>${ent ? `<cbc:CompanyID schemeID="0208">${ent}</cbc:CompanyID>` : ""}</cac:PartyLegalEntity>${s(p.email) ? `<cac:Contact><cbc:ElectronicMail>${x(p.email)}</cbc:ElectronicMail></cac:Contact>` : ""}</cac:Party></cac:${role}>`;
 }
 
@@ -71,10 +90,13 @@ export function buildUbl(i: UblInput) {
   const lineTag = credit ? "CreditNoteLine" : "InvoiceLine";
   const qtyTag = credit ? "CreditedQuantity" : "InvoicedQuantity";
   const lines = rows.map((l, k) => {
-    const qty = Number(l.qty) || 0;
-    const price = Number(l.price) || 0;
+    // Peppol refuse un prix négatif (remise) : la quantité porte le signe. Montant de ligne = celui des totaux.
+    const q0 = Number(l.qty) || 0;
+    const p0 = Number(l.price) || 0;
+    const qty = p0 < 0 ? -q0 : q0;
+    const price = Math.abs(p0);
     const rate = franchise ? 0 : Number(l.vat) || 0;
-    return `<cac:${lineTag}><cbc:ID>${k + 1}</cbc:ID><cbc:${qtyTag} unitCode="C62">${qty}</cbc:${qtyTag}><cbc:LineExtensionAmount currencyID="EUR">${a(qty * price)}</cbc:LineExtensionAmount><cac:Item><cbc:Name>${x(s(l.desc).slice(0, 200) || "Prestation")}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${cat(rate)}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item><cac:Price><cbc:PriceAmount currencyID="EUR">${r2(price).toFixed(2)}</cbc:PriceAmount></cac:Price></cac:${lineTag}>`;
+    return `<cac:${lineTag}><cbc:ID>${k + 1}</cbc:ID><cbc:${qtyTag} unitCode="C62">${dec(qty)}</cbc:${qtyTag}><cbc:LineExtensionAmount currencyID="EUR">${a(q0 * p0)}</cbc:LineExtensionAmount><cac:Item><cbc:Name>${x(s(l.desc).slice(0, 200) || "Prestation")}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${cat(rate)}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item><cac:Price><cbc:PriceAmount currencyID="EUR">${dec(price)}</cbc:PriceAmount></cac:Price></cac:${lineTag}>`;
   }).join("");
   const iban = s(i.seller.iban).replace(/\s/g, "");
   const payment = !credit && iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>${i.comm ? `<cbc:PaymentID>${x(i.comm)}</cbc:PaymentID>` : ""}<cac:PayeeFinancialAccount><cbc:ID>${x(iban)}</cbc:ID>${s(i.seller.bic) ? `<cac:FinancialInstitutionBranch><cbc:ID>${x(i.seller.bic)}</cbc:ID></cac:FinancialInstitutionBranch>` : ""}</cac:PayeeFinancialAccount></cac:PaymentMeans>` : "";

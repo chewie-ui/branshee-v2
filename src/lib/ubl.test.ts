@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildUbl, enterpriseNumber, ublMissing, type UblInput } from "./ubl";
+import { buildUbl, countryCode, enterpriseNumber, ublMissing, type UblInput } from "./ubl";
 
 const base: UblInput = {
   docType: "invoice", number: "2026-001", issueDate: "2026-10-28", dueDate: "2026-11-12", serviceDate: "2026-10-28", comm: "+++123/4567/89002+++", notes: "Merci & à bientôt",
@@ -30,4 +30,19 @@ test("UBL note de crédit en franchise", () => {
   assert.match(xml, /<cbc:ID>E<\/cbc:ID><cbc:Percent>0<\/cbc:Percent><cbc:TaxExemptionReason>/);
   assert.match(xml, /<cac:InvoiceDocumentReference><cbc:ID>2026-001/);
   assert.ok(ublMissing({ ...base, client: { name: "X" } }).length >= 2);
+});
+
+test("UBL : pays ISO, caractères de contrôle, remise négative, prix à 3 décimales", () => {
+  const xml = buildUbl({
+    docType: "invoice", number: "F2026-9", issueDate: "2026-10-01", dueDate: null, serviceDate: null, comm: null, notes: "Merci\u0007",
+    lines: [{ desc: "Pièce", qty: 3, price: 1.234, vat: 21 }, { desc: "Remise fidélité", qty: 1, price: -2, vat: 21 }] as never,
+    seller: { legalName: "A", bce: "0123456789", vatNumber: "BE0123456789", vatRegime: "assujetti", street: "Rue 1", zip: "1300", city: "Wavre", country: "Belgique" },
+    client: { name: "B", vat: "FR12345678901", city: "Lille", country: "France" },
+  });
+  assert.ok(xml.includes("<cbc:IdentificationCode>FR</cbc:IdentificationCode>"));
+  assert.ok(!xml.includes("\u0007"));
+  assert.ok(xml.includes('<cbc:InvoicedQuantity unitCode="C62">-1</cbc:InvoicedQuantity><cbc:LineExtensionAmount currencyID="EUR">-2.00</cbc:LineExtensionAmount>'));
+  assert.ok(xml.includes('<cbc:PriceAmount currencyID="EUR">1.234</cbc:PriceAmount>'));
+  assert.ok(xml.includes('<cbc:LineExtensionAmount currencyID="EUR">3.70</cbc:LineExtensionAmount>'));
+  assert.equal(countryCode("Pays-Bas"), "NL");
 });
