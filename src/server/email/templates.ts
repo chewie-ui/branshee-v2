@@ -543,6 +543,36 @@ export const emails = {
     };
   },
 
+  /** Avis Google : demande envoyée au client (même lien pour tous : pas de tri des clients mécontents). */
+  reviewRequest(p: { businessName: string; name: string | null; message: string; url: string; googleUrl: string }) {
+    return {
+      subject: `Votre avis sur ${p.businessName} ?`,
+      ...render({
+        preheader: "Une minute pour nous aider",
+        title: `Votre avis compte`,
+        intro: `${p.name ? `Bonjour ${p.name}, ` : "Bonjour, "}${p.message}`,
+        cta: { label: "Donner mon avis sur Google", url: p.googleUrl },
+        note: `Une remarque à nous faire en privé ? Écrivez-nous ici : ${p.url}`,
+        footer: `${p.businessName}`,
+      }),
+    };
+  },
+
+  /** Avis Google : remarque privée d'un client, pour le responsable. */
+  reviewFeedback(p: { businessName: string; name: string | null; rating: number; text: string; url: string }) {
+    return {
+      subject: `Remarque d'un client : ${p.rating}/5`,
+      ...render({
+        preheader: p.text.slice(0, 90),
+        title: "Un client vous a écrit",
+        intro: `${p.name ?? "Un client"} a laissé une remarque privée (note ${p.rating}/5).`,
+        details: [{ label: "Message", value: p.text }],
+        cta: { label: "Voir les remarques", url: p.url },
+        footer: `Skydev — ${p.businessName}`,
+      }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

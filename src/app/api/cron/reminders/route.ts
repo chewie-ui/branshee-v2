@@ -1,5 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
-import { publishScheduledArticles } from "@/server/jobs";
+import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs";
 import { sendDueReminders } from "@/server/notifications";
 
 export const dynamic = "force-dynamic";
@@ -12,5 +12,6 @@ export async function POST(req: Request) {
   if (!cronAuthorized(req)) return Response.json({ error: "Non autorisé" }, { status: 401 });
   const result = await sendDueReminders();
   const published = await publishScheduledArticles().catch((e) => (console.error("[cron] blog :", e), 0));
-  return Response.json({ ...result, articlesPublished: published });
+  const reviewRequests = await sendAutoReviewRequests().catch((e) => (console.error("[cron] avis :", e), -1));
+  return Response.json({ ...result, articlesPublished: published, reviewRequests });
 }

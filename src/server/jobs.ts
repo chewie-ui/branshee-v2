@@ -1,7 +1,8 @@
 import "server-only";
 import { and, count, eq, gt, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, articles, businessPlans, businesses, deals, members, notificationSettings, services, users } from "@/db/schema";
+import { appointments, articles, businessPlans, businesses, deals, members, notificationSettings, reviewSettings, services, users } from "@/db/schema";
+import { deliverReviewRequest } from "@/server/google-reviews";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { indexNow } from "@/server/indexnow";
@@ -253,6 +254,44 @@ export async function sendSalesFollowUps(now = new Date()) {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: first.tz || "Europe/Brussels" }).format(now);
     const mail = emails.salesFollowUps({ businessName: first.biz, name: firstName(first.name), items: list.slice(0, 30).map((r) => ({ title: r.title, detail: [r.what, r.company].filter(Boolean).join(" · "), late: !!r.next && r.next < today })), more: Math.max(0, list.length - 30), url: `${(process.env.SKYDEV_APP_URL ?? appUrl()).replace(/\/$/, "")}/app/ventes/relances?moi=1` });
     if (await sendEmail({ to: first.email, ...mail, template: "sales_follow_ups", businessId: first.businessId })) sent++;
+  }
+  return sent;
+}
+
+/**
+ * App Avis Google : quelques heures après chaque rendez-vous terminé, demande d'avis au client
+ * (une seule fois par rendez-vous, et pas plus d'une par client sur la période choisie).
+ */
+export async function sendAutoReviewRequests(now = new Date()) {
+  const at = sql`${now.toISOString()}::timestamptz`;
+  const rows = await db
+    .select({ id: appointments.id, businessId: appointments.businessId, email: appointments.contactEmail, name: appointments.contactName, customerId: appointments.customerId, minDays: reviewSettings.minDaysBetween })
+    .from(appointments)
+    .innerJoin(reviewSettings, eq(reviewSettings.businessId, appointments.businessId))
+    .innerJoin(businesses, eq(businesses.id, appointments.businessId))
+    .where(
+      and(
+        eq(reviewSettings.autoSend, true),
+        isNotNull(reviewSettings.googleUrl),
+        isNull(businesses.deletedAt),
+        eq(appointments.kind, "appointment"),
+        eq(appointments.status, "confirmed"),
+        eq(appointments.noShow, false),
+        isNotNull(appointments.contactEmail),
+        sql`${appointments.endsAt} <= ${at} - make_interval(hours => ${reviewSettings.delayHours})`,
+        sql`${appointments.endsAt} > ${at} - make_interval(hours => ${reviewSettings.delayHours} + 24)`,
+        sql`not exists (select 1 from review_requests rr where rr.appointment_id = ${appointments.id})`,
+        sql`not exists (select 1 from review_requests rr where rr.business_id = ${appointments.businessId} and lower(rr.email) = lower(${appointments.contactEmail}) and rr.created_at > ${at} - make_interval(days => ${reviewSettings.minDaysBetween}))`,
+      ),
+    )
+    .limit(300);
+  let sent = 0;
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const key = `${r.businessId}:${r.email!.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (await deliverReviewRequest(r.businessId, { email: r.email!, name: r.name, customerId: r.customerId, appointmentId: r.id }).catch((e) => (console.error("[cron] avis :", e), false))) sent++;
   }
   return sent;
 }
