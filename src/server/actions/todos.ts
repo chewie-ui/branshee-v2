@@ -39,7 +39,7 @@ const addSchema = z.object({ text: z.string().trim().min(1).max(500), listId: z.
 
 /** Ajout rapide : « Appeler Marc demain 14h p1 #Chantier @Lucas ». */
 export async function addTask(input: z.input<typeof addSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   const v = addSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Écrivez la tâche." };
@@ -79,7 +79,7 @@ const updSchema = z.object({
 });
 
 export async function updateTask(id: string, input: z.input<typeof updSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   const v = updSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Vérifiez les champs." };
@@ -114,7 +114,7 @@ export async function updateTask(id: string, input: z.input<typeof updSchema>): 
 
 /** Cocher / décocher. Une tâche récurrente cochée repart à sa prochaine échéance. */
 export async function toggleTask(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   const t = await canSeeTask(ctx, id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
@@ -134,7 +134,7 @@ export async function toggleTask(id: string): Promise<Result> {
 
 /** Supprimer : son auteur, le créateur de la liste, ou le responsable. */
 export async function deleteTask(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   const t = await canSeeTask(ctx, id);
   if (!t) return { ok: false, error: "Tâche introuvable." };
@@ -158,7 +158,7 @@ const listSchema = z.object({
 });
 
 export async function saveList(input: z.input<typeof listSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   const v = listSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez la liste." };
@@ -189,7 +189,7 @@ export async function saveList(input: z.input<typeof listSchema>): Promise<Resul
 }
 
 export async function archiveList(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "taches" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Liste introuvable." };
   const [l] = await db.select().from(todoLists).where(and(eq(todoLists.id, id), eq(todoLists.businessId, ctx.business.id)));

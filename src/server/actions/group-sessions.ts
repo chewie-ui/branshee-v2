@@ -41,7 +41,7 @@ const recurrenceSchema = z.object({
 
 /** Cours récurrent : « tous les lundis et jeudis à 18:00 », sans date de fin. Jours vides = pas de récurrence. */
 export async function saveRecurrence(serviceId: string, input: z.input<typeof recurrenceSchema>): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("groupSessions.manage");
+  const ctx = await requireContext("groupSessions.manage", { app: "rdv" });
   const svc = await ownGroupService(ctx.business.id, serviceId);
   if (!svc) return { ok: false, error: "Cours introuvable." };
   const parsed = recurrenceSchema.safeParse(input);
@@ -66,7 +66,7 @@ const sessionSchema = z.object({
 
 /** Date ponctuelle (heure de début et de fin libres), éventuellement répétée N semaines. */
 export async function createSessions(serviceId: string, _prev: SessionFormState, formData: FormData): Promise<SessionFormState> {
-  const ctx = await requireContext("groupSessions.manage");
+  const ctx = await requireContext("groupSessions.manage", { app: "rdv" });
   const service = await ownGroupService(ctx.business.id, serviceId);
   if (!service) return { error: "Cours introuvable." };
 
@@ -115,7 +115,7 @@ export async function createSessions(serviceId: string, _prev: SessionFormState,
 
 /** Annule une séance (récurrente ou ponctuelle) et toutes ses inscriptions ; chaque participant est prévenu. */
 export async function cancelSession(sessionId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("groupSessions.manage");
+  const ctx = await requireContext("groupSessions.manage", { app: "rdv" });
   const virtual = parseVirtualSessionId(sessionId);
   const result = await db.transaction(async (tx) => {
     let id = sessionId;
@@ -148,7 +148,7 @@ export async function cancelSession(sessionId: string): Promise<{ ok: boolean; e
 
 /** Rétablit une séance annulée (les inscriptions annulées ne sont pas restaurées). */
 export async function restoreSession(sessionId: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("groupSessions.manage");
+  const ctx = await requireContext("groupSessions.manage", { app: "rdv" });
   const id = z.uuid().parse(sessionId);
   const [own] = await db.select({ id: groupSessions.id }).from(groupSessions).innerJoin(services, eq(services.id, groupSessions.serviceId)).where(and(eq(groupSessions.id, id), eq(services.businessId, ctx.business.id)));
   if (!own) return { ok: false };

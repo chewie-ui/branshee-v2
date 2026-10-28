@@ -22,7 +22,7 @@ const opt = (max: number) => z.string().trim().max(max).transform((v) => v || nu
 const minutes = z.union([z.literal(""), z.number().int().min(0).max(100_000)]).transform((v) => (v === "" ? null : v));
 
 async function member(): Promise<{ ctx: AppContext; error: null } | { ctx: AppContext; error: { ok: false; error: string } }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "projets" });
   return ctx.impersonating ? { ctx, error: SUPERVISION } : { ctx, error: null };
 }
 async function manager() {

@@ -76,7 +76,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .filter(visible)
             .filter((i) => !hidden.has(i.href))
             .filter((i) => i.href !== "/app/demandes" || pending > 0)
-            .filter((i) => i.href !== "/app/apps" && i.href !== "/app/modules")
+            // Employés est commun à toutes les apps : il est dans Administration, plus dans RDV.
+            .filter((i) => i.href !== "/app/apps" && i.href !== "/app/modules" && i.href !== "/app/equipe")
             .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: clients } : i)),
         })).filter((g) => g.items.length > 0),
       ],

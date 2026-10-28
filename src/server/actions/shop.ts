@@ -31,7 +31,7 @@ const schema = z.object({
 });
 
 export async function saveShopSettings(input: z.input<typeof schema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "boutique" });
   if (ctx.impersonating) return SUPERVISION;
   if (!shopRights(ctx).manage) return { ok: false, error: "Seul le responsable règle la boutique." };
   const v = schema.safeParse(input);
@@ -50,7 +50,7 @@ export async function saveShopSettings(input: z.input<typeof schema>): Promise<R
 
 /** Avancer une commande (prête, expédiée, terminée) ; le client est prévenu par email pour « prête » et « expédiée ». */
 export async function setShopOrderStatus(id: string, status: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "boutique" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success || !isShopStatus(status) || status === "cancelled" || status === "pending_payment") return { ok: false, error: "Commande introuvable." };
   // Seuls les passages prévus : nouvelle → prête / expédiée → terminée (jamais depuis une commande annulée ou non payée).
@@ -63,7 +63,7 @@ export async function setShopOrderStatus(id: string, status: string): Promise<Re
 }
 
 export async function markShopOrderPaid(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "boutique" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Commande introuvable." };
   const done = await db.update(shopOrders).set({ paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), isNull(shopOrders.paidAt), inArray(shopOrders.status, ["new", "ready", "shipped", "done"]))).returning({ n: shopOrders.number });
@@ -73,7 +73,7 @@ export async function markShopOrderPaid(id: string): Promise<Result> {
 }
 
 export async function cancelShopOrder(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "boutique" });
   if (ctx.impersonating) return SUPERVISION;
   if (!shopRights(ctx).manage) return { ok: false, error: "Seul le responsable peut annuler une commande." };
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Commande introuvable." };

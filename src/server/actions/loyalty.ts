@@ -19,7 +19,7 @@ const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire
 const refresh = () => revalidatePath("/app/fidelite", "layout");
 
 async function member(): Promise<{ ctx: AppContext; error: null } | { ctx: AppContext; error: { ok: false; error: string } }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "fidelite" });
   return ctx.impersonating ? { ctx, error: SUPERVISION } : { ctx, error: null };
 }
 

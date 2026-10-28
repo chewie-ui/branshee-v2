@@ -20,7 +20,7 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 
 /** Envoyer le devis au client pour signature en ligne (le lien précédent, s'il y en a un, est annulé). */
 export async function requestSignature(documentId: string, email: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "signature" });
   if (ctx.impersonating) return SUPERVISION;
   const e = z.email().safeParse(email.trim().toLowerCase());
   if (!e.success) return { ok: false, error: "Adresse email invalide." };
@@ -51,7 +51,7 @@ export async function requestSignature(documentId: string, email: string): Promi
 }
 
 export async function cancelSignature(documentId: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "signature" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(documentId).success) return { ok: false, error: "Devis introuvable." };
   await db.update(quoteSignatures).set({ cancelledAt: new Date() }).where(and(eq(quoteSignatures.businessId, ctx.business.id), eq(quoteSignatures.documentId, documentId), isNull(quoteSignatures.signedAt), isNull(quoteSignatures.cancelledAt)));

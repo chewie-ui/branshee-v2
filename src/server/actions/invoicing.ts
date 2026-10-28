@@ -58,7 +58,7 @@ async function ownCustomer(businessId: string, id: string | null | undefined) {
  * Un devis reçoit son numéro (D-AAAA-NNN) au premier enregistrement, comme dans Comptoir.
  */
 export async function saveDocument(input: DocInput): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const parsed = docSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Vérifiez les champs du document." };
@@ -135,7 +135,7 @@ function sellerSnapshot(s: Awaited<ReturnType<typeof getSellerSettings>>) {
  * communication structurée, copie figée du vendeur et du client. Ensuite, plus aucune modification possible.
  */
 export async function issueDocument(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType === "quote") return { ok: false, error: "Document introuvable." };
@@ -205,7 +205,7 @@ export async function issueDocument(id: string): Promise<Result> {
 }
 
 export async function markPaid(id: string, input: { date: string; method: string }): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "invoice" || d.status !== "sent") return { ok: false, error: "Seule une facture émise et non payée peut être encaissée." };
@@ -218,7 +218,7 @@ export async function markPaid(id: string, input: { date: string; method: string
 }
 
 export async function unmarkPaid(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.status !== "paid") return { ok: false, error: "Cette facture n'est pas marquée comme payée." };
@@ -230,7 +230,7 @@ export async function unmarkPaid(id: string): Promise<Result> {
 
 /** Prépare une note de crédit (brouillon) qui reprend les lignes de la facture : à ajuster si l'annulation est partielle. */
 export async function createCreditNote(invoiceId: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, invoiceId);
   if (!d || d.docType !== "invoice" || !d.number || d.status === "cancelled") return { ok: false, error: "Une note de crédit ne peut être faite que sur une facture émise." };
@@ -245,7 +245,7 @@ export async function createCreditNote(invoiceId: string): Promise<Result> {
 
 /** Nouveau brouillon à partir d'un document existant (une note de crédit redevient une facture). */
 export async function duplicateDocument(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d) return { ok: false, error: "Document introuvable." };
@@ -256,7 +256,7 @@ export async function duplicateDocument(id: string): Promise<Result> {
 }
 
 export async function setQuoteStatus(id: string, status: "sent" | "accepted" | "refused"): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "quote" || d.status === "invoiced") return { ok: false, error: "Devis introuvable ou déjà facturé." };
@@ -269,7 +269,7 @@ export async function setQuoteStatus(id: string, status: "sent" | "accepted" | "
 
 /** Devis accepté → brouillon de facture avec les mêmes lignes ; le devis passe en « facturé ». */
 export async function quoteToInvoice(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d || d.docType !== "quote") return { ok: false, error: "Devis introuvable." };
@@ -292,7 +292,7 @@ export async function quoteToInvoice(id: string): Promise<Result> {
 
 /** Seuls les brouillons et les devis non facturés se suppriment (une facture émise reste, la loi l'exige). */
 export async function deleteDocument(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const d = await getDocument(ctx.business.id, id);
   if (!d) return { ok: false, error: "Document introuvable." };
@@ -310,7 +310,7 @@ export async function deleteDocument(id: string): Promise<Result> {
 const productSchema = z.object({ name: z.string().trim().min(1, "Indiquez un nom.").max(200), unit: z.string().max(30), price: z.coerce.number().min(0).max(10_000_000), vat: z.coerce.number().refine((v) => [0, 6, 12, 21].includes(v)) });
 
 export async function saveProduct(id: string | null, input: { name: string; unit: string; price: number | string; vat: number | string }): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const p = productSchema.safeParse(input);
   if (!p.success) return { ok: false, error: p.error.issues[0]?.message ?? "Vérifiez les champs." };
@@ -325,7 +325,7 @@ export async function saveProduct(id: string | null, input: { name: string; unit
 }
 
 export async function deleteProduct(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const ok = uuid.safeParse(id);
   if (!ok.success) return { ok: false, error: "Élément introuvable." };
@@ -360,7 +360,7 @@ const settingsSchema = z.object({
 });
 
 export async function saveInvoiceSettings(input: z.input<typeof settingsSchema>): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const p = settingsSchema.safeParse(input);
   if (!p.success) {
@@ -397,7 +397,7 @@ const clientSchema = z.object({
 
 /** Crée (ou complète) une fiche client depuis l'app Factures : elle est aussitôt visible dans Clients et RDV. */
 export async function saveBillingClient(id: string | null, input: z.input<typeof clientSchema>): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const p = clientSchema.safeParse(input);
   if (!p.success) {
@@ -434,7 +434,7 @@ const billingSchema = clientSchema.pick({ company: true, vatNumber: true, street
 
 /** Coordonnées de facturation d'une fiche client (société, TVA, adresse), sans toucher au nom ni aux contacts. */
 export async function saveCustomerBilling(customerId: string, input: z.input<typeof billingSchema>): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const c = await ownCustomer(ctx.business.id, uuid.safeParse(customerId).success ? customerId : null);
   if (!c) return { ok: false, error: "Client introuvable." };

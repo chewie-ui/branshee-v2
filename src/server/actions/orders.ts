@@ -18,7 +18,7 @@ const canEditMenu = (ctx: AppContext) => ctx.member.isOwner || ctx.can("settings
 const newTableToken = async () => randomBytes(9).toString("base64url");
 
 async function editor() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "commandes" });
   if (ctx.impersonating) return { ctx, error: SUPERVISION };
   if (!canEditMenu(ctx)) return { ctx, error: { ok: false as const, error: "Seul le responsable peut modifier la carte et les tables." } };
   return { ctx, error: null };
@@ -125,7 +125,7 @@ export async function deleteMenuItem(id: string): Promise<Result> {
 
 /** Épuisé / de nouveau disponible : toute l'équipe peut le faire (la cuisine sait ce qui manque). */
 export async function setItemAvailable(id: string, available: boolean): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "commandes" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Plat introuvable." };
   await db.update(menuItems).set({ available, updatedAt: new Date() }).where(and(eq(menuItems.id, id), eq(menuItems.businessId, ctx.business.id)));
@@ -181,7 +181,7 @@ export async function deleteTable(id: string): Promise<Result> {
 /* ───────── Suivi des commandes ───────── */
 
 export async function setOrderStatus(id: string, status: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "commandes" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success || !isOrderStatus(status)) return { ok: false, error: "Commande introuvable." };
   const done = await db.update(tableOrders).set({ status, updatedAt: new Date() }).where(and(eq(tableOrders.id, id), eq(tableOrders.businessId, ctx.business.id))).returning({ n: tableOrders.number });
@@ -191,7 +191,7 @@ export async function setOrderStatus(id: string, status: string): Promise<Result
 }
 
 export async function setOrderPaid(id: string, paid: boolean): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "commandes" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Commande introuvable." };
   await db.update(tableOrders).set({ paidAt: paid ? new Date() : null, updatedAt: new Date() }).where(and(eq(tableOrders.id, id), eq(tableOrders.businessId, ctx.business.id)));

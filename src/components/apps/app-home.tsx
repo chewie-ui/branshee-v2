@@ -7,7 +7,7 @@ import { Minus, Plus, SlidersHorizontal } from "lucide-react";
 import type { VisibleApp } from "@/server/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { CATEGORY_LABEL, type AppCategory } from "@/lib/apps";
+import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 import { setAppPinned } from "@/server/actions/apps";
 
@@ -24,7 +24,7 @@ function tagOf(app: VisibleApp, activeAddons: string[]) {
  * Accueil Skydev : les apps de l'entreprise en grandes icônes (comme un écran de téléphone),
  * puis le catalogue des autres apps, à ajouter en un clic. Le responsable peut ranger son accueil.
  */
-export function AppHome({ apps, activeAddons, canEdit }: { apps: VisibleApp[]; activeAddons: string[]; canEdit: boolean }) {
+export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: VisibleApp[]; activeAddons: string[]; canEdit: boolean; admin?: { href: string; label: string; hint: string; icon: AppIconName }[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,6 +42,22 @@ export function AppHome({ apps, activeAddons, canEdit }: { apps: VisibleApp[]; a
 
   return (
     <div className="mx-auto max-w-4xl">
+      {admin.length ? (
+        <section aria-labelledby="admin-h" className="mb-10">
+          <h2 id="admin-h" className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">Administration</h2>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {admin.map((a) => (
+              <li key={a.href}>
+                <Link href={a.href} className="flex h-full items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-start">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
+                  <span className="min-w-0"><span className="block text-sm font-medium">{a.label}</span><span className="block truncate text-xs text-muted">{a.hint}</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h2 className="mt-10 mb-1 text-sm font-semibold tracking-wide text-muted uppercase">Applications</h2>
+        </section>
+      ) : null}
       <ul className="grid grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-5">
         {pinned.map((app) => {
           const tag = tagOf(app, activeAddons);

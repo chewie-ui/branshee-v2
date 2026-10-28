@@ -15,7 +15,7 @@ const NOPE = { ok: false as const, error: "Vous n'avez pas le droit de modifier 
 const refresh = () => revalidatePath("/app/ventes", "layout");
 
 async function editor(): Promise<{ ctx: AppContext; error: null } | { ctx: AppContext; error: { ok: false; error: string } }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "ventes" });
   if (ctx.impersonating) return { ctx, error: SUPERVISION };
   if (!salesRights(ctx).manage) return { ctx, error: NOPE };
   return { ctx, error: null };
@@ -170,7 +170,7 @@ export async function quoteFromDeal(id: string): Promise<Result> {
 
 /** Lecture de l'historique d'une piste (panneau latéral). */
 export async function dealDetail(id: string) {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "ventes" });
   if (!salesRights(ctx).view || !z.uuid().safeParse(id).success) return null;
   return dealDetailFor(ctx.business.id, id, ctx.can("invoices.view"));
 }

@@ -38,7 +38,7 @@ const productSchema = z.object({
 
 /** Ajouter ou modifier un produit (photo facultative). La quantité de départ crée un mouvement « Inventaire ». */
 export async function saveProduct(fd: FormData): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "stock" });
   if (ctx.impersonating) return SUPERVISION;
   if (!stockRights(ctx).manage) return { ok: false, error: "Seul le responsable modifie les produits et les prix." };
   const raw = Object.fromEntries([...fd.entries()].filter(([, v]) => typeof v === "string"));
@@ -79,7 +79,7 @@ export async function saveProduct(fd: FormData): Promise<Result> {
 
 /** Retirer un produit : supprimé s'il n'a jamais servi, sinon archivé (les tickets passés restent lisibles). */
 export async function deleteProduct(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "stock" });
   if (ctx.impersonating) return SUPERVISION;
   if (!stockRights(ctx).manage) return { ok: false, error: "Seul le responsable modifie les produits." };
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Produit introuvable." };
@@ -96,7 +96,7 @@ export async function deleteProduct(id: string): Promise<Result> {
 }
 
 export async function restoreProduct(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "stock" });
   if (ctx.impersonating) return SUPERVISION;
   if (!stockRights(ctx).manage || !z.uuid().safeParse(id).success) return { ok: false, error: "Action impossible." };
   await db.update(products).set({ active: true, updatedAt: new Date() }).where(and(eq(products.id, id), eq(products.businessId, ctx.business.id)));
@@ -113,7 +113,7 @@ const moveSchema = z.object({
 
 /** Réception (+), sortie (casse, usage interne : −) ou inventaire (quantité comptée). Toute l'équipe peut le faire. */
 export async function moveStock(input: z.input<typeof moveSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "stock" });
   if (ctx.impersonating) return SUPERVISION;
   const v = moveSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Quantité invalide." };

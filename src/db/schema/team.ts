@@ -18,6 +18,8 @@ export const grades = pgTable(
     name: text("name").notNull(),
     isBuiltIn: boolean("is_built_in").notNull().default(false),
     permissions: jsonb("permissions").$type<Permissions>().notNull(),
+    /** Skydev : apps ouvertes à ce grade (null = toutes). Le titulaire a toujours tout. */
+    appAccess: jsonb("app_access").$type<string[]>(),
     legacyId: legacyId(),
     ...timestamps,
   },

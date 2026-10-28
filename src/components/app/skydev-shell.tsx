@@ -30,7 +30,7 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
   if ((app?.id ?? null) !== last) setLast(app?.id ?? null);
 
   const home: NavItem = { href: "/app", label: "Toutes les apps", icon: "apps" };
-  const settings = new Set(["reglages"]);
+  const settings = new Set(["reglages", "employes"]);
   const groups =
     app?.id === "rdv"
       ? rdv.groups

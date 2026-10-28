@@ -25,7 +25,7 @@ const shiftSchema = z.object({
 });
 
 async function guard() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "horaires" });
   if (ctx.impersonating) return { ctx, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!planningRights(ctx).manage) return { ctx, error: "Seul le responsable peut modifier le planning." };
   return { ctx, error: null };
@@ -117,7 +117,7 @@ export async function clearWeek(monday: string): Promise<Result> {
 
 /** Lien d'abonnement agenda personnel (Google Agenda, Apple, Outlook) : créé au premier besoin. */
 export async function planningFeedToken(): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "horaires" });
   if (ctx.impersonating) return { ok: false, error: "Le lien d'agenda n'est pas visible pendant une session de supervision." };
   const [m] = await db.select({ t: members.calendarFeedToken }).from(members).where(eq(members.id, ctx.member.id));
   if (m?.t) return { ok: true, token: m.t };
@@ -128,7 +128,7 @@ export async function planningFeedToken(): Promise<Result> {
 
 /** Nouveau lien d'agenda : l'ancien cesse de fonctionner (lien partagé par erreur, téléphone perdu…). */
 export async function regenerateFeedToken(): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "horaires" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const token = randomBytes(24).toString("hex");
   await db.update(members).set({ calendarFeedToken: token }).where(eq(members.id, ctx.member.id));

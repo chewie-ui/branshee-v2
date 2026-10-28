@@ -18,7 +18,7 @@ const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire
 
 /** Envoie la facture (ou la note de crédit) émise au client, avec un lien pour la voir et la payer. Renvoyer garde le même lien. */
 export async function sendInvoiceByEmail(documentId: string, email: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const e = z.email().safeParse(email.trim().toLowerCase());
   if (!e.success) return { ok: false, error: "Adresse email invalide." };
@@ -52,7 +52,7 @@ export async function sendInvoiceByEmail(documentId: string, email: string): Pro
 
 /** Coupe ou relance les rappels automatiques pour une facture. */
 export async function setInvoiceReminders(documentId: string, on: boolean): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(documentId).success) return { ok: false, error: "Facture introuvable." };
   const done = await db.update(invoiceMailings).set({ remindersOff: !on }).where(and(eq(invoiceMailings.businessId, ctx.business.id), eq(invoiceMailings.documentId, documentId))).returning({ id: invoiceMailings.id });
@@ -65,7 +65,7 @@ const ruleSchema = z.object({ enabled: z.boolean(), firstDays: z.coerce.number()
 
 /** Réglage de l'entreprise : relancer automatiquement les factures échues envoyées depuis Skydev. */
 export async function saveReminderSettings(input: z.input<typeof ruleSchema>): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "factures" });
   if (ctx.impersonating) return SUPERVISION;
   const v = ruleSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Vérifiez les réglages." };

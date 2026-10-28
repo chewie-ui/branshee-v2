@@ -25,7 +25,7 @@ const questionSchema = z.object({
 
 /** Remplace l'ensemble des questions posées avant la réservation (ordre = ordre de la liste). */
 export async function saveFormQuestions(input: unknown): Promise<Result> {
-  const ctx = await requireContext("forms.manage");
+  const ctx = await requireContext("forms.manage", { app: "rdv" });
   const parsed = z.array(questionSchema).max(10, "10 questions maximum.").safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   for (const q of parsed.data) if (q.type === "choice" && q.options.length < 2) return { ok: false, error: `« ${q.label} » : ajoutez au moins deux choix.` };
@@ -53,7 +53,7 @@ function done(ctx: { business: { id: string }; user: { id: string; name: string 
 }
 
 export async function saveFaq(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const parsed = faqSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   await db.update(bookingPageSettings).set({ faq: parsed.data }).where(eq(bookingPageSettings.businessId, ctx.business.id));
@@ -63,7 +63,7 @@ export async function saveFaq(input: unknown): Promise<Result> {
 
 /** Photo / logo et texte « À propos » (texte riche nettoyé). */
 export async function saveProfile(fd: FormData): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const about = sanitizeRichText(String(fd.get("aboutHtml") ?? "").slice(0, 20000));
   if (richTextToPlain(about).length > 3000) return { ok: false, error: "Le texte « À propos » est trop long (3 000 caractères maximum)." };
   const file = fd.get("photo");
@@ -112,7 +112,7 @@ const locationSchema = z.object({
 });
 
 export async function saveLocation(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const parsed = locationSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
@@ -129,7 +129,7 @@ export async function saveLocation(input: unknown): Promise<Result> {
 const GALLERY_MAX = 12;
 
 export async function addGalleryImages(fd: FormData): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const files = fd.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
   if (!files.length) return { ok: false, error: "Choisissez au moins une image." };
   const [page] = await db.select({ gallery: bookingPageSettings.gallery }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, ctx.business.id));
@@ -152,7 +152,7 @@ export async function addGalleryImages(fd: FormData): Promise<Result> {
 
 /** Nouvel ordre / suppression / présentation de la galerie (la liste ne peut que contenir des photos existantes). */
 export async function saveGallery(input: { images: string[]; layout: "grid" | "mosaic" | "carousel" }): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const layout = z.enum(["grid", "mosaic", "carousel"]).safeParse(input.layout);
   if (!layout.success || !Array.isArray(input.images)) return { ok: false, error: "Données invalides." };
   const [page] = await db.select({ gallery: bookingPageSettings.gallery }).from(bookingPageSettings).where(eq(bookingPageSettings.businessId, ctx.business.id));
@@ -168,7 +168,7 @@ const SECTIONS: PageSection[] = ["about", "services", "team", "reviews", "amenit
 
 /** Sections affichées, dans l'ordre choisi (celles absentes de la liste sont masquées). */
 export async function saveSections(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const parsed = z.array(z.enum(SECTIONS as [PageSection, ...PageSection[]])).max(SECTIONS.length).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Sections invalides." };
   await db.update(bookingPageSettings).set({ sections: [...new Set(parsed.data)] }).where(eq(bookingPageSettings.businessId, ctx.business.id));
@@ -189,7 +189,7 @@ const socialSchema = z.object({
 });
 
 export async function saveSocial(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const parsed = socialSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const { website, show, ...social } = parsed.data;
@@ -203,7 +203,7 @@ export async function saveSocial(input: unknown): Promise<Result> {
 }
 
 export async function saveTheme(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   if (!(await businessHas(ctx.business.id, "customization"))) return { ok: false, error: "La personnalisation de la page est disponible à partir du forfait Pro." };
   const parsed = themeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
@@ -217,7 +217,7 @@ export async function saveTheme(input: unknown): Promise<Result> {
 }
 
 export async function saveSlug(input: string): Promise<Result & { slug?: string }> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   if (!(await businessHas(ctx.business.id, "customUrl"))) return { ok: false, error: "L'URL personnalisée est incluse dans le forfait Pro+, ou en option à 5 €/mois avec le forfait Pro (Réglages › Abonnement)." };
   const slug = slugify(String(input ?? ""));
   if (slug.length < 3) return { ok: false, error: "3 caractères minimum (lettres, chiffres, tirets)." };
@@ -238,7 +238,7 @@ const embedSchema = z.object({
 
 /** Réglages du calendrier intégré sur le site du pro (titre, police). */
 export async function saveEmbed(input: unknown): Promise<Result> {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "rdv" });
   const parsed = embedSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
@@ -252,7 +252,7 @@ export async function saveEmbed(input: unknown): Promise<Result> {
 
 /** Image de fond de la page (enregistrée tout de suite ; le thème la référence ensuite). */
 export async function uploadPageBackground(fd: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  await requireContext("customization.manage");
+  await requireContext("customization.manage", { app: "rdv" });
   const f = fd.get("image");
   if (!(f instanceof File) || f.size === 0) return { ok: false, error: "Choisissez une image." };
   if (f.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };

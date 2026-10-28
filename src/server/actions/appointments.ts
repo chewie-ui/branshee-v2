@@ -48,7 +48,7 @@ async function allowsOverbooking(businessId: string) {
 /* ───────────────────────────── Demandes en attente ───────────────────────────── */
 
 export async function confirmRequest(rawId: string) {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   let updated: { contactName: string | null }[];
   try {
@@ -73,7 +73,7 @@ export async function confirmRequest(rawId: string) {
  * `silent` : pour une demande expirée, on libère le créneau sans écrire au client.
  */
 export async function refuseRequest(rawId: string, reason = "", silent = false) {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   const motive = reason.trim().slice(0, 500);
   const updated = await db
@@ -111,7 +111,7 @@ const createSchema = z
 export type CreateAppointmentState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
 
 export async function createAppointment(_prev: CreateAppointmentState, formData: FormData): Promise<CreateAppointmentState> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const bid = ctx.business.id;
   const tz = ctx.business.timezone;
   if (!bookingOpen((await effectivePlan(bid)).plan)) return { error: "Pas d’abonnement actif : abonnez-vous (Réglages › Abonnement) pour ajouter de nouveaux rendez-vous. Vos rendez-vous existants restent consultables." };
@@ -241,7 +241,7 @@ const t0 = (times: { date: string; time: string | null }[]) => `${times[0]!.date
 
 /** Créneaux libres pour aider à choisir l'heure dans le formulaire de création. */
 export async function fetchFreeSlots(serviceId: string, memberId: string, date: string): Promise<string[]> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const parsed = z.object({ serviceId: z.uuid(), memberId: z.union([z.uuid(), z.literal("")]), date: isoDay }).safeParse({ serviceId, memberId, date });
   if (!parsed.success) return [];
   // Côté pro, on ignore le délai minimum et l'horizon : ils ne concernent que la réservation en ligne.
@@ -264,7 +264,7 @@ export type BlockResult = { ok: true } | { ok: false; error: string };
 
 /** Crée (blockId null) ou modifie un créneau bloqué : pause, rendez-vous perso, absence… */
 export async function saveBlock(blockId: string | null, input: z.input<typeof blockSchema>): Promise<BlockResult> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const parsed = blockSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
@@ -310,7 +310,7 @@ const rescheduleSchema = z.object({
 });
 
 export async function rescheduleAppointment(rawId: string, input: z.input<typeof rescheduleSchema>): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   const parsed = rescheduleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
@@ -347,7 +347,7 @@ export async function rescheduleAppointment(rawId: string, input: z.input<typeof
 
 /** Annulation par l'équipe (le client est prévenu par email s'il en a un). */
 export async function cancelAppointment(id: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("appointments.cancel");
+  const ctx = await requireContext("appointments.cancel", { app: "rdv" });
   const apptId = idSchema.parse(id);
   const updated = await db
     .update(appointments)
@@ -364,7 +364,7 @@ export async function cancelAppointment(id: string): Promise<{ ok: boolean; erro
 
 /** Restaure un RDV annulé (s'il ne chevauche pas un autre RDV entre-temps). Le client n'est pas prévenu. */
 export async function restoreAppointment(rawId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   try {
     const updated = await db
@@ -385,7 +385,7 @@ export async function restoreAppointment(rawId: string): Promise<{ ok: boolean; 
 
 /** Supprime définitivement des rendez-vous (historique). Les blocages et RDV d'un autre établissement sont ignorés. */
 export async function deleteAppointments(rawIds: string[]): Promise<{ ok: boolean; deleted: number }> {
-  const ctx = await requireContext("appointments.cancel");
+  const ctx = await requireContext("appointments.cancel", { app: "rdv" });
   const ids = z.array(z.uuid()).max(500).parse(rawIds);
   if (ids.length === 0) return { ok: true, deleted: 0 };
   const deleted = await db.delete(appointments).where(and(eq(appointments.businessId, ctx.business.id), inArray(appointments.id, ids))).returning({ id: appointments.id });
@@ -396,7 +396,7 @@ export async function deleteAppointments(rawIds: string[]): Promise<{ ok: boolea
 
 /** Libère d'un coup toutes les demandes dont la date est passée (sans email). */
 export async function releaseExpiredRequests(): Promise<{ ok: boolean; released: number }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const released = await db
     .update(appointments)
     .set({ status: "cancelled", cancelledAt: new Date() })
@@ -409,7 +409,7 @@ export async function releaseExpiredRequests(): Promise<{ ok: boolean; released:
 
 /** Message libre au client (retard, consigne, changement…), envoyé par email avec le récapitulatif du RDV. */
 export async function sendClientMessage(rawId: string, message: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   const text = String(message ?? "").trim();
   if (text.length < 2) return { ok: false, error: "Écrivez votre message." };
@@ -425,7 +425,7 @@ export async function sendClientMessage(rawId: string, message: string): Promise
 }
 
 export async function sendReminderNow(rawId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   const [appt] = await db.select({ email: appointments.contactEmail, status: appointments.status, name: appointments.contactName }).from(appointments).where(and(eq(appointments.id, id), eq(appointments.businessId, ctx.business.id), isNotNull(appointments.contactEmail)));
   if (!appt) return { ok: false, error: "Ce client n'a pas d'adresse email." };
@@ -440,7 +440,7 @@ export async function sendReminderNow(rawId: string): Promise<{ ok: boolean; err
 /* ───────────────────────────── Détails ───────────────────────────── */
 
 export async function setNoShow(id: string, noShow: boolean, reason: "justified" | "unjustified" | null): Promise<{ ok: boolean; message?: string; error?: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const updated = await db
     .update(appointments)
     .set({ noShow, noShowReason: noShow ? reason : null })
@@ -459,7 +459,7 @@ export async function setNoShow(id: string, noShow: boolean, reason: "justified"
 
 /** Frais d'annulation prélevés automatiquement : rembourser (raison valable) ou garder. */
 export async function decidePenalty(id: string, decision: "refunded" | "kept") {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const [appt] = await db.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)));
   if (!appt) return { ok: false, error: "Rendez-vous introuvable." };
   const r = await reviewPenalty(appt.id, decision === "refunded" ? "refunded" : "kept");
@@ -469,7 +469,7 @@ export async function decidePenalty(id: string, decision: "refunded" | "kept") {
 }
 
 export async function saveInternalNote(id: string, note: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   await db
     .update(appointments)
     .set({ internalNote: note.trim().slice(0, 2000) || null })
@@ -486,7 +486,7 @@ const paymentSchema = z.object({
 
 /** Paiement noté à la main (paiement sur place, virement reçu…). */
 export async function savePayment(rawId: string, input: z.input<typeof paymentSchema>): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("appointments.manage");
+  const ctx = await requireContext("appointments.manage", { app: "rdv" });
   const id = idSchema.parse(rawId);
   const parsed = paymentSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Paiement invalide." };

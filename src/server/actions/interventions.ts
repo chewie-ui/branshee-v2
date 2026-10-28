@@ -37,7 +37,7 @@ const saveSchema = z.object({
 
 /** Créer ou modifier une intervention (responsable). Le client peut venir des fiches clients ou être tapé. */
 export async function saveIntervention(input: z.input<typeof saveSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   if (!interventionRights(ctx).manage) return { ok: false, error: "Seul le responsable planifie les interventions." };
   const v = saveSchema.safeParse(input);
@@ -74,7 +74,7 @@ export async function saveIntervention(input: z.input<typeof saveSchema>): Promi
 
 /** Avancer le statut (technicien assigné ou responsable). « Commencer » et « Terminer » notent l'heure. */
 export async function setInterventionStatus(id: string, status: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   const r = await interventionOf(ctx.business.id, id);
   if (!r || !isInterventionStatus(status)) return NF;
@@ -101,7 +101,7 @@ const workSchema = z.object({
 
 /** Rapport et fournitures / main-d'œuvre (technicien ou responsable). */
 export async function saveInterventionWork(input: z.input<typeof workSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   const v = workSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Vérifiez le rapport et les lignes." };
@@ -118,7 +118,7 @@ export async function saveInterventionWork(input: z.input<typeof workSchema>): P
 
 /** Photo avant / après (image chiffrée, 10 Mo max, 30 photos max). */
 export async function addInterventionPhoto(fd: FormData): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   const id = String(fd.get("id") ?? "");
   const kind = fd.get("kind") === "after" ? "after" : "before";
@@ -139,7 +139,7 @@ export async function addInterventionPhoto(fd: FormData): Promise<Result> {
 }
 
 export async function removeInterventionPhoto(id: string, ref: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   const r = await interventionOf(ctx.business.id, id);
   if (!r) return NF;
@@ -158,7 +158,7 @@ const signSchema = z.object({ id: z.uuid(), name: z.string().trim().min(2, "Nom 
 
 /** Signature du client sur le téléphone du technicien, en fin d'intervention. Envoie le rapport au client s'il a un email. */
 export async function signIntervention(input: z.input<typeof signSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   const v = signSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Signature invalide." };
@@ -178,7 +178,7 @@ export async function signIntervention(input: z.input<typeof signSchema>): Promi
 
 /** Brouillon de facture depuis les lignes de l'intervention (fiche client créée si besoin). */
 export async function invoiceIntervention(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   if (!interventionRights(ctx).manage || !ctx.can("invoices.manage")) return { ok: false, error: "Vous n'avez pas le droit de créer des factures." };
   const r = await interventionOf(ctx.business.id, id);
@@ -207,7 +207,7 @@ export async function invoiceIntervention(id: string): Promise<Result> {
 }
 
 export async function deleteIntervention(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "interventions" });
   if (ctx.impersonating) return SUPERVISION;
   if (!interventionRights(ctx).manage) return { ok: false, error: "Seul le responsable peut supprimer." };
   const r = await interventionOf(ctx.business.id, id);

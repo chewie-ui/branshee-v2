@@ -26,7 +26,7 @@ const campaignSchema = z.object({
 });
 
 async function manager() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "marketing" });
   if (ctx.impersonating) return { ctx, error: SUPERVISION };
   if (!marketingRights(ctx).manage) return { ctx, error: { ok: false as const, error: "Seul le responsable envoie des campagnes." } };
   return { ctx, error: null };

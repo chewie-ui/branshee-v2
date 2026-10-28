@@ -27,7 +27,7 @@ const MAX = 10 * 1024 * 1024;
 
 /** Ajouter ou modifier une dépense, avec son justificatif (photo ou PDF, 10 Mo max, chiffré sur le serveur). */
 export async function saveExpense(fd: FormData): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "depenses" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const v = schema.safeParse(Object.fromEntries([...fd.entries()].filter(([, val]) => typeof val === "string")));
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
@@ -60,7 +60,7 @@ export async function saveExpense(fd: FormData): Promise<Result> {
 }
 
 export async function deleteExpense(id: string): Promise<Result> {
-  const ctx = await requireContext("invoices.manage");
+  const ctx = await requireContext("invoices.manage", { app: "depenses" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = z.uuid().safeParse(id);
   if (!parsed.success) return { ok: false, error: "Dépense introuvable." };

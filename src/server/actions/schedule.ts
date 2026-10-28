@@ -34,7 +34,7 @@ async function assertCanEdit(ctx: AppContext, memberId: string | null, kind: "sc
 const FORBIDDEN: ActionResult = { ok: false, error: "Vous n'avez pas le droit de modifier ces horaires." };
 
 export async function saveWeeklyHours(memberId: string | null, week: Record<string, unknown>): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "rdv" });
   try {
     await assertCanEdit(ctx, memberId, "schedule");
   } catch {
@@ -59,7 +59,7 @@ export async function saveWeeklyHours(memberId: string | null, week: Record<stri
 }
 
 export async function setScheduleMode(mode: "shared" | "per_member"): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "rdv" });
   if (!ctx.can("availability.manageShared")) return FORBIDDEN;
   const value = z.enum(["shared", "per_member"]).parse(mode);
 
@@ -95,7 +95,7 @@ const exceptionSchema = z
   .refine((v) => v.type === "closed" || range.safeParse({ start: v.start, end: v.end }).success, { message: "Horaires spéciaux invalides.", path: ["start"] });
 
 export async function addException(input: Record<string, string>): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "rdv" });
   const parsed = exceptionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
@@ -138,7 +138,7 @@ export async function addException(input: Record<string, string>): Promise<Actio
 }
 
 export async function deleteException(id: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "rdv" });
   const [e] = await db.select().from(scheduleExceptions).where(and(eq(scheduleExceptions.id, z.uuid().parse(id)), eq(scheduleExceptions.businessId, ctx.business.id)));
   if (!e) return { ok: false, error: "Introuvable." };
   try {

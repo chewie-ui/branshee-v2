@@ -11,6 +11,9 @@ import { businessModules } from "@/db/schema";
 import { effectivePlan } from "@/server/plan";
 import { SubscriptionSummary } from "@/components/apps/subscription-summary";
 
+/** Apps rangées dans « Administration » (patron et admins), pas dans la grille des apps. */
+const ADMIN_APPS = new Set(["employes", "reglages"]);
+
 export async function generateMetadata(): Promise<Metadata> {
   // Le modèle « %s · Marque » du layout ne s'applique pas à la page du même dossier : titre complet ici.
   const brand = await currentBrand();
@@ -26,6 +29,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   // Première visite du responsable : questionnaire de départ pour choisir les apps de l'accueil.
   if (canEdit && !(await appsSetupDone(ctx.business.id))) redirect("/app/demarrer");
   const ready = !!(await searchParams).pret;
+  // Administration : ce que le patron et ses admins gèrent pour toute l'entreprise (selon leurs droits).
+  const admin = ([
+    { href: "/app/reglages/etablissement", label: "Entreprise", hint: "Nom, adresse, logo", icon: "store", ok: ctx.can("business.manage") },
+    { href: "/app/equipe", label: "Employés", hint: "Inviter, accès, fiches", icon: "team", ok: ctx.can("team.view") },
+    { href: "/app/equipe/grades", label: "Grades", hint: "Qui voit quelles apps", icon: "signature", ok: ctx.can("grades.view") },
+    { href: "/app/reglages/abonnement", label: "Abonnement", hint: "Formule, factures", icon: "card", ok: ctx.can("billing.manage") },
+    { href: "/app/reglages/journal", label: "Journal", hint: "Qui a fait quoi", icon: "history", ok: ctx.can("logs.view") },
+    { href: "/app/reglages", label: "Réglages", hint: "Notifications, paiements…", icon: "settings", ok: ctx.can("settings.manage") },
+  ] as const).filter((x) => x.ok).map(({ ok: _ok, ...x }) => x); // eslint-disable-line @typescript-eslint/no-unused-vars
   const firstName = ctx.user.name.split(" ")[0];
   const [plan, mods, apps] = await Promise.all([
     effectivePlan(ctx.business.id),
@@ -40,7 +52,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
         <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps de ${ctx.business.name}.`}</p>
       </div>
-      <AppHome apps={apps} activeAddons={active} canEdit={canEdit} />
+      <AppHome apps={apps.filter((a) => !ADMIN_APPS.has(a.id))} activeAddons={active} canEdit={canEdit} admin={admin} />
       {/* Essai ou abonnement absent : le bandeau du haut le dit déjà. */}
       {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? (
         <div className="mx-auto mt-12 max-w-3xl">

@@ -46,7 +46,7 @@ const schema = z.object({
 });
 
 export async function saveService(serviceId: string | null, _prev: ServiceFormState, formData: FormData): Promise<ServiceFormState> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const bid = ctx.business.id;
 
   const parsed = schema.safeParse({
@@ -175,7 +175,7 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
 }
 
 export async function deleteService(serviceId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const id = z.uuid().parse(serviceId);
   // Les RDV passés gardent le nom de la prestation (copie figée), la suppression ne casse pas l'historique.
   const deleted = await db.delete(services).where(and(eq(services.id, id), eq(services.businessId, ctx.business.id))).returning({ name: services.name });
@@ -186,7 +186,7 @@ export async function deleteService(serviceId: string): Promise<{ ok: boolean; e
 }
 
 export async function toggleService(serviceId: string, active: boolean): Promise<void> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   if (active) {
     const [{ n }] = await db.select({ n: count() }).from(services).where(and(eq(services.businessId, ctx.business.id), eq(services.isActive, true)));
     if ((await serviceLimitReached(ctx.business.id, n)).reached) return;
@@ -199,7 +199,7 @@ export async function toggleService(serviceId: string, active: boolean): Promise
 
 /** Active / masque une ou plusieurs prestations en un clic. */
 export async function setServicesActive(rawIds: string[], active: boolean): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const ids = z.array(z.uuid()).min(1).max(500).parse(rawIds);
   if (active) {
     const rows = await db.select({ id: services.id, isActive: services.isActive }).from(services).where(eq(services.businessId, ctx.business.id));
@@ -215,7 +215,7 @@ export async function setServicesActive(rawIds: string[], active: boolean): Prom
 
 /** Monte ou descend une prestation dans sa catégorie (ordre d'affichage public). */
 export async function moveService(serviceId: string, direction: "up" | "down"): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const id = z.uuid().parse(serviceId);
   const [svc] = await db.select({ categoryId: services.categoryId }).from(services).where(and(eq(services.id, id), eq(services.businessId, ctx.business.id)));
   if (!svc) return { ok: false };
@@ -240,7 +240,7 @@ export async function moveService(serviceId: string, direction: "up" | "down"): 
 const categorySchema = z.object({ name: z.string().trim().min(1, "Donnez un nom à la catégorie.").max(50), icon: z.string().trim().max(8) });
 
 export async function saveCategory(categoryId: string | null, input: { name: string; icon: string }): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const parsed = categorySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
   const v = parsed.data;
@@ -263,14 +263,14 @@ export async function saveCategory(categoryId: string | null, input: { name: str
 
 /** Supprime une catégorie ; ses prestations passent « sans catégorie ». */
 export async function deleteCategory(categoryId: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   await db.delete(serviceCategories).where(and(eq(serviceCategories.id, z.uuid().parse(categoryId)), eq(serviceCategories.businessId, ctx.business.id)));
   revalidatePath("/app/prestations", "layout");
   return { ok: true };
 }
 
 export async function moveCategory(categoryId: string, direction: "up" | "down"): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const list = await db.select({ id: serviceCategories.id }).from(serviceCategories).where(eq(serviceCategories.businessId, ctx.business.id)).orderBy(asc(serviceCategories.position), asc(serviceCategories.name));
   const i = list.findIndex((c) => c.id === categoryId);
   const j = direction === "up" ? i - 1 : i + 1;
@@ -285,7 +285,7 @@ export async function moveCategory(categoryId: string, direction: "up" | "down")
 
 /** Présentation des catégories sur la page de réservation : pastilles, accordéon ou grille. */
 export async function setCategoryStyle(style: "pills" | "accordion" | "grid"): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const v = z.enum(["pills", "accordion", "grid"]).parse(style);
   await db.insert(bookingPageSettings).values({ businessId: ctx.business.id, categoryStyle: v }).onConflictDoUpdate({ target: bookingPageSettings.businessId, set: { categoryStyle: v } });
   revalidatePath("/app/prestations", "layout");

@@ -9,6 +9,7 @@ import { can, type PermissionKey, type Permissions } from "@/lib/permissions";
 import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
 import { apiAuth } from "@/server/api/als";
 import { isLocked } from "@/server/plan";
+import { APPS, appForPath } from "@/lib/apps";
 
 export type AppContext = {
   user: { id: string; name: string; email: string; avatarUrl: string | null };
@@ -18,6 +19,9 @@ export type AppContext = {
   businesses: { id: string; name: string; businessType: string | null }[];
   permissions: Permissions | null;
   can: (key: PermissionKey) => boolean;
+  /** Apps ouvertes à ce membre par son grade (null = toutes). */
+  appAccess: string[] | null;
+  canApp: (appId: string) => boolean;
   /** Session ouverte par l'équipe Branshee (supervision acceptée par le pro). */
   impersonating: boolean;
 };
@@ -35,7 +39,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
   const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl };
 
   const rows = await db
-    .select({ business: businesses, member: members, permissions: grades.permissions })
+    .select({ business: businesses, member: members, permissions: grades.permissions, appAccess: grades.appAccess })
     .from(members)
     .innerJoin(businesses, eq(businesses.id, members.businessId))
     .leftJoin(grades, eq(grades.id, members.gradeId))
@@ -49,6 +53,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
   const row = rows.find((r) => r.business.id === wanted) ?? rows[0]!;
   const isOwner = row.member.isOwner;
   const permissions = row.permissions ?? null;
+  const appAccess = isOwner ? null : (row.appAccess ?? null);
 
   return {
     kind: "ok",
@@ -59,6 +64,8 @@ const resolveContext = cache(async (): Promise<Resolved> => {
       businesses: rows.map((r) => ({ id: r.business.id, name: r.business.name, businessType: r.business.businessType })),
       permissions,
       can: (key) => can(permissions, key, isOwner),
+      appAccess,
+      canApp: (appId) => !appAccess || appAccess.includes(appId),
       impersonating: !!session.impersonatedById,
     },
   };
@@ -85,11 +92,19 @@ const actionGate = cache(() => ({ checked: false }));
  * (essai terminé sans abonnement) est renvoyé vers l'abonnement, sauf pour les actions marquées `allowLocked`
  * (s'abonner, choisir un établissement…). Sûr par défaut : toute nouvelle action est bloquée.
  */
-export async function requireContext(permission?: PermissionKey, opts: { allowLocked?: boolean } = {}): Promise<AppContext> {
+export async function requireContext(permission?: PermissionKey, opts: { allowLocked?: boolean; app?: string } = {}): Promise<AppContext> {
   const r = await resolveContext();
   if (r.kind === "anonymous") redirect("/connexion");
   if (r.kind === "no-business") redirect("/bienvenue");
   if (permission && !r.ctx.can(permission)) redirect("/app/acces-refuse");
+  // App fermée à ce grade (ex. un comptable sans accès à RDV) : pages et actions refusées.
+  if (opts.app && !r.ctx.canApp(opts.app)) redirect("/app/acces-refuse");
+  // Toute page (et toute navigation interne) d'une app fermée au grade : refusée côté serveur, avant de lire la moindre donnée.
+  if (r.ctx.appAccess) {
+    const path = (await headers()).get("x-pathname") ?? "";
+    const app = path.startsWith("/app/") && path !== "/app/acces-refuse" ? appForPath(APPS, path) : null;
+    if (app && app.id !== "reglages" && !r.ctx.canApp(app.id)) redirect("/app/acces-refuse");
+  }
   const gate = actionGate();
   if (!gate.checked && (await headers()).has("next-action")) {
     gate.checked = true;

@@ -14,7 +14,7 @@ const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire
 const refresh = () => revalidatePath("/app/paie", "layout");
 
 async function manager() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "paie" });
   if (ctx.impersonating) return { ctx, error: SUPERVISION };
   if (!payrollRights(ctx).manage) return { ctx, error: { ok: false as const, error: "Réservé au responsable." } };
   return { ctx, error: null };

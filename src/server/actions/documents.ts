@@ -16,7 +16,7 @@ const refresh = () => revalidatePath("/app/documents", "layout");
 const uuidOrNull = z.union([z.literal(""), z.null(), z.uuid()]).transform((v) => v || null);
 
 async function member(): Promise<{ ctx: AppContext; error: null } | { ctx: AppContext; error: { ok: false; error: string } }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "documents" });
   return ctx.impersonating ? { ctx, error: SUPERVISION } : { ctx, error: null };
 }
 async function ownFolder(businessId: string, id: string | null) {

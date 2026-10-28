@@ -27,7 +27,7 @@ const settingsSchema = z.object({
 });
 
 export async function saveReviewSettings(input: z.input<typeof settingsSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "avis" });
   if (ctx.impersonating) return SUPERVISION;
   if (!reviewRights(ctx).settings) return { ok: false, error: "Seul le responsable peut modifier ces réglages." };
   const v = settingsSchema.safeParse(input);
@@ -42,7 +42,7 @@ export async function saveReviewSettings(input: z.input<typeof settingsSchema>):
 }
 
 export async function regenerateReviewQr(): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "avis" });
   if (ctx.impersonating) return SUPERVISION;
   if (!reviewRights(ctx).settings) return { ok: false, error: "Seul le responsable peut faire ça." };
   await reviewSettingsOf(ctx.business.id);
@@ -53,7 +53,7 @@ export async function regenerateReviewQr(): Promise<Result> {
 
 /** Demander un avis à un client précis (fiche client ou adresse email). */
 export async function sendReviewRequest(input: { customerId?: string; email?: string; name?: string }): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "avis" });
   if (ctx.impersonating) return SUPERVISION;
   if (!reviewRights(ctx).send) return { ok: false, error: "Vous n'avez pas le droit de contacter les clients." };
   const s = await reviewSettingsOf(ctx.business.id);

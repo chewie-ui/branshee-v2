@@ -24,7 +24,10 @@ export function proxy(request: NextRequest) {
     if (next !== "/app") url.searchParams.set("suite", next);
     return NextResponse.redirect(url);
   }
-  return NextResponse.next();
+  // Chemin demandé, pour que l'espace pro sache quelle app est ouverte (toujours réécrit : jamais celui du navigateur).
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", path);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };

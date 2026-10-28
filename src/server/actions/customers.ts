@@ -47,7 +47,7 @@ const newSchema = z
 
 /** Ajoute un client à la main : le nom suffit ; email et téléphone rattacheront ses futurs RDV. */
 export async function createCustomer(_prev: CustomerState, fd: FormData): Promise<CustomerState> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const g = (k: string) => String(fd.get(k) ?? "").trim();
   const parsed = newSchema.safeParse({ firstName: g("firstName"), lastName: g("lastName"), email: g("email").toLowerCase(), phone: g("phone") });
   if (!parsed.success) return { error: "Vérifiez les champs indiqués.", fieldErrors: fieldErrors(parsed.error.issues) };
@@ -78,7 +78,7 @@ const contactSchema = z.object({
 });
 
 export async function saveContact(customerId: string, _prev: CustomerState, fd: FormData): Promise<CustomerState> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { error: "Fiche introuvable." };
   const g = (k: string) => String(fd.get(k) ?? "").trim();
@@ -106,7 +106,7 @@ const altSchema = z.object({
 
 /** Contacts alternatifs : surnom ou nom de jeune fille, 2ᵉ email, 2ᵉ téléphone. */
 export async function saveAltContacts(customerId: string, _prev: CustomerState, fd: FormData): Promise<CustomerState> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { error: "Fiche introuvable." };
   const g = (k: string) => String(fd.get(k) ?? "").trim();
@@ -120,7 +120,7 @@ export async function saveAltContacts(customerId: string, _prev: CustomerState, 
 
 /** Notes générales (allergies, préférences…) — chiffrées. */
 export async function saveGeneralInfo(customerId: string, text: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { ok: false, error: "Fiche introuvable." };
   await db.update(customers).set({ generalInfoEnc: encrypt(text.trim().slice(0, 5000)) }).where(eq(customers.id, c.id));
@@ -129,7 +129,7 @@ export async function saveGeneralInfo(customerId: string, text: string): Promise
 }
 
 export async function setCustomerBlocked(customerId: string, blocked: boolean, reason: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { ok: false };
   await db.update(customers).set({ blockedAt: blocked ? new Date() : null, blockedReason: blocked ? reason.slice(0, 200) || null : null }).where(eq(customers.id, c.id));
@@ -140,7 +140,7 @@ export async function setCustomerBlocked(customerId: string, blocked: boolean, r
 
 /** Supprime des fiches avec leur dossier et leurs rendez-vous (comme l'ancien « supprimer le client »). */
 export async function deleteCustomers(rawIds: string[]): Promise<{ ok: boolean; deleted: number }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const ids = z.array(z.uuid()).min(1).max(500).parse(rawIds);
   const own = await db.select({ id: customers.id, name: customers.fullName }).from(customers).where(and(eq(customers.businessId, ctx.business.id), inArray(customers.id, ids)));
   if (!own.length) return { ok: false, deleted: 0 };
@@ -166,7 +166,7 @@ export async function deleteCustomerAndLeave(customerId: string) {
  * les coordonnées manquantes sont complétées, puis la fiche en double est supprimée.
  */
 export async function mergeCustomers(targetId: string, sourceId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   if (targetId === sourceId) return { ok: false, error: "Choisissez une autre fiche." };
   const [target, source] = await Promise.all([ownCustomer(ctx.business.id, targetId), ownCustomer(ctx.business.id, sourceId)]);
   if (!target || !source) return { ok: false, error: "Fiche introuvable." };
@@ -199,7 +199,7 @@ export async function mergeCustomers(targetId: string, sourceId: string): Promis
 
 /** Rattache un rendez-vous à une autre fiche (ex. réservation faite par un parent). */
 export async function reassignAppointment(appointmentId: string, customerId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { ok: false, error: "Fiche introuvable." };
   const updated = await db
@@ -215,7 +215,7 @@ export async function reassignAppointment(appointmentId: string, customerId: str
 
 /** Recherche de fiches (fusion, rattachement). */
 export async function searchCustomers(query: string, excludeId?: string): Promise<{ id: string; name: string; email: string | null; phone: string | null }[]> {
-  const ctx = await requireContext("customers.view");
+  const ctx = await requireContext("customers.view", { app: "clients" });
   const q = query.trim().slice(0, 80);
   if (q.length < 2) return [];
   const like = `%${q.replace(/[%_\\]/g, (ch) => `\\${ch}`)}%`;
@@ -238,7 +238,7 @@ const noteSchema = z.object({
 
 /** Crée ou modifie une note du dossier, avec un PDF facultatif (chiffré sur le disque). */
 export async function saveNote(customerId: string, noteId: string | null, fd: FormData): Promise<CustomerState> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { error: "Fiche introuvable." };
   const parsed = noteSchema.safeParse(Object.fromEntries(["date", "title", "note", "todo"].map((k) => [k, String(fd.get(k) ?? "")])));
@@ -271,7 +271,7 @@ export async function saveNote(customerId: string, noteId: string | null, fd: Fo
 }
 
 export async function deleteNote(customerId: string, noteId: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("customers.manage");
+  const ctx = await requireContext("customers.manage", { app: "clients" });
   const c = await ownCustomer(ctx.business.id, customerId);
   if (!c) return { ok: false };
   const [deleted] = await db.delete(customerNotes).where(and(eq(customerNotes.id, z.uuid().parse(noteId)), eq(customerNotes.customerId, c.id))).returning({ path: customerNotes.attachmentPath });

@@ -18,7 +18,7 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number } = 
   // Apps rangées hors de l'accueil (questionnaire de départ ou choix du responsable).
   const off = new Set(biz?.o.hiddenApps ?? []);
   const clients = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
-  return APPS.map((a) => ({
+  return APPS.filter((a) => ctx.canApp(a.id)).map((a) => ({
     id: a.id,
     name: a.id === "clients" ? clients : a.name,
     icon: a.icon,

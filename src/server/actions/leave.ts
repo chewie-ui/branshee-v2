@@ -49,7 +49,7 @@ async function memberEmail(memberId: string) {
 
 /** Demander une absence (pour soi), ou l'encoder directement pour quelqu'un si on valide les congés. */
 export async function requestLeave(input: z.input<typeof requestSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "conges" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const v = requestSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
@@ -95,7 +95,7 @@ export async function requestLeave(input: z.input<typeof requestSchema>): Promis
 
 /** Valider ou refuser une demande en attente. */
 export async function decideLeave(id: string, approve: boolean, note = ""): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "conges" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!leaveRights(ctx).approve) return { ok: false, error: "Seul le responsable peut valider les congés." };
   const parsed = z.object({ id: z.uuid(), note: z.string().trim().max(500) }).safeParse({ id, note });
@@ -120,7 +120,7 @@ export async function decideLeave(id: string, approve: boolean, note = ""): Prom
 
 /** Annuler une absence : la sienne (en attente ou à venir), ou n'importe laquelle pour le responsable. L'agenda est rouvert. */
 export async function cancelLeave(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "conges" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = z.uuid().safeParse(id);
   if (!parsed.success) return { ok: false, error: "Absence introuvable." };
@@ -140,7 +140,7 @@ export async function cancelLeave(id: string): Promise<Result> {
 
 /** Jours de congé par an d'un membre (vide = pas de solde suivi). */
 export async function setAllowance(memberId: string, year: number, days: number | null): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "conges" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!leaveRights(ctx).approve) return { ok: false, error: "Seul le responsable peut modifier les soldes." };
   const v = z.object({ memberId: z.uuid(), year: z.number().int().min(2000).max(2100), days: z.number().min(0).max(366).multipleOf(0.5).nullable() }).safeParse({ memberId, year, days });
@@ -155,7 +155,7 @@ export async function setAllowance(memberId: string, year: number, days: number 
 
 /** Appliquer le même nombre de jours à toute l'équipe qui n'a pas encore de solde cette année. */
 export async function setAllowanceForAll(year: number, days: number): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "conges" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   if (!leaveRights(ctx).approve) return { ok: false, error: "Seul le responsable peut modifier les soldes." };
   const v = z.object({ year: z.number().int().min(2000).max(2100), days: z.number().min(0).max(366).multipleOf(0.5) }).safeParse({ year, days });

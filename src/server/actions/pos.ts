@@ -16,7 +16,7 @@ const refresh = () => { revalidatePath("/app/caisse", "layout"); revalidatePath(
 const cents = z.number().int().min(0).max(100_000_000);
 
 export async function openRegister(openingCashCents: number): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   if (ctx.impersonating) return SUPERVISION;
   if (!cents.safeParse(openingCashCents).success) return { ok: false, error: "Fond de caisse invalide." };
   if (await openSessionOf(ctx.business.id)) return { ok: false, error: "La caisse est déjà ouverte." };
@@ -31,7 +31,7 @@ export async function openRegister(openingCashCents: number): Promise<Result> {
 
 /** Clôture : espèces attendues (fond + ventes en espèces − remboursements en espèces) comparées au comptage. */
 export async function closeRegister(input: { countedCashCents: number; note: string }): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   if (ctx.impersonating) return SUPERVISION;
   if (!cents.safeParse(input.countedCashCents).success) return { ok: false, error: "Montant compté invalide." };
   // Verrou exclusif sur la session : les tickets en cours se terminent, puis les totaux sont calculés et figés.
@@ -69,7 +69,7 @@ const saleSchema = z.object({
  * Numérotation continue par année (verrou), stock décompté pour les produits suivis.
  */
 export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   if (ctx.impersonating) return SUPERVISION;
   const v = saleSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Ticket invalide." };
@@ -126,7 +126,7 @@ export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
 
 /** Rembourser un ticket (responsable) : les produits reviennent en stock. */
 export async function refundSale(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "caisse" });
   if (ctx.impersonating) return SUPERVISION;
   if (!stockRights(ctx).manage) return { ok: false, error: "Seul le responsable peut rembourser un ticket." };
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Ticket introuvable." };

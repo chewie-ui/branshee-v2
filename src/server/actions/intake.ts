@@ -29,7 +29,7 @@ const schema = z.object({
  * les prestations qu'elle affiche. Les identifiants des réponses existantes sont conservés.
  */
 export async function saveIntakeQuestion(questionId: string | null, input: z.input<typeof schema>): Promise<IntakeResult> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const bid = ctx.business.id;
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
@@ -74,7 +74,7 @@ export async function saveIntakeQuestion(questionId: string | null, input: z.inp
 }
 
 export async function deleteIntakeQuestion(questionId: string): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const deleted = await db.delete(intakeQuestions).where(and(eq(intakeQuestions.id, z.uuid().parse(questionId)), eq(intakeQuestions.businessId, ctx.business.id))).returning({ q: intakeQuestions.question });
   if (deleted.length) await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "intake.delete", description: `Question d'orientation supprimée : ${deleted[0]!.q}` });
   revalidatePath("/app/prestations", "layout");
@@ -83,7 +83,7 @@ export async function deleteIntakeQuestion(questionId: string): Promise<{ ok: bo
 
 /** Monte ou descend une question dans l'ordre où elles sont posées. */
 export async function moveIntakeQuestion(questionId: string, direction: "up" | "down"): Promise<{ ok: boolean }> {
-  const ctx = await requireContext("services.manage");
+  const ctx = await requireContext("services.manage", { app: "rdv" });
   const list = await db.select({ id: intakeQuestions.id }).from(intakeQuestions).where(eq(intakeQuestions.businessId, ctx.business.id)).orderBy(intakeQuestions.position, intakeQuestions.createdAt);
   const i = list.findIndex((q) => q.id === questionId);
   const j = direction === "up" ? i - 1 : i + 1;

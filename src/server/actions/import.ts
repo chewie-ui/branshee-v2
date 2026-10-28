@@ -18,6 +18,7 @@ const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire
 async function rightsFor(ctx: AppContext, kind: ImportKind) {
   if (kind !== "clients" && kind !== "produits") return { ok: false as const, error: "Import inconnu." };
   if ((await currentBrand()).id !== "skydev") return { ok: false as const, error: "Import indisponible." };
+  if (!ctx.canApp(kind === "clients" ? "clients" : "stock")) return { ok: false as const, error: "Vous n'avez pas accès à cette app." };
   if (ctx.impersonating) return SUPERVISION;
   if (kind === "clients" && !ctx.can("customers.manage")) return { ok: false as const, error: "Vous n'avez pas le droit de créer des fiches." };
   if (kind === "produits" && !stockRights(ctx).manage) return { ok: false as const, error: "Seul le responsable ajoute des produits." };

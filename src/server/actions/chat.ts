@@ -14,7 +14,7 @@ export type ChatMessage = { id: string; memberId: string | null; author: string 
 
 /** Messages d'un salon : les 100 derniers, ou seulement les nouveaux après une date (rafraîchissement). Marque comme lu. */
 export async function fetchMessages(channelId: string, after?: string | null): Promise<{ ok: true; messages: ChatMessage[] } | { ok: false; error: string }> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   const c = await chatChannelFor(ctx, channelId);
   if (!c) return { ok: false, error: "Discussion introuvable." };
   const since = after && !Number.isNaN(Date.parse(after)) ? new Date(after) : null;
@@ -31,12 +31,12 @@ export async function fetchMessages(channelId: string, after?: string | null): P
 
 /** Liste des salons (pastilles non lus), rafraîchie régulièrement par la page. */
 export async function chatList() {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   return (await chatOverview(ctx)).channels;
 }
 
 export async function sendMessage(channelId: string, body: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   if (ctx.impersonating) return SUPERVISION;
   const v = z.string().trim().min(1).max(4000).safeParse(body);
   if (!v.success) return { ok: false, error: "Message vide ou trop long (4 000 caractères maximum)." };
@@ -49,7 +49,7 @@ export async function sendMessage(channelId: string, body: string): Promise<Resu
 }
 
 export async function deleteMessage(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Message introuvable." };
   const [m] = await db.select({ memberId: chatMessages.memberId, channelId: chatMessages.channelId }).from(chatMessages).where(and(eq(chatMessages.id, id), eq(chatMessages.businessId, ctx.business.id)));
@@ -60,7 +60,7 @@ export async function deleteMessage(id: string): Promise<Result> {
 }
 
 export async function createChannel(name: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   if (ctx.impersonating) return SUPERVISION;
   const v = z.string().trim().min(1, "Donnez un nom au salon.").max(40).safeParse(name);
   if (!v.success) return { ok: false, error: v.error.issues[0]!.message };
@@ -71,7 +71,7 @@ export async function createChannel(name: string): Promise<Result> {
 }
 
 export async function deleteChannel(id: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   if (ctx.impersonating) return SUPERVISION;
   if (!chatRights(ctx).manage) return { ok: false, error: "Seul le responsable peut supprimer un salon." };
   const c = await chatChannelFor(ctx, id);
@@ -84,7 +84,7 @@ export async function deleteChannel(id: string): Promise<Result> {
 
 /** Ouvre (ou crée) la discussion privée avec un membre de l'équipe. */
 export async function openDirect(memberId: string): Promise<Result> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(undefined, { app: "messagerie" });
   if (!z.uuid().safeParse(memberId).success || memberId === ctx.member.id) return { ok: false, error: "Personne introuvable." };
   const [m] = await db.select({ id: members.id }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id)));
   if (!m) return { ok: false, error: "Personne introuvable." };

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { and, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
+import { APPS } from "@/lib/apps";
 import { activityLogs, grades, members, users } from "@/db/schema";
 import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions";
 import { requireContext, type AppContext } from "@/server/context";
@@ -178,16 +179,22 @@ export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: Fo
     for (const action of Object.keys(def.actions)) permissions[domain]![action] = fd.get(`${domain}.${action}`) === "on";
   }
 
+  // Skydev : apps accessibles (champ absent sur Branshee : on ne touche à rien).
+  const mode = fd.get("appMode");
+  const appAccess = mode === "some" ? APPS.filter((a) => a.id !== "reglages" && fd.get(`app.${a.id}`) === "on").map((a) => a.id) : null;
+  const appSet = mode === "all" || mode === "some" ? { appAccess } : {};
+  if (mode === "some" && !appAccess!.length) return { error: "Cochez au moins une app, ou choisissez « Toutes les apps »." };
+
   try {
     if (gradeId) {
       const updated = await db
         .update(grades)
-        .set({ name, permissions: permissions as Permissions })
+        .set({ name, permissions: permissions as Permissions, ...appSet })
         .where(and(eq(grades.id, z.uuid().parse(gradeId)), eq(grades.businessId, ctx.business.id)))
         .returning({ id: grades.id });
       if (!updated.length) return { error: "Grade introuvable." };
     } else {
-      await db.insert(grades).values({ businessId: ctx.business.id, name, permissions: permissions as Permissions });
+      await db.insert(grades).values({ businessId: ctx.business.id, name, permissions: permissions as Permissions, ...appSet });
     }
   } catch (e) {
     const err = e as { code?: string; cause?: { code?: string } };

@@ -21,7 +21,7 @@ type Result = { ok: boolean; error?: string; message?: string };
 const LOCKED: Result = { ok: false, error: "« Mon site » est inclus dans le forfait Pro+." };
 
 async function ctxWithSite() {
-  const ctx = await requireContext("customization.manage");
+  const ctx = await requireContext("customization.manage", { app: "site" });
   if (!(await businessHas(ctx.business.id, "mySite"))) return { ctx, site: null };
   return { ctx, site: await getOrCreateSite(ctx.business.id) };
 }
