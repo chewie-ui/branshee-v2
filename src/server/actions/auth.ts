@@ -39,9 +39,12 @@ function safeNext(value: FormDataEntryValue | null): string | null {
   return /^\/(app|espace-client|r)(\/[\w\-/?=&%.]*)?$/.test(v) || /^\/[a-z0-9-]{3,60}(\?[\w\-=&%.]*)?$/.test(v) ? v : null;
 }
 
-/** Page d'arrivée après connexion : l'espace pro pour un membre d'établissement, sinon l'espace client. */
-async function landing(userId: string, verified: boolean) {
-  if (await isPro(userId)) return "/app";
+/**
+ * Page d'arrivée après connexion : l'espace pro pour un membre d'établissement, ou pour un compte inscrit
+ * comme pro qui n'a pas encore créé son entreprise (il y arrive) ; sinon l'espace client.
+ */
+async function landing(userId: string, verified: boolean, intent?: string | null) {
+  if ((await isPro(userId)) || intent === "pro") return "/app";
   return verified ? "/espace-client" : "/verifier-email";
 }
 
@@ -136,7 +139,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "password", ip: meta.ip });
   await linkInvitations(user.id, email);
-  redirect(safeNext(formData.get("next")) ?? (await landing(user.id, !!user.emailVerifiedAt)));
+  redirect(safeNext(formData.get("next")) ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent)));
 }
 
 export async function logout() {
@@ -165,5 +168,5 @@ export async function verifyLoginTwoFactor(_prev: TwoFactorState, formData: Form
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "two_factor", ip: meta.ip });
   await linkInvitations(user.id, user.email);
-  redirect(pending.next ?? (await landing(user.id, !!user.emailVerifiedAt)));
+  redirect(pending.next ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent)));
 }

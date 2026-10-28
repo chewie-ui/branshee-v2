@@ -42,7 +42,10 @@ export async function GET(req: NextRequest) {
     [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
     if (user) await db.update(users).set({ googleId: info.sub, emailVerifiedAt: user.emailVerifiedAt ?? new Date() }).where(eq(users.id, user.id));
   }
-  if (!user) [user] = await db.insert(users).values({ email, fullName: info.name?.slice(0, 120) || email, googleId: info.sub, emailVerifiedAt: new Date() }).returning();
+  // Nouveau compte sans page de retour précise (bouton Google de l'inscription ou de la connexion) : c'est un pro
+  // qui veut ses apps. Un client qui réserve chez un pro arrive avec une page de retour (son espace ou la page du pro).
+  const created = !user;
+  if (!user) [user] = await db.insert(users).values({ email, fullName: info.name?.slice(0, 120) || email, googleId: info.sub, emailVerifiedAt: new Date(), signupIntent: state.s ? "client" : "pro" }).returning();
   if (!user || user.disabledAt) return go("/connexion?google=desactive");
   await linkCustomerRecords(user.id, email);
   await linkInvitations(user.id, email);
@@ -54,5 +57,7 @@ export async function GET(req: NextRequest) {
   const ip = (clientIp(h) ?? null);
   await createSession(user.id, { ip, userAgent: h.get("user-agent") });
   await db.insert(loginEvents).values({ userId: user.id, method: "google", ip });
-  return go(state.s || ((await isPro(user.id)) ? "/app" : "/espace-client"));
+  // Sans entreprise, un compte « pro » arrive sur la création de son entreprise (/app → /bienvenue).
+  const pro = (await isPro(user.id)) || created || user.signupIntent === "pro";
+  return go(state.s || (pro ? "/app" : "/espace-client"));
 }
