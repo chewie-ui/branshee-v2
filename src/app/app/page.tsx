@@ -38,11 +38,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   // Administration : ce que le patron et ses admins gèrent pour toute l'entreprise (selon leurs droits).
   const admin = ([
     { href: "/app/reglages/etablissement", label: "Entreprise", hint: "Nom, adresse, logo", icon: "store", ok: ctx.can("business.manage") },
-    { href: "/app/equipe", label: "Employés", hint: "Inviter, accès, fiches", icon: "team", ok: ctx.can("team.view") },
-    { href: "/app/equipe/grades", label: "Grades", hint: "Qui voit quelles apps", icon: "signature", ok: ctx.can("grades.view") },
+    { href: "/app/equipe", label: "Employés", hint: "Inviter, accès", icon: "team", ok: ctx.can("team.view") },
+    { href: "/app/equipe/grades", label: "Grades", hint: "Droits par app", icon: "signature", ok: ctx.can("grades.view") },
     { href: "/app/reglages/abonnement", label: "Abonnement", hint: "Formule, factures", icon: "card", ok: ctx.can("billing.manage") },
     { href: "/app/reglages/journal", label: "Journal", hint: "Qui a fait quoi", icon: "history", ok: ctx.can("logs.view") },
-    { href: "/app/reglages", label: "Réglages", hint: "Notifications, paiements…", icon: "settings", ok: ctx.can("settings.manage") },
+    { href: "/app/reglages", label: "Réglages", hint: "Paiements, SMS", icon: "settings", ok: ctx.can("settings.manage") },
   ] as const).filter((x) => x.ok).map(({ ok: _ok, ...x }) => x); // eslint-disable-line @typescript-eslint/no-unused-vars
   const firstName = ctx.user.name.split(" ")[0];
   const [plan, mods, apps] = await Promise.all([

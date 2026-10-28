@@ -72,13 +72,13 @@ export function MenuEditor({ categories, items, canEdit }: { categories: MenuCat
             {list.length ? (
               <ul className="divide-y divide-border">
                 {list.map((it) => (
-                  <li key={it.id} className="flex items-center gap-3 px-5 py-3">
+                  <li key={it.id} className="flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-5">
                     {it.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={it.photoUrl} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
-                    ) : <span className="size-12 shrink-0 rounded-lg bg-surface-muted" aria-hidden="true" />}
+                    ) : <span className="hidden size-12 shrink-0 rounded-lg bg-surface-muted sm:block" aria-hidden="true" />}
                     <div className="min-w-0 flex-1">
-                      <p className={cn("truncate font-medium", !it.available && "text-muted line-through")}>{it.name}</p>
+                      <p className={cn("font-medium break-words", !it.available && "text-muted line-through")}>{it.name}</p>
                       <p className="truncate text-sm text-muted">{it.description || it.tags || " "}</p>
                     </div>
                     <span className="shrink-0 font-medium tabular-nums">{eur(it.priceCents)}</span>

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { activeNavHref, appForPath, type AppIcon as AppIconName, type AppNavItem } from "@/lib/apps";
-import { Sidebar } from "@/components/app/sidebar";
+import { HomeTopBar, Sidebar } from "@/components/app/sidebar";
 import type { NavItem } from "@/lib/navigation";
 
 export type ShellApp = { id: string; name: string; icon: AppIconName; href: string; nav: AppNavItem[]; match?: string[]; pinned?: boolean };
@@ -39,6 +39,16 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
         : [{ label: null, items: [home] }, { label: "Vos apps", items: apps.filter((a) => a.pinned !== false && !settings.has(a.id)).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) }];
   const activeHref = app && app.id !== "rdv" ? activeNavHref(app.nav, pathname) : undefined;
 
+  // Accueil : le lanceur d'apps prend toute la largeur, avec une barre en haut au lieu de la barre latérale.
+  if (pathname === "/app")
+    return (
+      <div className="min-h-dvh">
+        <HomeTopBar brand="skydev" business={business} businesses={businesses} user={user} footer={rdv.footer} supportUnread={badges["/app/aide"] ?? 0} />
+        <main>
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        </main>
+      </div>
+    );
   return (
     <div className="min-h-dvh">
       <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} />

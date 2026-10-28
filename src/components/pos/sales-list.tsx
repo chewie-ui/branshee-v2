@@ -26,8 +26,8 @@ export function SalesList({ rows, canRefund, tz }: { rows: Row[]; canRefund: boo
         <ul className="divide-y divide-border">
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 text-sm">
-              <span className="w-28 shrink-0 text-muted">{fmt.format(new Date(r.createdAt))}</span>
-              <span className="min-w-0 flex-1"><span className="font-medium tabular-nums">{r.number}</span><span className="text-muted"> · {r.items} article{r.items > 1 ? "s" : ""} · {PAY_METHODS[r.method as keyof typeof PAY_METHODS] ?? r.method}</span></span>
+              <span className="w-full shrink-0 text-xs text-muted sm:w-28 sm:text-sm">{fmt.format(new Date(r.createdAt))}</span>
+              <span className="min-w-0 flex-1"><span className="font-medium whitespace-nowrap tabular-nums">{r.number}</span><span className="text-muted"> · {r.items} article{r.items > 1 ? "s" : ""} · {PAY_METHODS[r.method as keyof typeof PAY_METHODS] ?? r.method}</span></span>
               {r.status === "refunded" ? <span className="rounded bg-danger-soft px-1.5 text-xs font-medium text-danger">Remboursé</span> : null}
               <span className={cn("w-20 text-right font-medium tabular-nums", r.status === "refunded" && "text-muted line-through")}>{eur(r.total)}</span>
               <a href={`/imprimer/ticket/${r.id}`} target="_blank" rel="noopener" className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label={`Imprimer le ticket ${r.number}`}><Printer className="size-4" aria-hidden="true" /></a>

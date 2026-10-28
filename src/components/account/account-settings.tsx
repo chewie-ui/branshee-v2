@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useBrandName } from "@/components/brand-context";
 import { ImagePlus, ShieldCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -277,13 +278,14 @@ export function LanguageCard({ locale }: { locale: string }) {
 }
 
 export function DeleteAccountCard({ hasPassword, ownsBusiness }: { hasPassword: boolean; ownsBusiness: boolean }) {
+  const brandName = useBrandName();
   const [step, setStep] = useState<"idle" | "confirm" | "code">("idle");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const { pending, status, run } = useAction();
   return (
     <Card className="border-danger/30">
-      <CardHeader title="Supprimer mon compte" description={ownsBusiness ? "Vos établissements seront fermés et retirés de Branshee. Cette action est définitive." : "Votre compte et vos avis seront supprimés. Cette action est définitive."} />
+      <CardHeader title="Supprimer mon compte" description={ownsBusiness ? `Vos établissements seront fermés et retirés de ${brandName}. Cette action est définitive.` : "Votre compte et vos avis seront supprimés. Cette action est définitive."} />
       <div className="space-y-4 p-5">
         {step === "idle" ? <Button variant="danger" size="sm" onClick={() => setStep("confirm")}>Supprimer mon compte…</Button> : null}
         {step === "confirm" ? (

@@ -26,7 +26,7 @@ export function CustomerBillingForm({ customerId, initial }: { customerId: strin
           {f("company", "Société (facultatif)", { autoComplete: "organization" })}
           {f("vatNumber", "TVA / N° d'entreprise")}
           {f("street", "Rue et numéro", { autoComplete: "street-address" })}
-          <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3">
+          <div className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] gap-3">
             {f("postalCode", "Code postal", { autoComplete: "postal-code" })}
             {f("city", "Ville", { autoComplete: "address-level2" })}
           </div>

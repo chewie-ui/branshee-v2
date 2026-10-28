@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrandName } from "@/components/brand-context";
 import { useState, useTransition } from "react";
 import { MessageCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ function Switch({ checked, onChange, label, description, disabled }: { checked: 
 const eur = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
 export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, smsReady, waReady, isOwner, prices }: { initial: Flags; included: number; used: number; balanceCents: number; autoRecharge: { enabled: boolean; thresholdCents: number; amountCents: number }; smsReady: boolean; waReady: boolean; isOwner: boolean; prices: { sms: number; wa: number } }) {
+  const brandName = useBrandName();
   const [f, setF] = useState(initial);
   const [ar, setAr] = useState(autoRecharge);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -65,7 +67,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
         </div>
         <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
           <p className="mb-1 flex items-center gap-2 font-medium"><Smartphone className="size-4" aria-hidden="true" />Aperçu</p>
-          <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">votre établissement</span> est jeudi 12 mars à 10:30. Gérer : branshee.com/r/…</p>
+          <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">votre établissement</span> est jeudi 12 mars à 10:30. Gérer : {brandName === "Skydev" ? "skydev.be" : "branshee.com"}/r/…</p>
         </div>
       </Card>
 

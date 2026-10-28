@@ -47,10 +47,10 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
           <h2 id="admin-h" className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">Administration</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {admin.map((a) => (
-              <li key={a.href}>
-                <Link href={a.href} className="flex h-full items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-start">
+              <li key={a.href} className="min-w-0">
+                <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
-                  <span className="min-w-0"><span className="block text-sm font-medium">{a.label}</span><span className="block truncate text-xs text-muted">{a.hint}</span></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{a.label}</span><span className="line-clamp-2 block text-xs text-muted">{a.hint}</span></span>
                 </Link>
               </li>
             ))}

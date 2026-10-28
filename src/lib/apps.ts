@@ -330,6 +330,8 @@ export const APPS: SkyApp[] = [
     status: "active",
     billing: "included",
     features: ["Agenda et page de réservation", "Rappels automatiques", "Carte en garantie et acomptes", "Fichier clients"],
+    // « Demandes » n'apparaît dans le menu que s'il y en a, mais la page reste dans l'app RDV.
+    match: ["/app/demandes"],
     nav: [
       { href: "/app/rdv", label: "Aujourd'hui", icon: "today" },
       { href: "/app/demandes", label: "Demandes", icon: "inbox", permission: "appointments.manage" },

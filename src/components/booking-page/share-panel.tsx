@@ -81,7 +81,7 @@ const FORMATS: { k: EmbedFormat; t: string; d: string; icon: typeof Calendar }[]
   { k: "inline", t: "Calendrier dans la page", d: "Le calendrier s'affiche directement à l'endroit choisi.", icon: Calendar },
   { k: "popup", t: "Bouton « Prendre rendez-vous »", d: "Un bouton qui ouvre le calendrier par-dessus la page.", icon: MousePointerClick },
   { k: "bubble", t: "Bulle flottante", d: "Un bouton fixé dans un coin, sur toutes les pages du site.", icon: MessageCircle },
-  { k: "link", t: "Lien simple", d: "Un bouton qui ouvre votre page Branshee. Fonctionne partout.", icon: Link2 },
+  { k: "link", t: "Lien simple", d: "Un bouton qui ouvre votre page de réservation. Fonctionne partout.", icon: Link2 },
 ];
 const SECTIONS = [
   { k: "profile", l: "Profil" },

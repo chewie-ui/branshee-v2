@@ -11,11 +11,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { currentBrand } from "@/server/brand";
 
 export const metadata: Metadata = { title: "Avis · Page de réservation" };
 
 export default async function ReviewsPage() {
   const ctx = await requireContext("customization.manage");
+  const brandName = (await currentBrand()).name;
   const bid = ctx.business.id;
   const [[stats], list, requests, [page]] = await Promise.all([
     db.select({ n: count(), avg: avg(reviews.rating) }).from(reviews).where(eq(reviews.businessId, bid)),
@@ -37,7 +39,7 @@ export default async function ReviewsPage() {
             <p className="text-sm text-muted">{stats?.n ?? 0} avis</p>
           </div>
           <p className="flex-1 text-sm text-muted">
-            {visible ? "La section « Avis clients » est visible sur votre page." : "La section « Avis clients » est masquée : activez-la dans l'onglet Contenu pour que vos clients puissent laisser un avis."} Seuls les clients avec un compte vérifié peuvent publier un avis. Vous ne pouvez pas supprimer un avis vous-même : demandez sa suppression, l&apos;équipe Branshee tranche.
+            {visible ? "La section « Avis clients » est visible sur votre page." : "La section « Avis clients » est masquée : activez-la dans l'onglet Contenu pour que vos clients puissent laisser un avis."} Seuls les clients avec un compte vérifié peuvent publier un avis. Vous ne pouvez pas supprimer un avis vous-même : demandez sa suppression, l&apos;équipe {brandName} tranche.
           </p>
         </Card>
         <Card>

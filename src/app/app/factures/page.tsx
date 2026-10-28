@@ -98,7 +98,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
               <div className="flex h-48 items-end gap-1.5 sm:gap-2" role="img" aria-label={`Chiffre d'affaires par mois en ${year}`}>
                 {stats.monthsCents.map((c, i) => (
                   <div key={i} className="group flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5 self-stretch">
-                    <span className="hidden text-[11px] text-muted tabular-nums opacity-0 transition-opacity group-hover:opacity-100 sm:block">{c ? moneyCents(c) : ""}</span>
+                    <span className="hidden text-[11px] whitespace-nowrap text-muted tabular-nums opacity-0 transition-opacity group-hover:opacity-100 sm:block" title={c ? moneyCents(c) : undefined}>{c ? new Intl.NumberFormat("fr-BE", { notation: "compact", maximumFractionDigits: 1 }).format(c / 100) + " €" : ""}</span>
                     <div className={cn("w-full rounded-t-md", c > 0 ? "bg-accent" : "bg-surface-muted")} style={{ height: `${Math.max(3, (Math.max(0, c) / max) * 100)}%` }} />
                     <span className={cn("text-[11px] text-muted", year === thisYear && i === Number(today.slice(5, 7)) - 1 && "font-semibold text-text")}><span className="sm:hidden">{MONTHS[i]!.charAt(0)}</span><span className="hidden sm:inline">{MONTHS[i]}</span></span>
                   </div>

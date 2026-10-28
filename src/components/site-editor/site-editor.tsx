@@ -185,7 +185,7 @@ export function SiteEditor({ initial, published: initialPublished, publicUrl, vi
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-full sm:basis-0">
           <p className="flex items-center gap-2 font-medium">
             <span className={cn("size-2 rounded-full", published ? "bg-success" : "bg-border-strong")} aria-hidden="true" />
             {published ? "En ligne" : "Brouillon (non publié)"}

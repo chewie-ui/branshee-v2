@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, LogOut, Menu, Plus, X } from "lucide-react";
+import { Check, ChevronsUpDown, Building2, LifeBuoy, LogOut, Menu, Plus, Settings, X } from "lucide-react";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -154,6 +154,46 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Accueil Skydev (lanceur d'apps) : pas de barre latérale, une barre en haut avec la marque, l'entreprise,
+ * les réglages, l'aide et le compte (déconnexion comprise).
+ */
+export function HomeTopBar({ brand, business, businesses, user, footer, supportUnread = 0 }: Pick<Props, "brand" | "business" | "businesses" | "user" | "footer" | "supportUnread">) {
+  const settings = footer.find((i) => i.href === "/app/reglages");
+  const help = footer.find((i) => i.href === "/app/aide");
+  const iconBtn = "relative flex size-10 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text sm:w-auto sm:gap-2 sm:px-3 sm:text-sm sm:font-medium";
+  return (
+    <header className="sticky top-0 z-30 border-b border-border bg-surface">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-6 sm:py-0">
+        <Link href="/app" className="flex h-10 shrink-0 items-center rounded-lg px-1" aria-label={`${brand === "skydev" ? "Skydev" : "Branshee"}, accueil`}>
+          <Brand brand={brand} small />
+        </Link>
+        <div className="order-last min-w-0 basis-full sm:order-none sm:w-60 sm:basis-auto">
+          <BusinessSwitcher current={business} all={businesses} brand={brand} />
+        </div>
+        <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
+          {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
+          {help ? (
+            <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>
+              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden md:inline">Aide et support</span>
+              {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
+            </Link>
+          ) : null}
+          <Link href="/app/compte" className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-muted" aria-label="Mon compte" title={user.email}>
+            <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+            <span className="hidden max-w-32 truncate text-sm font-medium lg:block">{user.name}</span>
+          </Link>
+          <form action={logout}>
+            <button type="submit" className="flex size-10 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Se déconnecter" title="Se déconnecter">
+              <LogOut className="size-4" aria-hidden="true" />
+            </button>
+          </form>
+        </nav>
+      </div>
+    </header>
   );
 }
 

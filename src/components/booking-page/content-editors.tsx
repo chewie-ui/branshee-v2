@@ -59,10 +59,10 @@ export function ProfileEditor({ name, photoUrl, aboutHtml }: { name: string; pho
       <CardHeader title="Profil" description="La photo (ou le logo) et la présentation affichées en haut de votre page." />
       <div className="space-y-5 p-5">
         <div className="flex items-center gap-4">
-          <Avatar name={name} src={preview} size="lg" className="size-16 text-lg" />
-          <div className="flex flex-wrap gap-2">
+          <Avatar name={name} src={preview} size="lg" className="size-16 shrink-0 text-lg" />
+          <div className="flex min-w-0 flex-wrap gap-2">
             <Button variant="secondary" size="sm" icon={<ImagePlus className="size-4" aria-hidden="true" />} onClick={() => fileRef.current?.click()}>
-              {preview ? "Changer" : "Ajouter une photo ou un logo"}
+              {preview ? "Changer" : "Ajouter photo ou logo"}
             </Button>
             {preview ? (
               <Button variant="ghost" size="sm" onClick={() => { setPreview(null); setRemoved(true); if (fileRef.current) fileRef.current.value = ""; setDirty(true); }}>

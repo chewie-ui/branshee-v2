@@ -24,7 +24,7 @@ type Service = { id: string; name: string; description: string | null; durationM
 type Reviews = { count: number; average: number | null; items: { id: string; author: string; rating: number; comment: string | null }[] };
 type Props = {
   site: { sections: SiteSection[]; theme: SiteTheme; logoUrl: string | null; social: SocialLinks };
-  business: { id: string; name: string; slug: string; noBranding: boolean };
+  business: { id: string; name: string; slug: string; noBranding: boolean; poweredBy?: { name: string; url: string } };
   content: { services: Service[]; reviews: Reviews };
   preview?: boolean;
 };
@@ -323,7 +323,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
             {site.social.tiktok ? <li><a href={extLink(site.social.tiktok)} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="flex h-10 items-center justify-center rounded-full border border-[var(--s-border)] px-3 text-xs font-semibold">TikTok</a></li> : null}
             {site.social.whatsapp ? <li><a href={`https://wa.me/${site.social.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex size-10 items-center justify-center rounded-full border border-[var(--s-border)]"><MessageCircle className="size-4" aria-hidden="true" /></a></li> : null}
           </ul>
-          {!business.noBranding ? <a href="https://branshee.com" className="hover:underline">Réservation en ligne par Branshee</a> : null}
+          {!business.noBranding ? <a href={business.poweredBy?.url ?? "https://branshee.com"} className="hover:underline">Réservation en ligne par {business.poweredBy?.name ?? "Branshee"}</a> : null}
         </div>
       </footer>
     </div>
