@@ -34,12 +34,17 @@ export async function closeRegister(input: { countedCashCents: number; note: str
   const ctx = await requireContext();
   if (ctx.impersonating) return SUPERVISION;
   if (!cents.safeParse(input.countedCashCents).success) return { ok: false, error: "Montant compté invalide." };
-  const s = await openSessionOf(ctx.business.id);
-  if (!s) return { ok: false, error: "La caisse n'est pas ouverte." };
-  const t = await sessionTotals(ctx.business.id, s.id);
-  const expected = s.openingCashCents + t.cash - t.refundedCash;
-  const done = await db.update(posSessions).set({ closedAt: new Date(), closedById: ctx.member.id, countedCashCents: input.countedCashCents, expectedCashCents: expected, totals: t, note: input.note.trim().slice(0, 500) || null }).where(and(eq(posSessions.id, s.id), isNull(posSessions.closedAt))).returning({ id: posSessions.id });
-  if (!done.length) return { ok: false, error: "La caisse est déjà clôturée." };
+  // Verrou exclusif sur la session : les tickets en cours se terminent, puis les totaux sont calculés et figés.
+  const res = await db.transaction(async (tx) => {
+    const [s] = await tx.select().from(posSessions).where(and(eq(posSessions.businessId, ctx.business.id), isNull(posSessions.closedAt))).for("update");
+    if (!s) return null;
+    const t = await sessionTotals(ctx.business.id, s.id, tx);
+    const expected = s.openingCashCents + t.cash - t.refundedCash;
+    await tx.update(posSessions).set({ closedAt: new Date(), closedById: ctx.member.id, countedCashCents: input.countedCashCents, expectedCashCents: expected, totals: t, note: input.note.trim().slice(0, 500) || null }).where(eq(posSessions.id, s.id));
+    return { s, expected };
+  });
+  if (!res) return { ok: false, error: "La caisse n'est pas ouverte." };
+  const { s, expected } = res;
   refresh();
   const diff = input.countedCashCents - expected;
   return { ok: true, id: s.id, message: diff === 0 ? "Caisse clôturée : le compte est juste." : `Caisse clôturée. Écart : ${(diff / 100).toFixed(2).replace(".", ",")} €.` };
@@ -129,6 +134,8 @@ export async function refundSale(id: string): Promise<Result> {
   const session = await openSessionOf(ctx.business.id);
   if (!session) return { ok: false, error: "Ouvrez la caisse pour rembourser (l'argent sort du tiroir du jour)." };
   return db.transaction(async (tx) => {
+    const [open] = await tx.select({ id: posSessions.id }).from(posSessions).where(and(eq(posSessions.id, session.id), isNull(posSessions.closedAt))).for("share");
+    if (!open) return { ok: false as const, error: "La caisse vient d'être fermée : rouvrez-la pour rembourser." };
     const [s] = await tx.select().from(posSales).where(and(eq(posSales.id, id), eq(posSales.businessId, ctx.business.id))).for("update");
     if (!s) return { ok: false as const, error: "Ticket introuvable." };
     if (s.status === "refunded") return { ok: false as const, error: "Ticket déjà remboursé." };

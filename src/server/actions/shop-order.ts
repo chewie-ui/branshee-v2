@@ -36,6 +36,8 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Commande invalide." };
   const d = v.data;
   if (!rateLimit(`shop:${clientIp(await headers()) ?? "?"}`, 10, 3600_000).ok) return { ok: false, error: "Trop de commandes. Réessayez plus tard." };
+  const units = d.lines.reduce((a, l) => a + l.qty, 0);
+  if (units > 100) return { ok: false, error: "100 articles maximum par commande : contactez la boutique pour une grosse commande." };
   const shop = await publicShop(d.slug);
   if (!shop) return { ok: false, error: "Cette boutique n'est pas disponible." };
   const s = shop.settings;
@@ -43,11 +45,13 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
   if (d.fulfilment === "delivery" && !s.delivery) return { ok: false, error: "La livraison n'est pas proposée." };
   if (d.fulfilment === "delivery" && d.address.length < 8) return { ok: false, error: "Indiquez l'adresse de livraison." };
   if ((d.payMethod === "online" && !shop.canPayOnline) || (d.payMethod === "pickup" && !s.payOnPickup) || (d.payMethod === "transfer" && !s.payTransfer)) return { ok: false, error: "Moyen de paiement indisponible." };
+  const [recent] = await db.select({ n: sql<number>`count(*)::int` }).from(shopOrders).where(and(eq(shopOrders.businessId, shop.business.id), eq(shopOrders.email, d.email.toLowerCase()), sql`${shopOrders.createdAt} > now() - interval '1 hour'`));
+  if ((recent?.n ?? 0) >= 3) return { ok: false, error: "Vous avez déjà passé plusieurs commandes : contactez la boutique." };
   const qty = new Map<string, number>();
   for (const l of d.lines) qty.set(l.productId, Math.min(MAX_SHOP_QTY, (qty.get(l.productId) ?? 0) + l.qty));
   const token = randomBytes(18).toString("base64url");
   const order = await db.transaction(async (tx) => {
-    const items = await tx.select().from(products).where(and(eq(products.businessId, shop.business.id), inArray(products.id, [...qty.keys()]), eq(products.active, true), eq(products.onlineEnabled, true))).for("update");
+    const items = await tx.select().from(products).where(and(eq(products.businessId, shop.business.id), inArray(products.id, [...qty.keys()]), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(products.id).for("update");
     if (items.length !== qty.size) return { error: "Un produit de votre panier n'est plus en vente. Rechargez la page." };
     const lines: ShopLine[] = [];
     for (const p of items) {

@@ -110,7 +110,8 @@ export async function saveInterventionWork(input: z.input<typeof workSchema>): P
   if (!canWork(ctx, r.i)) return { ok: false, error: "Cette intervention est confiée à quelqu'un d'autre." };
   if (r.i.invoiceId) return { ok: false, error: "Déjà facturée : modifiez la facture." };
   if (r.i.signedAt) return { ok: false, error: "Signée par le client : le rapport ne peut plus changer." };
-  await db.update(interventions).set({ report: v.data.report || null, items: v.data.items, updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
+  const saved = await db.update(interventions).set({ report: v.data.report || null, items: v.data.items, updatedAt: new Date() }).where(and(eq(interventions.id, r.i.id), isNull(interventions.signedAt), isNull(interventions.invoiceId))).returning({ id: interventions.id });
+  if (!saved.length) return { ok: false, error: "Signée ou facturée entre-temps : le rapport ne peut plus changer." };
   refresh();
   return { ok: true, message: "Rapport enregistré." };
 }
@@ -146,7 +147,8 @@ export async function removeInterventionPhoto(id: string, ref: string): Promise<
   const photo = r.i.photos.find((p) => p.ref === ref);
   if (!photo) return { ok: false, error: "Photo introuvable." };
   if (r.i.signedAt) return { ok: false, error: "Signée par le client : les photos ne changent plus." };
-  await db.update(interventions).set({ photos: sql`(select coalesce(jsonb_agg(p), '[]'::jsonb) from jsonb_array_elements(${interventions.photos}) p where p->>'ref' <> ${ref})`, updatedAt: new Date() }).where(eq(interventions.id, r.i.id));
+  const gone = await db.update(interventions).set({ photos: sql`(select coalesce(jsonb_agg(p), '[]'::jsonb) from jsonb_array_elements(${interventions.photos}) p where p->>'ref' <> ${ref})`, updatedAt: new Date() }).where(and(eq(interventions.id, r.i.id), isNull(interventions.signedAt))).returning({ id: interventions.id });
+  if (!gone.length) return { ok: false, error: "Signée entre-temps : les photos ne changent plus." };
   await deletePrivateFile(ref).catch(() => {});
   refresh();
   return { ok: true, message: "Photo retirée." };

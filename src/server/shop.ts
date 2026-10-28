@@ -61,7 +61,7 @@ export async function notifyNewOrder(orderId: string) {
 export async function cancelShopOrderAndRestock(orderId: string, by?: string | null) {
   return db.transaction(async (tx) => {
     const [o] = await tx.select().from(shopOrders).where(eq(shopOrders.id, orderId)).for("update");
-    if (!o || o.status === "cancelled") return false;
+    if (!o || o.status === "cancelled" || o.status === "done") return false;
     await tx.update(shopOrders).set({ status: "cancelled", updatedAt: new Date() }).where(eq(shopOrders.id, o.id));
     const moves = await tx.select({ productId: stockMoves.productId, delta: stockMoves.delta }).from(stockMoves).where(and(eq(stockMoves.saleId, o.id), eq(stockMoves.reason, "sale")));
     for (const m of moves) {
@@ -72,6 +72,14 @@ export async function cancelShopOrderAndRestock(orderId: string, by?: string | n
   });
 }
 
+/** Webhook Stripe : session expirée, seulement si la commande attend encore ce paiement. */
+export async function expireShopCheckout(session: { id: string; metadata: Record<string, string> | null }) {
+  const id = session.metadata?.orderId;
+  if (session.metadata?.type !== "shop_order" || !id) return false;
+  const [o] = await db.select({ id: shopOrders.id }).from(shopOrders).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "pending_payment")));
+  return o ? cancelShopOrderAndRestock(o.id) : false;
+}
+
 /** Webhook Stripe : paiement de la boutique reçu (idempotent). */
 export async function completeShopPayment(session: { id: string; payment_status: string; metadata: Record<string, string> | null }) {
   if (session.metadata?.type !== "shop_order" || session.payment_status !== "paid") return false;
@@ -79,12 +87,23 @@ export async function completeShopPayment(session: { id: string; payment_status:
   if (!id) return false;
   const done = await db.update(shopOrders).set({ status: "new", paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "pending_payment"))).returning({ id: shopOrders.id });
   if (done.length) await notifyNewOrder(id);
+  else {
+    // Payé trop tard (commande déjà annulée, stock remis en vente) : le responsable doit rembourser ou honorer.
+    const [o] = await db.select().from(shopOrders).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "cancelled")));
+    if (o) {
+      await db.update(shopOrders).set({ paidAt: new Date(), note: `${o.note ? `${o.note} · ` : ""}PAYÉ APRÈS ANNULATION : à rembourser ou à honorer`, updatedAt: new Date() }).where(eq(shopOrders.id, o.id));
+      const [owner] = await db.select({ email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(and(eq(members.businessId, o.businessId), eq(members.isOwner, true)));
+      if (owner) await sendEmail({ to: owner.email, ...emails.shopOrderNew({ shopName: "Boutique", number: o.number, total: eur(o.totalCents), name: `${o.name} (payé après annulation : remboursez-le depuis Stripe ou honorez la commande)`, url: `${shopOrigin()}/app/boutique` }), template: "shop_order_late_payment", businessId: o.businessId }).catch(() => {});
+    }
+  }
   return true;
 }
 
 /** Paiements en ligne abandonnés (plus de 2 heures) : commande annulée, stock rendu. */
 export async function expireUnpaidShopOrders() {
   const rows = await db.select({ id: shopOrders.id }).from(shopOrders).where(and(eq(shopOrders.status, "pending_payment"), lt(shopOrders.createdAt, new Date(Date.now() - 2 * 3600_000)))).limit(200);
+  // Virements jamais reçus après 14 jours : la commande est annulée et le stock libéré.
+  rows.push(...(await db.select({ id: shopOrders.id }).from(shopOrders).where(and(eq(shopOrders.status, "new"), eq(shopOrders.payMethod, "transfer"), isNull(shopOrders.paidAt), lt(shopOrders.createdAt, new Date(Date.now() - 14 * 86400_000)))).limit(200)));
   let n = 0;
   for (const r of rows) if (await cancelShopOrderAndRestock(r.id)) n++;
   return n;

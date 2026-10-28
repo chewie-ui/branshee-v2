@@ -38,14 +38,14 @@ export async function openSessionOf(businessId: string) {
  * Totaux d'une session de caisse (clôture et rapport Z) : ventes encaissées pendant la session,
  * remboursements faits pendant la session (même pour un ticket d'un autre jour), espèces attendues.
  */
-export async function sessionTotals(businessId: string, sessionId: string) {
+export async function sessionTotals(businessId: string, sessionId: string, q: Pick<typeof db, "select"> = db) {
   const [sales, refunds] = await Promise.all([
-    db
+    q
       .select({ method: posSales.method, n: sql<number>`count(*)::int`, total: sql<number>`coalesce(sum(${posSales.totalCents}), 0)::int`, vat: sql<number>`coalesce(sum(${posSales.vatCents}), 0)::int` })
       .from(posSales)
       .where(and(eq(posSales.businessId, businessId), eq(posSales.sessionId, sessionId)))
       .groupBy(posSales.method),
-    db
+    q
       .select({ method: posSales.method, total: sql<number>`coalesce(sum(${posSales.totalCents}), 0)::int`, vat: sql<number>`coalesce(sum(${posSales.vatCents}), 0)::int` })
       .from(posSales)
       .where(and(eq(posSales.businessId, businessId), eq(posSales.refundSessionId, sessionId)))

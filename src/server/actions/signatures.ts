@@ -93,7 +93,8 @@ export async function signQuote(input: z.input<typeof signSchema>): Promise<Resu
   const { r, error } = await usable(v.data.token);
   if (error || !r) return { ok: false, error: error ?? "Lien invalide." };
   const done = await db.transaction(async (tx) => {
-    await tx.select({ id: salesDocuments.id }).from(salesDocuments).where(eq(salesDocuments.id, r.doc.id)).for("update");
+    const [fresh] = await tx.select().from(salesDocuments).where(eq(salesDocuments.id, r.doc.id)).for("update");
+    if (!fresh || docHash(fresh) !== r.sig.docHash || fresh.status === "invoiced" || fresh.status === "refused") return false;
     const upd = await tx.update(quoteSignatures).set({ signedAt: new Date(), signerName: v.data.name, signerIp: ip, signerAgent: (h.get("user-agent") ?? "").slice(0, 300), signaturePath: v.data.path }).where(and(eq(quoteSignatures.id, r.sig.id), isNull(quoteSignatures.signedAt), isNull(quoteSignatures.cancelledAt), isNull(quoteSignatures.declinedAt))).returning({ id: quoteSignatures.id });
     if (!upd.length) return false;
     await tx.update(salesDocuments).set({ status: "accepted", updatedAt: new Date() }).where(and(eq(salesDocuments.id, r.doc.id), sql`${salesDocuments.status} in ('draft','sent','accepted')`));

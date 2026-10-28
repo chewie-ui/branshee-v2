@@ -4,12 +4,15 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, campaignRecipients } from "@/db/schema";
 import { UnsubscribeButton } from "@/components/marketing/unsubscribe-button";
+import { fill, publicTexts } from "@/i18n/public-pages";
+import { resolvePublicLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: { absolute: "Se désabonner" }, robots: { index: false, follow: false } };
 
 /** Page de désabonnement : un bouton à confirmer (un simple passage sur le lien ne désabonne pas, à cause des antivirus). */
-export default async function UnsubscribePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function UnsubscribePage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ lang?: string }> }) {
+  const tx = publicTexts(await resolvePublicLocale((await searchParams).lang)).unsub;
   const { token } = await params;
   if (!/^[\w-]{16,40}$/.test(token)) notFound();
   const [r] = await db.select({ name: businesses.name, done: campaignRecipients.unsubscribedAt }).from(campaignRecipients).innerJoin(businesses, eq(businesses.id, campaignRecipients.businessId)).where(eq(campaignRecipients.token, token));
@@ -17,8 +20,8 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 text-center shadow-sm">
-        <h1 className="text-xl font-semibold">Emails de {r.name}</h1>
-        <UnsubscribeButton token={token} done={!!r.done} />
+        <h1 className="text-xl font-semibold">{fill(tx.title, { name: r.name })}</h1>
+        <UnsubscribeButton token={token} done={!!r.done} tx={tx} />
       </div>
     </div>
   );

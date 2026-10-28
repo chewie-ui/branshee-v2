@@ -57,8 +57,8 @@ export async function campaignsOf(businessId: string) {
  * Les lignes sont « réservées » d'abord (SKIP LOCKED) : deux passages simultanés n'envoient jamais deux fois le même email.
  */
 export async function processCampaignQueue(limit = 300) {
-  // Réservations abandonnées (serveur arrêté en plein envoi) : remises en attente après 30 minutes.
-  await db.execute(sql`update campaign_recipients set status = 'pending', sent_at = null where status = 'sending' and sent_at < now() - interval '30 minutes'`);
+  // Réservations abandonnées (serveur arrêté en plein envoi) : remises en attente après 3 heures.
+  await db.execute(sql`update campaign_recipients set status = 'pending', sent_at = null where status = 'sending' and sent_at < now() - interval '3 hours'`);
   const claimed = await db.execute<{ id: string }>(sql`
     update campaign_recipients set status = 'sending', sent_at = now()
     where id in (

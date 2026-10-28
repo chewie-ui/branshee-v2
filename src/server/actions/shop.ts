@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { shopOrders, shopSettings } from "@/db/schema";
@@ -53,8 +53,10 @@ export async function setShopOrderStatus(id: string, status: string): Promise<Re
   const ctx = await requireContext();
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success || !isShopStatus(status) || status === "cancelled" || status === "pending_payment") return { ok: false, error: "Commande introuvable." };
-  const [o] = await db.update(shopOrders).set({ status, updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id))).returning();
-  if (!o) return { ok: false, error: "Commande introuvable." };
+  // Seuls les passages prévus : nouvelle → prête / expédiée → terminée (jamais depuis une commande annulée ou non payée).
+  const from = status === "done" ? ["ready", "shipped"] : ["new"];
+  const [o] = await db.update(shopOrders).set({ status, updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), inArray(shopOrders.status, from))).returning();
+  if (!o) return { ok: false, error: "Cette commande ne peut pas passer à cette étape." };
   if (status === "ready" || status === "shipped") await sendEmail({ to: o.email, ...emails.shopOrderStatus({ shopName: ctx.business.name, number: o.number, status: SHOP_STATUS[status].label, url: `${shopOrigin()}/commande/${o.token}` }), template: "shop_order_status", businessId: ctx.business.id }).catch(() => {});
   refresh();
   return { ok: true, message: `Commande n° ${o.number} : ${SHOP_STATUS[status].label.toLowerCase()}.` };
@@ -64,8 +66,8 @@ export async function markShopOrderPaid(id: string): Promise<Result> {
   const ctx = await requireContext();
   if (ctx.impersonating) return SUPERVISION;
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Commande introuvable." };
-  const done = await db.update(shopOrders).set({ paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id))).returning({ n: shopOrders.number });
-  if (!done.length) return { ok: false, error: "Commande introuvable." };
+  const done = await db.update(shopOrders).set({ paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), isNull(shopOrders.paidAt), inArray(shopOrders.status, ["new", "ready", "shipped", "done"]))).returning({ n: shopOrders.number });
+  if (!done.length) return { ok: false, error: "Commande introuvable, annulée ou déjà encaissée." };
   refresh();
   return { ok: true, message: `Commande n° ${done[0]!.n} encaissée.` };
 }
