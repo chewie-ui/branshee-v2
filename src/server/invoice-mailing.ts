@@ -54,9 +54,14 @@ export async function sendInvoiceReminders() {
         eq(salesDocuments.docType, "invoice"),
         eq(salesDocuments.status, "sent"),
         isNotNull(salesDocuments.dueDate),
+        // Échéance assez dépassée (le détail jour par jour, fuseau compris, est vérifié plus bas).
+        sql`${salesDocuments.dueDate} + ${invoiceReminderSettings.firstDays} <= current_date + 1`,
+        // Une note de crédit (même partielle) change le montant dû : plus de relance automatique, le responsable décide.
+        sql`not exists (select 1 from "sales_documents" c where c.related_id = "sales_documents"."id" and c.doc_type = 'credit' and c.number is not null)`,
         isNull(businesses.deletedAt),
       ),
     )
+    .orderBy(sql`${invoiceMailings.lastReminderAt} asc nulls first`)
     .limit(2000);
   let sent = 0;
   for (const r of rows) {
@@ -67,7 +72,7 @@ export async function sendInvoiceReminders() {
     const claimed = await db
       .update(invoiceMailings)
       .set({ remindersSent: sql`${invoiceMailings.remindersSent} + 1`, lastReminderAt: new Date() })
-      .where(and(eq(invoiceMailings.id, r.m.id), eq(invoiceMailings.remindersSent, r.m.remindersSent), eq(invoiceMailings.remindersOff, false)))
+      .where(and(eq(invoiceMailings.id, r.m.id), eq(invoiceMailings.remindersSent, r.m.remindersSent), eq(invoiceMailings.remindersOff, false), sql`exists (select 1 from "sales_documents" s where s.id = ${invoiceMailings.documentId} and s.status = 'sent')`))
       .returning({ id: invoiceMailings.id });
     if (!claimed.length) continue;
     const seller = String(r.d.seller?.tradeName || r.d.seller?.legalName || r.biz);

@@ -26,3 +26,11 @@ test("clients et produits : lignes valides et refusées", () => {
   assert.deepEqual(p.ok.map((x) => [x.name, x.priceCents, x.vatRate, x.stockQty]), [["Savon", 650, 21, 12], ["Livre", 1500, 6, 0]]);
   assert.equal(p.errors[0]!.line, 3);
 });
+
+test("import : limites (colonnes, lignes vides, zip)", async () => {
+  const { zipStats, MAX_COLS } = await import("./import");
+  assert.equal(parseCsv("a" + ";".repeat(5000) + "\nb")[0]!.length, MAX_COLS);
+  const blank = "Nom\n" + Array.from({ length: 30 }, (_, i) => `n${i}\n;`).join("\n");
+  assert.equal(parseCsv(blank).length, 31);
+  assert.equal(zipStats(new Uint8Array([1, 2, 3])), null);
+});

@@ -2,7 +2,8 @@ import "server-only";
 import { and, asc, desc, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, assistantSettings, assistantUsage, customers, products, salesDocuments } from "@/db/schema";
-import { dailyLimit, type ChatTurn } from "@/lib/assistant";
+import { assistantBlockedFor, dailyLimit, type ChatTurn } from "@/lib/assistant";
+import { currentBrand } from "@/server/brand";
 import { parsePeriod, periodRange } from "@/lib/accounting";
 import { isLow } from "@/lib/stock";
 import { isPatientProfession } from "@/lib/terminology";
@@ -20,25 +21,31 @@ export const assistantConfigured = () => !!process.env.ANTHROPIC_API_KEY;
 const MODEL = () => process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
 const API = () => (process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com").replace(/\/$/, "");
 
-/** Données de santé : l'assistant n'est jamais proposé aux métiers de santé (rien ne part chez un tiers). */
-export const assistantAllowed = (ctx: AppContext) => assistantConfigured() && !isPatientProfession(ctx.business.businessType);
+/**
+ * Skydev seulement, jamais pour un métier de santé ni sans métier renseigné (sûr par défaut) :
+ * aucune donnée de patient ne part chez un fournisseur d'IA.
+ */
+export async function assistantAllowed(ctx: AppContext) {
+  if (!assistantConfigured() || assistantBlockedFor(ctx.business.businessType, isPatientProfession(ctx.business.businessType))) return false;
+  return (await currentBrand()).id === "skydev";
+}
 
 export async function assistantEnabled(businessId: string) {
   const [s] = await db.select({ at: assistantSettings.enabledAt }).from(assistantSettings).where(eq(assistantSettings.businessId, businessId));
   return !!s?.at;
 }
 
-/** Compte une question ; false quand le plafond du jour est atteint. */
-export async function takeQuota(ctx: AppContext) {
-  const p = await effectivePlan(ctx.business.id);
-  const paid = (p.source === "stripe" || p.source === "account") && !p.isTrial;
+/** Compte une question : "plan" sans abonnement, "full" quand le plafond du jour est atteint. */
+export async function takeQuota(ctx: AppContext): Promise<"ok" | "plan" | "full"> {
+  const limit = dailyLimit(await effectivePlan(ctx.business.id));
+  if (!limit) return "plan";
   const day = todayIn(ctx.business.timezone);
   const [r] = await db
     .insert(assistantUsage)
     .values({ businessId: ctx.business.id, day, count: 1 })
     .onConflictDoUpdate({ target: [assistantUsage.businessId, assistantUsage.day], set: { count: sql`${assistantUsage.count} + 1` } })
     .returning({ n: assistantUsage.count });
-  return (r?.n ?? 0) <= dailyLimit(paid);
+  return (r?.n ?? 0) <= limit ? "ok" : "full";
 }
 
 type Tool = {
@@ -226,7 +233,8 @@ Apps disponibles :
 ${appList}`;
   const messages: ApiMessage[] = history.map((t) => ({ role: t.role, content: t.text }));
   const links: string[] = [];
-  for (let round = 0; round < 6; round++) {
+  let drafts = 0;
+  for (let round = 0; round < 4; round++) {
     const r = await callApi({ model: MODEL(), max_tokens: 1200, system, tools: tools.map(({ name, description, input_schema }) => ({ name, description, input_schema })), messages });
     const uses = r.content.filter((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
     if (r.stop_reason !== "tool_use" || !uses.length) {
@@ -235,17 +243,19 @@ ${appList}`;
     }
     messages.push({ role: "assistant", content: r.content });
     const results = [];
-    for (const u of uses.slice(0, 5)) {
+    for (const u of uses.slice(0, 4)) {
       const tool = tools.find((t) => t.name === u.name);
       let out: unknown;
       try {
-        out = tool ? await tool.run(ctx, u.input ?? {}) : { erreur: "Outil inconnu." };
+        // Un seul brouillon par question : une consigne cachée dans une donnée ne peut pas en créer en série.
+        if (u.name === "preparer_document" && drafts++ >= 1) out = { erreur: "Un seul document par question. Demandez le suivant ensuite." };
+        else out = tool ? await tool.run(ctx, u.input ?? {}) : { erreur: "Outil inconnu." };
       } catch {
         out = { erreur: "Cette information n'est pas disponible pour le moment." };
       }
       const lien = out && typeof out === "object" && "lien" in out ? String((out as { lien: unknown }).lien) : null;
       if (lien && u.name === "preparer_document") links.push(lien);
-      results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(out).slice(0, 12_000) });
+      results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(out).slice(0, 6_000) });
     }
     messages.push({ role: "user", content: results });
   }

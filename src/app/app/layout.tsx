@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   if (brand.id === "skydev") {
     // Une app = ses menus uniquement (filtrés par permissions) ; une app sans menu accessible n'apparaît pas.
-    const [apps, ai]: [ShellApp[], boolean] = await Promise.all([visibleApps(ctx, { pending }), assistantAllowed(ctx) ? assistantEnabled(ctx.business.id) : Promise.resolve(false)]);
+    const [apps, ai]: [ShellApp[], boolean] = await Promise.all([visibleApps(ctx, { pending }), assistantAllowed(ctx).then((ok) => (ok ? assistantEnabled(ctx.business.id) : false))]);
     // App RDV : la barre latérale Branshee à l'identique, avec un retour vers toutes les apps en tête.
     const rdvSidebar = {
       groups: [

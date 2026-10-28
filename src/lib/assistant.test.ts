@@ -14,5 +14,17 @@ test("rendu : gras et liens internes seulement", () => {
     { kind: "text", text: "Voir " }, { kind: "link", text: "la facture", href: "/app/factures/12" }, { kind: "text", text: " " }, { kind: "bold", text: "vite" },
   ]);
   assert.deepEqual(segments("[x](javascript:alert(1)) [y](https://evil.be)"), [{ kind: "text", text: "[x](javascript:alert(1)) [y](https://evil.be)" }]);
-  assert.deepEqual(segments("[a](/app//evil.com)")[0]!.kind, "link");
+
+});
+
+test("assistant : métiers de santé bloqués, sûr par défaut", async () => {
+  const { assistantBlockedFor } = await import("./assistant");
+  for (const t of [null, "", "ORL", "Chirurgien", "Radiologue", "Cabinet médical / Maison médicale", "Laboratoire d'analyses", "Maison de repos / Résidence services", "Pharmacie", "Logopède", "Audioprothésiste", "Physiothérapeute"]) assert.equal(assistantBlockedFor(t, false), true, String(t));
+  for (const t of ["Coiffeur", "Institut de beauté", "Soins esthétiques", "Menuisier", "Restaurant", "Consultant", "Commerce", "Garage"]) assert.equal(assistantBlockedFor(t, false), false, t);
+  assert.equal(assistantBlockedFor("Coiffeur", true), true);
+});
+
+test("liens : pas de sortie de /app", () => {
+  assert.equal(segments("[x](/app/../auth/supervision/quitter)")[0]!.kind, "text");
+  assert.equal(segments("[x](/app//evil)")[0]!.kind, "text");
 });

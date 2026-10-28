@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Assistant IA · Réglages" };
 /** Activation de l'assistant IA (choix du responsable, pour toute l'équipe). */
 export default async function AssistantSettingsPage() {
   const [ctx, brand] = await Promise.all([requireContext(), currentBrand()]);
-  if (brand.id !== "skydev" || !assistantAllowed(ctx) || !(ctx.member.isOwner || ctx.can("settings.manage"))) notFound();
+  if (brand.id !== "skydev" || !(await assistantAllowed(ctx)) || !(ctx.member.isOwner || ctx.can("settings.manage"))) notFound();
   const on = await assistantEnabled(ctx.business.id);
   return (
     <Card className="max-w-2xl space-y-4 p-6">
@@ -27,7 +27,8 @@ export default async function AssistantSettingsPage() {
         <li>Il lit vos clients, rendez-vous, factures, chiffres, stock et tâches, selon les droits de chaque membre.</li>
         <li>Il ne peut rien envoyer, émettre, encaisser ni supprimer : il prépare des brouillons que vous validez.</li>
         <li>Les questions et les données nécessaires à la réponse sont traitées par Anthropic, notre fournisseur d&apos;IA (sous-traitant), sans servir à entraîner ses modèles. Les notes et dossiers clients ne sont jamais transmis.</li>
-        <li>Un nombre de questions par jour est inclus pour toute l&apos;équipe.</li>
+        <li>Inclus dans l&apos;abonnement Skydev (quelques questions par jour pendant l&apos;essai).</li>
+        <li>Interdit aux professions de santé : aucune donnée de patient ne doit partir chez un fournisseur d&apos;IA.</li>
       </ul>
       <AssistantToggle on={on} />
     </Card>

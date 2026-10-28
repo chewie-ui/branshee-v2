@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { db } from "@/db";
 import { activityLogs, customers, products, stockMoves } from "@/db/schema";
-import { MAX_ROWS, guessMapping, parseCsv, toClients, toProducts, type ImportKind } from "@/lib/import";
+import { MAX_CELL, MAX_COLS, MAX_ROWS, guessMapping, parseCsv, toClients, toProducts, zipStats, type ImportKind } from "@/lib/import";
+import { currentBrand } from "@/server/brand";
 import { clientWord } from "@/lib/terminology";
 import { requireContext, type AppContext } from "@/server/context";
 import { stockRights } from "@/server/stock";
@@ -14,8 +15,9 @@ type Done = { ok: true; created: number; skipped: number; errors: { line: number
 
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
 
-function rightsFor(ctx: AppContext, kind: ImportKind) {
+async function rightsFor(ctx: AppContext, kind: ImportKind) {
   if (kind !== "clients" && kind !== "produits") return { ok: false as const, error: "Import inconnu." };
+  if ((await currentBrand()).id !== "skydev") return { ok: false as const, error: "Import indisponible." };
   if (ctx.impersonating) return SUPERVISION;
   if (kind === "clients" && !ctx.can("customers.manage")) return { ok: false as const, error: "Vous n'avez pas le droit de créer des fiches." };
   if (kind === "produits" && !stockRights(ctx).manage) return { ok: false as const, error: "Seul le responsable ajoute des produits." };
@@ -30,6 +32,8 @@ async function readRows(fd: FormData): Promise<string[][] | string> {
   const name = file.name.toLowerCase();
   const buf = Buffer.from(await file.arrayBuffer());
   if (name.endsWith(".xlsx")) {
+    const z = zipStats(buf);
+    if (!z || z.entries > 200 || z.uncompressed > 40 * 1024 * 1024) return "Ce fichier Excel est trop volumineux une fois ouvert : enregistrez-le en .csv ou découpez-le.";
     try {
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(buf as unknown as ArrayBuffer);
@@ -39,10 +43,10 @@ async function readRows(fd: FormData): Promise<string[][] | string> {
       ws.eachRow({ includeEmpty: false }, (row) => {
         if (rows.length > MAX_ROWS + 1) return;
         const out: string[] = [];
-        for (let i = 1; i <= Math.min(row.cellCount, 60); i++) out.push(String(row.getCell(i).text ?? "").trim());
-        rows.push(out);
+        for (let i = 1; i <= Math.min(row.cellCount, MAX_COLS); i++) out.push(String(row.getCell(i).text ?? "").trim().slice(0, MAX_CELL));
+        if (out.some((c) => c)) rows.push(out);
       });
-      return rows.filter((r) => r.some((c) => c));
+      return rows;
     } catch {
       return "Ce fichier Excel n'a pas pu être lu. Enregistrez-le en .xlsx ou en .csv.";
     }
@@ -58,7 +62,7 @@ async function readRows(fd: FormData): Promise<string[][] | string> {
 /** Étape 1 : aperçu du fichier et colonnes devinées. */
 export async function previewImport(kind: ImportKind, fd: FormData): Promise<Preview> {
   const ctx = await requireContext();
-  const denied = rightsFor(ctx, kind);
+  const denied = await rightsFor(ctx, kind);
   if (denied) return denied;
   const rows = await readRows(fd);
   if (typeof rows === "string") return { ok: false, error: rows };
@@ -71,7 +75,7 @@ export async function previewImport(kind: ImportKind, fd: FormData): Promise<Pre
 /** Étape 2 : création des fiches. Les clients déjà connus (même email) et les produits au code-barres existant sont ignorés. */
 export async function runImport(kind: ImportKind, fd: FormData, mapping: Record<string, number>): Promise<Done> {
   const ctx = await requireContext();
-  const denied = rightsFor(ctx, kind);
+  const denied = await rightsFor(ctx, kind);
   if (denied) return denied;
   const rows = await readRows(fd);
   if (typeof rows === "string") return { ok: false, error: rows };

@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 export default async function SettingsLayout({ children }: { children: ReactNode }) {
   const [ctx, brand] = await Promise.all([requireContext(), currentBrand()]);
   // Section « Assistant IA » : Skydev seulement, hors métiers de santé, pour le responsable.
-  const extra = brand.id === "skydev" && assistantAllowed(ctx) && (ctx.member.isOwner || ctx.can("settings.manage")) ? [{ href: "/app/reglages/assistant", label: "Assistant IA" }] : [];
+  const extra = brand.id === "skydev" && (await assistantAllowed(ctx)) && (ctx.member.isOwner || ctx.can("settings.manage")) ? [{ href: "/app/reglages/assistant", label: "Assistant IA" }] : [];
   return (
     <>
       <PageHeader title="Réglages" description="Tout ce qu'on règle une fois, rangé par thème." />

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { activityLogs, invoiceMailings, invoiceReminderSettings } from "@/db/schema";
+import { activityLogs, emailLogs, invoiceMailings, invoiceReminderSettings } from "@/db/schema";
 import { clampRule } from "@/lib/invoice-reminders";
 import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
@@ -25,8 +25,12 @@ export async function sendInvoiceByEmail(documentId: string, email: string): Pro
   const d = await getDocument(ctx.business.id, documentId);
   if (!d || (d.docType !== "invoice" && d.docType !== "credit")) return { ok: false, error: "Facture introuvable." };
   if (d.status === "draft" || !d.number) return { ok: false, error: "Émettez d'abord la facture : un brouillon ne s'envoie pas." };
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(invoiceMailings).where(and(eq(invoiceMailings.businessId, ctx.business.id), gte(invoiceMailings.sentAt, new Date(Date.now() - 86400_000))));
-  if (n >= 200) return { ok: false, error: "200 envois en 24 heures : réessayez demain." };
+  if (d.status === "cancelled") return { ok: false, error: "Cette facture est annulée par une note de crédit : envoyez plutôt la note de crédit." };
+  // Plafond sur les emails réellement partis (un renvoi compte aussi), et pas de renvoi en rafale du même document.
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(emailLogs).where(and(eq(emailLogs.businessId, ctx.business.id), eq(emailLogs.template, "invoice_sent"), gte(emailLogs.createdAt, new Date(Date.now() - 86400_000))));
+  if (n >= 100) return { ok: false, error: "100 envois de factures en 24 heures : réessayez demain." };
+  const [prev] = await db.select({ at: invoiceMailings.sentAt }).from(invoiceMailings).where(and(eq(invoiceMailings.businessId, ctx.business.id), eq(invoiceMailings.documentId, d.id)));
+  if (prev && Date.now() - prev.at.getTime() < 10 * 60_000) return { ok: false, error: "Déjà envoyée il y a quelques minutes : attendez un peu avant de renvoyer." };
   const [m] = await db
     .insert(invoiceMailings)
     .values({ businessId: ctx.business.id, documentId: d.id, token: newSignToken(), email: e.data })
@@ -41,7 +45,7 @@ export async function sendInvoiceByEmail(documentId: string, email: string): Pro
     businessId: ctx.business.id,
     replyTo: String(d.seller?.email || "") || null,
   });
-  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "invoice.email", description: `${d.docType === "credit" ? "Note de crédit" : "Facture"} ${d.number} envoyée à ${e.data}` });
+  if (ok) await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "invoice.email", description: `${d.docType === "credit" ? "Note de crédit" : "Facture"} ${d.number} envoyée à ${e.data}` });
   revalidatePath(`/app/factures/${d.id}`);
   return ok ? { ok: true, message: `Envoyée à ${e.data}.`, url } : { ok: false, error: "L'email n'a pas pu partir. Le lien reste utilisable : copiez-le." };
 }

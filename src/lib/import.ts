@@ -4,6 +4,31 @@
  */
 
 export const MAX_ROWS = 5000;
+export const MAX_COLS = 60;
+export const MAX_CELL = 1000;
+
+/**
+ * Taille décompressée d'un .xlsx (archive zip) lue dans son répertoire central, sans rien décompresser :
+ * protège contre les fichiers minuscules qui gonflent en centaines de Mo.
+ */
+export function zipStats(buf: Uint8Array): { entries: number; uncompressed: number } | null {
+  const v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65_557); i--) {
+    if (v.getUint32(i, true) !== 0x06054b50) continue;
+    const entries = v.getUint16(i + 10, true);
+    let p = v.getUint32(i + 16, true);
+    let total = 0;
+    for (let k = 0; k < entries; k++) {
+      if (p + 46 > buf.length || v.getUint32(p, true) !== 0x02014b50) return null;
+      const size = v.getUint32(p + 24, true);
+      if (size === 0xffffffff) return null; // zip64 : refusé
+      total += size;
+      p += 46 + v.getUint16(p + 28, true) + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+    }
+    return { entries, uncompressed: total };
+  }
+  return null;
+}
 
 /** Lit un CSV (séparateur « ; », « , » ou tabulation détecté, guillemets, BOM, retours à la ligne dans les champs). */
 export function parseCsv(text: string): string[][] {
@@ -22,15 +47,18 @@ export function parseCsv(text: string): string[][] {
       else if (ch === '"') quoted = false;
       else cell += ch;
     } else if (ch === '"' && cell === "") quoted = true;
-    else if (ch === sep) { row.push(cell); cell = ""; }
+    else if (ch === sep) { if (row.length < MAX_COLS) row.push(cell.slice(0, MAX_CELL)); cell = ""; }
     else if (ch === "\n" || ch === "\r") {
       if (ch === "\r" && src[i + 1] === "\n") i++;
-      row.push(cell); rows.push(row); row = []; cell = "";
+      if (row.length < MAX_COLS) row.push(cell.slice(0, MAX_CELL));
+      // Seules les lignes non vides comptent ; au-delà de la limite, on s'arrête (l'appelant refuse le fichier).
+      if (row.some((c) => c.trim())) rows.push(row);
+      row = []; cell = "";
       if (rows.length > MAX_ROWS + 1) break;
-    } else cell += ch;
+    } else if (cell.length <= MAX_CELL) cell += ch;
   }
-  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
-  return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c));
+  if (cell !== "" || row.length) { if (row.length < MAX_COLS) row.push(cell.slice(0, MAX_CELL)); if (row.some((c) => c.trim())) rows.push(row); }
+  return rows.map((r) => r.map((c) => c.trim()));
 }
 
 export type ImportKind = "clients" | "produits";
