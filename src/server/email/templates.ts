@@ -658,6 +658,14 @@ export const emails = {
     };
   },
 
+  /** Fidélité : lien de la carte, envoyé au premier passage. */
+  loyaltyWelcome(p: { businessName: string; goal: number; reward: string; url: string }) {
+    return {
+      subject: `Votre carte de fidélité ${p.businessName}`,
+      ...render({ preheader: `${p.goal} passages = ${p.reward}`, title: "Votre carte de fidélité", intro: `Merci pour votre visite ! Vous avez reçu votre premier tampon. Au bout de ${p.goal} passages : ${p.reward}. Gardez ce lien pour suivre vos tampons.`, cta: { label: "Voir ma carte", url: p.url }, footer: p.businessName }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

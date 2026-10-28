@@ -224,7 +224,21 @@ const UPCOMING: SkyApp[] = [
       { href: "/app/avis/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
     ],
   },
-  soon("fidelite", "marketing", "Fidélité", "gift", "Cartes cadeaux et points fidélité.", ["Cartes cadeaux vendues en ligne", "Points à chaque visite ou achat", "Offres d'anniversaire automatiques", "Lié à RDV, Boutique et Caisse"]),
+  {
+    id: "fidelite",
+    category: "marketing",
+    name: "Fidélité",
+    tagline: "Carte à tampons et cartes cadeaux.",
+    icon: "gift",
+    href: "/app/fidelite",
+    status: "active",
+    billing: "included",
+    features: ["Carte à tampons sur le téléphone du client", "Récompense automatique à l'objectif", "Cartes cadeaux imprimables, utilisables en plusieurs fois", "Suivi des cartes en cours et des montants à honorer"],
+    nav: [
+      { href: "/app/fidelite", label: "Fidélité", icon: "gift" },
+      { href: "/app/fidelite/cartes-cadeaux", label: "Cartes cadeaux", icon: "card" },
+    ],
+  },
   {
     id: "signature",
     category: "services",

@@ -17,3 +17,4 @@ export * from "./documents";
 export * from "./chat";
 export * from "./interventions";
 export * from "./marketing";
+export * from "./loyalty";

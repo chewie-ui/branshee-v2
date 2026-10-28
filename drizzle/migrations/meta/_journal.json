@@ -246,6 +246,13 @@
       "when": 1793148273427,
       "tag": "0034_marketing",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793148745762,
+      "tag": "0035_fidelite",
+      "breakpoints": true
     }
   ]
 }
