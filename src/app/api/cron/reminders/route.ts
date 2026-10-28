@@ -1,5 +1,6 @@
 import { cronAuthorized } from "@/server/cron-auth";
 import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs";
+import { processCampaignQueue } from "@/server/marketing";
 import { sendDueReminders } from "@/server/notifications";
 
 export const dynamic = "force-dynamic";
@@ -13,5 +14,6 @@ export async function POST(req: Request) {
   const result = await sendDueReminders();
   const published = await publishScheduledArticles().catch((e) => (console.error("[cron] blog :", e), 0));
   const reviewRequests = await sendAutoReviewRequests().catch((e) => (console.error("[cron] avis :", e), -1));
-  return Response.json({ ...result, articlesPublished: published, reviewRequests });
+  const campaignEmails = await processCampaignQueue().catch((e) => (console.error("[cron] campagnes :", e), -1));
+  return Response.json({ ...result, articlesPublished: published, reviewRequests, campaignEmails });
 }

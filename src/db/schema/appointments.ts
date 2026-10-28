@@ -46,6 +46,8 @@ export const customers = pgTable(
     createdManually: boolean("created_manually").notNull().default(false),
     blockedAt: timestamp("blocked_at", { withTimezone: true }),
     blockedReason: text("blocked_reason"),
+    /** App Marketing : le client ne veut plus recevoir de campagnes (lien de désabonnement). */
+    marketingOptOutAt: timestamp("marketing_opt_out_at", { withTimezone: true }),
     legacyId: legacyId(),
     ...timestamps,
   },

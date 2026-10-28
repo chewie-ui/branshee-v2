@@ -15,6 +15,8 @@ export type OutgoingEmail = {
   replyTo?: string | null;
   businessId?: string | null;
   appointmentId?: string | null;
+  /** En-têtes supplémentaires (ex. List-Unsubscribe des campagnes). */
+  headers?: Record<string, string>;
 };
 
 let transporter: Transporter | null | undefined;
@@ -71,7 +73,7 @@ export async function sendEmail(input: OutgoingEmail): Promise<boolean> {
   const redirect = staging ? process.env.STAGING_EMAIL_TO?.trim() : null;
   try {
     if (transport && (!staging || redirect)) {
-      await transport.sendMail({ from, to: redirect || mail.to, subject: redirect ? `[TEST → ${mail.to}] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, replyTo: redirect ? undefined : (mail.replyTo ?? undefined) });
+      await transport.sendMail({ from, to: redirect || mail.to, subject: redirect ? `[TEST → ${mail.to}] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, replyTo: redirect ? undefined : (mail.replyTo ?? undefined), headers: mail.headers });
       status = "sent";
     } else {
       // En production, jamais le contenu (codes, noms de patients) dans les journaux.

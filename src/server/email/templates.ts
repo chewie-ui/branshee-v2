@@ -11,6 +11,8 @@ type Layout = {
   preheader: string;
   title: string;
   intro: string;
+  /** Lien de désabonnement (campagnes marketing). */
+  unsubscribe?: string;
   /** Message écrit par le pro, affiché en citation. */
   quote?: string;
   details?: Detail[];
@@ -42,7 +44,7 @@ function render(l: Layout): { html: string; text: string } {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e4e4e7;border-radius:14px">
         <tr><td style="padding:32px 28px">
           <h1 style="margin:0 0 12px;font-size:22px;line-height:28px;color:#18181b">${esc(l.title)}</h1>
-          <p style="margin:0;font-size:15px;line-height:23px;color:#3f3f46">${esc(l.intro)}</p>
+          <p style="margin:0;font-size:15px;line-height:23px;color:#3f3f46;white-space:pre-line">${esc(l.intro)}</p>
           ${l.quote ? `<p style="margin:16px 0 0;padding:12px 16px;border-left:3px solid #4f46e5;background:#f4f4f5;border-radius:6px;font-size:15px;line-height:23px;color:#18181b">${esc(l.quote).replace(/\n/g, "<br>")}</p>` : ""}
           ${details}
           ${cta}
@@ -50,11 +52,12 @@ function render(l: Layout): { html: string; text: string } {
         </td></tr>
       </table>
       <p style="margin:16px 0 0;font-size:12px;line-height:18px;color:#71717a">${esc(l.footer)}</p>
+      ${l.unsubscribe ? `<p style="margin:6px 0 0;font-size:12px;line-height:18px;color:#71717a"><a href="${esc(l.unsubscribe)}" style="color:#71717a">Se désabonner</a></p>` : ""}
     </td></tr>
   </table>
 </body></html>`;
 
-  const text = [l.title, "", l.intro, "", ...(l.quote ? [l.quote, ""] : []), ...(l.details ?? []).map((d) => `${d.label} : ${d.value}`), ...(l.cta ? ["", `${l.cta.label} : ${l.cta.url}`] : []), ...(l.note ? ["", l.note] : []), "", "—", l.footer].join("\n");
+  const text = [l.title, "", l.intro, "", ...(l.quote ? [l.quote, ""] : []), ...(l.details ?? []).map((d) => `${d.label} : ${d.value}`), ...(l.cta ? ["", `${l.cta.label} : ${l.cta.url}`] : []), ...(l.note ? ["", l.note] : []), "", "—", l.footer, ...(l.unsubscribe ? [`Se désabonner : ${l.unsubscribe}`] : [])].join("\n");
   return { html, text };
 }
 
@@ -636,6 +639,21 @@ export const emails = {
         details: p.report ? [{ label: "Travaux réalisés", value: p.report }] : undefined,
         note: "Pour toute question, répondez simplement à cet email.",
         footer: p.sellerName,
+      }),
+    };
+  },
+
+  /** Marketing : campagne d'une entreprise à ses clients (texte simple, lien de désabonnement obligatoire). */
+  campaign(p: { businessName: string; subject: string; body: string; unsubscribeUrl: string }) {
+    return {
+      subject: p.subject,
+      ...render({
+        preheader: p.body.slice(0, 90),
+        title: p.subject,
+        intro: p.body,
+        note: `Vous recevez cet email car vous êtes client de ${p.businessName}.`,
+        unsubscribe: p.unsubscribeUrl,
+        footer: p.businessName,
       }),
     };
   },
