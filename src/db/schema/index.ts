@@ -18,3 +18,4 @@ export * from "./chat";
 export * from "./interventions";
 export * from "./marketing";
 export * from "./loyalty";
+export * from "./payroll";
