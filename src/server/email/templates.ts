@@ -593,6 +593,31 @@ export const emails = {
   },
 
   /** Signature : devis à signer en ligne, pour le client. */
+  /** Facture envoyée au client depuis Skydev (lien pour la voir, la télécharger et la payer). */
+  invoiceSent(p: { sellerName: string; number: string; amount: string; due: string | null; url: string; credit: boolean }) {
+    return {
+      subject: `${p.credit ? "Note de crédit" : "Facture"} ${p.number} de ${p.sellerName}`,
+      ...render({
+        preheader: `${p.credit ? "Note de crédit" : "Facture"} ${p.number} · ${p.amount}`,
+        title: p.credit ? "Votre note de crédit" : "Votre facture",
+        intro: p.credit ? `${p.sellerName} vous envoie la note de crédit ${p.number} (${p.amount} TVAC).` : `${p.sellerName} vous envoie la facture ${p.number} (${p.amount} TVAC). Vous pouvez la consulter, la télécharger en PDF et la payer en scannant le QR code avec votre app bancaire.`,
+        details: p.due && !p.credit ? [{ label: "À payer avant le", value: p.due }] : undefined,
+        cta: { label: p.credit ? "Voir la note de crédit" : "Voir et payer la facture", url: p.url },
+        footer: p.sellerName,
+      }),
+    };
+  },
+  /** Relance automatique d'une facture échue (ton courtois, de plus en plus net). */
+  invoiceReminder(p: { sellerName: string; number: string; amount: string; due: string; url: string; nth: number }) {
+    const intro =
+      p.nth === 1
+        ? `Sauf erreur de notre part, la facture ${p.number} de ${p.amount}, échue le ${p.due}, n'a pas encore été réglée. C'est peut-être un simple oubli : vous pouvez la payer en quelques secondes avec le QR code.`
+        : `Malgré notre précédent rappel, la facture ${p.number} de ${p.amount}, échue le ${p.due}, reste impayée. Merci de procéder au paiement dès que possible ou de nous contacter en répondant à cet email.`;
+    return {
+      subject: `${p.nth === 1 ? "Rappel" : `Rappel n° ${p.nth}`} : facture ${p.number} de ${p.sellerName}`,
+      ...render({ preheader: `Facture ${p.number} · ${p.amount} · échue le ${p.due}`, title: "Rappel de paiement", intro: `${intro}\n\nSi le paiement a été fait entre-temps, merci de ne pas tenir compte de ce message.`, cta: { label: "Voir et payer la facture", url: p.url }, footer: p.sellerName }),
+    };
+  },
   signRequest(p: { sellerName: string; number: string; amount: string; url: string; validUntil: string | null }) {
     return {
       subject: `Devis ${p.number} de ${p.sellerName} à signer`,

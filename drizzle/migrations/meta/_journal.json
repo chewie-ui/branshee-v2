@@ -288,6 +288,13 @@
       "when": 1793152900863,
       "tag": "0040_assistant",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793153491301,
+      "tag": "0041_factures_email",
+      "breakpoints": true
     }
   ]
 }

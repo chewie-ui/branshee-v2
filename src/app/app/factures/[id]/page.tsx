@@ -13,6 +13,9 @@ import { customerOptions, getDocument, getSellerSettings, paymentQr, relatedDocu
 import { SignPanel, type SigView } from "@/components/signature/sign-panel";
 import { signOrigin, signaturesOfDoc } from "@/server/signatures";
 import { ublMissing } from "@/lib/ubl";
+import { InvoiceMailPanel } from "@/components/invoicing/invoice-mail-panel";
+import { currentBrand } from "@/server/brand";
+import { invoiceUrl, mailingOf, reminderRuleOf } from "@/server/invoice-mailing";
 
 export const metadata: Metadata = { title: "Document" };
 
@@ -34,6 +37,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const days = d.dueDate ? daysBetween(today, d.dueDate) : 0;
   const isQuote = d.docType === "quote";
   const sigs = isQuote ? await signaturesOfDoc(ctx.business.id, d.id) : [];
+  // Skydev : envoi de la facture par email depuis la plateforme, avec rappels automatiques.
+  const mailable = !isQuote && !!d.number && d.status !== "draft" && (await currentBrand()).id === "skydev";
+  const [mailing, rule] = mailable ? await Promise.all([mailingOf(ctx.business.id, d.id), reminderRuleOf(ctx.business.id)]) : [null, null];
   const last = sigs.find((x) => x.signedAt) ?? sigs.find((x) => !x.cancelledAt) ?? null;
   const sig: SigView | null = last
     ? { status: last.signedAt ? "signed" : last.declinedAt ? "declined" : last.expiresAt < new Date() ? "expired" : last.viewedAt ? "viewed" : "pending", email: last.email, sentAt: last.sentAt.toISOString(), url: `${signOrigin()}/signer/${last.token}`, signerName: last.signerName, signedAt: last.signedAt?.toISOString() ?? null, path: last.signaturePath, ip: last.signerIp, hash: last.docHash, reason: last.declineReason }
@@ -65,6 +71,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <p className="flex gap-2 rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm text-accent-soft-foreground" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Échéance {days === 0 ? "aujourd'hui" : `dans ${days} jour${days > 1 ? "s" : ""}`}. Quand le virement arrive, marquez la facture comme payée.</span></p>
           ) : state === "expired" ? (
             <p className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Ce devis a dépassé sa date de validité. Relancez le client ou dupliquez-le avec une nouvelle date.</span></p>
+          ) : null}
+          {mailable ? (
+            <InvoiceMailPanel
+              documentId={d.id}
+              defaultEmail={String(client?.email ?? "")}
+              mailing={mailing ? { email: mailing.email, sentAt: mailing.sentAt.toISOString(), viewedAt: mailing.viewedAt?.toISOString() ?? null, remindersSent: mailing.remindersSent, remindersOff: mailing.remindersOff, url: invoiceUrl(mailing.token) } : null}
+              remindersOn={!!rule?.enabled}
+              canManage={ctx.can("invoices.manage")}
+              unpaid={d.status === "sent"}
+              credit={d.docType === "credit"}
+            />
           ) : null}
           {!isQuote && d.number && d.seller && d.client ? (() => {
             const missing = ublMissing({ docType: d.docType as "invoice" | "credit", number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, serviceDate: d.serviceDate, comm: d.comm, notes: d.notes, lines: d.lines, seller: d.seller, client: d.client });
