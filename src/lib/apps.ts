@@ -203,7 +203,21 @@ const UPCOMING: SkyApp[] = [
     ],
   },
   soon("fidelite", "marketing", "Fidélité", "gift", "Cartes cadeaux et points fidélité.", ["Cartes cadeaux vendues en ligne", "Points à chaque visite ou achat", "Offres d'anniversaire automatiques", "Lié à RDV, Boutique et Caisse"]),
-  soon("signature", "services", "Signature", "signature", "Faites signer devis et contrats en ligne.", ["Signature électronique valable en Belgique", "Devis signé, facture prête", "Rappels aux signataires", "Documents archivés"]),
+  {
+    id: "signature",
+    category: "services",
+    name: "Signature",
+    tagline: "Faites signer vos devis en ligne.",
+    icon: "signature",
+    href: "/app/signatures",
+    status: "active",
+    billing: "included",
+    features: ["Le client signe sur son téléphone, sans compte", "Preuve : nom, tracé, date, IP et empreinte du devis", "Devis signé = accepté, prêt à facturer", "Suivi : envoyé, ouvert, signé ou refusé"],
+    nav: [
+      { href: "/app/signatures", label: "Signatures", icon: "signature", permission: "invoices.view" },
+      { href: "/app/factures/devis", label: "Devis", icon: "quote", permission: "invoices.view" },
+    ],
+  },
   soon("documents", "services", "Documents", "folder", "Tous vos fichiers, partagés avec l'équipe.", ["Dossiers par client ou par projet", "Partage sécurisé avec vos clients", "Recherche dans les documents", "Lié aux fiches clients"]),
   soon("messagerie", "equipe", "Messagerie", "message", "Discutez avec votre équipe, sans WhatsApp.", ["Discussions d'équipe et privées", "Fichiers et photos", "Notifications sur téléphone", "Lié aux rendez-vous et projets"]),
 ];

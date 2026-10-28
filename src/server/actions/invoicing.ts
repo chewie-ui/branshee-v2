@@ -9,6 +9,7 @@ import { activityLogs, appointments, customers, invoiceProducts, invoiceSettings
 import { addDays, bceValid, cleanLines, formatNumber, ibanValid, money, newLine, num, settingsMissing, structComm, todayIso, totals, type DocType } from "@/lib/invoicing";
 import { requireContext, type AppContext } from "@/server/context";
 import { getDocument, getSellerSettings } from "@/server/invoicing";
+import { signedSignature } from "@/server/signatures";
 
 type Result = { ok: true; id?: string; message?: string } | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
@@ -93,6 +94,7 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     if (!d || d.docType !== v.docType) return { ok: false, error: "Document introuvable." };
     if (d.docType !== "quote" && d.status !== "draft") return { ok: false, error: "Une facture émise ne peut plus être modifiée : faites une note de crédit." };
     if (d.docType === "quote" && d.status === "invoiced") return { ok: false, error: "Ce devis est déjà facturé." };
+    if (d.docType === "quote" && (await signedSignature(d.id))) return { ok: false, error: "Ce devis est signé par le client : il ne peut plus être modifié. Dupliquez-le pour en faire un nouveau." };
     await db.update(salesDocuments).set(values).where(eq(salesDocuments.id, d.id));
     await log(ctx, "invoice.save", `${d.docType === "quote" ? "Devis" : "Brouillon"} modifié${d.number ? ` : ${d.number}` : ""}`);
     refresh();
@@ -296,6 +298,7 @@ export async function deleteDocument(id: string): Promise<Result> {
   if (!d) return { ok: false, error: "Document introuvable." };
   const deletable = d.docType === "quote" ? d.status !== "invoiced" : d.status === "draft";
   if (!deletable) return { ok: false, error: "Un document émis ne peut pas être supprimé : faites une note de crédit." };
+  if (d.docType === "quote" && (await signedSignature(d.id))) return { ok: false, error: "Un devis signé par le client est conservé comme preuve : il ne peut pas être supprimé." };
   await db.delete(salesDocuments).where(eq(salesDocuments.id, d.id));
   await log(ctx, "invoice.delete", d.docType === "quote" ? `Devis supprimé : ${d.number}` : "Brouillon supprimé");
   refresh();

@@ -589,6 +589,42 @@ export const emails = {
     };
   },
 
+  /** Signature : devis à signer en ligne, pour le client. */
+  signRequest(p: { sellerName: string; number: string; amount: string; url: string; validUntil: string | null }) {
+    return {
+      subject: `Devis ${p.number} de ${p.sellerName} à signer`,
+      ...render({
+        preheader: `Devis ${p.number} · ${p.amount}`,
+        title: "Votre devis à signer",
+        intro: `${p.sellerName} vous envoie le devis ${p.number} (${p.amount} TVAC). Lisez-le et signez-le en ligne, en une minute, depuis votre téléphone ou votre ordinateur.`,
+        details: p.validUntil ? [{ label: "Valable jusqu'au", value: new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", dateStyle: "long" }).format(new Date(`${p.validUntil}T12:00:00Z`)) }] : undefined,
+        cta: { label: "Lire et signer le devis", url: p.url },
+        footer: p.sellerName,
+      }),
+    };
+  },
+
+  signConfirm(p: { sellerName: string; number: string; url: string }) {
+    return {
+      subject: `Devis ${p.number} signé`,
+      ...render({ preheader: "Votre copie du devis signé", title: "Devis signé, merci !", intro: `Vous avez signé le devis ${p.number} de ${p.sellerName}. Gardez ce lien : il montre le devis et votre signature.`, cta: { label: "Voir le devis signé", url: p.url }, footer: p.sellerName }),
+    };
+  },
+
+  quoteSigned(p: { number: string; signer: string; amount: string; url: string; businessName: string }) {
+    return {
+      subject: `Devis ${p.number} signé par ${p.signer}`,
+      ...render({ preheader: `${p.amount} · bon pour accord`, title: "Votre devis est signé", intro: `${p.signer} a signé le devis ${p.number} (${p.amount} TVAC). Il est passé en « accepté » : vous pouvez le transformer en facture.`, cta: { label: "Voir le devis", url: p.url }, footer: `Branshee — ${p.businessName}` }),
+    };
+  },
+
+  quoteDeclined(p: { number: string; reason: string | null; url: string; businessName: string }) {
+    return {
+      subject: `Devis ${p.number} refusé par le client`,
+      ...render({ preheader: p.reason ?? "Sans message", title: "Devis refusé", intro: `Votre client a refusé le devis ${p.number} en ligne.`, details: p.reason ? [{ label: "Son message", value: p.reason }] : undefined, cta: { label: "Voir le devis", url: p.url }, footer: `Branshee — ${p.businessName}` }),
+    };
+  },
+
   /** Alerte interne à l'équipe Skydev (option activée, à configurer avec le client). */
   skydevTeamAlert(p: { subject: string; title: string; intro: string; details: { label: string; value: string }[] }) {
     return {

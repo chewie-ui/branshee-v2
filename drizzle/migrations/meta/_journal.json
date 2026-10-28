@@ -211,6 +211,13 @@
       "when": 1793145853454,
       "tag": "0029_stock_caisse",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793146647602,
+      "tag": "0030_signature",
+      "breakpoints": true
     }
   ]
 }

@@ -16,7 +16,7 @@ export function A4Frame({ children }: { children: ReactNode }) {
     return () => ro.disconnect();
   }, []);
   return (
-    <div className="rounded-xl border border-border bg-surface-muted p-3 sm:p-4">
+    <div className="min-w-0 rounded-xl border border-border bg-surface-muted p-3 sm:p-4">
       <div ref={ref} className="w-full overflow-hidden" style={{ height: 1123 * scale }}>
         <div className="origin-top-left shadow-md" style={{ width: 794, transform: `scale(${scale})` }}>
           {children}

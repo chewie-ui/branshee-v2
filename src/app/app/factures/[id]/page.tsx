@@ -10,6 +10,8 @@ import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-d
 import { daysBetween, docState, docTitle, fdate, mailText, moneyCents, todayIso } from "@/lib/invoicing";
 import { requireContext } from "@/server/context";
 import { customerOptions, getDocument, getSellerSettings, paymentQr, relatedDocuments } from "@/server/invoicing";
+import { SignPanel, type SigView } from "@/components/signature/sign-panel";
+import { signOrigin, signaturesOfDoc } from "@/server/signatures";
 
 export const metadata: Metadata = { title: "Document" };
 
@@ -30,6 +32,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const view = { docType: d.docType, number: d.number, ttc: d.ttcCents / 100, dueDate: d.dueDate, comm: d.comm, validUntil: d.validUntil };
   const days = d.dueDate ? daysBetween(today, d.dueDate) : 0;
   const isQuote = d.docType === "quote";
+  const sigs = isQuote ? await signaturesOfDoc(ctx.business.id, d.id) : [];
+  const last = sigs.find((x) => x.signedAt) ?? sigs.find((x) => !x.cancelledAt) ?? null;
+  const sig: SigView | null = last
+    ? { status: last.signedAt ? "signed" : last.declinedAt ? "declined" : last.expiresAt < new Date() ? "expired" : last.viewedAt ? "viewed" : "pending", email: last.email, sentAt: last.sentAt.toISOString(), url: `${signOrigin()}/signer/${last.token}`, signerName: last.signerName, signedAt: last.signedAt?.toISOString() ?? null, path: last.signaturePath, ip: last.signerIp, hash: last.docHash, reason: last.declineReason }
+    : null;
   const back = isQuote ? { href: "/app/factures/devis", label: "Devis" } : { href: "/app/factures/liste", label: "Factures" };
 
   return (
@@ -58,6 +65,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           ) : state === "expired" ? (
             <p className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Ce devis a dépassé sa date de validité. Relancez le client ou dupliquez-le avec une nouvelle date.</span></p>
           ) : null}
+          {isQuote ? <SignPanel documentId={d.id} defaultEmail={String(client?.email ?? "")} current={sig} canManage={ctx.can("invoices.manage")} editable={d.status !== "invoiced" && d.status !== "refused"} /> : null}
           <Card>
             <CardHeader title="Détails" />
             <dl className="divide-y divide-border text-sm">
