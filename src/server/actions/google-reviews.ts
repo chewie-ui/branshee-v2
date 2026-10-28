@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { customers, members, reviewRequests, reviewSettings, users } from "@/db/schema";
@@ -58,7 +58,10 @@ export async function sendReviewRequest(input: { customerId?: string; email?: st
   if (!reviewRights(ctx).send) return { ok: false, error: "Vous n'avez pas le droit de contacter les clients." };
   const s = await reviewSettingsOf(ctx.business.id);
   if (!s.googleUrl) return { ok: false, error: "Ajoutez d'abord le lien de votre fiche Google dans les réglages." };
-  if (!rateLimit(`review-send:${ctx.business.id}`, 100, 3600_000).ok) return { ok: false, error: "Beaucoup de demandes envoyées : réessayez dans une heure." };
+  // Plafonds en base (contre le spam depuis un compte gratuit) : 100 demandes par jour, dont 20 vers des adresses hors fiches clients.
+  const day = new Date(Date.now() - 86400_000);
+  const [cap] = await db.select({ all: sql<number>`count(*)::int`, loose: sql<number>`count(*) filter (where ${reviewRequests.customerId} is null)::int` }).from(reviewRequests).where(and(eq(reviewRequests.businessId, ctx.business.id), eq(reviewRequests.channel, "email"), gte(reviewRequests.createdAt, day)));
+  if ((cap?.all ?? 0) >= 100) return { ok: false, error: "100 demandes envoyées en 24 heures : réessayez demain." };
   let to: { email: string; name: string | null; customerId: string | null };
   if (input.customerId) {
     if (!z.uuid().safeParse(input.customerId).success) return { ok: false, error: "Client introuvable." };
@@ -71,7 +74,9 @@ export async function sendReviewRequest(input: { customerId?: string; email?: st
     if (!e.success) return { ok: false, error: "Adresse email invalide." };
     const [c] = await db.select({ id: customers.id, name: customers.fullName }).from(customers).where(and(eq(customers.businessId, ctx.business.id), sql`lower(${customers.email}) = ${e.data}`));
     to = { email: e.data, name: (input.name ?? "").trim().slice(0, 80) || c?.name || null, customerId: c?.id ?? null };
+    if (!c && (cap?.loose ?? 0) >= 20) return { ok: false, error: "Limite atteinte pour les adresses hors fiches clients (20 par jour). Ajoutez la personne à vos clients." };
   }
+  if (!rateLimit(`review-to:${ctx.business.id}:${to.email}`, 1, 60_000).ok) return { ok: false, error: "Demande déjà en cours d'envoi." };
   const since = new Date(Date.now() - 7 * 86400_000);
   const [recent] = await db.select({ id: reviewRequests.id }).from(reviewRequests).where(and(eq(reviewRequests.businessId, ctx.business.id), sql`lower(${reviewRequests.email}) = ${to.email.toLowerCase()}`, gte(reviewRequests.createdAt, since)));
   if (recent) return { ok: false, error: "Une demande a déjà été envoyée à cette personne cette semaine." };
@@ -90,8 +95,11 @@ export async function submitPrivateFeedback(input: z.input<typeof feedbackSchema
   if (!rateLimit(`review-fb:${ip}`, 5, 3600_000).ok) return { ok: false, error: "Trop de messages. Réessayez plus tard." };
   const r = await requestByToken(v.data.token);
   if (!r) return { ok: false, error: "Ce lien n'est plus valable." };
-  if (r.req.feedbackAt) return { ok: false, error: "Merci, votre message a déjà été transmis." };
-  await db.update(reviewRequests).set({ feedbackRating: v.data.rating, feedback: v.data.text, feedbackAt: new Date() }).where(eq(reviewRequests.id, r.req.id));
+  const saved = await db.update(reviewRequests).set({ feedbackRating: v.data.rating, feedback: v.data.text, feedbackAt: new Date() }).where(and(eq(reviewRequests.id, r.req.id), isNull(reviewRequests.feedbackAt))).returning({ id: reviewRequests.id });
+  if (!saved.length) return { ok: false, error: "Merci, votre message a déjà été transmis." };
+  // Au plus 10 alertes par heure au responsable (les remarques restent toutes visibles dans l'app).
+  const [recent] = await db.select({ n: sql<number>`count(*)::int` }).from(reviewRequests).where(and(eq(reviewRequests.businessId, r.business.id), gte(reviewRequests.feedbackAt, new Date(Date.now() - 3600_000))));
+  if ((recent?.n ?? 0) > 10) return { ok: true, message: "Merci ! Votre message a été transmis directement au responsable." };
   const [owner] = await db.select({ email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(and(eq(members.businessId, r.business.id), eq(members.isOwner, true)));
   if (owner) await sendEmail({ to: owner.email, ...emails.reviewFeedback({ businessName: r.business.name, name: r.req.name, rating: v.data.rating, text: v.data.text, url: `${reviewOrigin()}/app/avis/remarques` }), template: "review_feedback", businessId: r.business.id }).catch(() => {});
   return { ok: true, message: "Merci ! Votre message a été transmis directement au responsable." };

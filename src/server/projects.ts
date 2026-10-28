@@ -11,7 +11,7 @@ import type { AppContext } from "@/server/context";
 export const projectRights = (ctx: AppContext) => ({ manage: ctx.member.isOwner || ctx.can("invoices.manage"), invoice: ctx.can("invoices.manage") });
 
 /** Temps facturable pas encore repris dans une facture (ou dont le brouillon a été supprimé ou annulé). */
-export const unbilled = sql`${timeEntries.billable} and (${timeEntries.invoiceId} is null or not exists (select 1 from sales_documents sd where sd.id = ${timeEntries.invoiceId} and sd.status <> 'cancelled'))`;
+export const unbilled = sql`"time_entries"."billable" and ("time_entries"."invoice_id" is null or not exists (select 1 from sales_documents sd where sd.id = "time_entries"."invoice_id" and sd.status <> 'cancelled'))`;
 
 export type ProjectCard = { id: string; name: string; color: string; status: string; customerName: string | null; customerId: string | null; deadline: string | null; hourlyRateCents: number; budgetMinutes: number | null; description: string | null; tasks: number; done: number; minutes: number; unbilledMinutes: number };
 

@@ -538,7 +538,7 @@ export const emails = {
         intro: `Bonjour ${p.name}, voici les pistes à relancer aujourd'hui.`,
         details: [...p.items.map((i) => ({ label: i.late ? "En retard" : "Aujourd'hui", value: [i.title, i.detail].filter(Boolean).join(" — ") })), ...(p.more ? [{ label: "Et encore", value: `${p.more} autre${p.more > 1 ? "s" : ""}` }] : [])],
         cta: { label: "Voir mes relances", url: p.url },
-        footer: `Skydev — ${p.businessName}`,
+        footer: `Branshee — ${p.businessName}`,
       }),
     };
   },
@@ -568,7 +568,7 @@ export const emails = {
         intro: `${p.name ?? "Un client"} a laissé une remarque privée (note ${p.rating}/5).`,
         details: [{ label: "Message", value: p.text }],
         cta: { label: "Voir les remarques", url: p.url },
-        footer: `Skydev — ${p.businessName}`,
+        footer: `Branshee — ${p.businessName}`,
       }),
     };
   },

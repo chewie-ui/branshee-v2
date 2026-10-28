@@ -29,12 +29,12 @@ export async function salesMembers(businessId: string) {
 }
 
 /** Historique d'une piste et documents (devis, factures) du client relié. */
-export async function dealDetailFor(businessId: string, dealId: string) {
+export async function dealDetailFor(businessId: string, dealId: string, withDocs = true) {
   const [d] = await db.select({ id: deals.id, customerId: deals.customerId }).from(deals).where(and(eq(deals.id, dealId), eq(deals.businessId, businessId)));
   if (!d) return null;
   const [acts, docs] = await Promise.all([
     db.select({ id: dealActivities.id, kind: dealActivities.kind, body: dealActivities.body, createdAt: dealActivities.createdAt, by: members.displayName }).from(dealActivities).leftJoin(members, eq(members.id, dealActivities.memberId)).where(and(eq(dealActivities.dealId, d.id), eq(dealActivities.businessId, businessId))).orderBy(desc(dealActivities.createdAt)).limit(200),
-    d.customerId
+    d.customerId && withDocs
       ? db.select({ id: salesDocuments.id, docType: salesDocuments.docType, status: salesDocuments.status, number: salesDocuments.number, ttcCents: salesDocuments.ttcCents, issueDate: salesDocuments.issueDate }).from(salesDocuments).where(and(eq(salesDocuments.businessId, businessId), eq(salesDocuments.customerId, d.customerId))).orderBy(desc(salesDocuments.issueDate)).limit(20)
       : Promise.resolve([]),
   ]);

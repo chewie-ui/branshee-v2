@@ -18,7 +18,7 @@ export default async function ReviewsPage() {
   const [s, stats, recent, clients] = await Promise.all([
     reviewSettingsOf(ctx.business.id),
     reviewStats(ctx.business.id),
-    recentRequests(ctx.business.id),
+    ctx.can("customers.view") ? recentRequests(ctx.business.id) : Promise.resolve([]),
     rights.send ? db.select({ id: customers.id, name: customers.fullName, email: customers.email }).from(customers).where(and(eq(customers.businessId, ctx.business.id), isNotNull(customers.email))).orderBy(asc(customers.fullName)).limit(3000) : Promise.resolve([]),
   ]);
   const rate = stats.sent ? Math.round((stats.clicked / Math.max(1, stats.sent + stats.scans)) * 100) : null;

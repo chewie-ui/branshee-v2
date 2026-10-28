@@ -204,6 +204,13 @@
       "when": 1793145165965,
       "tag": "0028_avis",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793145853454,
+      "tag": "0029_stock_caisse",
+      "breakpoints": true
     }
   ]
 }

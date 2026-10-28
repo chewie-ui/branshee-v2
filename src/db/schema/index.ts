@@ -11,3 +11,4 @@ export * from "./orders";
 export * from "./sales";
 export * from "./projects";
 export * from "./google-reviews";
+export * from "./stock";

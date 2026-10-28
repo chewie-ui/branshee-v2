@@ -163,7 +163,7 @@ export async function quoteFromDeal(id: string): Promise<Result> {
   const r = await ensureCustomer(ctx, id);
   if (!r.ok) return r;
   const [d] = await db.select({ stage: deals.stage }).from(deals).where(eq(deals.id, id));
-  if (d && (d.stage === "lead" || d.stage === "contacted")) await moveDeal(id, "quote");
+  if (d && (d.stage === "lead" || d.stage === "contacted")) await moveDeal(id, "quote").catch((e) => console.error("[ventes] étape devis :", e));
   refresh();
   return { ok: true, url: `/app/factures/nouvelle?type=devis&client=${r.customerId}` };
 }
@@ -172,5 +172,5 @@ export async function quoteFromDeal(id: string): Promise<Result> {
 export async function dealDetail(id: string) {
   const ctx = await requireContext();
   if (!salesRights(ctx).view || !z.uuid().safeParse(id).success) return null;
-  return dealDetailFor(ctx.business.id, id);
+  return dealDetailFor(ctx.business.id, id, ctx.can("invoices.view"));
 }

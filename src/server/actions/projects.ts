@@ -79,7 +79,7 @@ export async function saveProject(input: z.input<typeof projectSchema>): Promise
 export async function setProjectStatus(id: string, status: string): Promise<Result> {
   const { ctx, error } = await manager();
   if (error) return error;
-  if (!(status in PROJECT_STATUS)) return NOT_FOUND;
+  if (!z.uuid().safeParse(id).success || !(status in PROJECT_STATUS)) return NOT_FOUND;
   const done = await db.update(projects).set({ status, updatedAt: new Date() }).where(and(eq(projects.id, id), eq(projects.businessId, ctx.business.id))).returning({ id: projects.id });
   if (!done.length) return NOT_FOUND;
   refresh();
@@ -208,12 +208,15 @@ export async function invoiceProjectTime(projectId: string): Promise<Result> {
   if (!p) return NOT_FOUND;
   if (!p.customerId) return { ok: false, error: "Choisissez d'abord le client du projet (Modifier le projet)." };
   if (!p.hourlyRateCents) return { ok: false, error: "Indiquez d'abord le tarif horaire du projet (Modifier le projet)." };
-  const rows = await db
+  // Verrou par projet : deux clics (ou deux onglets) ne facturent pas deux fois le même temps.
+  return db.transaction(async (tx) => {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`invoice-time:${p.id}`}))`);
+  const rows = await tx
     .select({ id: timeEntries.id, minutes: timeEntries.minutes, taskTitle: projectTasks.title, day: timeEntries.day })
     .from(timeEntries)
     .leftJoin(projectTasks, eq(projectTasks.id, timeEntries.taskId))
     .where(and(eq(timeEntries.projectId, p.id), eq(timeEntries.businessId, ctx.business.id), unbilled));
-  if (!rows.length) return { ok: false, error: "Aucun temps à facturer sur ce projet." };
+  if (!rows.length) return { ok: false as const, error: "Aucun temps à facturer sur ce projet." };
   const groups = new Map<string, number>();
   for (const r of rows) groups.set(r.taskTitle ?? "Autres travaux", (groups.get(r.taskTitle ?? "Autres travaux") ?? 0) + r.minutes);
   const seller = await getSellerSettings(ctx.business.id);
@@ -222,8 +225,9 @@ export async function invoiceProjectTime(projectId: string): Promise<Result> {
   const today = todayIn(ctx.business.timezone);
   const lines = [...groups].map(([task, mins]) => ({ ...newLine(), desc: `${p.name} — ${task}`, qty: Math.round((mins / 60) * 100) / 100, unit: "heure", price: p.hourlyRateCents / 100, vat: seller.vatRegime === "franchise" ? 0 : 21 }));
   const r = await saveDocument({ docType: "invoice", customerId: p.customerId, issueDate: today, serviceDate: days.at(-1) ?? today, notes: `Temps passé sur « ${p.name} » (${period}).`, lines });
-  if (!r.ok || !r.id) return { ok: false, error: r.ok ? "Facture impossible." : r.error };
-  await db.update(timeEntries).set({ invoiceId: r.id }).where(and(eq(timeEntries.businessId, ctx.business.id), inArray(timeEntries.id, rows.map((x) => x.id))));
+  if (!r.ok || !r.id) return { ok: false as const, error: r.ok ? "Facture impossible." : r.error };
+  await tx.update(timeEntries).set({ invoiceId: r.id }).where(and(eq(timeEntries.businessId, ctx.business.id), inArray(timeEntries.id, rows.map((x) => x.id))));
   refresh();
-  return { ok: true, message: "Brouillon de facture créé.", url: `/app/factures/${r.id}` };
+  return { ok: true as const, message: "Brouillon de facture créé.", url: `/app/factures/${r.id}` };
+  });
 }

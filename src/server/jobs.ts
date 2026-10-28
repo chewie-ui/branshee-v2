@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, gt, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, articles, businessPlans, businesses, deals, members, notificationSettings, reviewSettings, services, users } from "@/db/schema";
+import { appointments, articles, businessPlans, businesses, deals, emailLogs, members, notificationSettings, reviewSettings, services, users } from "@/db/schema";
 import { deliverReviewRequest } from "@/server/google-reviews";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
@@ -251,6 +251,9 @@ export async function sendSalesFollowUps(now = new Date()) {
   let sent = 0;
   for (const list of byMember.values()) {
     const first = list[0]!;
+    // Une seule fois par jour, même si la tâche est relancée.
+    const [already] = await db.select({ id: emailLogs.id }).from(emailLogs).where(and(eq(emailLogs.template, "sales_follow_ups"), eq(emailLogs.toEmail, first.email), gt(emailLogs.createdAt, new Date(now.getTime() - 20 * H))));
+    if (already) continue;
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: first.tz || "Europe/Brussels" }).format(now);
     const mail = emails.salesFollowUps({ businessName: first.biz, name: firstName(first.name), items: list.slice(0, 30).map((r) => ({ title: r.title, detail: [r.what, r.company].filter(Boolean).join(" · "), late: !!r.next && r.next < today })), more: Math.max(0, list.length - 30), url: `${(process.env.SKYDEV_APP_URL ?? appUrl()).replace(/\/$/, "")}/app/ventes/relances?moi=1` });
     if (await sendEmail({ to: first.email, ...mail, template: "sales_follow_ups", businessId: first.businessId })) sent++;
