@@ -635,7 +635,7 @@ export const emails = {
       ...render({
         preheader: `${p.friend} s'est abonné grâce à vous`,
         title: "1 mois offert pour vous",
-        intro: `Bonjour ${p.firstName},\n\n${p.friend} s'est abonné à ${p.brand} grâce à votre invitation. Merci ! Vous gagnez 1 mois d'abonnement offert : activez-le en un clic depuis votre page Parrainage.\n\nChaque pro que vous invitez et qui s'abonne vous rapporte 1 mois de plus.`,
+        intro: `Bonjour ${p.firstName},\n\n${p.friend} s'est abonné à ${p.brand} grâce à votre invitation. Merci ! Vous gagnez 1 mois d'abonnement offert (29 €, déduits de votre prochaine facture) : activez-le en un clic depuis votre page Parrainage.\n\nChaque pro que vous invitez et qui s'abonne vous rapporte 1 mois de plus.`,
         cta: { label: "Utiliser mon mois offert", url: p.url },
         footer: p.brand,
       }),

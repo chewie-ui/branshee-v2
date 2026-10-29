@@ -5,6 +5,8 @@
 export const REFERRAL_MONTHS_PER_FRIEND = 1;
 export const REFERRAL_MAX_PER_YEAR = 12;
 export const REFERRAL_MIN_PAYMENTS = 2;
+/** Valeur d'un mois offert : un abonnement de base (1er utilisateur), 29 € TVAC. */
+export const REFERRAL_MONTH_CENTS = 2900;
 
 /** Mois gagnés à partir du nombre de filleuls validés, année par année. */
 export const referralMonths = (perYear: number[]) => perYear.reduce((a, n) => a + Math.min(REFERRAL_MAX_PER_YEAR, Math.max(0, n) * REFERRAL_MONTHS_PER_FRIEND), 0);

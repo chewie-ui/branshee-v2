@@ -6,6 +6,7 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
+import { REFERRAL_MONTH_CENTS } from "@/lib/referral";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
 import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
@@ -241,7 +242,8 @@ export async function claimReferral(): Promise<Result> {
   const s = stripe()!;
   const preview = await s.invoices.createPreview({ subscription: live.id }).catch(() => null);
   const yearly = live.items.data.some((i) => i.price.recurring?.interval === "year");
-  const monthly = preview ? Math.round(Math.max(0, preview.total) / (yearly ? 12 : 1)) : 0;
+  // 1 mois = la valeur d'un abonnement de base (1er utilisateur, 29 €), jamais plus que ce que le client paie.
+  const monthly = preview ? Math.min(REFERRAL_MONTH_CENTS, Math.round(Math.max(0, preview.total) / (yearly ? 12 : 1))) : 0;
   if (!monthly) return { ok: false, error: "Le montant de votre abonnement n'a pas pu être calculé. Réessayez dans un instant." };
   const reserved = st.claimed
     ? await db.update(referralCredits).set({ monthsClaimed: st.claimed + st.claimable }).where(and(eq(referralCredits.userId, ctx.user.id), eq(referralCredits.monthsClaimed, st.claimed))).returning({ id: referralCredits.userId })

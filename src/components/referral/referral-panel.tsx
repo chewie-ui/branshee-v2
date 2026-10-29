@@ -46,7 +46,7 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
           <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-6" aria-hidden="true" /></span>
           <div className="min-w-0">
             <h2 className="text-xl font-semibold tracking-tight text-accent-soft-foreground sm:text-2xl">1 mois offert pour chaque pro que vous invitez</h2>
-            <p className="mt-1 max-w-prose text-sm text-accent-soft-foreground">Un collègue, un ami indépendant, votre comptable… Chaque personne qui s&apos;abonne à {brand} grâce à votre lien vous fait gagner 1 mois d&apos;abonnement gratuit. Sans limite de métier.</p>
+            <p className="mt-1 max-w-prose text-sm text-accent-soft-foreground">Un collègue, un ami indépendant, votre comptable… Chaque personne qui s&apos;abonne à {brand} grâce à votre lien vous fait gagner 1 mois d&apos;abonnement offert (29 €). Sans limite de métier.</p>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
           {[
             { n: 1, t: "Partagez votre lien", d: "Par WhatsApp, SMS ou email, en un clic." },
             { n: 2, t: "Il essaie gratuitement", d: "Puis il s'abonne s'il est convaincu." },
-            { n: 3, t: "Vous gagnez 1 mois", d: "Dès son 2e paiement. Vous êtes prévenu par email." },
+            { n: 3, t: "Vous gagnez 29 €", d: "1 mois offert dès son 2e paiement. Vous êtes prévenu par email." },
           ].map((s) => (
             <li key={s.n} className="rounded-xl bg-surface p-4">
               <span className="flex size-7 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground" aria-hidden="true">{s.n}</span>
@@ -115,7 +115,7 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
         )}
       </Card>
 
-      <p className="text-xs text-muted">Conditions : un invité compte une seule fois, après son 2e paiement d&apos;abonnement (pas pendant l&apos;essai gratuit). Chaque invité validé vaut 1 mois de votre abonnement, crédité sur vos prochaines factures. Maximum {REFERRAL_MAX_PER_YEAR} mois gagnés par année civile. Les comptes créés pour s&apos;inviter soi-même ne comptent pas.</p>
+      <p className="text-xs text-muted">Conditions : un invité compte une seule fois, après son 2e paiement d&apos;abonnement (pas pendant l&apos;essai gratuit). Chaque invité validé vaut 1 mois d&apos;abonnement de base (29 € TVAC, la valeur d&apos;un utilisateur), crédité sur vos prochaines factures. Maximum {REFERRAL_MAX_PER_YEAR} mois gagnés par année civile. Les comptes créés pour s&apos;inviter soi-même ne comptent pas.</p>
     </div>
   );
 }
