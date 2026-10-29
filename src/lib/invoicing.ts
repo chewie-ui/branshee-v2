@@ -132,11 +132,28 @@ export type SellerSettings = {
 };
 
 /** Mentions obligatoires manquantes pour émettre une facture. */
-export function settingsMissing(s: Pick<SellerSettings, "legalName" | "street" | "zip" | "city" | "bce">) {
+/** Mentions obligatoires du vendeur sur une facture belge (et l'IBAN, pour être payé). */
+export function settingsMissing(s: Pick<SellerSettings, "legalName" | "street" | "zip" | "city" | "bce"> & Partial<Pick<SellerSettings, "vatRegime" | "vatNumber" | "iban">>) {
   const miss: string[] = [];
   if (!s.legalName) miss.push("votre nom ou raison sociale");
   if (!s.street || !s.zip || !s.city) miss.push("votre adresse");
   if (!s.bce) miss.push("votre numéro d'entreprise");
+  if (s.vatRegime === "assujetti" && !s.vatNumber && !s.bce) miss.push("votre numéro de TVA");
+  if ("iban" in s && !s.iban) miss.push("votre IBAN");
+  return miss;
+}
+
+/**
+ * Mentions obligatoires du client sur une facture : nom et adresse complète ; pour une société, son numéro
+ * de TVA ou d'entreprise.
+ */
+export function clientMissing(c: { name?: string | null; company?: string | null; vatNumber?: string | null; street?: string | null; postalCode?: string | null; city?: string | null }) {
+  const miss: string[] = [];
+  if (!(c.company || c.name)?.trim()) miss.push("le nom");
+  if (!c.street?.trim()) miss.push("la rue et le numéro");
+  if (!c.postalCode?.trim()) miss.push("le code postal");
+  if (!c.city?.trim()) miss.push("la ville");
+  if (c.company?.trim() && !c.vatNumber?.trim()) miss.push("le numéro de TVA ou d'entreprise de la société");
   return miss;
 }
 

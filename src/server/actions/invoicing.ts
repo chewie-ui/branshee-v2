@@ -6,7 +6,7 @@ import { z } from "zod";
 import { isDay } from "@/lib/planning";
 import { db } from "@/db";
 import { activityLogs, appointments, customers, invoiceProducts, invoiceSettings, salesDocuments, type SalesLine } from "@/db/schema";
-import { addDays, bceValid, cleanLines, formatNumber, ibanValid, money, newLine, num, settingsMissing, structComm, todayIso, totals, type DocType } from "@/lib/invoicing";
+import { addDays, bceValid, cleanLines, clientMissing, formatNumber, ibanValid, money, newLine, num, settingsMissing, structComm, todayIso, totals, type DocType } from "@/lib/invoicing";
 import { requireContext, type AppContext } from "@/server/context";
 import { getDocument, getSellerSettings } from "@/server/invoicing";
 import { signedSignature } from "@/server/signatures";
@@ -47,6 +47,8 @@ function clientSnapshot(c: typeof customers.$inferSelect) {
   return { name: c.companyName || c.fullName, contact: c.companyName ? c.fullName : "", email: c.email ?? "", phone: c.phone ?? "", vat: c.vatNumber ?? "", street: c.street ?? "", zip: c.postalCode ?? "", city: c.city ?? "", country: c.country ?? "" };
 }
 
+const billingOf = (c: typeof customers.$inferSelect) => ({ name: c.fullName, company: c.companyName, vatNumber: c.vatNumber, street: c.street, postalCode: c.postalCode, city: c.city });
+
 async function ownCustomer(businessId: string, id: string | null | undefined) {
   if (!id) return null;
   const [c] = await db.select().from(customers).where(and(eq(customers.businessId, businessId), eq(customers.id, id)));
@@ -71,7 +73,14 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     if (!customer) return { ok: false, error: "Choisissez un client." };
     if (!lines.some((l) => l.desc.trim())) return { ok: false, error: "Ajoutez au moins une prestation avec une description." };
     if (v.validUntil && v.validUntil < v.issueDate) return { ok: false, error: "La date de validité doit être après la date du devis." };
-  } else if (!customer) return { ok: false, error: "Choisissez un client avant d'enregistrer." };
+  } else {
+    if (!customer) return { ok: false, error: "Choisissez un client avant d'enregistrer." };
+    // Facture légale : toutes les mentions obligatoires, du vendeur comme du client, avant même le brouillon.
+    const sm = settingsMissing(seller);
+    if (!seller.saved || sm.length) return { ok: false, error: `Complétez d'abord ${sm.length ? sm.join(", ") : "vos informations de facturation"} dans les réglages de facturation.` };
+    const cm = clientMissing(billingOf(customer));
+    if (cm.length && v.docType === "invoice") return { ok: false, error: `Fiche client incomplète : ajoutez ${cm.join(", ")}.` };
+  }
   const t = totals(lines, seller.vatRegime);
   const values = {
     customerId: customer?.id ?? null,
@@ -145,6 +154,8 @@ export async function issueDocument(id: string): Promise<Result> {
   if (!seller.saved || miss.length) return { ok: false, error: `Complétez d'abord ${miss.length ? miss.join(", ") : "vos informations de facturation"} dans Réglages de facturation.` };
   const customer = await ownCustomer(ctx.business.id, d.customerId);
   if (!customer) return { ok: false, error: "Choisissez un client." };
+  const cm = clientMissing(billingOf(customer));
+  if (cm.length) return { ok: false, error: `Fiche client incomplète : ajoutez ${cm.join(", ")}.` };
   const lines = cleanLines(d.lines);
   if (!lines.some((l) => l.desc.trim())) return { ok: false, error: "Ajoutez au moins une prestation avec une description." };
   if (lines.some((l) => l.desc.trim() && num(l.qty) <= 0)) return { ok: false, error: "Chaque ligne doit avoir une quantité supérieure à 0." };

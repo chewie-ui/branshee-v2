@@ -9,8 +9,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
-import { addDays, money, newLine, num, totals, UNITS, VAT_RATES, type DocType, type SalesLine } from "@/lib/invoicing";
-import { issueDocument, saveBillingClient, saveDocument } from "@/server/actions/invoicing";
+import { addDays, clientMissing, money, newLine, num, totals, UNITS, VAT_RATES, type DocType, type SalesLine } from "@/lib/invoicing";
+import { issueDocument, saveBillingClient, saveCustomerBilling, saveDocument } from "@/server/actions/invoicing";
 import type { CustomerOption } from "@/server/invoicing";
 import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-document";
 import { A4Frame } from "@/components/invoicing/a4-frame";
@@ -51,6 +51,9 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const isCredit = doc.docType === "credit";
   const t = useMemo(() => totals(doc.lines, fr ? "franchise" : "assujetti"), [doc.lines, fr]);
   const client = customers.find((c) => c.id === doc.customerId);
+  // Facture légale : mentions du vendeur et du client complètes, sinon impossible d'enregistrer ou d'émettre.
+  const clientGaps = client && !isQuote ? clientMissing(client) : [];
+  const blocked = !isQuote && (missing.length > 0 || clientGaps.length > 0);
   const set = (patch: Partial<EditorDoc>) => setDoc((d) => ({ ...d, ...patch }));
   const setLine = (i: number, patch: Partial<SalesLine>) => setDoc((d) => ({ ...d, lines: d.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) }));
 
@@ -88,15 +91,15 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
             <Button loading={pending} onClick={() => save()}>Enregistrer le devis</Button>
           ) : (
             <>
-              <Button variant="secondary" disabled={pending} onClick={() => save()}>Enregistrer le brouillon</Button>
-              <Button icon={<Send className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => { setError(null); setConfirming(true); }}>Émettre {isCredit ? "la note de crédit" : "la facture"}</Button>
+              <Button variant="secondary" disabled={pending || blocked} onClick={() => save()}>Enregistrer le brouillon</Button>
+              <Button icon={<Send className="size-4" aria-hidden="true" />} disabled={pending || blocked} onClick={() => { setError(null); setConfirming(true); }}>Émettre {isCredit ? "la note de crédit" : "la facture"}</Button>
             </>
           )
         }
       />
       {missing.length && !isQuote ? (
         <p className="mb-4 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
-          Avant d&apos;émettre, ajoutez {missing.join(", ")} dans les <Link href="/app/factures/reglages" className="font-medium underline">réglages de facturation</Link>. Ces mentions sont obligatoires sur une facture.
+          Pour créer une facture, ajoutez d&apos;abord {missing.join(", ")} dans les <Link href="/app/factures/reglages" className="font-medium underline">réglages de facturation</Link>. Ces mentions sont obligatoires sur une facture.
         </p>
       ) : null}
       {error ? <p className="mb-4 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">{error}</p> : null}
@@ -114,7 +117,14 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                   ))}
                 </Select>
               </Field>
-              {client && !client.street && !isCredit ? <p className="text-sm text-muted">Pas d&apos;adresse sur la fiche : ajoutez-la depuis la fiche du {clientWord} si votre client est une entreprise.</p> : null}
+              {client && clientGaps.length ? (
+                <ClientBillingFix
+                  key={client.id}
+                  client={client}
+                  gaps={clientGaps}
+                  onSaved={(patch) => setCustomers((list) => list.map((c) => (c.id === client.id ? { ...c, ...patch } : c)))}
+                />
+              ) : null}
               {newClient ? (
                 <NewClientForm
                   onCreated={(c) => {
@@ -318,6 +328,48 @@ function NewClientForm({ onCreated }: { onCreated: (c: CustomerOption) => void }
       >
         Ajouter
       </Button>
+    </div>
+  );
+}
+
+/** Fiche client incomplète : les mentions obligatoires se complètent ici même, sans quitter la facture. */
+function ClientBillingFix({ client, gaps, onSaved }: { client: CustomerOption; gaps: string[]; onSaved: (patch: Partial<CustomerOption>) => void }) {
+  const [v, setV] = useState({ company: client.company ?? "", vatNumber: client.vatNumber ?? "", street: client.street ?? "", postalCode: client.postalCode ?? "", city: client.city ?? "", country: client.country ?? "Belgique" });
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const live = clientMissing({ name: client.name, ...v });
+  const f = (k: keyof typeof v, label: string, extra: React.ComponentProps<typeof Input> = {}) => (
+    <Field label={label} htmlFor={`cf-${k}`}><Input id={`cf-${k}`} value={v[k]} onChange={(e) => setV((o) => ({ ...o, [k]: e.target.value }))} {...extra} /></Field>
+  );
+  return (
+    <div className="rounded-xl border border-warning/40 bg-warning-soft/50 p-4">
+      <p className="text-sm font-medium text-warning">Informations obligatoires manquantes</p>
+      <p className="mt-0.5 text-sm text-muted">Une facture doit indiquer {gaps.join(", ")}. Complétez-les ici : elles sont enregistrées sur la fiche.</p>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {f("street", "Rue et numéro", { autoComplete: "street-address", required: true })}
+        <div className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] gap-3">
+          {f("postalCode", "Code postal", { autoComplete: "postal-code", inputMode: "numeric", required: true })}
+          {f("city", "Ville", { autoComplete: "address-level2", required: true })}
+        </div>
+        {f("company", "Société (si c'est une entreprise)", { autoComplete: "organization" })}
+        {f("vatNumber", v.company.trim() ? "N° de TVA ou d'entreprise" : "N° de TVA (si entreprise)", { placeholder: "BE0123456789" })}
+      </div>
+      {err ? <p className="mt-2 text-sm text-danger" role="alert">{err}</p> : null}
+      <Button
+        size="sm"
+        className="mt-3"
+        loading={pending}
+        disabled={live.length > 0}
+        onClick={() => start(async () => {
+          setErr(null);
+          const r = await saveCustomerBilling(client.id, v);
+          if (!r.ok) return setErr(r.error);
+          onSaved({ company: v.company || null, vatNumber: v.vatNumber || null, street: v.street, postalCode: v.postalCode, city: v.city, country: v.country || null });
+        })}
+      >
+        Enregistrer sur la fiche
+      </Button>
+      {live.length ? <p className="mt-2 text-xs text-muted">Encore à remplir : {live.join(", ")}.</p> : null}
     </div>
   );
 }
