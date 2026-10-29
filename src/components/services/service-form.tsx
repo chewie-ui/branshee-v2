@@ -1,5 +1,6 @@
 "use client";
 
+import type { Week as OpeningWeek } from "@/lib/opening";
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
 import { ImageIcon, Trash2, Upload } from "lucide-react";
@@ -43,11 +44,13 @@ type Props = {
   showAudience: boolean;
   /** Cours collectifs autorisés (interrupteur du super-admin). */
   allowGroup?: boolean;
+  /** Horaires d'ouverture : cadre des jours et heures de la prestation. */
+  bounds?: OpeningWeek | null;
 };
 
 const fmt = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m / 60} h`);
 
-export function ServiceForm({ initial, categories, team, showAudience, allowGroup = true }: Props) {
+export function ServiceForm({ initial, categories, team, showAudience, allowGroup = true, bounds = null }: Props) {
   const [state, action, pending] = useActionState<ServiceFormState, FormData>(saveService.bind(null, initial.id), undefined);
   const [category, setCategory] = useState(initial.categoryId);
   const [color, setColor] = useState(initial.color);
@@ -281,7 +284,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
             {limited ? <p className="text-sm text-muted">Exemple : uniquement le mardi de 8 h à 13 h. Les créneaux restent limités aux horaires du praticien.</p> : null}
           </fieldset>
           </div>
-          {limited ? <WeekRanges value={hours} onChange={setHours} offLabel="Non proposée" defaultRange={{ start: "09:00", end: "12:00" }} className="border-t border-border" /> : null}
+          {limited ? <WeekRanges value={hours} onChange={setHours} offLabel="Non proposée" defaultRange={{ start: "09:00", end: "12:00" }} bounds={bounds} className="border-t border-border" /> : null}
           {err.hours ? <p className="px-5 pb-4 text-sm text-danger" role="alert">{err.hours}</p> : null}
         </Card>
       ) : null}

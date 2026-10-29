@@ -94,6 +94,7 @@ const it: Messages = {
     confirmGroup: "Conferma l'iscrizione",
     confirm: "Conferma l'appuntamento",
     request: "Invia la richiesta",
+    addAnother: "Aggiungi un altro appuntamento", cartTitle: "I tuoi appuntamenti", removeItem: "Rimuovi questo appuntamento", confirmAll: "Prenota i {n} appuntamenti", multiDone: "{n} appuntamenti prenotati", multiPartial: "Questi appuntamenti non sono stati prenotati:", seeAppt: "Vedi", emailEach: "Riceverai un'email di conferma per ogni appuntamento.", alreadyInCart: "Questo orario è già nella tua selezione.",
     willConfirm: "L'attività confermerà il suo appuntamento.",
     ruleHalf: "In caso di disdetta meno di 24 ore prima, verrà addebitato il 50% del prezzo. Un'assenza non giustificata può essere addebitata.",
     ruleFull: "Disdetta meno di 24 ore prima: 50% del prezzo; meno di 12 ore prima: 100%. Un'assenza non giustificata può essere addebitata.",

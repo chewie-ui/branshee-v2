@@ -94,6 +94,7 @@ const en: Messages = {
     confirmGroup: "Confirm registration",
     confirm: "Confirm appointment",
     request: "Send request",
+    addAnother: "Add another appointment", cartTitle: "Your appointments", removeItem: "Remove this appointment", confirmAll: "Book the {n} appointments", multiDone: "{n} appointments booked", multiPartial: "These appointments could not be booked:", seeAppt: "View", emailEach: "You will receive a confirmation email for each appointment.", alreadyInCart: "This slot is already in your selection.",
     willConfirm: "The business will confirm your appointment.",
     ruleHalf: "If you cancel less than 24 hours before, 50% of the price will be charged. A no-show may be charged.",
     ruleFull: "Cancelling less than 24 hours before: 50% of the price; less than 12 hours before: 100%. A no-show may be charged.",

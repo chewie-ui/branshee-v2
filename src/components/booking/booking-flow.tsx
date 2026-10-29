@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, Check, ChevronLeft, ChevronRight, Clock, MapPin, Star, UserRound, Users } from "lucide-react";
+import { ArrowLeft, BellRing, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, Star, Trash2, UserRound, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -98,6 +98,10 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   const service = services.find((s) => s.id === serviceId) ?? null;
   const member = team.find((m) => m.id === memberId) ?? null;
   const candidates = service ? team.filter((m) => service.memberIds.includes(m.id)) : [];
+  // Plusieurs rendez-vous d'un coup : seulement sans paiement en ligne ni carte en garantie (un paiement = un rendez-vous).
+  const multiOk = (svc: { kind: string; priceCents: number | null } | null) => !!svc && svc.kind !== "group" && !((svc.priceCents ?? 0) > 0 && (data.payment.required || data.payment.guarantee));
+  const [cart, setCart] = useState<{ serviceId: string; memberId: string | null; day: string; time: string }[]>([]);
+  const [multiDone, setMultiDone] = useState<{ label: string; token?: string; error?: string }[] | null>(null);
 
   // Semaine sans aucun créneau à l'ouverture : on avance tout seul jusqu'à la première semaine qui en a (8 semaines max).
   // Désactivé dès que le client navigue lui-même entre les semaines.
@@ -183,7 +187,15 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     }
   }
 
-  const slotsOfDay = days?.find((d) => d.date === day)?.slots ?? [];
+  // Créneaux qui chevauchent un rendez-vous déjà dans la sélection : retirés.
+  const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const clashes = (d: string, t: string) => cart.some((c) => {
+    if (c.day !== d) return false;
+    const other = data.services.find((x) => x.id === c.serviceId)?.durationMin ?? 30;
+    const mine = service?.durationMin ?? 30;
+    return mins(t) < mins(c.time) + other && mins(c.time) < mins(t) + mine;
+  });
+  const slotsOfDay = (days?.find((d) => d.date === day)?.slots ?? []).filter((s) => !clashes(day!, s.time));
   const maxDaySlots = Math.max(0, ...(days ?? []).map((d) => d.slots.length));
   const periods = [
     { label: t("booking.morning"), items: slotsOfDay.filter((s) => s.time < "12:00") },
@@ -249,6 +261,31 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
       locale,
       paymentMethod: (String(formData.get("paymentMethod") ?? "") || "none") as "online" | "on_site" | "bank_transfer" | "paypal" | "none",
     };
+    if (cart.length) {
+      // Les rendez-vous de la sélection, puis celui en cours : réservés un par un avec les mêmes coordonnées.
+      const items = [...cart, { serviceId: service.id, memberId, day, time }];
+      startSubmit(async () => {
+        const out: { label: string; token?: string; error?: string }[] = [];
+        for (const it of items) {
+          const svc = data.services.find((x) => x.id === it.serviceId);
+          const res = await createPublicBooking({ ...payload, serviceId: it.serviceId, memberId: it.memberId, date: it.day, time: it.time, paymentMethod: payload.paymentMethod === "online" ? "none" : payload.paymentMethod }).catch(() => ({ ok: false as const, error: "Réservation impossible." }));
+          const label = `${svc?.name ?? ""} · ${at(it.day, it.time)}`;
+          if (res.ok) out.push({ label, token: res.token });
+          else {
+            out.push({ label, error: tr(res.error) });
+            // Coordonnées invalides : inutile d'essayer les suivants, le formulaire reste affiché.
+            if ("fieldErrors" in res && res.fieldErrors && Object.keys(res.fieldErrors).length && !out.some((o) => o.token)) {
+              setError(tr(res.error));
+              setFieldErrors(Object.fromEntries(Object.entries(res.fieldErrors).map(([k, v]) => [k, tr(v)])));
+              return;
+            }
+          }
+        }
+        setCart([]);
+        setMultiDone(out);
+      });
+      return;
+    }
     const price = service.priceCents ?? 0;
     const mode = payload.paymentMethod === "online" ? "pay" : data.payment.guarantee && price > 0 ? "guarantee" : null;
     if (mode) {
@@ -329,6 +366,36 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     return <p className="p-6 text-sm text-muted">{t("booking.noServices")}</p>;
   }
 
+  if (multiDone) {
+    const ok = multiDone.filter((d) => d.token);
+    const ko = multiDone.filter((d) => !d.token);
+    return (
+      <div className="space-y-4" role="status">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-full bg-success-soft text-success"><Check className="size-5" aria-hidden="true" /></span>
+          <h2 className="text-lg font-semibold">{t("booking.multiDone", { n: ok.length })}</h2>
+        </div>
+        {ok.length ? (
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {ok.map((d) => (
+              <li key={d.token} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span className="min-w-0">{d.label}</span>
+                <a href={`/r/${d.token}`} className="shrink-0 font-medium text-accent hover:text-accent-hover">{t("booking.seeAppt")}</a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {ko.length ? (
+          <div className="rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert">
+            <p className="font-medium">{t("booking.multiPartial")}</p>
+            <ul className="mt-1 list-disc pl-5">{ko.map((d) => <li key={d.label}>{d.label} : {d.error}</li>)}</ul>
+          </div>
+        ) : null}
+        {ok.length ? <p className="text-sm text-muted">{t("booking.emailEach")}</p> : null}
+      </div>
+    );
+  }
+
   return (
     <div>
       {(step !== "service" && step !== "visit") || (step === "service" && (fv?.enabled || intakeOrder.length > 0)) ? (
@@ -345,6 +412,9 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
         </button>
       ) : null}
 
+      {cart.length && step !== "details" ? (
+        <p className="mb-4 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-soft-foreground" role="status"><Check className="size-4" aria-hidden="true" />{t("booking.cartTitle")} : {cart.length}</p>
+      ) : null}
       {step === "visit" && fv ? (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">{fv.question}</h2>
@@ -617,8 +687,38 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
 
       {step === "details" && service && !pendingPay && ((day && time) || chosenSession) ? (
         <form onSubmit={(e) => { e.preventDefault(); submit(new FormData(e.currentTarget)); }} className="space-y-5" noValidate>
-          <h2 className="text-lg font-semibold">{t("booking.yourDetails")}</h2>
+          <h2 className="text-lg font-semibold">{cart.length ? t("booking.cartTitle") : t("booking.yourDetails")}</h2>
+          {cart.map((c, i) => {
+            const svc = data.services.find((x) => x.id === c.serviceId);
+            const who = team.find((m) => m.id === c.memberId);
+            return (
+              <div key={`${c.serviceId}-${c.day}-${c.time}`} className="flex items-start justify-between gap-3 rounded-lg bg-surface-muted p-4 text-sm">
+                <div className="min-w-0">
+                  <p className="font-semibold">{svc?.name}</p>
+                  <p className="flex items-center gap-2 text-muted"><Clock className="size-4" aria-hidden="true" />{at(c.day, c.time)}</p>
+                  {who ? <p className="flex items-center gap-2 text-muted"><UserRound className="size-4" aria-hidden="true" />{t("common.with", { name: who.name })}</p> : null}
+                </div>
+                <button type="button" onClick={() => setCart((l) => l.filter((_, j) => j !== i))} className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-danger" aria-label={t("booking.removeItem")}><Trash2 className="size-4" aria-hidden="true" /></button>
+              </div>
+            );
+          })}
           {summary}
+          {multiOk(service) && day && time && cart.length < 5 && cart.every((c) => multiOk(data.services.find((x) => x.id === c.serviceId) ?? null)) ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (clashes(day, time)) return setError(t("booking.alreadyInCart"));
+                setCart((l) => [...l, { serviceId: service.id, memberId, day, time }]);
+                setTime(null);
+                setDay(null);
+                setError(null);
+                setStep("service");
+              }}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border-strong text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent-soft"
+            >
+              <Plus className="size-4" aria-hidden="true" />{t("booking.addAnother")}
+            </button>
+          ) : null}
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert">{error}</p> : null}
           {viewer ? (
             <p className="text-sm text-muted">{t("booking.loggedAs", { email: viewer.email })}</p>
@@ -665,7 +765,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           <Field label={t("common.optional", { label: t("booking.message") })} htmlFor="message">
             <Textarea id="message" name="message" rows={3} maxLength={1000} placeholder={t("booking.messagePlaceholder")} />
           </Field>
-          {service.kind !== "group" && (service.priceCents ?? 0) > 0 ? <PaymentChoice pay={data.payment} ruleText={policy ? null : ruleText} /> : null}
+          {service.kind !== "group" && ((service.priceCents ?? 0) > 0 || cart.length > 0) ? <PaymentChoice pay={data.payment} ruleText={policy ? null : ruleText} noOnline={cart.length > 0} /> : null}
           {policy ? (
             <fieldset className="space-y-3 rounded-lg border border-border-strong p-4 text-sm">
               <legend className="px-1 font-semibold">{t("booking.policyTitle")}</legend>
@@ -680,7 +780,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
             </fieldset>
           ) : null}
           <Button type="submit" loading={submitting} className="w-full" icon={<Check className="size-4" aria-hidden="true" />}>
-            {service.kind === "group" ? t("booking.confirmGroup") : settings?.autoConfirm ? t("booking.confirm") : t("booking.request")}
+            {service.kind === "group" ? t("booking.confirmGroup") : cart.length ? t("booking.confirmAll", { n: cart.length + 1 }) : settings?.autoConfirm ? t("booking.confirm") : t("booking.request")}
           </Button>
           {!settings?.autoConfirm && service.kind !== "group" ? <p className="text-center text-sm text-muted">{t("booking.willConfirm")}</p> : null}
         </form>
@@ -722,11 +822,11 @@ function WaitlistForm({ slug, serviceId, memberId, day, dayLabel }: { slug: stri
 }
 
 /** Choix du mode de paiement (affiché seulement s'il y a un vrai choix). */
-function PaymentChoice({ pay, ruleText }: { pay: PublicBusiness["payment"]; ruleText: string | null }) {
+function PaymentChoice({ pay, ruleText, noOnline = false }: { pay: PublicBusiness["payment"]; ruleText: string | null; noOnline?: boolean }) {
   const { t: tt } = useI18n();
   const site = [pay.onSite.cash && tt("booking.cash"), pay.onSite.card && tt("booking.card"), pay.onSite.qr && tt("booking.qr")].filter(Boolean).join(", ");
   const options = [
-    pay.online ? { v: "online", t: tt("booking.payOnline"), d: tt("booking.payOnlineHint") } : null,
+    pay.online && !noOnline ? { v: "online", t: tt("booking.payOnline"), d: tt("booking.payOnlineHint") } : null,
     !pay.required ? { v: "on_site", t: tt("booking.payOnSite"), d: site ? tt("booking.acceptedOnSite", { list: site }) : tt("booking.onTheDay") } : null,
     !pay.required && pay.onSite.bankTransfer ? { v: "bank_transfer", t: tt("booking.bankTransfer"), d: tt("booking.bankTransferHint") } : null,
     !pay.required && pay.onSite.paypal ? { v: "paypal", t: "PayPal", d: tt("booking.paypalHint") } : null,

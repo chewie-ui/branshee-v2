@@ -94,6 +94,7 @@ const nl: Messages = {
     confirmGroup: "Inschrijving bevestigen",
     confirm: "Afspraak bevestigen",
     request: "Aanvraag versturen",
+    addAnother: "Nog een afspraak toevoegen", cartTitle: "Je afspraken", removeItem: "Deze afspraak verwijderen", confirmAll: "De {n} afspraken boeken", multiDone: "{n} afspraken geboekt", multiPartial: "Deze afspraken konden niet geboekt worden:", seeAppt: "Bekijken", emailEach: "Je krijgt een bevestigingsmail voor elke afspraak.", alreadyInCart: "Dit tijdslot zit al in je selectie.",
     willConfirm: "De zaak zal uw afspraak bevestigen.",
     ruleHalf: "Bij annulering minder dan 24 uur vooraf wordt 50% van de prijs aangerekend. Een niet-verwittigde afwezigheid kan worden aangerekend.",
     ruleFull: "Annulering minder dan 24 uur vooraf: 50% van de prijs; minder dan 12 uur vooraf: 100%. Een niet-verwittigde afwezigheid kan worden aangerekend.",
