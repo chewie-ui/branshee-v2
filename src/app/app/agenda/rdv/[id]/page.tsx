@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, BadgeCheck, Clock, Mail, MessageSquare, Phone, UserRound } from "lucide-react";
-import { and, asc, eq } from "drizzle-orm";
+import { ArrowLeft, BadgeCheck, Clock, FolderOpen, Mail, MessageSquare, Phone, Plus, UserRound } from "lucide-react";
+import { and, asc, desc, eq } from "drizzle-orm";
+import { decrypt } from "@/lib/field-crypto";
 import { format } from "date-fns";
 import { z } from "zod";
 import { db } from "@/db";
-import { appointmentPayments, appointments, customers, members, services, users } from "@/db/schema";
+import { appointmentPayments, appointments, customerNotes, customers, members, services, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";
 import { ClientContactActions, PaymentForm, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
@@ -46,6 +47,14 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
   const week = format(zoned(a.startsAt, tz), "yyyy-MM-dd");
   const term = clientWord(ctx.business.businessType);
   const canManage = ctx.can("appointments.manage");
+  // Dossier du client : ses dernières notes, ouvrables d'un clic depuis le rendez-vous.
+  const canFile = !!a.customerId && ctx.can("customers.view");
+  const lastNotes = canFile
+    ? await db.select({ id: customerNotes.id, date: customerNotes.date, title: customerNotes.title, noteEnc: customerNotes.noteEnc }).from(customerNotes).innerJoin(customers, eq(customers.id, customerNotes.customerId)).where(and(eq(customerNotes.customerId, a.customerId!), eq(customers.businessId, ctx.business.id))).orderBy(desc(customerNotes.date), desc(customerNotes.createdAt)).limit(3)
+    : [];
+  const snippet = (enc: string | null) => {
+    try { const t = (enc ? decrypt(enc) : "") ?? ""; return t.length > 160 ? `${t.slice(0, 160)}…` : t; } catch { return ""; }
+  };
   const team = canManage ? await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"))).orderBy(asc(members.createdAt)) : [];
   const durationMin = Math.round((a.endsAt.getTime() - a.startsAt.getTime()) / 60000);
 
@@ -74,6 +83,33 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
           <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium">{a.startsAt < now ? "Cette demande a expiré : sa date est passée." : "Cette demande attend votre réponse."}</p>
             <RequestActions id={a.id} expired={a.startsAt < now} />
+          </Card>
+        ) : null}
+
+        {canFile ? (
+          <Card>
+            <CardHeader title={`Dossier du ${term}`} />
+            {lastNotes.length ? (
+              <ul className="divide-y divide-border">
+                {lastNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="block px-5 py-3 text-sm hover:bg-surface-muted/60">
+                      <span className="flex flex-wrap items-baseline gap-x-2"><span className="font-medium">{n.title || "Note"}</span><span className="text-xs text-muted">{formatDay(new Date(`${n.date}T12:00:00Z`), tz, "d MMMM yyyy")}</span></span>
+                      {snippet(n.noteEnc) ? <span className="mt-0.5 block whitespace-pre-line text-muted">{snippet(n.noteEnc)}</span> : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm text-muted">
+                <span>Aucune note dans le dossier pour l&apos;instant.</span>
+                <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Plus className="size-4" aria-hidden="true" />Ajouter une note</Link>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 border-t border-border px-5 py-4">
+              <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"><FolderOpen className="size-4" aria-hidden="true" />Ouvrir le dossier</Link>
+              <Link href={`/app/clients/${a.customerId}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:bg-surface-muted"><UserRound className="size-4" aria-hidden="true" />Fiche du {term}</Link>
+            </div>
           </Card>
         ) : null}
 
