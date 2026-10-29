@@ -41,7 +41,7 @@ export function DocActions({ id, docType, state, today, mail, reminder, canManag
 
   const isQuote = docType === "quote";
   const draft = !isQuote && state === "draft";
-  const pdf = <ButtonLink href={`/imprimer/factures/${id}`} target="_blank" variant="secondary" icon={<Download className="size-4" aria-hidden="true" />}>PDF</ButtonLink>;
+  const pdf = <a href={`/app/factures/${id}/pdf`} download className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"><Download className="size-4" aria-hidden="true" />Télécharger le PDF</a>;
 
   return (
     <div className="space-y-3">
@@ -51,6 +51,7 @@ export function DocActions({ id, docType, state, today, mail, reminder, canManag
           <>
             <ButtonLink href={`/app/factures/${id}/modifier`} variant="secondary" icon={<Pencil className="size-4" aria-hidden="true" />}>Modifier</ButtonLink>
             <Button icon={<Send className="size-4" aria-hidden="true" />} onClick={() => setConfirm("issue")} disabled={pending}>Émettre</Button>
+            {pdf}
             <Button variant="ghost" icon={<Trash2 className="size-4" aria-hidden="true" />} onClick={() => setConfirm("delete")} disabled={pending}>Supprimer</Button>
           </>
         ) : null}

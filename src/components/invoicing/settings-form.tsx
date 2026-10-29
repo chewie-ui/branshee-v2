@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { UnsavedBar } from "@/components/ui/unsaved-bar";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -14,7 +16,19 @@ const COLORS = ["#4f46e5", "#0f766e", "#1d4ed8", "#9d174d", "#b45309", "#18181b"
 /** Identité de facturation : les mentions obligatoires d'une facture belge, l'IBAN et le régime TVA. */
 export function InvoiceSettingsForm({ initial, saved, canManage }: { initial: SellerSettings; saved: boolean; canManage: boolean }) {
   const router = useRouter();
-  const [v, setV] = useState({ ...initial, bce: initial.bce ? bceFmt(initial.bce) : "", iban: initial.iban ? ibanFmt(initial.iban) : "" });
+  const start0 = () => ({ ...initial, bce: initial.bce ? bceFmt(initial.bce) : "", iban: initial.iban ? ibanFmt(initial.iban) : "" });
+  const [v, setV] = useState(start0);
+  const [base, setBase] = useState(start0);
+  const dirty = canManage && JSON.stringify(v) !== JSON.stringify(base);
+  // Lien « Modifier » depuis une facture : on fait défiler jusqu'au régime TVA et on l'entoure un instant.
+  const voir = useSearchParams().get("voir");
+  const [flash, setFlash] = useState(voir === "tva");
+  useEffect(() => {
+    if (voir !== "tva") return;
+    document.getElementById("tva")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlash(false), 3500);
+    return () => clearTimeout(t);
+  }, [voir]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -32,7 +46,7 @@ export function InvoiceSettingsForm({ initial, saved, canManage }: { initial: Se
       const r = await saveInvoiceSettings({ ...v, paymentDays: Number(v.paymentDays) });
       setErrors(r.ok ? {} : (r.fieldErrors ?? {}));
       setMsg(r.ok ? { ok: true, text: r.message ?? "Enregistré." } : { ok: false, text: r.error });
-      if (r.ok) router.refresh();
+      if (r.ok) { setBase(v); router.refresh(); }
     });
 
   return (
@@ -59,7 +73,7 @@ export function InvoiceSettingsForm({ initial, saved, canManage }: { initial: Se
         </div>
       </Card>
 
-      <Card>
+      <Card id="tva" className={cn("scroll-mt-24 transition-shadow duration-500", flash && "ring-4 ring-accent ring-offset-2 ring-offset-background")}>
         <CardHeader title="TVA" description="En franchise (chiffre d'affaires sous 25 000 €/an), vos factures ne mentionnent pas de TVA." />
         <div className="space-y-4 p-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Régime TVA">
@@ -110,6 +124,7 @@ export function InvoiceSettingsForm({ initial, saved, canManage }: { initial: Se
 
       {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
       {canManage ? <Button loading={pending} onClick={submit}>Enregistrer</Button> : null}
+      <UnsavedBar dirty={dirty} pending={pending} onSave={submit} onReset={() => { setV(base); setErrors({}); }} />
     </div>
   );
 }

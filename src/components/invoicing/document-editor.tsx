@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Send, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Download, Plus, Send, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -15,6 +15,7 @@ import type { CustomerOption } from "@/server/invoicing";
 import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-document";
 import { A4Frame } from "@/components/invoicing/a4-frame";
 import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
+import { DecimalInput } from "@/components/ui/decimal-input";
 
 type CatalogItem = { id: string; name: string; unit: string; price: number; vat: number; source: "catalogue" | "prestation" };
 export type EditorDoc = {
@@ -91,6 +92,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
             <Button loading={pending} onClick={() => save()}>Enregistrer le devis</Button>
           ) : (
             <>
+              {doc.id ? <a href={`/app/factures/${doc.id}/pdf`} download className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-accent"><Download className="size-4" aria-hidden="true" />PDF</a> : null}
               <Button variant="secondary" disabled={pending || blocked} onClick={() => save()}>Enregistrer le brouillon</Button>
               <Button icon={<Send className="size-4" aria-hidden="true" />} disabled={pending || blocked} onClick={() => { setError(null); setConfirming(true); }}>Émettre {isCredit ? "la note de crédit" : "la facture"}</Button>
             </>
@@ -211,7 +213,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-qty-${l.id}`}>Qté</label>
-                    <Input id={`l-qty-${l.id}`} type="number" step="0.25" min="0" inputMode="decimal" className="tabular-nums" value={l.qty} onChange={(e) => setLine(i, { qty: num(e.target.value) })} />
+                    <DecimalInput id={`l-qty-${l.id}`} className="tabular-nums" value={num(l.qty)} onValue={(n) => setLine(i, { qty: Math.max(0, n) })} />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-unit-${l.id}`}>Unité</label>
@@ -221,7 +223,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-price-${l.id}`}>Prix unit. €{fr ? "" : " HTVA"}</label>
-                    <Input id={`l-price-${l.id}`} type="number" step="0.01" inputMode="decimal" className="tabular-nums" value={l.price} onChange={(e) => setLine(i, { price: num(e.target.value) })} />
+                    <DecimalInput id={`l-price-${l.id}`} className="tabular-nums" placeholder="0,00" value={num(l.price)} onValue={(n) => setLine(i, { price: n })} />
                   </div>
                   {fr ? null : (
                     <div>
@@ -246,7 +248,10 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                   </>
                 )}
                 <div className="flex justify-between border-t border-border pt-2 text-base font-semibold"><span>Total{fr ? "" : " TVAC"}</span><span className="tabular-nums">{money(fr ? t.ht : t.ttc)}</span></div>
-                {fr ? <p className="text-right text-xs text-muted">Franchise : pas de TVA facturée</p> : null}
+                <p className="text-right text-xs text-muted">
+                  {fr ? "Franchise : pas de TVA facturée" : "Assujetti à la TVA"} ·{" "}
+                  <Link href="/app/factures/reglages?voir=tva#tva" className="font-medium text-accent hover:text-accent-hover">Modifier</Link>
+                </p>
               </div>
             </div>
           </Card>

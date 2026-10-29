@@ -74,7 +74,8 @@ export default async function PublicInvoice({ params }: { params: Promise<{ toke
               {credited ? <p className="text-muted">Indiquez le montant restant ({eur(due)}) dans votre virement.</p> : null}
             </div>
           ) : null}
-          <PrintButton />
+          <a href={`/facture/${(await params).token}/pdf`} download className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 font-medium text-accent-foreground transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Télécharger le PDF</a>
+          <PrintButton label="Imprimer" />
           <p className="text-xs text-muted">Une question ? Répondez simplement à l&apos;email reçu de {sellerName}.</p>
         </aside>
       </main>
