@@ -45,7 +45,9 @@ export async function GET(req: NextRequest) {
   // Nouveau compte sans page de retour précise (bouton Google de l'inscription ou de la connexion) : c'est un pro
   // qui veut ses apps. Un client qui réserve chez un pro arrive avec une page de retour (son espace ou la page du pro).
   const created = !user;
-  if (!user) [user] = await db.insert(users).values({ email, fullName: info.name?.slice(0, 120) || email, googleId: info.sub, emailVerifiedAt: new Date(), signupIntent: state.s ? "client" : "pro" }).returning();
+  // Parrainage : code du parrain transmis par le bouton Google de l'inscription (?ref=).
+  const [referrer] = !user && state.r ? await db.select({ id: users.id }).from(users).where(eq(users.referralCode, String(state.r))) : [];
+  if (!user) [user] = await db.insert(users).values({ email, fullName: info.name?.slice(0, 120) || email, googleId: info.sub, emailVerifiedAt: new Date(), signupIntent: state.s ? "client" : "pro", referredById: referrer?.id ?? null }).returning();
   if (!user || user.disabledAt) return go("/connexion?google=desactive");
   await linkCustomerRecords(user.id, email);
   await linkInvitations(user.id, email);

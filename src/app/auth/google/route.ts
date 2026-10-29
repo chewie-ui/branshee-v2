@@ -14,5 +14,6 @@ export async function GET(req: NextRequest) {
     if (!s) return NextResponse.redirect(`${appUrl()}/connexion`);
     return NextResponse.redirect(authUrl("calendar", signState({ i: "calendar", u: s.user.id })));
   }
-  return NextResponse.redirect(authUrl("login", signState({ i: "login", s: /^\/(?!\/)[\w\-/?=&%.]*$/.test(suite) ? suite : "" })));
+  const ref = (req.nextUrl.searchParams.get("ref") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 40);
+  return NextResponse.redirect(authUrl("login", signState({ i: "login", s: /^\/(?!\/)[\w\-/?=&%.]*$/.test(suite) ? suite : "", ...(ref ? { r: ref } : {}) })));
 }

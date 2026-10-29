@@ -42,6 +42,7 @@ export const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
 export const NAV_FOOTER: NavItem[] = [
   { href: "/app/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
   { href: "/app/aide", label: "Aide et support", icon: "help" },
+  { href: "/app/parrainage", label: "1 mois offert par invité", icon: "gift", permission: "billing.manage" },
 ];
 
 /**

@@ -281,7 +281,7 @@ export function ReferralCard({ code, link, paying, claimable, claimed, invited }
   const [pending, start] = useTransition();
   return (
     <Card>
-      <CardHeader title="Parrainage" description="3 pros qui s'abonnent grâce à vous = 2 mois offerts." />
+      <CardHeader title="Parrainage" description="1 mois offert pour chaque pro qui s'abonne grâce à vous (après son 2e paiement)." />
       <div className="space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-muted p-1 pl-3">
           <span className="min-w-0 flex-1 truncate text-sm">{link.replace(/^https?:\/\//, "")}</span>

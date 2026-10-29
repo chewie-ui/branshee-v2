@@ -1,5 +1,6 @@
 import { cronAuthorized } from "@/server/cron-auth";
 import { sendInvoiceReminders } from "@/server/invoice-mailing";
+import { reconcileReferrals } from "@/server/billing";
 import { reconcileSkydevUsers, sendCreateBusinessNudges, sendSalesFollowUps, sendLowStockAlerts, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
 
 export const dynamic = "force-dynamic";
@@ -21,5 +22,6 @@ export async function POST(req: Request) {
     salesFollowUps: await run("relances Ventes", sendSalesFollowUps),
     lowStock: await run("stock bas", sendLowStockAlerts),
     invoiceReminders: await run("relances factures", sendInvoiceReminders),
+    referrals: await run("parrainages", reconcileReferrals),
   });
 }

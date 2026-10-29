@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       case "customer.subscription.deleted":
         await syncSubscription(event.data.object);
         break;
+      case "invoice.paid":
       case "invoice.payment_failed": {
         const subId = (event.data.object as unknown as { subscription?: string | null; parent?: { subscription_details?: { subscription?: string } } }).subscription ?? (event.data.object as unknown as { parent?: { subscription_details?: { subscription?: string } } }).parent?.subscription_details?.subscription;
         if (subId) await syncSubscription(await s.subscriptions.retrieve(subId));

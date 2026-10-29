@@ -9,6 +9,7 @@ import { invoiceFooter } from "@/lib/legal";
 import type { BrandId } from "@/lib/brand";
 import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLAN, type ModuleAddon } from "@/lib/skydev-plans";
 import { sendEmail } from "@/server/email/mailer";
+import { REFERRAL_MIN_PAYMENTS } from "@/lib/referral";
 import { emails } from "@/server/email/templates";
 
 /**
@@ -208,7 +209,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
   };
   const [before] = await db.select({ plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   await db.insert(businessPlans).values({ businessId, ...values }).onConflictDoUpdate({ target: businessPlans.businessId, set: values });
-  if (!ended) await countReferral(metaUser(sub.metadata));
+  if (!ended) await countReferral(metaUser(sub.metadata), sub.id).catch(() => {});
   await syncModules(businessId, ended ? new Map() : moduleItems);
   // Passage du gratuit au payant : les rappels SMS (quota inclus dans le forfait) s'allument d'office.
   // Le pro peut toujours les couper dans Réglages › SMS et WhatsApp.
@@ -256,10 +257,27 @@ async function notifyModuleActivated(businessId: string, key: ModuleAddon) {
 
 const rank = (p: Plan) => ({ free: 0, pro: 1, pro_plus: 2 })[p];
 
-/** Premier paiement d'un filleul : il compte pour son parrain, une seule fois. */
-async function countReferral(userId: string | undefined) {
+/**
+ * Parrainage : un filleul compte pour son parrain après son 2e paiement réel (plus de remboursement
+ * opportuniste après le 1er), une seule fois. Appelé à chaque mise à jour de l'abonnement (renouvellements compris).
+ */
+export async function countReferral(userId: string | undefined, subscriptionId: string) {
   if (!userId) return;
-  await db.update(users).set({ referralPaidAt: new Date() }).where(and(eq(users.id, userId), isNull(users.referralPaidAt), sql`${users.referredById} is not null`));
+  const [u] = await db.select({ ref: users.referredById, paid: users.referralPaidAt }).from(users).where(eq(users.id, userId));
+  if (!u?.ref || u.paid) return;
+  const s = stripe();
+  if (!s) return;
+  const list = await s.invoices.list({ subscription: subscriptionId, status: "paid", limit: 10 });
+  const paid = list.data.filter((i) => i.amount_paid > 0 && !(i as unknown as { post_payment_credit_notes_amount?: number }).post_payment_credit_notes_amount).length;
+  if (paid < REFERRAL_MIN_PAYMENTS) return;
+  const done = await db.update(users).set({ referralPaidAt: new Date() }).where(and(eq(users.id, userId), isNull(users.referralPaidAt), sql`${users.referredById} is not null`)).returning({ id: users.id, name: users.fullName });
+  if (!done.length) return;
+  // Le parrain est prévenu : il voit qu'inviter rapporte vraiment.
+  const [parrain] = await db.select({ email: users.email, name: users.fullName }).from(users).where(eq(users.id, u.ref));
+  if (parrain) {
+    const base = (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
+    await sendEmail({ to: parrain.email, ...emails.referralEarned({ firstName: parrain.name.split(" ")[0] ?? "", friend: done[0]!.name, url: `${base}/app/parrainage`, brand: onSkydev() ? "Skydev" : "Branshee" }), template: "referral_earned" }).catch(() => false);
+  }
 }
 
 /**
@@ -343,4 +361,24 @@ export async function vatRate(): Promise<string> {
   }
   const r = await s.taxRates.create({ display_name: "TVA", description: "TVA belge 21 %", percentage: 21, inclusive: true, country: "BE", jurisdiction: "BE", tax_type: "vat", metadata: { branshee: "vat21-incl" } });
   return (vatRateId = r.id);
+}
+
+/**
+ * Tâche quotidienne : filleuls pas encore validés dont l'entreprise a un abonnement en cours
+ * (au cas où un événement Stripe aurait été manqué). Borné, idempotent.
+ */
+export async function reconcileReferrals() {
+  const rows = await db
+    .select({ userId: users.id, sub: businessPlans.stripeSubscriptionId })
+    .from(users)
+    .innerJoin(members, and(eq(members.userId, users.id), eq(members.isOwner, true)))
+    .innerJoin(businessPlans, eq(businessPlans.businessId, members.businessId))
+    .where(and(sql`${users.referredById} is not null`, isNull(users.referralPaidAt), sql`${businessPlans.stripeSubscriptionId} is not null`))
+    .limit(300);
+  let n = 0;
+  for (const r of rows) {
+    await countReferral(r.userId, r.sub!).catch(() => {});
+    n++;
+  }
+  return n;
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight, Gift } from "lucide-react";
 import type { Metadata } from "next";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { featureStatus } from "@/server/features";
@@ -45,6 +47,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <div className="space-y-6">
         {sp.bloque && current.source === "free" ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert"><b>Votre essai gratuit est terminé.</b> Votre espace est en lecture seule : choisissez votre abonnement ci-dessous pour continuer à créer et modifier. Toutes vos données sont conservées.{canManage ? null : " Demandez au responsable de l'entreprise de s'abonner."}</p> : null}
         {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.ok ? "Merci ! Votre abonnement Skydev est actif." : notice.text}</p> : null}
+        {canManage ? (
+          <Link href="/app/parrainage" className="flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-soft p-4 text-sm text-accent-soft-foreground transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-accent">
+            <Gift className="size-5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1"><b>Payez moins en invitant :</b> 1 mois offert pour chaque pro qui s&apos;abonne grâce à vous.</span>
+            <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+          </Link>
+        ) : null}
         <SkydevBillingPanel
           canManage={canManage}
           enabled={billingEnabled("skydev")}

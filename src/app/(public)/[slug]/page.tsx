@@ -33,6 +33,7 @@ import type { Locale } from "@/i18n/config";
 import { I18nProvider } from "@/i18n/client";
 import { resolvePublicLocale } from "@/i18n/server";
 import { LanguageSwitcher } from "@/components/public/language-switcher";
+import { poweredByFor } from "@/server/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
     const site = await publishedSiteFor(b.id);
     if (site) {
       after(() => countSiteVisit(site.id));
-      return <MiniSite site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: b.id, name: b.name, slug: b.slug, noBranding: data.features.noBranding , poweredBy: (await currentBrand()).id === "skydev" ? { name: "Skydev", url: "https://skydev.be" } : undefined }} content={await siteContent(b.id)} />;
+      return <MiniSite site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: b.id, name: b.name, slug: b.slug, noBranding: data.features.noBranding , poweredBy: await poweredByFor(b.id, await currentBrand()) }} content={await siteContent(b.id)} />;
     }
   }
   const session = await getSessionUser();
@@ -149,6 +150,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
 
   // Calendrier intégré sur le site du pro : `?sections=booking,profile,about,hours,reviews` (format de l'ancien Branshee).
   const embedded = typeof sp.sections === "string";
+  const poweredBy = !embedded && !data.features.noBranding ? await poweredByFor(b.id, await currentBrand()) : undefined;
   const embedSecs = new Set((sp.sections ?? "").split(",").map((s) => s.trim()));
   const showProfile = !embedded || embedSecs.has("profile");
   const asideSections = embedded ? data.sections.filter((s) => embedSecs.has(s)) : data.sections;
@@ -205,7 +207,8 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
 
       {!embedded && !data.features.noBranding ? (
         <footer className="pb-8 text-center text-xs text-muted">
-          {t("common.poweredBy")} <span className="font-medium text-text">Branshee</span>
+          {t("common.poweredBy")}{" "}
+          {poweredBy ? <a href={poweredBy.url} className="font-medium text-text hover:underline">{poweredBy.name}</a> : <span className="font-medium text-text">Branshee</span>}
         </footer>
       ) : null}
       <EmbedResize />

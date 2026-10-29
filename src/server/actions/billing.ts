@@ -224,23 +224,41 @@ export async function setModuleAddon(key: string, on: boolean): Promise<Result> 
   return { ok: true, message: on ? `${label} ajouté à votre abonnement. On vous contacte pour le configurer.` : `${label} retiré de votre abonnement.` };
 }
 
-/* ───────── Parrainage : 3 filleuls payants = 2 mois offerts ───────── */
+/* ───────── Parrainage : 1 filleul payant (2 paiements) = 1 mois offert, 12 par an au plus ───────── */
 
-
+/**
+ * Les mois gagnés deviennent un crédit sur le compte Stripe du client (déduit automatiquement des prochaines
+ * factures) : les crédits s'additionnent, contrairement à une réduction qui remplacerait la précédente.
+ * La réservation en base passe avant Stripe : deux clics simultanés ne créditent jamais deux fois.
+ */
 export async function claimReferral(): Promise<Result> {
   const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const st = await referralStatus(ctx.user.id);
-  if (st.claimable <= 0) return { ok: false, error: "Aucun mois à réclamer pour le moment." };
+  if (st.claimable <= 0) return { ok: false, error: "Aucun mois à utiliser pour le moment." };
   const live = await liveSubscription(ctx);
-  if (!live) return { ok: false, error: "Il faut un abonnement payant actif pour utiliser vos mois offerts." };
+  if (!live) return { ok: false, error: "Vos mois offerts s'utilisent sur un abonnement payant : abonnez-vous d'abord, ils seront déduits de vos prochaines factures." };
   const s = stripe()!;
-  const coupon = await s.coupons.create({ percent_off: 100, duration: st.claimable > 1 ? "repeating" : "once", duration_in_months: st.claimable > 1 ? st.claimable : undefined, name: `Parrainage — ${st.claimable} mois offert${st.claimable > 1 ? "s" : ""}` });
-  await s.subscriptions.update(live.id, { discounts: [{ coupon: coupon.id }] });
-  await db.insert(referralCredits).values({ userId: ctx.user.id, monthsClaimed: st.claimed + st.claimable }).onConflictDoUpdate({ target: referralCredits.userId, set: { monthsClaimed: st.claimed + st.claimable } });
+  const preview = await s.invoices.createPreview({ subscription: live.id }).catch(() => null);
+  const yearly = live.items.data.some((i) => i.price.recurring?.interval === "year");
+  const monthly = preview ? Math.round(Math.max(0, preview.total) / (yearly ? 12 : 1)) : 0;
+  if (!monthly) return { ok: false, error: "Le montant de votre abonnement n'a pas pu être calculé. Réessayez dans un instant." };
+  const reserved = st.claimed
+    ? await db.update(referralCredits).set({ monthsClaimed: st.claimed + st.claimable }).where(and(eq(referralCredits.userId, ctx.user.id), eq(referralCredits.monthsClaimed, st.claimed))).returning({ id: referralCredits.userId })
+    : await db.insert(referralCredits).values({ userId: ctx.user.id, monthsClaimed: st.claimable }).onConflictDoNothing().returning({ id: referralCredits.userId });
+  if (!reserved.length) return { ok: false, error: "Vos mois offerts viennent déjà d'être utilisés." };
+  const customer = typeof live.customer === "string" ? live.customer : live.customer.id;
+  try {
+    await s.customers.createBalanceTransaction(customer, { amount: -monthly * st.claimable, currency: "eur", description: `Parrainage : ${st.claimable} mois offert${st.claimable > 1 ? "s" : ""}` });
+  } catch {
+    await db.update(referralCredits).set({ monthsClaimed: st.claimed }).where(eq(referralCredits.userId, ctx.user.id));
+    return { ok: false, error: "Le crédit n'a pas pu être ajouté. Réessayez dans un instant." };
+  }
   await log(ctx, "billing.referral", `${st.claimable} mois offerts par parrainage`);
+  revalidatePath("/app/parrainage");
   revalidatePath("/app/reglages/abonnement");
-  return { ok: true, message: `${st.claimable} mois offert${st.claimable > 1 ? "s" : ""} appliqué${st.claimable > 1 ? "s" : ""} sur vos prochaines factures.` };
+  const euros = new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format((monthly * st.claimable) / 100);
+  return { ok: true, message: `${st.claimable} mois offert${st.claimable > 1 ? "s" : ""} : ${euros} seront déduits de vos prochaines factures.` };
 }
 
 

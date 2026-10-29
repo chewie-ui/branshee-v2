@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, LifeBuoy, LogOut, Menu, Plus, Settings, X } from "lucide-react";
+import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Settings, X } from "lucide-react";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -134,7 +134,14 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
         <ul className="space-y-0.5">
           {footer.map((item) => (
             <li key={item.href}>
-              <NavLink item={item} pathname={pathname} badge={item.href === "/app/aide" ? supportUnread : undefined} />
+              {item.href === "/app/parrainage" ? (
+                <Link href={item.href} aria-current={pathname === item.href ? "page" : undefined} className="mt-1 flex items-center gap-3 rounded-lg bg-accent-soft px-2.5 py-2 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                  <Gift className="size-4 shrink-0" aria-hidden="true" />
+                  {item.label}
+                </Link>
+              ) : (
+                <NavLink item={item} pathname={pathname} badge={item.href === "/app/aide" ? supportUnread : undefined} />
+              )}
             </li>
           ))}
         </ul>
@@ -164,6 +171,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
 export function HomeTopBar({ brand, business, businesses, user, footer, supportUnread = 0 }: Pick<Props, "brand" | "business" | "businesses" | "user" | "footer" | "supportUnread">) {
   const settings = footer.find((i) => i.href === "/app/reglages");
   const help = footer.find((i) => i.href === "/app/aide");
+  const invite = footer.find((i) => i.href === "/app/parrainage");
   const iconBtn = "relative flex size-10 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text sm:w-auto sm:gap-2 sm:px-3 sm:text-sm sm:font-medium";
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface">
@@ -175,6 +183,11 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
           <BusinessSwitcher current={business} all={businesses} brand={brand} />
         </div>
         <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
+          {invite ? (
+            <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Parrainage : 1 mois offert par pro invité">
+              <Gift className="size-4" aria-hidden="true" /><span className="hidden sm:inline">1 mois offert</span>
+            </Link>
+          ) : null}
           {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
           {help ? (
             <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>

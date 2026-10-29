@@ -37,9 +37,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           ))}
         </nav>
       ) : null}
-      {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur {brand.name}.</p> : null}
+      {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur {brand.name}. Créez votre espace entreprise : essai gratuit, sans carte.</p> : null}
       <Card className="mt-6 p-6">
-        {googleConfigured() && !sp.ref ? <GoogleButton suite={sp.suite ?? (client ? "/espace-client" : undefined)} label="S'inscrire avec Google" /> : null}
+        {googleConfigured() ? <GoogleButton suite={sp.ref ? undefined : (sp.suite ?? (client ? "/espace-client" : undefined))} refCode={sp.ref?.slice(0, 40)} label="S'inscrire avec Google" /> : null}
         <RegisterForm client={client} next={sp.suite} refCode={sp.ref?.slice(0, 40)} defaults={{ email: sp.email?.slice(0, 200), fullName: sp.nom?.slice(0, 120) }} />
       </Card>
       <p className="mt-6 text-center text-sm text-muted">

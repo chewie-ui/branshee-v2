@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight, Gift } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TodayPage } from "@/components/app/today";
@@ -58,6 +60,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
         <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps de ${ctx.business.name}.`}</p>
       </div>
+      {ctx.can("billing.manage") ? (
+        <Link href="/app/parrainage" className="group mx-auto mb-8 flex max-w-3xl items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-accent-soft-foreground sm:text-base">Invitez un pro, gagnez 1 mois offert</span>
+            <span className="block text-sm text-accent-soft-foreground/80">Chaque personne qui s&apos;abonne grâce à vous = 1 mois gratuit pour vous.</span>
+          </span>
+          <span className="hidden shrink-0 items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground group-hover:bg-accent-hover sm:inline-flex">Inviter<ArrowRight className="size-4" aria-hidden="true" /></span>
+          <ArrowRight className="size-5 shrink-0 text-accent-soft-foreground sm:hidden" aria-hidden="true" />
+        </Link>
+      ) : null}
       <AppHome apps={apps.filter((a) => !ADMIN_APPS.has(a.id))} activeAddons={active} canEdit={canEdit} admin={admin} />
       {/* Essai ou abonnement absent : le bandeau du haut le dit déjà. */}
       {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? (

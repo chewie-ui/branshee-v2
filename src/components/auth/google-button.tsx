@@ -6,12 +6,12 @@ import { useEmbedded } from "@/lib/use-embedded";
  * « Continuer avec Google » — affiché seulement si Google est configuré sur le serveur,
  * et jamais dans un calendrier intégré sur le site d'un pro (Google refuse de s'ouvrir dans une iframe).
  */
-export function GoogleButton({ suite, label = "Continuer avec Google" }: { suite?: string; label?: string }) {
+export function GoogleButton({ suite, label = "Continuer avec Google", refCode }: { suite?: string; label?: string; refCode?: string }) {
   const embedded = useEmbedded();
   if (embedded) return null;
   return (
     <>
-      <a href={`/auth/google?intention=connexion${suite ? `&suite=${encodeURIComponent(suite)}` : ""}`} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-border-strong bg-surface text-sm font-medium hover:bg-surface-muted">
+      <a href={`/auth/google?intention=connexion${suite ? `&suite=${encodeURIComponent(suite)}` : ""}${refCode ? `&ref=${encodeURIComponent(refCode)}` : ""}`} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-border-strong bg-surface text-sm font-medium hover:bg-surface-muted">
         <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
           <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8Z" />
           <path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9h-4v3.1A12 12 0 0 0 12 24Z" />

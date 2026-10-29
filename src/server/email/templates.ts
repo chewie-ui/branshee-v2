@@ -628,6 +628,19 @@ export const emails = {
       }),
     };
   },
+  /** Parrainage : un filleul a payé, le parrain gagne un mois. */
+  referralEarned(p: { firstName: string; friend: string; url: string; brand: string }) {
+    return {
+      subject: `Vous avez gagné 1 mois offert sur ${p.brand}`,
+      ...render({
+        preheader: `${p.friend} s'est abonné grâce à vous`,
+        title: "1 mois offert pour vous",
+        intro: `Bonjour ${p.firstName},\n\n${p.friend} s'est abonné à ${p.brand} grâce à votre invitation. Merci ! Vous gagnez 1 mois d'abonnement offert : activez-le en un clic depuis votre page Parrainage.\n\nChaque pro que vous invitez et qui s'abonne vous rapporte 1 mois de plus.`,
+        cta: { label: "Utiliser mon mois offert", url: p.url },
+        footer: p.brand,
+      }),
+    };
+  },
   /** Relance automatique d'une facture échue (ton courtois, de plus en plus net). */
   invoiceReminder(p: { sellerName: string; number: string; amount: string; due: string; url: string; nth: number }) {
     const intro =
