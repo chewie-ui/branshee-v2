@@ -39,8 +39,9 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
         : [{ label: null, items: [home] }, { label: "Vos apps", items: apps.filter((a) => a.pinned !== false && !settings.has(a.id)).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) }];
   const activeHref = app && app.id !== "rdv" ? activeNavHref(app.nav, pathname) : undefined;
 
-  // Accueil : le lanceur d'apps prend toute la largeur, avec une barre en haut au lieu de la barre latérale.
-  if (pathname === "/app")
+  // Accueil et pages hors app (questionnaire de départ, compte, aide, parrainage) : pleine largeur, barre en haut
+  // au lieu de la barre latérale.
+  if (pathname === "/app" || !app)
     return (
       <div className="min-h-dvh">
         <HomeTopBar brand="skydev" business={business} businesses={businesses} user={user} footer={rdv.footer} supportUnread={badges["/app/aide"] ?? 0} />
