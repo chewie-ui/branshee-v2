@@ -57,6 +57,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const banners = (
     <>
+      {ctx.user.isDemo ? (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent-soft p-4 sm:flex-row sm:items-center" role="status">
+          <p className="min-w-0 flex-1 text-sm text-accent-soft-foreground"><b>Mode démo.</b> Explorez toutes les apps avec un cabinet fictif. Rien ne s&apos;enregistre : créez votre compte pour commencer avec vos données, gratuitement pendant 30 jours.</p>
+          <a href="/inscription?demo=1" className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">Créer mon compte gratuit</a>
+        </div>
+      ) : null}
       {!ctx.impersonating ? <SupervisionPrompt /> : null}
       <AdminMessages messages={adminMessages} />
       <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} />

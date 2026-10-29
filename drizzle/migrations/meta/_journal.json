@@ -330,6 +330,13 @@
       "when": 1793281250331,
       "tag": "0046_health",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793282010630,
+      "tag": "0047_demo",
+      "breakpoints": true
     }
   ]
 }

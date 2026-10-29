@@ -26,6 +26,8 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
               <Link className="btn btn-primary btn-sm" href="/app">Mon espace</Link>
             ) : (
               <>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
+                <a className="nav-login nav-demo" href="/demo">Voir la démo</a>
                 <Link className="nav-login" href="/connexion">Se connecter</Link>
                 <Link className="btn btn-primary btn-sm" href="/inscription"><span className="lg-only">Créer mon compte</span><span className="sm-only">S&apos;inscrire</span></Link>
               </>

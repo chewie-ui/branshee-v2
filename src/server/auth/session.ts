@@ -1,6 +1,7 @@
 import "server-only";
+import { redirect } from "next/navigation";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { and, eq, gt, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
@@ -47,6 +48,7 @@ export async function getSessionUser(): Promise<{ user: typeof users.$inferSelec
     .where(and(eq(sessions.tokenHash, sha256(token)), eq(sessions.kind, "web"), gt(sessions.expiresAt, new Date())))
     .limit(1);
   if (!row || row.user.disabledAt) return null;
+  if (row.user.isDemo) await guardDemo();
   return row;
 }
 
@@ -134,4 +136,18 @@ export async function stopImpersonation() {
 /** Le pro met fin à la supervision : toutes les sessions supervisées de son compte sont fermées. */
 export async function endImpersonationsFor(userId: string) {
   await db.delete(sessions).where(and(eq(sessions.userId, userId), isNotNull(sessions.impersonatedById)));
+}
+
+/**
+ * Démo publique : on regarde tout, on n'enregistre rien. Toute écriture (action, formulaire, API) renvoie
+ * vers l'inscription, sauf la connexion et l'inscription elles-mêmes (pour passer à un vrai compte).
+ * `x-method` et `x-pathname` sont toujours réécrits par le proxy : le navigateur ne peut pas les choisir.
+ */
+async function guardDemo() {
+  const h = await headers();
+  const method = (h.get("x-method") ?? "GET").toUpperCase();
+  if (method === "GET" || method === "HEAD") return;
+  const path = h.get("x-pathname") ?? "";
+  if (/^\/(connexion|inscription|mot-de-passe|verifier-email|demo)(\/|$)/.test(path)) return;
+  redirect("/inscription?demo=1");
 }

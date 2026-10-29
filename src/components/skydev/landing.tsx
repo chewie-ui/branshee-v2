@@ -2,7 +2,7 @@
 
 import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, FileText, Gift, Globe, Home, LayoutTemplate, Mail, MapPin, Phone, ShieldCheck, Smartphone, Store, UsersRound } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, Eye, FileText, Gift, Globe, Home, LayoutTemplate, Mail, MapPin, Phone, ShieldCheck, Smartphone, Store, UsersRound } from "lucide-react";
 import { APPS, CATEGORY_LABEL, appById, type AppCategory, type AppId } from "@/lib/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { sendContact, type ContactState } from "@/server/actions/contact";
@@ -79,7 +79,14 @@ export function SkydevLanding() {
           <div className="hero-txt">
             <span className="pill"><b>{CATALOG.length} apps</b>Un seul abonnement, tout est relié</span>
             <h1>Tout le logiciel de <span className="a">votre entreprise.</span></h1>
-            <p className="lead">Rendez-vous, factures, site web, caisse, boutique, stock, planning, fidélité, tâches… {CATALOG.length} apps qui partagent vos clients et votre agenda. Et ce qui manque, on le construit sur mesure.</p>
+            <p className="lead lead-tight">Rendez-vous, factures, site web, caisse, boutique, stock, planning, fidélité, tâches… {CATALOG.length} apps qui partagent vos clients et votre agenda. Et ce qui manque, on le construit sur mesure.</p>
+          </div>
+
+          <div className="hero-cta">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
+            <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
+            <Link className="btn btn-ghost btn-lg" href="/inscription">Créer mon compte gratuit</Link>
+            <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif avec ses rendez-vous, factures, clients et stock. Rien à remplir.</p>
           </div>
 
           <div className="builder">
@@ -124,8 +131,9 @@ export function SkydevLanding() {
             </div>
 
             <div className="builder-cta">
-              <Link className="btn btn-primary" href="/inscription">Créer mon compte <ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
-              <a className="btn btn-ghost" href="#contact">Recevoir un devis</a>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
+              <a className="btn btn-primary" href="/demo">Essayer ces apps dans la démo <ArrowRight className="ico ico-sm" aria-hidden="true" /></a>
+              <Link className="btn btn-ghost" href="/inscription">Créer mon compte</Link>
             </div>
           </div>
         </div>

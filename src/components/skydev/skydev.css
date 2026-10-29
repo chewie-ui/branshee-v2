@@ -266,3 +266,12 @@
 .sky .lk { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
 .sky .lk h3 { font-size: 18px; letter-spacing: -.02em; font-weight: 700; margin: 16px 0 0; }
 .sky .lk p { margin: 6px 0 0; font-size: 15px; color: var(--text-muted); }
+/* Appel à la démo, juste sous le titre */
+.sky .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 28px auto 0; max-width: 640px; }
+.sky .btn-lg { min-height: 52px; padding: 0 22px; font-size: 16px; }
+.sky .hero-note { flex-basis: 100%; text-align: center; margin: 4px 0 0; font-size: 14px; color: var(--text-muted); }
+.sky .nav-demo { color: var(--accent); font-weight: 600; }
+@media (max-width: 520px) {
+.sky .hero-cta .btn { width: 100%; } }
+@media (max-width: 639px) {
+.sky .nav-demo { display: none; } }

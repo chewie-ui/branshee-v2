@@ -64,6 +64,8 @@ export const businesses = pgTable(
      * Checklist « Bien démarrer » : lien partagé, checklist masquée.
      * Skydev : questionnaire de départ (taille d'équipe, besoins) et apps rangées hors de l'accueil.
      */
+    /** Entreprise de démonstration (données fictives, réinitialisées chaque jour). */
+    isDemo: boolean("is_demo").notNull().default(false),
     onboarding: jsonb("onboarding").$type<{ linkSharedAt?: string; dismissedAt?: string; appsSetupAt?: string; teamSize?: string; needs?: string[]; hiddenApps?: string[] }>().notNull().default({}),
 
     /**

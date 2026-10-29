@@ -13,12 +13,14 @@ import { currentBrand } from "@/server/brand";
 export const metadata: Metadata = { title: "Créer un compte" };
 export const dynamic = "force-dynamic";
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ client?: string; suite?: string; email?: string; nom?: string; ref?: string }> }) {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ client?: string; suite?: string; email?: string; nom?: string; ref?: string; demo?: string }> }) {
   const gate = await featureStatus("register");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const sp = await searchParams;
   const client = sp.client === "1";
-  if (await getSessionUser()) redirect(client ? "/espace-client" : "/app");
+  const session = await getSessionUser();
+  // Visiteur de la démo : il peut créer son vrai compte (la démo ne s'enregistre pas).
+  if (session && !session.user.isDemo) redirect(client ? "/espace-client" : "/app");
   const brand = await currentBrand();
   return (
     <>
@@ -37,6 +39,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           ))}
         </nav>
       ) : null}
+      {sp.demo ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground" role="status">Dans la démo, rien ne s&apos;enregistre. Créez votre compte gratuit pour commencer avec vos propres données : 30 jours d&apos;essai, sans carte.</p> : null}
       {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur {brand.name}. Créez votre espace entreprise : essai gratuit, sans carte.</p> : null}
       <Card className="mt-6 p-6">
         {googleConfigured() ? <GoogleButton suite={sp.ref ? undefined : (sp.suite ?? (client ? "/espace-client" : undefined))} refCode={sp.ref?.slice(0, 40)} label="S'inscrire avec Google" /> : null}

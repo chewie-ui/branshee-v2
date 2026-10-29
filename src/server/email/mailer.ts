@@ -72,7 +72,9 @@ export async function sendEmail(input: OutgoingEmail): Promise<boolean> {
   const staging = isStaging();
   const redirect = staging ? process.env.STAGING_EMAIL_TO?.trim() : null;
   try {
-    if (transport && (!staging || redirect)) {
+    // Compte de démonstration : adresse fictive, rien ne part.
+    if (/@demo\.skydev\.be$/i.test(mail.to)) status = "logged";
+    else if (transport && (!staging || redirect)) {
       await transport.sendMail({ from, to: redirect || mail.to, subject: redirect ? `[TEST → ${mail.to}] ${mail.subject}` : mail.subject, html: mail.html, text: mail.text, replyTo: redirect ? undefined : (mail.replyTo ?? undefined), headers: mail.headers });
       status = "sent";
     } else {

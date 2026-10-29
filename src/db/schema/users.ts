@@ -37,6 +37,8 @@ export const users = pgTable(
     sessionVersion: integer("session_version").notNull().default(0),
 
     isSuperadmin: boolean("is_superadmin").notNull().default(false),
+    /** Compte de démonstration partagé (skydev.be/demo) : tout est en lecture, rien ne s'enregistre. */
+    isDemo: boolean("is_demo").notNull().default(false),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
 

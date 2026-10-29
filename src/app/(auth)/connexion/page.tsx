@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const { suite, google, reinitialise } = await searchParams;
   const s = await getSessionUser();
-  if (s) redirect(internal(suite) ?? ((await isPro(s.user.id)) ? "/app" : "/espace-client"));
+  if (s && !s.user.isDemo) redirect(internal(suite) ?? ((await isPro(s.user.id)) ? "/app" : "/espace-client"));
   const clientFlow = !!suite && !suite.startsWith("/app");
   return (
     <>

@@ -1,5 +1,6 @@
 "use server";
 
+import { isDemoBusiness } from "@/server/demo-flag";
 import { LOCALES } from "@/i18n/config";
 
 import { headers } from "next/headers";
@@ -94,6 +95,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
   const data = await getPublicBusiness(v.slug);
   if (!data || !data.settings) return { ok: false, error: "Établissement introuvable." };
   if (data.closed) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
+  if (await isDemoBusiness(data.business.id)) return { ok: false, error: "Ceci est une démonstration : la réservation n'est pas enregistrée." };
   const service = data.services.find((s) => s.id === v.serviceId);
   if (!service) return { ok: false, error: "Cette prestation n'est plus disponible." };
 

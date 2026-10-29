@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   if (intent === "calendar") {
     const s = await getSessionUser();
     if (!s) return NextResponse.redirect(`${appUrl()}/connexion`);
+    if (s.user.isDemo) return NextResponse.redirect(`${appUrl()}/inscription?demo=1`);
     return NextResponse.redirect(authUrl("calendar", signState({ i: "calendar", u: s.user.id })));
   }
   const ref = (req.nextUrl.searchParams.get("ref") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 40);
