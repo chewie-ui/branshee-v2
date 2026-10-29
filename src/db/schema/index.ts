@@ -24,3 +24,4 @@ export * from "./assistant";
 export * from "./invoice-mailing";
 export * from "./custom-work";
 export * from "./todos";
+export * from "./health";

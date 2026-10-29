@@ -1,4 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
+import { recordError, trackJob } from "@/server/health";
 import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs";
 import { processCampaignQueue } from "@/server/marketing";
 import { expireUnpaidShopOrders } from "@/server/shop";
@@ -13,11 +14,18 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!cronAuthorized(req)) return Response.json({ error: "Non autorisé" }, { status: 401 });
-  const result = await sendDueReminders();
-  const published = await publishScheduledArticles().catch((e) => (console.error("[cron] blog :", e), 0));
-  const reviewRequests = await sendAutoReviewRequests().catch((e) => (console.error("[cron] avis :", e), -1));
-  const campaignEmails = await processCampaignQueue().catch((e) => (console.error("[cron] campagnes :", e), -1));
-  const shopExpired = await expireUnpaidShopOrders().catch((e) => (console.error("[cron] boutique :", e), -1));
-  const loyaltyStamps = await autoStamps().catch((e) => (console.error("[cron] fidélité :", e), -1));
-  return Response.json({ ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps });
+  return Response.json(await trackJob("reminders", async () => {
+    const note = (label: string) => async (e: unknown) => {
+      console.error(`[cron] ${label} :`, e);
+      await recordError({ source: "cron", message: `${label} : ${e instanceof Error ? e.message : String(e)}`, detail: e instanceof Error ? e.stack : null, path: "/api/cron/reminders" });
+      return -1;
+    };
+    const result = await sendDueReminders();
+    const published = await publishScheduledArticles().catch(note("blog"));
+    const reviewRequests = await sendAutoReviewRequests().catch(note("avis"));
+    const campaignEmails = await processCampaignQueue().catch(note("campagnes"));
+    const shopExpired = await expireUnpaidShopOrders().catch(note("boutique"));
+    const loyaltyStamps = await autoStamps().catch(note("fidélité"));
+    return { ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps };
+  }));
 }

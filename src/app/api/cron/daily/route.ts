@@ -1,4 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
+import { recordError, trackJob } from "@/server/health";
 import { sendInvoiceReminders } from "@/server/invoice-mailing";
 import { reconcileReferrals } from "@/server/billing";
 import { reconcileSkydevUsers, sendCreateBusinessNudges, sendSalesFollowUps, sendLowStockAlerts, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
@@ -12,8 +13,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!cronAuthorized(req)) return Response.json({ error: "Non autorisé" }, { status: 401 });
-  const run = async (label: string, fn: () => Promise<number>) => fn().catch((e) => (console.error(`[cron] ${label} :`, e), -1));
-  return Response.json({
+  const run = async (label: string, fn: () => Promise<number>) => fn().catch(async (e) => {
+    console.error(`[cron] ${label} :`, e);
+    await recordError({ source: "cron", message: `${label} : ${e instanceof Error ? e.message : String(e)}`, detail: e instanceof Error ? e.stack : null, path: "/api/cron/daily" });
+    return -1;
+  });
+  return Response.json(await trackJob("daily", async () => ({
     onboardingNudges: await run("relances", sendOnboardingNudges),
     createBusinessNudges: await run("créez votre établissement", sendCreateBusinessNudges),
     grantReminders: await run("fin d'accès offert", sendGrantExpiryReminders),
@@ -23,5 +28,5 @@ export async function POST(req: Request) {
     lowStock: await run("stock bas", sendLowStockAlerts),
     invoiceReminders: await run("relances factures", sendInvoiceReminders),
     referrals: await run("parrainages", reconcileReferrals),
-  });
+  })));
 }

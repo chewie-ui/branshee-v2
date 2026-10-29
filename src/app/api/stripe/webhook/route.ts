@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { completeCheckout, syncSubscription } from "@/server/billing";
 import { stripe } from "@/server/payments";
+import { recordError } from "@/server/health";
 import { completeSmsTopup } from "@/server/sms";
 import { completeShopPayment, expireShopCheckout } from "@/server/shop";
 
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     console.error("[stripe webhook]", event.type, e);
+    await recordError({ source: "stripe", message: `${event.type} : ${e instanceof Error ? e.message : String(e)}`, detail: e instanceof Error ? e.stack : null, path: "/api/stripe/webhook" });
     return new Response("Erreur", { status: 500 });
   }
   return Response.json({ received: true });
