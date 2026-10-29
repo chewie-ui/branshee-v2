@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { TZDate } from "@date-fns/tz";
 import { addDays, startOfWeek } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appointments, businessPlans, businesses, customerNotes, customers, invoiceSettings, loyaltyCards, loyaltySettings, members, notificationSettings,
@@ -31,14 +31,23 @@ async function demoUser() {
   return again!.id;
 }
 
-/** L'entreprise de démo du jour (créée si besoin). */
+/** L'entreprise de démo du jour (créée si besoin). Verrou : deux visiteurs simultanés n'en créent qu'une. */
 export async function ensureDemo() {
   const userId = await demoUser();
-  const [b] = await db.select({ id: businesses.id, createdAt: businesses.createdAt }).from(businesses).where(and(eq(businesses.ownerId, userId), eq(businesses.isDemo, true)));
-  const fresh = b && new TZDate(b.createdAt, TZ).toDateString() === new TZDate(new Date(), TZ).toDateString();
-  if (b && fresh) return { userId, businessId: b.id };
-  if (b) await db.delete(businesses).where(eq(businesses.id, b.id));
-  return { userId, businessId: await seed(userId) };
+  const today = new TZDate(new Date(), TZ).toDateString();
+  const current = async () => {
+    const list = await db.select({ id: businesses.id, createdAt: businesses.createdAt }).from(businesses).where(and(eq(businesses.ownerId, userId), eq(businesses.isDemo, true))).orderBy(desc(businesses.createdAt));
+    const fresh = list.find((b) => new TZDate(b.createdAt, TZ).toDateString() === today);
+    return { fresh, stale: list.filter((b) => b !== fresh) };
+  };
+  const first = await current();
+  if (first.fresh && !first.stale.length) return { userId, businessId: first.fresh.id };
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('skydev-demo'))`);
+    const { fresh, stale } = await current();
+    for (const b of stale) await db.delete(businesses).where(eq(businesses.id, b.id));
+    return { userId, businessId: fresh ? fresh.id : await seed(userId) };
+  });
 }
 
 async function seed(userId: string) {
