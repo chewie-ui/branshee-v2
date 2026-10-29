@@ -8,7 +8,8 @@ import { isNoise, normalizeMessage, routeOf } from "@/lib/health";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 
-const alertTo = () => process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be";
+// Alertes techniques : adresse dédiée si configurée (HEALTH_ALERT_EMAIL), sinon la boîte de contact.
+const alertTo = () => process.env.HEALTH_ALERT_EMAIL || process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be";
 
 /**
  * Note une erreur de la plateforme (regroupée par empreinte). Nouvelle erreur, ou erreur résolue qui
@@ -34,7 +35,7 @@ export async function recordError(e: { source: "server" | "stripe" | "cron"; mes
     const base = (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
     await sendEmail({
       to: alertTo(),
-      ...emails.skydevTeamAlert({ subject: `Erreur ${e.source === "stripe" ? "Stripe" : e.source === "cron" ? "tâche automatique" : "du site"} : ${e.message.slice(0, 80)}`, title: "Nouvelle erreur sur la plateforme", intro: `Une erreur vient de se produire${row.count > 1 ? ` (${row.count} fois au total)` : ""}. Détails et suivi dans Admin › Santé : ${base}/admin/sante`, details: [{ label: "Où", value: route ?? "—" }, { label: "Message", value: e.message.slice(0, 300) }] }),
+      ...emails.skydevTeamAlert({ subject: `Erreur ${e.source === "stripe" ? "Stripe" : e.source === "cron" ? "tâche automatique" : "du site"} : ${e.message.slice(0, 80)}`, title: "Nouvelle erreur sur la plateforme", intro: `Une erreur vient de se produire${row.count > 1 ? ` (${row.count} fois au total)` : ""}. Détails et suivi dans Admin › Santé : ${base}/admin/sante`, details: [{ label: "Où", value: route ?? "—" }, { label: "Message", value: e.message.slice(0, 300) }], note: "Alerte technique automatique : aucun client n'a reçu ce message." }),
       template: "health_alert",
     }).catch(() => {});
   } catch {

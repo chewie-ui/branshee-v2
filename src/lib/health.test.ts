@@ -8,6 +8,7 @@ test("regroupement des erreurs", () => {
   assert.equal(routeOf("/facture/abcdefghijklmnopqrstuv/pdf"), "/facture/<jeton>/pdf");
   assert.ok(isNoise('The Server Reference ID did not match the expected format'));
   assert.ok(!isNoise("relation \"foo\" does not exist"));
+  assert.ok(isNoise("Failed to parse body as FormData."), "robot qui envoie n'importe quoi sur la page d'accueil");
 });
 
 test("tâches en retard", () => {

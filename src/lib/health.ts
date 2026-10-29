@@ -13,7 +13,7 @@ export function normalizeMessage(m: string) {
 
 /** Bruit connu, sans action possible (ancien onglet ouvert pendant une mise à jour, robots). */
 export function isNoise(m: string) {
-  return /Server Reference ID|failed-to-find-server-action|Failed to find Server Action|NEXT_NOT_FOUND|NEXT_REDIRECT|aborted|ECONNRESET/i.test(m);
+  return /Server Reference ID|failed-to-find-server-action|Failed to find Server Action|NEXT_NOT_FOUND|NEXT_REDIRECT|aborted|ECONNRESET|Failed to parse body as FormData|Unexpected end of form|Invalid Server Actions? request|Missing .?next-action|Unexpected token .* in JSON|body (stream )?already|request body too large|Body exceeded/i.test(m);
 }
 
 /** Chemin sans identifiants : /app/clients/<id> au lieu d'un chemin par client. */
