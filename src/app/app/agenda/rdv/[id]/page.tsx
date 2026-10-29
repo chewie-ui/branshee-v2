@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, BadgeCheck, Clock, Mail, MessageSquare, Phone, UserRound } from "lucide-react";
-import { and, asc, eq } from "drizzle-orm";
+import { ArrowLeft, BadgeCheck, Clock, FolderOpen, Mail, MessageSquare, Phone, Plus, UserRound } from "lucide-react";
+import { and, asc, desc, eq } from "drizzle-orm";
+import { decrypt } from "@/lib/field-crypto";
 import { format } from "date-fns";
 import { z } from "zod";
 import { db } from "@/db";
-import { appointmentPayments, appointments, customers, members, services, users } from "@/db/schema";
+import { appointmentPayments, appointments, customerNotes, customers, members, services, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";
 import { ClientContactActions, PaymentForm, RescheduleForm, RestoreButton } from "@/components/agenda/appointment-editors";
 import { RequestActions } from "@/components/app/request-actions";
@@ -49,6 +50,14 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
   const week = format(zoned(a.startsAt, tz), "yyyy-MM-dd");
   const term = clientWord(ctx.business.businessType);
   const canManage = ctx.can("appointments.manage");
+  // Dossier du client : ses dernières notes, ouvrables d'un clic depuis le rendez-vous.
+  const canFile = !!a.customerId && ctx.can("customers.view") && ctx.canApp("clients");
+  const lastNotes = canFile
+    ? await db.select({ id: customerNotes.id, date: customerNotes.date, title: customerNotes.title, noteEnc: customerNotes.noteEnc }).from(customerNotes).innerJoin(customers, eq(customers.id, customerNotes.customerId)).where(and(eq(customerNotes.customerId, a.customerId!), eq(customers.businessId, ctx.business.id))).orderBy(desc(customerNotes.date), desc(customerNotes.createdAt)).limit(3)
+    : [];
+  const snippet = (enc: string | null) => {
+    try { const t = (enc ? decrypt(enc) : "") ?? ""; return t.length > 160 ? `${t.slice(0, 160)}…` : t; } catch { return ""; }
+  };
   const team = canManage ? await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"))).orderBy(asc(members.createdAt)) : [];
   const durationMin = Math.round((a.endsAt.getTime() - a.startsAt.getTime()) / 60000);
 
@@ -80,6 +89,33 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
           </Card>
         ) : null}
 
+        {canFile ? (
+          <Card>
+            <CardHeader title={`Dossier du ${term}`} />
+            {lastNotes.length ? (
+              <ul className="divide-y divide-border">
+                {lastNotes.map((n) => (
+                  <li key={n.id}>
+                    <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="block px-5 py-3 text-sm hover:bg-surface-muted/60">
+                      <span className="flex flex-wrap items-baseline gap-x-2"><span className="font-medium">{n.title || "Note"}</span><span className="text-xs text-muted">{formatDay(new Date(`${n.date}T12:00:00Z`), tz, "d MMMM yyyy")}</span></span>
+                      {snippet(n.noteEnc) ? <span className="mt-0.5 block whitespace-pre-line text-muted">{snippet(n.noteEnc)}</span> : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm text-muted">
+                <span>Aucune note dans le dossier pour l&apos;instant.</span>
+                <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Plus className="size-4" aria-hidden="true" />Ajouter une note</Link>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 border-t border-border px-5 py-4">
+              <ButtonLink href={`/app/clients/${a.customerId}?onglet=dossier`} size="sm" icon={<FolderOpen className="size-4" aria-hidden="true" />}>Ouvrir le dossier</ButtonLink>
+              <ButtonLink href={`/app/clients/${a.customerId}`} size="sm" variant="secondary" icon={<UserRound className="size-4" aria-hidden="true" />}>Fiche du {term}</ButtonLink>
+            </div>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Détails" />
           <dl className="space-y-3 p-5 text-sm">
@@ -88,7 +124,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-muted first-letter:uppercase">{term}</dt>
               <dd className="min-w-0 space-y-1">
-                {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName}</Link> : <p>{a.contactName}</p>}
+                {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName || "Voir la fiche"}</Link> : <p>{a.contactName}</p>}
                 {a.contactPhone ? <a href={`tel:${a.contactPhone}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Phone className="size-4" aria-hidden="true" />{a.contactPhone}</a> : null}
                 {a.contactEmail ? <a href={`mailto:${a.contactEmail}`} className="flex items-center gap-1.5 break-all text-accent hover:text-accent-hover"><Mail className="size-4 shrink-0" aria-hidden="true" />{a.contactEmail}</a> : null}
                 {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte {(await currentBrand()).name} : {account.email}</p> : null}
