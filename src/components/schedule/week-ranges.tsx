@@ -25,6 +25,7 @@ export function WeekRanges({
   offLabel = "Fermé",
   defaultRange = { start: "09:00", end: "18:00" },
   className,
+  bounds = null,
 }: {
   value: Week;
   onChange: (week: Week) => void;
@@ -32,11 +33,16 @@ export function WeekRanges({
   offLabel?: string;
   defaultRange?: Range;
   className?: string;
+  /** Horaires d'ouverture : jours fermés bloqués, heures limitées à l'ouverture. */
+  bounds?: Partial<Week> | null;
 }) {
   const set = (wd: number, ranges: Range[]) => onChange({ ...value, [wd]: ranges });
   const copyToWeekdays = (wd: number) => {
     const src = value[wd] ?? [];
-    onChange({ ...value, 1: [...src], 2: [...src], 3: [...src], 4: [...src], 5: [...src] });
+    const next = { ...value };
+    // Jours fermés (horaires d'ouverture) : laissés fermés.
+    for (const d of [1, 2, 3, 4, 5]) if (!bounds || (bounds[d] ?? []).length) next[d] = src.map((r) => ({ ...r }));
+    onChange(next);
   };
 
   return (
@@ -44,6 +50,11 @@ export function WeekRanges({
       {WEEK_DAYS.map(({ wd, label }) => {
         const ranges = value[wd] ?? [];
         const open = ranges.length > 0;
+        const dayBounds = bounds ? (bounds[wd] ?? []) : null;
+        const closed = !!dayBounds && dayBounds.length === 0;
+        const min = dayBounds?.[0]?.start;
+        const max = dayBounds?.at(-1)?.end;
+        const clamp = (t: string) => (min && t && t < min ? min : max && t && t > max ? max : t);
         return (
           <li key={wd} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start">
             <div className="flex w-40 shrink-0 items-center gap-3 pt-1.5">
@@ -51,19 +62,23 @@ export function WeekRanges({
                 type="button"
                 role="switch"
                 aria-checked={open}
-                aria-label={`${label} : ${open ? "activé" : offLabel.toLowerCase()}`}
-                disabled={disabled}
-                onClick={() => set(wd, open ? [] : [defaultRange])}
+                aria-label={`${label} : ${closed ? "fermé" : open ? "activé" : offLabel.toLowerCase()}`}
+                disabled={disabled || (closed && !open)}
+                title={closed ? "Vous êtes fermé ce jour-là (horaires d'ouverture)" : undefined}
+                onClick={() => set(wd, open ? [] : dayBounds?.length ? dayBounds.map((r) => ({ ...r })) : [defaultRange])}
                 className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50", open ? "bg-accent" : "bg-border-strong")}
               >
                 <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", open && "translate-x-4")} />
               </button>
-              <span className="text-sm font-medium">{label}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{label}</span>
+                {dayBounds ? <span className="block text-xs text-muted">{closed ? "Fermé" : dayBounds.map((r) => `${r.start}–${r.end}`).join(", ")}</span> : null}
+              </span>
             </div>
 
             <div className="flex-1">
               {!open ? (
-                <p className="pt-1.5 text-sm text-muted">{offLabel}</p>
+                <p className="pt-1.5 text-sm text-muted">{closed ? "Vous êtes fermé ce jour-là" : offLabel}</p>
               ) : (
                 <div className="space-y-2">
                   {ranges.map((r, i) => (
@@ -72,9 +87,12 @@ export function WeekRanges({
                         type="time"
                         step={300}
                         value={r.start}
+                        min={min}
+                        max={max}
                         disabled={disabled}
                         aria-label={`${label}, plage ${i + 1}, début`}
                         onChange={(e) => set(wd, ranges.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))}
+                        onBlur={(e) => { const c = clamp(e.target.value); if (c !== e.target.value) set(wd, ranges.map((x, j) => (j === i ? { ...x, start: c } : x))); }}
                         className="h-9 w-32 rounded-lg border border-border-strong bg-surface px-2 text-sm tabular-nums focus-visible:border-accent"
                       />
                       <span className="text-sm text-muted">à</span>
@@ -82,9 +100,12 @@ export function WeekRanges({
                         type="time"
                         step={300}
                         value={r.end}
+                        min={min}
+                        max={max}
                         disabled={disabled}
                         aria-label={`${label}, plage ${i + 1}, fin`}
                         onChange={(e) => set(wd, ranges.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))}
+                        onBlur={(e) => { const c = clamp(e.target.value); if (c !== e.target.value) set(wd, ranges.map((x, j) => (j === i ? { ...x, end: c } : x))); }}
                         className="h-9 w-32 rounded-lg border border-border-strong bg-surface px-2 text-sm tabular-nums focus-visible:border-accent"
                       />
                       {!disabled ? (
@@ -103,7 +124,7 @@ export function WeekRanges({
                     <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
                       <button
                         type="button"
-                        onClick={() => set(wd, [...ranges, { start: ranges.at(-1)?.end ?? defaultRange.start, end: defaultRange.end }])}
+                        onClick={() => set(wd, [...ranges, { start: ranges.at(-1)?.end ?? defaultRange.start, end: max ?? defaultRange.end }])}
                         disabled={ranges.length >= 6}
                         className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >

@@ -94,6 +94,7 @@ const es: Messages = {
     confirmGroup: "Confirmar la inscripción",
     confirm: "Confirmar la cita",
     request: "Enviar la solicitud",
+    addAnother: "Añadir otra cita", cartTitle: "Tus citas", removeItem: "Quitar esta cita", confirmAll: "Reservar las {n} citas", multiDone: "{n} citas reservadas", multiPartial: "Estas citas no se han podido reservar:", seeAppt: "Ver", emailEach: "Recibirás un correo de confirmación por cada cita.", alreadyInCart: "Esta franja ya está en tu selección.",
     willConfirm: "El establecimiento confirmará su cita.",
     ruleHalf: "Si cancela con menos de 24 h de antelación, se cobrará el 50 % del precio. Una ausencia sin aviso puede cobrarse.",
     ruleFull: "Cancelación con menos de 24 h: 50 % del precio; con menos de 12 h: 100 %. Una ausencia sin aviso puede cobrarse.",

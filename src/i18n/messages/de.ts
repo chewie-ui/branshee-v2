@@ -94,6 +94,7 @@ const de: Messages = {
     confirmGroup: "Anmeldung bestätigen",
     confirm: "Termin bestätigen",
     request: "Anfrage senden",
+    addAnother: "Weiteren Termin hinzufügen", cartTitle: "Ihre Termine", removeItem: "Diesen Termin entfernen", confirmAll: "Die {n} Termine buchen", multiDone: "{n} Termine gebucht", multiPartial: "Diese Termine konnten nicht gebucht werden:", seeAppt: "Ansehen", emailEach: "Sie erhalten für jeden Termin eine Bestätigungs-E-Mail.", alreadyInCart: "Dieser Termin ist bereits in Ihrer Auswahl.",
     willConfirm: "Der Betrieb wird Ihren Termin bestätigen.",
     ruleHalf: "Bei einer Stornierung weniger als 24 Stunden vorher werden 50 % des Preises berechnet. Ein unentschuldigtes Fernbleiben kann berechnet werden.",
     ruleFull: "Stornierung weniger als 24 Stunden vorher: 50 % des Preises; weniger als 12 Stunden vorher: 100 %. Ein unentschuldigtes Fernbleiben kann berechnet werden.",

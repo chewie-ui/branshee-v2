@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { and, asc, count, eq, inArray, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
+import { openingBounds } from "@/server/opening";
+import { outsideBounds, type Week } from "@/lib/opening";
 import { activityLogs, bookingPageSettings, members, serviceCategories, serviceHours, serviceMembers, services } from "@/db/schema";
 import { weekError, weekSchema } from "@/lib/week-schema";
 import { serviceLimitReached } from "@/server/plan";
@@ -86,6 +88,9 @@ export async function saveService(serviceId: string | null, _prev: ServiceFormSt
   if (!hours.success) return { error: "Vérifiez les champs indiqués.", fieldErrors: { hours: weekError(hours.error.issues) } };
   const hourRows = v.kind === "individual" ? Object.entries(hours.data).flatMap(([wd, ranges]) => ranges.map((r) => ({ weekday: Number(wd), startTime: r.start, endTime: r.end }))) : [];
   if (formData.get("hoursMode") !== null && hourRows.length === 0 && String(formData.get("hours")) !== "{}") return { error: "Vérifiez les champs indiqués.", fieldErrors: { hours: "Activez au moins un jour." } };
+  // Jamais en dehors des horaires d'ouverture (jour fermé, avant l'ouverture, après la fermeture).
+  const outside = hourRows.length ? outsideBounds(hours.data as Week, await openingBounds(bid)) : null;
+  if (outside) return { error: "Vérifiez les champs indiqués.", fieldErrors: { hours: outside } };
   if (v.durationMaxMin != null && v.durationMaxMin <= v.durationMin) return { error: "Vérifiez les champs indiqués.", fieldErrors: { durationMaxMin: "La durée maximale doit dépasser la durée minimale." } };
   let feeValue: number | null = null;
   if (v.feeEnabled) {
@@ -290,4 +295,31 @@ export async function setCategoryStyle(style: "pills" | "accordion" | "grid"): P
   await db.insert(bookingPageSettings).values({ businessId: ctx.business.id, categoryStyle: v }).onConflictDoUpdate({ target: bookingPageSettings.businessId, set: { categoryStyle: v } });
   revalidatePath("/app/prestations", "layout");
   return { ok: true };
+}
+
+/**
+ * Jours et heures de plusieurs prestations d'un coup (ex. « drainage lymphatique seulement le jeudi
+ * 14 h – 17 h »). `week` vide = proposées pendant toutes les heures d'ouverture.
+ */
+export async function setServicesHours(ids: string[], week: Record<string, { start: string; end: string }[]>): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const ctx = await requireContext("services.manage");
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
+  const bid = ctx.business.id;
+  const list = [...new Set((Array.isArray(ids) ? ids : []).filter((i) => typeof i === "string" && /^[0-9a-f-]{36}$/i.test(i)))].slice(0, 500);
+  if (!list.length) return { ok: false, error: "Sélectionnez au moins une prestation." };
+  const parsed = weekSchema.safeParse(week ?? {});
+  if (!parsed.success) return { ok: false, error: weekError(parsed.error.issues) };
+  const rows = Object.entries(parsed.data).flatMap(([wd, ranges]) => (ranges ?? []).map((r) => ({ weekday: Number(wd), startTime: r.start, endTime: r.end })));
+  const outside = rows.length ? outsideBounds(parsed.data as Week, await openingBounds(bid)) : null;
+  if (outside) return { ok: false, error: outside };
+  // Seulement les prestations individuelles de cette entreprise.
+  const own = (await db.select({ id: services.id }).from(services).where(and(eq(services.businessId, bid), inArray(services.id, list), eq(services.kind, "individual")))).map((s) => s.id);
+  if (!own.length) return { ok: false, error: "Prestations introuvables." };
+  await db.transaction(async (tx) => {
+    await tx.delete(serviceHours).where(inArray(serviceHours.serviceId, own));
+    if (rows.length) await tx.insert(serviceHours).values(own.flatMap((serviceId) => rows.map((r) => ({ ...r, serviceId }))));
+    await tx.insert(activityLogs).values({ businessId: bid, userId: ctx.user.id, actorName: ctx.user.name, action: "service.hours", description: `Jours et heures modifiés pour ${own.length} prestation${own.length > 1 ? "s" : ""}` });
+  });
+  revalidatePath("/app/prestations", "layout");
+  return { ok: true, message: rows.length ? `Horaires appliqués à ${own.length} prestation${own.length > 1 ? "s" : ""}.` : `${own.length} prestation${own.length > 1 ? "s" : ""} proposée${own.length > 1 ? "s" : ""} pendant toutes vos heures d'ouverture.` };
 }

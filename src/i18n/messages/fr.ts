@@ -97,6 +97,7 @@ const fr = {
     confirmGroup: "Confirmer l'inscription",
     confirm: "Confirmer le rendez-vous",
     request: "Envoyer la demande",
+    addAnother: "Ajouter un autre rendez-vous", cartTitle: "Vos rendez-vous", removeItem: "Retirer ce rendez-vous", confirmAll: "Réserver les {n} rendez-vous", multiDone: "{n} rendez-vous réservés", multiPartial: "Ces rendez-vous n'ont pas pu être réservés :", seeAppt: "Voir", emailEach: "Vous recevez un email de confirmation pour chaque rendez-vous.", alreadyInCart: "Ce créneau est déjà dans votre sélection.",
     willConfirm: "L'établissement confirmera votre rendez-vous.",
     ruleHalf: "En cas d'annulation moins de 24 h avant, 50 % du prix sera prélevé. Une absence non excusée peut être facturée.",
     ruleFull: "Annulation moins de 24 h avant : 50 % du prix ; moins de 12 h avant : 100 %. Une absence non excusée peut être facturée.",
