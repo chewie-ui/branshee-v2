@@ -12,7 +12,7 @@ import { isLocked } from "@/server/plan";
 import { APPS, appForPath } from "@/lib/apps";
 
 export type AppContext = {
-  user: { id: string; name: string; email: string; avatarUrl: string | null; isDemo?: boolean };
+  user: { id: string; name: string; email: string; avatarUrl: string | null; isDemo?: boolean; isSuperadmin?: boolean };
   business: { id: string; name: string; slug: string; businessType: string | null; timezone: string; brand: string | null };
   member: { id: string; isOwner: boolean };
   /** Tous les établissements dont l'utilisateur est membre actif (pour le sélecteur). */
@@ -36,7 +36,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
   const session = await getSessionUser();
   if (!session) return { kind: "anonymous" };
   const u = session.user;
-  const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl, isDemo: u.isDemo };
+  const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl, isDemo: u.isDemo, isSuperadmin: u.isSuperadmin };
 
   const rows = await db
     .select({ business: businesses, member: members, permissions: grades.permissions, appAccess: grades.appAccess })

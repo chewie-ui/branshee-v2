@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Settings, X } from "lucide-react";
+import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Settings, Shield, X } from "lucide-react";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -21,7 +21,7 @@ type Props = {
   footer: NavItem[];
   business: { id: string; name: string; businessType: string | null };
   businesses: { id: string; name: string; businessType: string | null }[];
-  user: { name: string; email: string; avatarUrl: string | null };
+  user: { name: string; email: string; avatarUrl: string | null; isSuperadmin?: boolean };
   pendingCount: number;
   supportUnread?: number;
   /** Menu actif imposé (apps Skydev : le plus long début d'adresse), sinon actif par début d'adresse. */
@@ -188,6 +188,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
               <Gift className="size-4" aria-hidden="true" /><span className="hidden sm:inline">1 mois offert</span>
             </Link>
           ) : null}
+          {user.isSuperadmin ? <Link href="/admin" className={iconBtn} aria-label="Administration de la plateforme"><Shield className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden lg:inline">Admin</span></Link> : null}
           {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
           {help ? (
             <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>
