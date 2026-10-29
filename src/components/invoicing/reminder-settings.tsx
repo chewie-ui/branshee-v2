@@ -23,7 +23,7 @@ export function ReminderSettings({ initial, canManage }: { initial: Rule; canMan
   return (
     <Card id="relances" className="mt-6 scroll-mt-8">
       <CardHeader title="Rappels de paiement automatiques" description="Pour les factures envoyées depuis Skydev : un email poli au client quand l'échéance est dépassée, avec le lien pour payer. Arrêt automatique dès que la facture est marquée payée." />
-      <div className="space-y-4 px-5 pb-5 text-sm">
+      <div className="space-y-4 p-5 text-sm">
         <label className="flex items-center gap-2 font-medium">
           <input type="checkbox" className="size-4" checked={r.enabled} disabled={!canManage} onChange={(e) => setR({ ...r, enabled: e.target.checked })} />
           Relancer automatiquement les factures impayées

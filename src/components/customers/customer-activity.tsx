@@ -22,6 +22,7 @@ export function CustomerActivity({ a, customerId }: { a: Activity; customerId: s
     { key: "orders", title: "Commandes en ligne", icon: ShoppingBag, items: a.orders.map((o) => ({ href: "/app/boutique", label: `Commande n° ${o.number}`, sub: `${day(o.at)} · ${SHOP_STATUS[o.status as ShopStatus]?.label ?? o.status}`, value: eur(o.total) })) },
     { key: "files", title: "Fichiers", icon: FolderOpen, items: a.files.map((f) => ({ href: `/app/documents/${f.id}/fichier`, label: f.name, sub: day(f.at), value: "" })) },
   ].filter((b): b is NonNullable<typeof b> => !!b);
+  const shown = blocks.filter((b) => b.items.length || b.key === "docs");
   const empty = blocks.every((b) => !b.items.length) && !a.card && !a.reviews.length && !a.pos?.n;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -35,8 +36,8 @@ export function CustomerActivity({ a, customerId }: { a: Activity; customerId: s
           </div>
         </Card>
       ) : null}
-      {blocks.filter((b) => b.items.length || b.key === "docs").map((b) => (
-        <Card key={b.key}>
+      {shown.map((b) => (
+        <Card key={b.key} className={shown.length === 1 ? "lg:col-span-2" : undefined}>
           <CardHeader title={b.title} action={b.action} />
           {b.items.length ? (
             <ul className="divide-y divide-border">
@@ -50,7 +51,7 @@ export function CustomerActivity({ a, customerId }: { a: Activity; customerId: s
                 </li>
               ))}
             </ul>
-          ) : <p className="px-5 pb-5 text-sm text-muted">Aucun pour l&apos;instant.</p>}
+          ) : <p className="px-5 py-4 text-sm text-muted">Aucun pour l&apos;instant.</p>}
         </Card>
       ))}
     </div>

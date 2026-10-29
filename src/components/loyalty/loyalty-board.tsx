@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Gift, Link2, Search, Stamp } from "lucide-react";
+import Link from "next/link";
+import { Gift, Link2, QrCode, Search, Stamp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
@@ -14,12 +15,17 @@ type Client = { id: string; name: string; email: string | null; phone: string | 
 type Res = { ok: boolean; message?: string; error?: string; reward?: boolean };
 
 /** Tampon en deux gestes : chercher le client, « + 1 tampon ». Récompense quand l'objectif est atteint. */
-export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings: { goal: number; reward: string }; cards: CardRow[]; clients: Client[]; canManage: boolean }) {
+type Settings = { goal: number; reward: string; autoAppointment: boolean; autoShop: boolean; qrEnabled: boolean };
+
+export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings: Settings; cards: CardRow[]; clients: Client[]; canManage: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string; reward?: boolean } | null>(null);
   const [goal, setGoal] = useState(String(settings.goal));
   const [reward, setReward] = useState(settings.reward);
+  const [autoAppointment, setAutoAppointment] = useState(settings.autoAppointment);
+  const [autoShop, setAutoShop] = useState(settings.autoShop);
+  const [qrEnabled, setQrEnabled] = useState(settings.qrEnabled);
   const [pending, start] = useTransition();
   const byCustomer = new Map(cards.map((c) => [c.customerId, c]));
   const ql = q.trim().toLowerCase();
@@ -30,8 +36,14 @@ export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <div className="min-w-0 space-y-4">
+        {settings.qrEnabled ? (
+          <Link href="/app/fidelite/qr" className="flex items-center gap-4 rounded-xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><QrCode className="size-5" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold text-accent-soft-foreground">Afficher le QR code à scanner</span><span className="block text-sm text-accent-soft-foreground/80">Votre client le scanne avec son téléphone : il reçoit son tampon et voit sa carte.</span></span>
+          </Link>
+        ) : null}
         <Card className="p-5">
-          <label htmlFor="ly-q" className="text-sm font-medium">Donner un tampon</label>
+          <label htmlFor="ly-q" className="text-sm font-medium">Donner un tampon à la main</label>
           <div className="relative mt-2">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
             <Input id="ly-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, email ou téléphone du client" className="pl-9" autoComplete="off" />
@@ -78,11 +90,30 @@ export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings
       </div>
       <Card className="h-fit p-5">
         <h2 className="font-semibold">Votre programme</h2>
-        <p className="mt-1 text-sm text-muted">{settings.goal} passages = {settings.reward}</p>
+        <p className="mt-1 text-sm text-muted">{settings.goal} tampons = {settings.reward}</p>
+        <ul className="mt-2 space-y-1 text-xs text-muted">
+          {settings.qrEnabled ? <li>Tampon par QR code activé</li> : null}
+          {settings.autoAppointment ? <li>Tampon automatique après chaque rendez-vous honoré</li> : null}
+          {settings.autoShop ? <li>Tampon automatique après chaque achat en ligne</li> : null}
+        </ul>
         {canManage ? (
-          <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); run(() => saveLoyaltySettings({ goal: Number(goal), reward })); }}>
+          <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); run(() => saveLoyaltySettings({ goal: Number(goal), reward, autoAppointment, autoShop, qrEnabled })); }}>
             <Field label="Nombre de tampons" htmlFor="ly-goal"><Input id="ly-goal" inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/\D/g, ""))} /></Field>
-            <Field label="Récompense" htmlFor="ly-reward"><Input id="ly-reward" value={reward} onChange={(e) => setReward(e.target.value)} maxLength={120} /></Field>
+            <Field label="Récompense" htmlFor="ly-reward"><Input id="ly-reward" value={reward} onChange={(e) => setReward(e.target.value)} maxLength={120} placeholder="Ex. une séance offerte, -20 %, un café" /></Field>
+            <fieldset className="space-y-2 pt-1">
+              <legend className="mb-1 text-sm font-medium">Donner des tampons</legend>
+              {[
+                { id: "ly-qr", on: qrEnabled, set: setQrEnabled, label: "Par QR code", hint: "Le client scanne un QR code sur votre écran." },
+                { id: "ly-appt", on: autoAppointment, set: setAutoAppointment, label: "Après chaque rendez-vous", hint: "Automatique, sauf si vous marquez une absence." },
+                { id: "ly-shop", on: autoShop, set: setAutoShop, label: "Après chaque achat en ligne", hint: "Commandes payées sur votre boutique." },
+              ].map((o) => (
+                <label key={o.id} htmlFor={o.id} className="flex cursor-pointer items-start gap-2.5 rounded-lg p-1.5 hover:bg-surface-muted">
+                  <input id={o.id} type="checkbox" checked={o.on} onChange={(e) => o.set(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                  <span className="min-w-0"><span className="block text-sm">{o.label}</span><span className="block text-xs text-muted">{o.hint}</span></span>
+                </label>
+              ))}
+              <p className="text-xs text-muted">Un seul tampon automatique ou scanné par jour et par client.</p>
+            </fieldset>
             <Button type="submit" size="sm" loading={pending}>Enregistrer</Button>
           </form>
         ) : null}

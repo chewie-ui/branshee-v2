@@ -111,7 +111,7 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
             ))}
           </ul>
         ) : (
-          <p className="px-5 pb-5 text-sm text-muted">Personne pour l&apos;instant. Pensez aux pros que vous croisez : collègues, voisins de cabinet, fournisseurs, amis indépendants.</p>
+          <p className="px-5 py-4 text-sm text-muted">Personne pour l&apos;instant. Pensez aux pros que vous croisez : collègues, voisins de cabinet, fournisseurs, amis indépendants.</p>
         )}
       </Card>
 

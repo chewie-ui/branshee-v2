@@ -37,7 +37,7 @@ export function AdminRequestForm({ id, businessId, initial, catalog, active }: {
       </Card>
       <Card>
         <CardHeader title="Fonctionnalités activées pour cette entreprise" description="Seules les modifs déjà codées dans Skydev apparaissent ici." />
-        <div className="space-y-2 px-5 pb-5 text-sm">
+        <div className="space-y-2 p-5 text-sm">
           {!catalog.length ? <p className="text-muted">Aucune fonctionnalité sur mesure codée pour l&apos;instant.</p> : catalog.map((c) => (
             <div key={c.key} className="flex flex-wrap items-center gap-3">
               <span className="flex-1">{c.label} <code className="text-xs text-muted">{c.key}</code></span>

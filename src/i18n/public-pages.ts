@@ -25,7 +25,7 @@ const fr = {
     signed: "Devis signé", signedBy: "Signé par {name} le {date}, « Bon pour accord ».", hash: "Empreinte du devis : {hash}", print: "Imprimer / PDF",
     declined: "Vous avez refusé ce devis.", expired: "Ce lien a expiré. Demandez un nouveau lien à votre fournisseur.", changed: "Le devis a changé depuis l'envoi. Demandez un nouveau lien à votre fournisseur.", quote: "Devis {n}",
   },
-  loyalty: { card: "Carte de fidélité", reward: "Récompense débloquée : {reward}. Demandez-la à votre prochain passage !", left: "Encore {n} passage(s) pour : {reward}", earned: "{n} récompense(s) déjà obtenue(s). Merci de votre fidélité !", stamps: "{n} tampons sur {goal}" },
+  loyalty: { card: "Carte de fidélité", reward: "Récompense débloquée : {reward}. Demandez-la à votre prochain passage !", left: "Encore {n} passage(s) pour : {reward}", earned: "{n} récompense(s) déjà obtenue(s). Merci de votre fidélité !", stamps: "{n} tampons sur {goal}", added: "Tampon ajouté !", already: "Déjà tamponné aujourd'hui : revenez à votre prochaine visite.", history: "Derniers tampons", book: "Prendre rendez-vous", keep: "Ajoutez cette page à l'écran d'accueil de votre téléphone pour la retrouver en un geste.", src: { manual: "Passage", qr: "QR code scanné", appointment: "Rendez-vous", shop: "Achat en ligne", reward: "Récompense utilisée" } },
   shop: {
     online: "Boutique en ligne", categories: "Catégories", all: "Tout", empty: "Aucun produit en vente pour l'instant.", soldOut: "Épuisé", add: "Ajouter", addAria: "Ajouter {name} au panier",
     lessAria: "Un {name} de moins", moreAria: "Un {name} de plus", cart: "Panier ({n})", close: "Fermer", yourOrder: "Votre commande", howGet: "Retrait ou livraison", pickupFree: "Retrait sur place (gratuit)",
@@ -63,7 +63,7 @@ const nl: PublicTexts = {
     signed: "Offerte ondertekend", signedBy: "Ondertekend door {name} op {date}, ‘Voor akkoord’.", hash: "Vingerafdruk van de offerte: {hash}", print: "Afdrukken / pdf",
     declined: "Je hebt deze offerte geweigerd.", expired: "Deze link is verlopen. Vraag een nieuwe link aan je leverancier.", changed: "De offerte is gewijzigd sinds het versturen. Vraag een nieuwe link aan je leverancier.", quote: "Offerte {n}",
   },
-  loyalty: { card: "Klantenkaart", reward: "Beloning vrijgespeeld: {reward}. Vraag ernaar bij je volgende bezoek!", left: "Nog {n} bezoek(en) voor: {reward}", earned: "Al {n} beloning(en) ontvangen. Bedankt voor je trouw!", stamps: "{n} stempels op {goal}" },
+  loyalty: { card: "Klantenkaart", reward: "Beloning vrijgespeeld: {reward}. Vraag ernaar bij je volgende bezoek!", left: "Nog {n} bezoek(en) voor: {reward}", earned: "Al {n} beloning(en) ontvangen. Bedankt voor je trouw!", stamps: "{n} stempels op {goal}", added: "Stempel toegevoegd!", already: "Vandaag al gestempeld: tot je volgende bezoek.", history: "Laatste stempels", book: "Afspraak maken", keep: "Zet deze pagina op het startscherm van je telefoon om ze snel terug te vinden.", src: { manual: "Bezoek", qr: "QR-code gescand", appointment: "Afspraak", shop: "Online aankoop", reward: "Beloning gebruikt" } },
   shop: {
     online: "Webshop", categories: "Categorieën", all: "Alles", empty: "Nog geen producten te koop.", soldOut: "Uitverkocht", add: "Toevoegen", addAria: "{name} aan winkelmandje toevoegen",
     lessAria: "Eén {name} minder", moreAria: "Eén {name} meer", cart: "Winkelmandje ({n})", close: "Sluiten", yourOrder: "Je bestelling", howGet: "Afhalen of levering", pickupFree: "Afhalen ter plaatse (gratis)",
@@ -100,7 +100,7 @@ const en: PublicTexts = {
     signed: "Quote signed", signedBy: "Signed by {name} on {date}, “Approved”.", hash: "Quote fingerprint: {hash}", print: "Print / PDF",
     declined: "You declined this quote.", expired: "This link has expired. Ask your supplier for a new one.", changed: "The quote changed since it was sent. Ask your supplier for a new link.", quote: "Quote {n}",
   },
-  loyalty: { card: "Loyalty card", reward: "Reward unlocked: {reward}. Ask for it on your next visit!", left: "{n} more visit(s) for: {reward}", earned: "{n} reward(s) already earned. Thanks for your loyalty!", stamps: "{n} stamps out of {goal}" },
+  loyalty: { card: "Loyalty card", reward: "Reward unlocked: {reward}. Ask for it on your next visit!", left: "{n} more visit(s) for: {reward}", earned: "{n} reward(s) already earned. Thanks for your loyalty!", stamps: "{n} stamps out of {goal}", added: "Stamp added!", already: "Already stamped today: see you next visit.", history: "Latest stamps", book: "Book an appointment", keep: "Add this page to your phone's home screen to find it in one tap.", src: { manual: "Visit", qr: "QR code scanned", appointment: "Appointment", shop: "Online purchase", reward: "Reward used" } },
   shop: {
     online: "Online shop", categories: "Categories", all: "All", empty: "No products for sale yet.", soldOut: "Sold out", add: "Add", addAria: "Add {name} to cart",
     lessAria: "One less {name}", moreAria: "One more {name}", cart: "Cart ({n})", close: "Close", yourOrder: "Your order", howGet: "Pickup or delivery", pickupFree: "Pickup in store (free)",

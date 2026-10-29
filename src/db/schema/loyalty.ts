@@ -1,4 +1,5 @@
-import { date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { businesses } from "./businesses";
 import { customers } from "./appointments";
@@ -12,6 +13,12 @@ export const loyaltySettings = pgTable("loyalty_settings", {
   /** Nombre de tampons pour obtenir la récompense. */
   goal: integer("goal").notNull().default(10),
   reward: text("reward").notNull().default("Une prestation offerte"),
+  /** Tampon automatique après un rendez-vous honoré (pas annulé, pas d'absence). */
+  autoAppointment: boolean("auto_appointment").notNull().default(false),
+  /** Tampon automatique après un achat payé sur la boutique en ligne. */
+  autoShop: boolean("auto_shop").notNull().default(false),
+  /** Le client scanne un QR code affiché par le pro (code qui change toutes les 30 secondes). */
+  qrEnabled: boolean("qr_enabled").notNull().default(false),
   ...timestamps,
 });
 
@@ -49,10 +56,14 @@ export const loyaltyMoves = pgTable(
     delta: integer("delta").notNull(),
     /** stamp | reward | fix */
     kind: text("kind").notNull(),
+    /** manual (le pro) | qr (le client scanne) | appointment | shop */
+    source: text("source").notNull().default("manual"),
+    /** Origine unique (appt:<id>, order:<id>) : jamais deux tampons pour le même rendez-vous ou achat. */
+    ref: text("ref"),
     memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("loyalty_moves_card_idx").on(t.cardId, t.createdAt)],
+  (t) => [index("loyalty_moves_card_idx").on(t.cardId, t.createdAt), uniqueIndex("loyalty_moves_ref_uq").on(t.businessId, t.ref).where(sql`${t.ref} is not null`)],
 );
 
 /** Carte cadeau vendue (montant, solde, validité). */

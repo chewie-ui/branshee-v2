@@ -92,7 +92,7 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
 
           <Card>
             <CardHeader title="Photos" description="Avant et après les travaux" />
-            <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
+            <div className="grid gap-4 p-5 sm:grid-cols-2">
               {(["before", "after"] as const).map((k) => (
                 <div key={k}>
                   <p className="mb-2 text-sm font-medium">{k === "before" ? "Avant" : "Après"}</p>
@@ -120,7 +120,7 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
 
           <Card>
             <CardHeader title="Rapport et fournitures" description={d.laborMinutes ? `Temps sur place : ${Math.floor(d.laborMinutes / 60)} h ${String(d.laborMinutes % 60).padStart(2, "0")}` : undefined} />
-            <div className="space-y-4 px-5 pb-5">
+            <div className="space-y-4 p-5">
               <div>
                 <label htmlFor="iv-report" className="block text-sm font-medium">Travaux réalisés</label>
                 <Textarea id="iv-report" rows={4} value={report} onChange={(e) => setReport(e.target.value)} maxLength={8000} disabled={!canWork || locked} className="mt-1" placeholder="Ce qui a été fait, constaté, conseillé…" />
@@ -158,7 +158,7 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
         <div className="space-y-4">
           <Card>
             <CardHeader title="Signature du client" />
-            <div className="space-y-3 px-5 pb-5">
+            <div className="space-y-3 p-5">
               {d.signedAt ? (
                 <>
                   <p className="flex items-center gap-1.5 text-sm font-medium text-success"><Check className="size-4" aria-hidden="true" />Signé par {d.signerName}</p>

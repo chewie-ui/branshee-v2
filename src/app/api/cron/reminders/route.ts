@@ -2,6 +2,7 @@ import { cronAuthorized } from "@/server/cron-auth";
 import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs";
 import { processCampaignQueue } from "@/server/marketing";
 import { expireUnpaidShopOrders } from "@/server/shop";
+import { autoStamps } from "@/server/loyalty";
 import { sendDueReminders } from "@/server/notifications";
 
 export const dynamic = "force-dynamic";
@@ -17,5 +18,6 @@ export async function POST(req: Request) {
   const reviewRequests = await sendAutoReviewRequests().catch((e) => (console.error("[cron] avis :", e), -1));
   const campaignEmails = await processCampaignQueue().catch((e) => (console.error("[cron] campagnes :", e), -1));
   const shopExpired = await expireUnpaidShopOrders().catch((e) => (console.error("[cron] boutique :", e), -1));
-  return Response.json({ ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired });
+  const loyaltyStamps = await autoStamps().catch((e) => (console.error("[cron] fidélité :", e), -1));
+  return Response.json({ ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps });
 }

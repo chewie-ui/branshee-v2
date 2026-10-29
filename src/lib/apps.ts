@@ -255,9 +255,10 @@ const UPCOMING: SkyApp[] = [
     href: "/app/fidelite",
     status: "active",
     billing: "included",
-    features: ["Carte à tampons sur le téléphone du client", "Récompense automatique à l'objectif", "Cartes cadeaux imprimables, utilisables en plusieurs fois", "Suivi des cartes en cours et des montants à honorer"],
+    features: ["Carte à tampons sur le téléphone du client", "Le client scanne un QR code pour son tampon", "Tampon automatique après un rendez-vous ou un achat", "Récompense de votre choix à l'objectif", "Cartes cadeaux imprimables, utilisables en plusieurs fois", "Suivi des cartes en cours et des montants à honorer"],
     nav: [
       { href: "/app/fidelite", label: "Fidélité", icon: "gift" },
+      { href: "/app/fidelite/qr", label: "QR code à scanner", icon: "qr" },
       { href: "/app/fidelite/cartes-cadeaux", label: "Cartes cadeaux", icon: "card" },
     ],
   },

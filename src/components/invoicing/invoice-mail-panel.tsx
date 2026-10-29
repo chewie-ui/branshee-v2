@@ -29,7 +29,7 @@ export function InvoiceMailPanel({ documentId, defaultEmail, mailing, remindersO
   return (
     <Card>
       <CardHeader title="Envoi au client" description={mailing ? undefined : credit ? "Le client reçoit un lien pour voir et télécharger la note de crédit." : "Le client reçoit un lien pour voir, télécharger et payer la facture (QR code bancaire)."} />
-      <div className="space-y-3 px-5 pb-5 text-sm">
+      <div className="space-y-3 p-5 text-sm">
         {mailing ? (
           <>
             <p>

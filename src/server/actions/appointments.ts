@@ -1,5 +1,6 @@
 "use server";
 
+import { undoAppointmentStamp } from "@/server/loyalty";
 import { TZDate } from "@date-fns/tz";
 import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -447,6 +448,8 @@ export async function setNoShow(id: string, noShow: boolean, reason: "justified"
     .where(and(eq(appointments.id, idSchema.parse(id)), eq(appointments.businessId, ctx.business.id)))
     .returning({ id: appointments.id });
   if (!updated.length) return { ok: false, error: "Rendez-vous introuvable." };
+  // Fidélité : un rendez-vous manqué ne donne pas de tampon (retiré s'il avait déjà été donné).
+  if (noShow) await undoAppointmentStamp(ctx.business.id, updated[0]!.id).catch(() => {});
   revalidatePath("/app", "layout");
   // Paiement en garantie : absence non justifiée → prélèvement ; justifiée → rien n'est dû.
   if (noShow && reason) {

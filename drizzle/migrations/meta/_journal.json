@@ -316,6 +316,13 @@
       "when": 1793179550590,
       "tag": "0044_grades_apps",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793264567055,
+      "tag": "0045_loyalty_auto",
+      "breakpoints": true
     }
   ]
 }

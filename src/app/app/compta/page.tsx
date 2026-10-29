@@ -74,7 +74,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         ) : (
           <Card>
             <CardHeader title="Franchise de TVA" description="Vous ne facturez pas de TVA et ne faites pas de déclaration périodique." />
-            <div className="space-y-2 px-5 pb-5 text-sm">
+            <div className="space-y-2 p-5 text-sm">
               <p>Chiffre d&apos;affaires {year} : <b className="tabular-nums">{eur(ytd?.salesHt ?? 0)}</b> sur un plafond de {eur(FRANCHISE_THRESHOLD)}.</p>
               <div className="h-2 rounded-full bg-surface-muted" role="progressbar" aria-valuenow={Math.round(((ytd?.salesHt ?? 0) / FRANCHISE_THRESHOLD) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Plafond de la franchise"><div className={cn("h-full rounded-full", (ytd?.salesHt ?? 0) > FRANCHISE_THRESHOLD * 0.8 ? "bg-warning" : "bg-accent")} style={{ width: `${Math.min(100, ((ytd?.salesHt ?? 0) / FRANCHISE_THRESHOLD) * 100)}%` }} /></div>
               {(ytd?.salesHt ?? 0) > FRANCHISE_THRESHOLD * 0.8 ? <p className="flex gap-2 text-warning"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Vous approchez du plafond : parlez-en à votre comptable avant de le dépasser.</p> : null}
@@ -99,7 +99,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         </Card>
         <Card>
           <CardHeader title="Factures à encaisser" />
-          {rec.rows.length === 0 ? <p className="px-5 pb-5 text-sm text-muted">Tout est payé.</p> : (
+          {rec.rows.length === 0 ? <p className="px-5 py-4 text-sm text-muted">Tout est payé.</p> : (
             <ul className="divide-y divide-border">
               {rec.rows.slice(0, 10).map((r) => <li key={r.id}><Link href={`/app/factures/${r.id}`} className="flex items-center gap-3 px-5 py-2 text-sm hover:bg-surface-muted/60"><span className="font-medium tabular-nums">{r.number}</span><span className="min-w-0 flex-1 truncate text-muted">{String(r.client?.name ?? "")}</span><span className={cn("text-xs", r.due && r.due < today ? "text-danger" : "text-muted")}>{r.due ? `échéance ${r.due.split("-").reverse().join("/")}` : ""}</span><span className="w-20 text-right tabular-nums">{eur(r.ttc)}</span></Link></li>)}
             </ul>

@@ -12,7 +12,9 @@ import { parseEuros } from "@/lib/stock";
 import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
-import { loyaltyOrigin, loyaltyRights, loyaltySettingsOf } from "@/server/loyalty";
+import QRCode from "qrcode";
+import { QR_STEP_MS, qrSign, qrWindow } from "@/lib/loyalty-qr";
+import { giveStamp, loyaltyOrigin, loyaltyQrKey, loyaltyRights, loyaltySettingsOf, sendLoyaltyWelcome } from "@/server/loyalty";
 
 type Result = { ok: true; message?: string; id?: string; code?: string; reward?: boolean } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
@@ -23,43 +25,52 @@ async function member(): Promise<{ ctx: AppContext; error: null } | { ctx: AppCo
   return ctx.impersonating ? { ctx, error: SUPERVISION } : { ctx, error: null };
 }
 
-export async function saveLoyaltySettings(input: { goal: number; reward: string }): Promise<Result> {
+const settingsSchema = z.object({
+  goal: z.number().int().min(2).max(50),
+  reward: z.string().trim().min(2, "Décrivez la récompense.").max(120),
+  autoAppointment: z.boolean().optional(),
+  autoShop: z.boolean().optional(),
+  qrEnabled: z.boolean().optional(),
+});
+
+export async function saveLoyaltySettings(input: z.input<typeof settingsSchema>): Promise<Result> {
   const { ctx, error } = await member();
   if (error) return error;
   if (!loyaltyRights(ctx).manage) return { ok: false, error: "Seul le responsable modifie le programme." };
-  const v = z.object({ goal: z.number().int().min(2).max(50), reward: z.string().trim().min(2, "Décrivez la récompense.").max(120) }).safeParse(input);
+  const v = settingsSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Réglages invalides." };
-  await db.insert(loyaltySettings).values({ businessId: ctx.business.id, ...v.data }).onConflictDoUpdate({ target: loyaltySettings.businessId, set: { ...v.data, updatedAt: new Date() } });
+  const cur = await loyaltySettingsOf(ctx.business.id);
+  const values = { goal: v.data.goal, reward: v.data.reward, autoAppointment: v.data.autoAppointment ?? cur.autoAppointment, autoShop: v.data.autoShop ?? cur.autoShop, qrEnabled: v.data.qrEnabled ?? cur.qrEnabled };
+  await db.insert(loyaltySettings).values({ businessId: ctx.business.id, ...values }).onConflictDoUpdate({ target: loyaltySettings.businessId, set: { ...values, updatedAt: new Date() } });
   refresh();
   return { ok: true, message: "Programme enregistré." };
 }
 
-/**
- * Un passage = un tampon sur la carte du client (créée au premier passage). Pas plus d'un tampon par client
- * toutes les 2 heures, contre les doubles clics. La récompense se débloque à l'objectif.
- */
+/** Un passage = un tampon sur la carte du client (créée au premier passage). La récompense se débloque à l'objectif. */
 export async function addStamp(customerId: string): Promise<Result> {
   const { ctx, error } = await member();
   if (error) return error;
   if (!z.uuid().safeParse(customerId).success) return { ok: false, error: "Client introuvable." };
   const [c] = await db.select({ id: customers.id, name: customers.fullName, email: customers.email }).from(customers).where(and(eq(customers.id, customerId), eq(customers.businessId, ctx.business.id)));
   if (!c) return { ok: false, error: "Client introuvable." };
-  const s = await loyaltySettingsOf(ctx.business.id);
-  const r = await db.transaction(async (tx) => {
-    await tx.insert(loyaltyCards).values({ businessId: ctx.business.id, customerId: c.id, token: randomBytes(16).toString("base64url") }).onConflictDoNothing();
-    const [card] = await tx.select().from(loyaltyCards).where(and(eq(loyaltyCards.businessId, ctx.business.id), eq(loyaltyCards.customerId, c.id))).for("update");
-    if (card!.lastStampAt && Date.now() - card!.lastStampAt.getTime() < 2 * 3600_000) return { ok: false as const, error: `${c.name} a déjà reçu un tampon il y a moins de 2 heures.` };
-    const stamps = card!.stamps + 1;
-    await tx.update(loyaltyCards).set({ stamps, lastStampAt: new Date(), updatedAt: new Date() }).where(eq(loyaltyCards.id, card!.id));
-    await tx.insert(loyaltyMoves).values({ businessId: ctx.business.id, cardId: card!.id, delta: 1, kind: "stamp", memberId: ctx.member.id });
-    return { ok: true as const, stamps, token: card!.token, first: card!.stamps === 0 && !card!.lastStampAt };
-  });
-  if (!r.ok) return r;
-  // Premier tampon : le client reçoit le lien de sa carte (à garder sur son téléphone).
-  if (r.first && c.email) await sendEmail({ to: c.email, ...emails.loyaltyWelcome({ businessName: ctx.business.name, goal: s.goal, reward: s.reward, url: `${loyaltyOrigin()}/fidelite/${r.token}` }), template: "loyalty_welcome", businessId: ctx.business.id }).catch(() => {});
+  const r = await giveStamp({ businessId: ctx.business.id, timezone: ctx.business.timezone, customerId: c.id, source: "manual", memberId: ctx.member.id });
+  if (!r.ok) return { ok: false, error: `${c.name} a déjà reçu un tampon il y a moins de 2 heures.` };
+  if (r.first) await sendLoyaltyWelcome(ctx.business.id, ctx.business.name, c.email, r.token, r.goal, r.reward);
   refresh();
-  const ready = r.stamps >= s.goal;
-  return { ok: true, reward: ready, message: ready ? `${c.name} a ${r.stamps} tampons : récompense débloquée (${s.reward}) !` : `Tampon ajouté : ${r.stamps}/${s.goal} pour ${c.name}.` };
+  const ready = r.stamps >= r.goal;
+  return { ok: true, reward: ready, message: ready ? `${c.name} a ${r.stamps} tampons : récompense débloquée (${r.reward}) !` : `Tampon ajouté : ${r.stamps}/${r.goal} pour ${c.name}.` };
+}
+
+/** QR code « tampon » du moment, affiché sur l'écran du pro (il change toutes les 30 secondes). */
+export async function currentLoyaltyQr(): Promise<{ ok: true; url: string; svg: string; expiresIn: number } | { ok: false; error: string }> {
+  const { ctx, error } = await member();
+  if (error) return error;
+  const s = await loyaltySettingsOf(ctx.business.id);
+  if (!s.qrEnabled) return { ok: false, error: "Activez d'abord le tampon par QR code dans votre programme." };
+  const w = qrWindow();
+  const url = `${loyaltyOrigin()}/fidelite/tampon?b=${ctx.business.id}&w=${w}&s=${qrSign(loyaltyQrKey(), ctx.business.id, w)}`;
+  const svg = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#111827", light: "#ffffff" } });
+  return { ok: true, url, svg, expiresIn: QR_STEP_MS - (Date.now() % QR_STEP_MS) };
 }
 
 /** La récompense est utilisée : on retire l'objectif du solde. */

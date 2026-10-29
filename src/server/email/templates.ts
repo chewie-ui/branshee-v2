@@ -718,10 +718,11 @@ export const emails = {
   },
 
   /** Fidélité : lien de la carte, envoyé au premier passage. */
-  loyaltyWelcome(p: { businessName: string; goal: number; reward: string; url: string }) {
+  loyaltyWelcome(p: { businessName: string; goal: number; reward: string; url: string; stamps?: number }) {
+    const first = !p.stamps || p.stamps <= 1;
     return {
-      subject: `Votre carte de fidélité ${p.businessName}`,
-      ...render({ preheader: `${p.goal} passages = ${p.reward}`, title: "Votre carte de fidélité", intro: `Merci pour votre visite ! Vous avez reçu votre premier tampon. Au bout de ${p.goal} passages : ${p.reward}. Gardez ce lien pour suivre vos tampons.`, cta: { label: "Voir ma carte", url: p.url }, footer: p.businessName }),
+      subject: first ? `Votre carte de fidélité ${p.businessName}` : `Nouveau tampon : ${p.stamps}/${p.goal} chez ${p.businessName}`,
+      ...render({ preheader: `${p.goal} passages = ${p.reward}`, title: "Votre carte de fidélité", intro: first ? `Merci pour votre visite ! Vous avez reçu votre premier tampon. Au bout de ${p.goal} passages : ${p.reward}. Gardez ce lien pour suivre vos tampons.` : `Merci pour votre visite ! Vous avez maintenant ${p.stamps} tampon${(p.stamps ?? 0) > 1 ? "s" : ""} sur ${p.goal}. Au bout : ${p.reward}.`, cta: { label: "Voir ma carte", url: p.url }, footer: p.businessName }),
     };
   },
 

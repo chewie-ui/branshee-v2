@@ -29,7 +29,7 @@ export function SignPanel({ documentId, defaultEmail, current, canManage, editab
   return (
     <Card>
       <CardHeader title="Signature en ligne" description={current?.status === "signed" ? undefined : "Le client lit et signe le devis sur son téléphone."} />
-      <div className="space-y-3 px-5 pb-5 text-sm">
+      <div className="space-y-3 p-5 text-sm">
         {current?.status === "signed" ? (
           <>
             <p className="flex items-center gap-1.5 font-medium text-success"><Check className="size-4" aria-hidden="true" />Signé par {current.signerName}</p>

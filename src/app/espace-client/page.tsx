@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
-import { CalendarDays, Clock, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
+import { CalendarDays, Clock, Gift, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
+import { cardsOfUser } from "@/server/loyalty";
 import { AddToCalendar } from "@/components/booking/add-to-calendar";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default async function ClientDashboard() {
   const user = await requireClient();
-  const [list, myReviews] = await Promise.all([listClientAppointments(user.id), listMyReviews(user.id)]);
+  const [list, myReviews, cards] = await Promise.all([listClientAppointments(user.id), listMyReviews(user.id), user.emailVerifiedAt ? cardsOfUser(user.id, user.email) : Promise.resolve([])]);
   const now = new Date();
   const upcoming = list.filter((a) => a.startsAt > now && a.status !== "cancelled").sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   const past = list.filter((a) => a.startsAt <= now || a.status === "cancelled");
@@ -78,6 +79,24 @@ export default async function ClientDashboard() {
           })
         )}
       </section>
+
+      {cards.length ? (
+        <section className="space-y-3" aria-labelledby="cartes">
+          <h2 id="cartes" className="text-lg font-semibold">Mes cartes de fidélité</h2>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {cards.map((c) => (
+              <li key={c.token}>
+                <Link href={`/fidelite/${c.token}`} className="block rounded-2xl bg-accent p-4 text-accent-foreground transition-opacity duration-150 hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                  <span className="flex items-center justify-between gap-3"><span className="truncate font-semibold">{c.business}</span><Gift className="size-5 shrink-0" aria-hidden="true" /></span>
+                  <span className="mt-3 block text-2xl font-semibold tabular-nums">{Math.min(c.stamps, c.goal)}<span className="text-base opacity-80"> / {c.goal} tampons</span></span>
+                  <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/25" aria-hidden="true"><span className="block h-full rounded-full bg-white" style={{ width: `${(Math.min(c.stamps, c.goal) / c.goal) * 100}%` }} /></span>
+                  <span className="mt-2 block truncate text-sm opacity-90">{c.stamps >= c.goal ? `Récompense débloquée : ${c.reward}` : `Au bout : ${c.reward}`}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {past.length ? (
         <section className="space-y-3">
