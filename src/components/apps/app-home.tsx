@@ -44,10 +44,11 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
     <div className="mx-auto max-w-4xl">
       {admin.length ? (
         <section aria-labelledby="admin-h" className="mb-10">
-          <h2 id="admin-h" className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">Administration</h2>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <h2 id="admin-h" className="mb-3 text-center text-sm font-semibold tracking-wide text-muted uppercase">Administration</h2>
+          {/* Cartes centrées : une rangée incomplète reste au milieu. */}
+          <ul className="flex flex-wrap justify-center gap-3">
             {admin.map((a) => (
-              <li key={a.href} className="min-w-0">
+              <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
                 <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
                   <span className="min-w-0"><span className="block truncate text-sm font-medium">{a.label}</span><span className="line-clamp-2 block text-xs text-muted">{a.hint}</span></span>
@@ -55,7 +56,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
               </li>
             ))}
           </ul>
-          <h2 className="mt-10 mb-1 text-sm font-semibold tracking-wide text-muted uppercase">Applications</h2>
+          <h2 className="mt-10 mb-1 text-center text-sm font-semibold tracking-wide text-muted uppercase">Applications</h2>
         </section>
       ) : null}
       <ul className="grid grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-5">

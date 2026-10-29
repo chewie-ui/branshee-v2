@@ -65,7 +65,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-accent-soft-foreground sm:text-base">Invitez un pro, gagnez 1 mois offert</span>
-            <span className="block text-sm text-accent-soft-foreground/80">Chaque personne qui s&apos;abonne grâce à vous = 1 mois gratuit pour vous.</span>
+            <span className="block text-sm text-accent-soft-foreground/80">Chaque personne qui s&apos;abonne grâce à vous = 29 € offerts sur votre abonnement.</span>
           </span>
           <span className="hidden shrink-0 items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground group-hover:bg-accent-hover sm:inline-flex">Inviter<ArrowRight className="size-4" aria-hidden="true" /></span>
           <ArrowRight className="size-5 shrink-0 text-accent-soft-foreground sm:hidden" aria-hidden="true" />

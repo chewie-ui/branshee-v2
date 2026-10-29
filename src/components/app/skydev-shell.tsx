@@ -41,7 +41,9 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
 
   // Accueil et pages hors app (questionnaire de départ, compte, aide, parrainage) : pleine largeur, barre en haut
   // au lieu de la barre latérale.
-  if (pathname === "/app" || !app)
+  // Les réglages et l'administration (équipe, compte, aide) ne sont pas des apps : même barre en haut que l'accueil.
+  const adminPage = ["/app/reglages", "/app/equipe", "/app/compte", "/app/aide", "/app/parrainage", "/app/demarrer"].some((p) => starts(pathname, p));
+  if (pathname === "/app" || !app || adminPage)
     return (
       <div className="min-h-dvh">
         <HomeTopBar brand="skydev" business={business} businesses={businesses} user={user} footer={rdv.footer} supportUnread={badges["/app/aide"] ?? 0} />
