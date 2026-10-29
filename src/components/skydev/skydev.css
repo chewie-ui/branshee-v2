@@ -239,3 +239,30 @@
 .sky .done .ico { width: 40px; height: 40px; color: var(--success); }
 .sky .price .btn { margin-top: 22px; width: 100%; }
 .sky .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+/* Chip « + autres apps » */
+.sky .chip-more { border-style: dashed; color: var(--accent-soft-fg); text-decoration: none; padding: 0 16px; }
+.sky .chip-more:hover { background: var(--accent-soft); border-color: var(--accent); }
+/* Catalogue complet des apps */
+.sky .catalog { margin-top: 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px 24px; }
+@media (min-width: 768px) {
+.sky .catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) {
+.sky .catalog { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.sky .cat h3 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; }
+.sky .cat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sky .cat li { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.sky .cat-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.sky .cat-ic .ico { width: 18px; height: 18px; }
+.sky .cat-t { min-width: 0; display: flex; flex-direction: column; }
+.sky .cat-t b { font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sky .cat-t em { font-style: normal; }
+.sky .cat-t small { font-size: 14px; color: var(--text-muted); }
+/* Tout est relié */
+.sky .linked { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 640px) {
+.sky .linked { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) {
+.sky .linked { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sky .lk { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+.sky .lk h3 { font-size: 18px; letter-spacing: -.02em; font-weight: 700; margin: 16px 0 0; }
+.sky .lk p { margin: 6px 0 0; font-size: 15px; color: var(--text-muted); }

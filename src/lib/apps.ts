@@ -250,7 +250,7 @@ const UPCOMING: SkyApp[] = [
     id: "fidelite",
     category: "marketing",
     name: "Fidélité",
-    tagline: "Carte à tampons et cartes cadeaux.",
+    tagline: "Carte à tampons à scanner et cartes cadeaux.",
     icon: "gift",
     href: "/app/fidelite",
     status: "active",

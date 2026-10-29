@@ -24,9 +24,9 @@ const BRANSHEE_META: Metadata = {
 };
 
 const SKYDEV_META: Metadata = {
-  title: { absolute: "Skydev — Site web, RDV, factures et apps sur mesure · Wavre" },
-  description: "Composez le logiciel de votre entreprise : site web, prise de rendez-vous, factures, boutique, employés, téléphone IA. Un seul abonnement, et tout le reste sur mesure. Basé à Wavre.",
-  openGraph: { siteName: "Skydev", title: "Skydev — Composez le logiciel de votre entreprise" },
+  title: { absolute: "Skydev — Toutes les apps de votre entreprise : RDV, factures, caisse, site · Wavre" },
+  description: "Rendez-vous en ligne, devis et factures, site web, caisse, boutique, stock, planning, congés, fidélité, tâches… Plus de 25 apps reliées pour un seul abonnement, et le reste sur mesure. Basé à Wavre.",
+  openGraph: { siteName: "Skydev", title: "Skydev — Tout le logiciel de votre entreprise" },
 };
 
 export async function generateMetadata(): Promise<Metadata> {
