@@ -62,6 +62,8 @@ export const members = pgTable(
     calendarFeedToken: text("calendar_feed_token").unique(),
 
     joinedAt: timestamp("joined_at", { withTimezone: true }),
+    /** Préférences personnelles : apps favorites (épinglées en tête de l'accueil et en raccourcis). */
+    prefs: jsonb("prefs").$type<{ favApps?: string[] }>().notNull().default({}),
     legacyId: legacyId(),
     ...timestamps,
   },

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Settings, Shield, X } from "lucide-react";
+import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, X } from "lucide-react";
+import { openSwitcher } from "@/components/app/app-switcher";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
 import { switchBusiness } from "@/server/actions/business";
@@ -26,6 +27,8 @@ type Props = {
   supportUnread?: number;
   /** Menu actif imposé (apps Skydev : le plus long début d'adresse), sinon actif par début d'adresse. */
   activeHref?: string | null;
+  /** Bouton « Aller à… » (Ctrl+K) pour passer d'une app à l'autre. */
+  switcher?: boolean;
 };
 
 function isActive(pathname: string, href: string) {
@@ -105,7 +108,7 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
   );
 }
 
-function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname }: Props & { pathname: string }) {
+function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 p-3">
@@ -113,6 +116,13 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
           <Brand brand={brand} small />
         </Link>
         <BusinessSwitcher current={business} all={businesses} brand={brand} />
+        {switcher ? (
+          <button type="button" onClick={openSwitcher} className="flex h-10 w-full items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 text-sm text-muted transition-colors hover:border-border-strong hover:text-text focus-visible:outline-2 focus-visible:outline-accent">
+            <Search className="size-4" aria-hidden="true" />
+            <span className="flex-1 text-left">Aller à une app…</span>
+            <kbd className="hidden rounded border border-border bg-surface px-1.5 text-[11px] lg:inline">Ctrl K</kbd>
+          </button>
+        ) : null}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-3" aria-label="Navigation principale">
@@ -168,7 +178,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
  * Accueil Skydev (lanceur d'apps) : pas de barre latérale, une barre en haut avec la marque, l'entreprise,
  * les réglages, l'aide et le compte (déconnexion comprise).
  */
-export function HomeTopBar({ brand, business, businesses, user, footer, supportUnread = 0 }: Pick<Props, "brand" | "business" | "businesses" | "user" | "footer" | "supportUnread">) {
+export function HomeTopBar({ brand, business, businesses, user, footer, supportUnread = 0, switcher = false }: Pick<Props, "brand" | "business" | "businesses" | "user" | "footer" | "supportUnread" | "switcher">) {
   const settings = footer.find((i) => i.href === "/app/reglages");
   const help = footer.find((i) => i.href === "/app/aide");
   const invite = footer.find((i) => i.href === "/app/parrainage");
@@ -183,6 +193,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
           <BusinessSwitcher current={business} all={businesses} brand={brand} />
         </div>
         <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
+          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden xl:inline">Aller à…</span></button> : null}
           {invite ? (
             <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Parrainage : 1 mois offert par pro invité">
               <Gift className="size-4" aria-hidden="true" /><span className="hidden sm:inline">1 mois offert</span>
@@ -225,7 +236,8 @@ export function Sidebar(props: Props) {
         <button type="button" onClick={() => setOpen(true)} className="-ml-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label="Ouvrir le menu">
           <Menu className="size-5" aria-hidden="true" />
         </button>
-        <span className="truncate text-sm font-semibold">{props.business.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{props.business.name}</span>
+        {props.switcher ? <button type="button" onClick={openSwitcher} className="-mr-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label="Aller à une app"><Search className="size-5" aria-hidden="true" /></button> : null}
       </div>
 
       {/* Tiroir mobile */}

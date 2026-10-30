@@ -3,13 +3,13 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, SlidersHorizontal } from "lucide-react";
+import { Minus, Pin, Plus, SlidersHorizontal } from "lucide-react";
 import type { VisibleApp } from "@/server/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName } from "@/lib/apps";
 import { cn } from "@/lib/cn";
-import { setAppPinned } from "@/server/actions/apps";
+import { setAppPinned, setFavoriteApp } from "@/server/actions/apps";
 
 const ORDER: AppCategory[] = ["clients", "finance", "equipe", "operations", "marketing", "services"];
 
@@ -31,6 +31,14 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
   const [, start] = useTransition();
   const pinned = apps.filter((a) => a.pinned);
   const others = apps.filter((a) => !a.pinned);
+  const favToggle = (id: string, fav: boolean) => {
+    setBusy(id);
+    start(async () => {
+      await setFavoriteApp(id, fav);
+      setBusy(null);
+      router.refresh();
+    });
+  };
   const toggle = (id: string, pin: boolean) => {
     setBusy(id);
     start(async () => {
@@ -57,6 +65,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
             ))}
           </ul>
           <h2 className="mt-10 mb-1 text-center text-sm font-semibold tracking-wide text-muted uppercase">Applications</h2>
+          <p className="mb-2 text-center text-xs text-muted">Épinglez les apps que vous utilisez le plus : elles passent en premier et deviennent des raccourcis dans chaque app.</p>
         </section>
       ) : null}
       <ul className="grid grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-5">
@@ -64,7 +73,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
           const tag = tagOf(app, activeAddons);
           const removable = editing && app.id !== "reglages";
           return (
-            <li key={app.id} className="relative">
+            <li key={app.id} className="group/tile relative">
               <Link href={app.href} className="group flex flex-col items-center gap-2.5 rounded-2xl p-2 text-center outline-offset-4">
                 <span className="relative flex size-16 items-center justify-center rounded-2xl border border-border bg-surface text-accent shadow-sm transition-[transform,box-shadow,border-color] duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-md sm:size-20">
                   <AppIcon icon={app.icon} className="size-7 sm:size-8" />
@@ -72,6 +81,22 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
                 <span className="text-sm font-medium text-text">{app.name}</span>
                 {tag ? <span className={`-mt-1.5 rounded px-1.5 text-[11px] font-semibold ${tag.cls}`}>{tag.text}</span> : null}
               </Link>
+              {!removable && app.id !== "reglages" ? (
+                <button
+                  type="button"
+                  onClick={() => favToggle(app.id, !app.fav)}
+                  disabled={busy === app.id}
+                  aria-pressed={app.fav}
+                  aria-label={app.fav ? `Désépingler ${app.name}` : `Épingler ${app.name} en premier`}
+                  title={app.fav ? "Épinglée : cliquez pour la désépingler" : "Épingler en premier"}
+                  className={cn(
+                    "absolute top-0 left-1/2 ml-6 flex size-7 items-center justify-center rounded-full border shadow-sm transition-opacity duration-150 disabled:opacity-50 sm:ml-8",
+                    app.fav ? "border-accent bg-accent text-accent-foreground" : "border-border bg-surface text-muted opacity-60 hover:text-accent focus-visible:opacity-100 sm:opacity-0 sm:group-hover/tile:opacity-100",
+                  )}
+                >
+                  <Pin className={cn("size-3.5", app.fav && "fill-current")} aria-hidden="true" />
+                </button>
+              ) : null}
               {removable ? (
                 <button type="button" onClick={() => toggle(app.id, false)} disabled={busy === app.id} aria-label={`Retirer ${app.name} de l'accueil`} className="absolute top-0 left-1/2 ml-6 flex size-7 items-center justify-center rounded-full border border-border bg-surface text-danger shadow-sm hover:bg-danger-soft disabled:opacity-50 sm:ml-8">
                   <Minus className="size-4" aria-hidden="true" />

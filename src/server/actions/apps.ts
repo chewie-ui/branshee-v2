@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { businesses } from "@/db/schema";
+import { businesses, members } from "@/db/schema";
 import { APPS, NEEDS, TEAM_SIZES, hiddenAppsFor, type NeedId, type TeamSize } from "@/lib/apps";
 import { requireContext } from "@/server/context";
 
@@ -40,4 +40,16 @@ export async function setAppPinned(appId: string, pinned: boolean): Promise<Resu
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ hiddenApps: [...hidden] })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app", "layout");
   return { ok: true, message: pinned ? "App ajoutée à l'accueil." : "App retirée de l'accueil." };
+}
+
+/** Épingler une app en favori (préférence personnelle) : elle passe en tête de l'accueil et dans les raccourcis. */
+export async function setFavoriteApp(appId: string, fav: boolean): Promise<Result> {
+  const ctx = await requireContext(undefined, { allowLocked: true });
+  if (!APPS.some((a) => a.id === appId) || !ctx.canApp(appId)) return { ok: false, error: "App inconnue." };
+  const [m] = await db.select({ p: members.prefs }).from(members).where(eq(members.id, ctx.member.id));
+  const list = (m?.p.favApps ?? []).filter((x) => x !== appId && APPS.some((a) => a.id === x));
+  if (fav) list.push(appId);
+  await db.update(members).set({ prefs: sql`${members.prefs} || ${JSON.stringify({ favApps: list.slice(0, 12) })}::jsonb` }).where(eq(members.id, ctx.member.id));
+  revalidatePath("/app", "layout");
+  return { ok: true, message: fav ? "App épinglée." : "App désépinglée." };
 }

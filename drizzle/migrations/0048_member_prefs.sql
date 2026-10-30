@@ -1,0 +1,1 @@
+ALTER TABLE "members" ADD COLUMN "prefs" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -1,12 +1,13 @@
 "use client";
 
+import { AppSwitcher } from "@/components/app/app-switcher";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { activeNavHref, appForPath, type AppIcon as AppIconName, type AppNavItem } from "@/lib/apps";
 import { HomeTopBar, Sidebar } from "@/components/app/sidebar";
 import type { NavItem } from "@/lib/navigation";
 
-export type ShellApp = { id: string; name: string; icon: AppIconName; href: string; nav: AppNavItem[]; match?: string[]; pinned?: boolean };
+export type ShellApp = { id: string; name: string; icon: AppIconName; href: string; nav: AppNavItem[]; match?: string[]; pinned?: boolean; fav?: boolean };
 type Biz = { id: string; name: string; businessType: string | null };
 
 /** Barre latérale Branshee, gardée telle quelle dans l'app RDV. */
@@ -31,12 +32,15 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
 
   const home: NavItem = { href: "/app", label: "Toutes les apps", icon: "apps" };
   const settings = new Set(["reglages", "employes"]);
-  const groups =
+  const groups: { label: string | null; items: NavItem[] }[] =
     app?.id === "rdv"
-      ? rdv.groups
+      ? [...rdv.groups]
       : app
         ? [{ label: null, items: [home] }, { label: app.name, items: app.nav.map((n) => ({ ...n, label: n.soon ? `${n.label} · bientôt` : n.label })) }]
         : [{ label: null, items: [home] }, { label: "Vos apps", items: apps.filter((a) => a.pinned !== false && !settings.has(a.id)).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) }];
+  // Raccourcis : les apps épinglées (sauf celle ouverte), pour passer de RDV à Factures ou Clients en un clic.
+  const shortcuts = app ? apps.filter((a) => a.fav && a.id !== app.id).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) : [];
+  if (shortcuts.length) groups.push({ label: "Raccourcis", items: shortcuts });
   const activeHref = app && app.id !== "rdv" ? activeNavHref(app.nav, pathname) : undefined;
 
   // Accueil et pages hors app (questionnaire de départ, compte, aide, parrainage) : pleine largeur, barre en haut
@@ -46,7 +50,8 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
   if (pathname === "/app" || !app || adminPage)
     return (
       <div className="min-h-dvh">
-        <HomeTopBar brand="skydev" business={business} businesses={businesses} user={user} footer={rdv.footer} supportUnread={badges["/app/aide"] ?? 0} />
+        <HomeTopBar brand="skydev" business={business} businesses={businesses} user={user} footer={rdv.footer} supportUnread={badges["/app/aide"] ?? 0} switcher />
+        <AppSwitcher apps={apps} />
         <main>
           <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
@@ -54,7 +59,8 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
     );
   return (
     <div className="min-h-dvh">
-      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} />
+      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} switcher />
+      <AppSwitcher apps={apps} />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>

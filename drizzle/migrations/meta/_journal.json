@@ -337,6 +337,13 @@
       "when": 1793282010630,
       "tag": "0047_demo",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793357046177,
+      "tag": "0048_member_prefs",
+      "breakpoints": true
     }
   ]
 }
