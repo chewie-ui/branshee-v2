@@ -139,15 +139,19 @@ export async function endImpersonationsFor(userId: string) {
 }
 
 /**
- * Démo publique : on regarde tout, on n'enregistre rien. Toute écriture (action, formulaire, API) renvoie
- * vers l'inscription, sauf la connexion et l'inscription elles-mêmes (pour passer à un vrai compte).
+ * Démo : chaque visiteur a sa propre copie, effacée après quelques heures. Il peut tout essayer, sauf ce qui
+ * touche au compte, à l'argent ou à l'extérieur (abonnement, équipe et invitations, intégrations, SMS,
+ * sur mesure, création d'entreprise) : là, on l'envoie vers l'inscription. Aucun email ni SMS ne part
+ * d'une entreprise de démo (voir mailer et notifications).
  * `x-method` et `x-pathname` sont toujours réécrits par le proxy : le navigateur ne peut pas les choisir.
  */
+const DEMO_BLOCKED = /^\/(app\/compte|app\/reglages\/abonnement|app\/reglages\/integrations|app\/reglages\/sms|app\/equipe|app\/parrainage|app\/sur-mesure|bienvenue|admin|espace-client)(\/|$)/;
 async function guardDemo() {
   const h = await headers();
   const method = (h.get("x-method") ?? "GET").toUpperCase();
   if (method === "GET" || method === "HEAD") return;
   const path = h.get("x-pathname") ?? "";
-  if (/^\/(connexion|inscription|mot-de-passe|verifier-email|demo)(\/|$)/.test(path)) return;
-  redirect("/inscription?demo=1");
+  if (DEMO_BLOCKED.test(path)) redirect("/inscription?demo=1");
+  // Pas d'envoi de gros fichiers dans une démo (photos, documents) : réservé aux vrais comptes.
+  if (Number(h.get("content-length") ?? 0) > 300_000) redirect("/inscription?demo=1");
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { isDemoBusiness } from "@/server/demo-flag";
 import { and, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appointmentPayments, appointments, bookingSettings, businesses, members, notificationSettings, users, waitlistEntries } from "@/db/schema";
@@ -86,6 +87,8 @@ async function toPhone(row: Loaded, kind: "reminder" | "confirmation") {
   const phone = row.a.contactPhone;
   const st = row.settings;
   if (!phone || !st) return false;
+  // Démo : rien ne part (numéro tapé par un visiteur).
+  if (await isDemoBusiness(row.business.id)) return false;
   const wantWa = kind === "reminder" ? st.whatsappReminders : st.whatsappConfirmations;
   const wantSms = kind === "reminder" ? st.smsReminders : st.smsConfirmations;
   if (!wantWa && !wantSms) return false;

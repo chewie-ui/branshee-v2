@@ -11,7 +11,6 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { getSessionUser } from "@/server/auth/session";
 import { customerByEmail, giveStamp, loyaltyQrKey, loyaltySettingsOf, sendLoyaltyWelcome } from "@/server/loyalty";
 import { isLocked } from "@/server/plan";
-import { isDemoBusiness } from "@/server/demo-flag";
 
 export type ScanResult =
   | { ok: true; stamps: number; goal: number; reward: string; already: boolean; token: string | null; business: string }
@@ -37,7 +36,6 @@ export async function scanStamp(input: { b: string; w: number; s: string; firstN
   const [b] = await db.select({ id: businesses.id, name: businesses.name, tz: businesses.timezone }).from(businesses).where(and(eq(businesses.id, input.b), isNull(businesses.deletedAt)));
   if (!b) return { ok: false, error: "Ce QR code n'est plus valable." };
   const s = await loyaltySettingsOf(b.id);
-  if (await isDemoBusiness(b.id)) return { ok: false, error: "Ceci est une démonstration : le tampon n'est pas enregistré." };
   if (!s.qrEnabled || (await isLocked(b.id))) return { ok: false, error: `${b.name} n'utilise pas le tampon par QR code pour le moment.` };
 
   const jar = await cookies();

@@ -86,7 +86,7 @@ export function SkydevLanding() {
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
             <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
             <Link className="btn btn-ghost btn-lg" href="/inscription">Créer mon compte gratuit</Link>
-            <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif avec ses rendez-vous, factures, clients et stock. Rien à remplir.</p>
+            <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
           </div>
 
           <div className="builder">

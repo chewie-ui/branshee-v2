@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { TZDate } from "@date-fns/tz";
 import { addDays, startOfWeek } from "date-fns";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appointments, businessPlans, businesses, customerNotes, customers, invoiceSettings, loyaltyCards, loyaltySettings, members, notificationSettings,
@@ -14,40 +14,31 @@ import { hashPassword } from "@/server/auth/password";
 import { createBusiness } from "@/server/business";
 
 /**
- * Démo publique de Skydev (skydev.be/demo) : un compte et une entreprise fictifs, en lecture seule,
- * recréés chaque jour pour que l'agenda tombe toujours sur la semaine en cours. Aucune donnée réelle,
- * aucun email ni téléphone de client (rien ne peut partir).
+ * Démo publique de Skydev (skydev.be/demo) : chaque visiteur reçoit sa propre copie d'un cabinet fictif,
+ * qu'il peut modifier librement (créer une facture, un rendez-vous…). Rien ne sort : aucun email ni SMS
+ * n'est envoyé par une entreprise de démo. Chaque copie est effacée après quelques heures.
  */
-const DEMO_EMAIL = "demo@demo.skydev.be";
+const DEMO_DOMAIN = "demo.skydev.be";
 const TZ = "Europe/Brussels";
+export const DEMO_HOURS = 3;
 
-async function demoUser() {
-  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, DEMO_EMAIL));
-  if (u) return u.id;
-  // Mot de passe aléatoire jamais communiqué : on n'entre dans la démo que par skydev.be/demo.
-  const [created] = await db.insert(users).values({ email: DEMO_EMAIL, fullName: "Visiteur", passwordHash: await hashPassword(randomBytes(24).toString("base64url")), emailVerifiedAt: new Date(), isDemo: true, signupIntent: "pro" }).onConflictDoNothing().returning({ id: users.id });
-  if (created) return created.id;
-  const [again] = await db.select({ id: users.id }).from(users).where(eq(users.email, DEMO_EMAIL));
-  return again!.id;
+/** Nouvelle copie de démo pour un visiteur : compte + entreprise remplie. */
+export async function createDemoSandbox() {
+  // Mot de passe aléatoire jamais communiqué : on n'entre dans une démo que par skydev.be/demo.
+  const [u] = await db.insert(users).values({ email: `visiteur-${randomBytes(6).toString("hex")}@${DEMO_DOMAIN}`, fullName: "Visiteur", passwordHash: await hashPassword(randomBytes(24).toString("base64url")), emailVerifiedAt: new Date(), isDemo: true, signupIntent: "pro" }).returning({ id: users.id });
+  const businessId = await seed(u!.id);
+  return { userId: u!.id, businessId };
 }
 
-/** L'entreprise de démo du jour (créée si besoin). Verrou : deux visiteurs simultanés n'en créent qu'une. */
-export async function ensureDemo() {
-  const userId = await demoUser();
-  const today = new TZDate(new Date(), TZ).toDateString();
-  const current = async () => {
-    const list = await db.select({ id: businesses.id, createdAt: businesses.createdAt }).from(businesses).where(and(eq(businesses.ownerId, userId), eq(businesses.isDemo, true))).orderBy(desc(businesses.createdAt));
-    const fresh = list.find((b) => new TZDate(b.createdAt, TZ).toDateString() === today);
-    return { fresh, stale: list.filter((b) => b !== fresh) };
-  };
-  const first = await current();
-  if (first.fresh && !first.stale.length) return { userId, businessId: first.fresh.id };
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('skydev-demo'))`);
-    const { fresh, stale } = await current();
-    for (const b of stale) await db.delete(businesses).where(eq(businesses.id, b.id));
-    return { userId, businessId: fresh ? fresh.id : await seed(userId) };
-  });
+/** Toutes les 15 minutes : les copies de démo de plus de quelques heures sont effacées (avec leurs sessions). */
+export async function cleanupDemos() {
+  const limit = new Date(Date.now() - DEMO_HOURS * 3600_000);
+  const old = await db.select({ id: users.id }).from(users).where(and(eq(users.isDemo, true), lt(users.createdAt, limit))).limit(200);
+  if (!old.length) return 0;
+  const ids = old.map((u) => u.id);
+  await db.delete(businesses).where(and(eq(businesses.isDemo, true), inArray(businesses.ownerId, ids)));
+  await db.delete(users).where(and(eq(users.isDemo, true), inArray(users.id, ids)));
+  return ids.length;
 }
 
 async function seed(userId: string) {

@@ -4,6 +4,7 @@ import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs"
 import { processCampaignQueue } from "@/server/marketing";
 import { expireUnpaidShopOrders } from "@/server/shop";
 import { autoStamps } from "@/server/loyalty";
+import { cleanupDemos } from "@/server/demo";
 import { sendDueReminders } from "@/server/notifications";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     const campaignEmails = await processCampaignQueue().catch(note("campagnes"));
     const shopExpired = await expireUnpaidShopOrders().catch(note("boutique"));
     const loyaltyStamps = await autoStamps().catch(note("fidélité"));
-    return { ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps };
+    const demosCleaned = await cleanupDemos().catch(note("démos"));
+    return { ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps, demosCleaned };
   }));
 }

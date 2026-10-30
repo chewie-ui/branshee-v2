@@ -39,7 +39,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           ))}
         </nav>
       ) : null}
-      {sp.demo ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground" role="status">Dans la démo, rien ne s&apos;enregistre. Créez votre compte gratuit pour commencer avec vos propres données : 30 jours d&apos;essai, sans carte.</p> : null}
+      {sp.demo ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground" role="status">Cette partie (compte, abonnement, équipe) n&apos;est pas disponible dans la démo. Créez votre compte gratuit pour commencer avec vos propres données : 30 jours d&apos;essai, sans carte.</p> : null}
       {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">Vous êtes invité par un professionnel déjà sur {brand.name}. Créez votre espace entreprise : essai gratuit, sans carte.</p> : null}
       <Card className="mt-6 p-6">
         {googleConfigured() ? <GoogleButton suite={sp.ref ? undefined : (sp.suite ?? (client ? "/espace-client" : undefined))} refCode={sp.ref?.slice(0, 40)} label="S'inscrire avec Google" /> : null}
