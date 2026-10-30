@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, businesses, leaveAllowances, leaveRequests, members, scheduleExceptions, users } from "@/db/schema";
 import { LEAVE_KINDS, datesBetween, fmtDays, fmtRange, isLeaveKind, leaveHalfDays, type LeavePeriod } from "@/lib/leave";
@@ -60,6 +60,7 @@ export async function requestLeave(input: z.input<typeof requestSchema>): Promis
   if (d.end < d.start) return { ok: false, error: "La date de fin est avant la date de début." };
   if (datesBetween(d.start, d.end).length > 366) return { ok: false, error: "Une absence ne peut pas dépasser un an." };
   const period: LeavePeriod = d.start === d.end ? d.period : "full";
+  if (leaveHalfDays(d.start, d.end, period) === 0) return { ok: false, error: "Ces dates ne contiennent aucun jour ouvrable (week-end ou jours fériés) : rien à enregistrer." };
   const [m] = await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id), eq(members.isActive, true), inArray(members.status, ["active", "invited"])));
   if (!m) return { ok: false, error: "Membre introuvable." };
   // Celui qui valide les congés n'a pas besoin de se demander l'autorisation (ni de la demander pour un autre).
@@ -90,7 +91,7 @@ export async function requestLeave(input: z.input<typeof requestSchema>): Promis
     });
   }
   refresh();
-  return { ok: true, message: status === "approved" ? `${label} enregistré ${when}.` : "Demande envoyée : vous serez prévenu de la réponse." };
+  return { ok: true, message: status === "approved" ? `${label} enregistré ${when.replace(/\.$/, "")}.` : "Demande envoyée : vous serez prévenu de la réponse." };
 }
 
 /** Valider ou refuser une demande en attente. */

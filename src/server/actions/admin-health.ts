@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq, isNull } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { errorLogs } from "@/db/schema";
 import { requireSuperadmin } from "@/server/admin";

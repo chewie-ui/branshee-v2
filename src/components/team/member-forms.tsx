@@ -32,7 +32,7 @@ export function AddMemberForm({ grades, defaultGradeId }: { grades: Grade[]; def
             <Input id="roleLabel" name="roleLabel" maxLength={60} />
           </Field>
         </div>
-        <Field label="Email (facultatif)" htmlFor="email" error={err.email} hint="Pour qu'il puisse se connecter : il crée son compte avec cette adresse et rejoint automatiquement l'équipe.">
+        <Field label="Email (facultatif)" htmlFor="email" error={err.email} hint="Pour qu'il puisse se connecter : il reçoit une invitation, crée son compte avec cette adresse, confirme son e-mail puis accepte l'invitation.">
           <Input id="email" name="email" type="email" aria-invalid={!!err.email || undefined} />
         </Field>
         <Field label="Grade" htmlFor="gradeId" hint="Définit ce qu'il peut voir et faire dans l'espace pro.">

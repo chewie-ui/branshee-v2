@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { diningTables, menuCategories, menuItems, tableOrders } from "@/db/schema";
 import { ORDER_STATUS, isOrderStatus } from "@/lib/orders";
@@ -142,11 +142,19 @@ export async function addTables(input: { prefix: string; from: number; count: nu
   if (!v.success) return { ok: false, error: "Entre 1 et 100 tables à la fois." };
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(diningTables).where(eq(diningTables.businessId, ctx.business.id));
   if (n + v.data.count > 300) return { ok: false, error: "300 tables maximum." };
+  // Une table qui existe déjà (même nom) n'est pas recréée : deux « Table 1 » avec deux QR différents prêtent à confusion.
+  const taken = new Set((await db.select({ l: diningTables.label }).from(diningTables).where(eq(diningTables.businessId, ctx.business.id))).map((r) => r.l.trim().toLowerCase()));
   const rows = [];
-  for (let i = 0; i < v.data.count; i++) rows.push({ businessId: ctx.business.id, label: `${v.data.prefix || "Table"} ${v.data.from + i}`.trim(), token: await newTableToken(), position: n + i });
+  let skipped = 0;
+  for (let i = 0; i < v.data.count; i++) {
+    const label = `${v.data.prefix || "Table"} ${v.data.from + i}`.trim();
+    if (taken.has(label.toLowerCase())) { skipped++; continue; }
+    rows.push({ businessId: ctx.business.id, label, token: await newTableToken(), position: n + rows.length });
+  }
+  if (!rows.length) return { ok: false, error: skipped > 1 ? "Ces tables existent déjà." : "Cette table existe déjà." };
   await db.insert(diningTables).values(rows);
   refresh();
-  return { ok: true, message: `${rows.length} table${rows.length > 1 ? "s" : ""} ajoutée${rows.length > 1 ? "s" : ""}.` };
+  return { ok: true, message: `${rows.length} table${rows.length > 1 ? "s" : ""} ajoutée${rows.length > 1 ? "s" : ""}.${skipped ? ` ${skipped} déjà existante${skipped > 1 ? "s" : ""}, ignorée${skipped > 1 ? "s" : ""}.` : ""}` };
 }
 
 export async function renameTable(id: string, label: string): Promise<Result> {

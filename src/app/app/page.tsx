@@ -16,6 +16,7 @@ import { SubscriptionSummary } from "@/components/apps/subscription-summary";
 import { PageScoreCard } from "@/components/directory/page-score-card";
 import { matchMetier, metierVilleUrl, pageCompleteness } from "@/lib/directory";
 import { slugify } from "@/lib/slug";
+import { de } from "@/lib/cn";
 import { pageFacts } from "@/server/directory";
 
 /** Apps rangées dans « Administration » (patron et admins), pas dans la grille des apps. */
@@ -71,7 +72,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     <>
       <div className="mt-2 mb-10 text-center">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
-        <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps de ${ctx.business.name}.`}</p>
+        <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps ${de(ctx.business.name)}.`}</p>
       </div>
       {score ? <PageScoreCard items={score.items} percent={score.percent} slug={ctx.business.slug} searchHref={searchHref} searchLabel={searchLabel} /> : null}
       {ctx.can("billing.manage") ? (

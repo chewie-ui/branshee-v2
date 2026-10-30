@@ -1,7 +1,7 @@
 "use server";
 
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { chatChannels, chatMessages, chatReads, members } from "@/db/schema";
 import { rateLimit } from "@/server/auth/rate-limit";

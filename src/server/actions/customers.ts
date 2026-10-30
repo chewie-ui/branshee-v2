@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, appointments, customerNotes, customers } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";

@@ -46,10 +46,17 @@ export function ExpensesBoard({ year, years, rows, canManage, franchise, today }
       </div>
       {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      {/* Franchise : la TVA payée n'est pas récupérable, le total TVAC est le vrai coût (pas de carte TVA à 0 €). */}
+      <div className={cn("grid gap-3", franchise ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
         <Card className="p-4"><p className="text-sm text-muted">Total {year}</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(total)}</p><p className="text-xs text-muted">{rows.length} dépense{rows.length > 1 ? "s" : ""}, TVA comprise</p></Card>
-        <Card className="p-4"><p className="text-sm text-muted">Hors TVA</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(total - vat)}</p><p className="text-xs text-muted">Ce qui réduit votre bénéfice</p></Card>
-        <Card className="p-4"><p className="text-sm text-muted">{franchise ? "TVA payée" : "TVA récupérable"}</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(vat)}</p><p className="text-xs text-muted">{franchise ? "Non récupérable en franchise" : "À déduire dans votre déclaration TVA"}</p></Card>
+        {franchise ? (
+          <Card className="p-4"><p className="text-sm text-muted">Votre coût réel</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(total)}</p><p className="text-xs text-muted">En franchise, la TVA payée n&apos;est pas récupérable : elle fait partie du coût.</p></Card>
+        ) : (
+          <>
+            <Card className="p-4"><p className="text-sm text-muted">Hors TVA</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(total - vat)}</p><p className="text-xs text-muted">Ce qui réduit votre bénéfice</p></Card>
+            <Card className="p-4"><p className="text-sm text-muted">TVA récupérable</p><p className="mt-1 text-xl font-semibold tabular-nums">{eur(vat)}</p><p className="text-xs text-muted">À déduire dans votre déclaration TVA</p></Card>
+          </>
+        )}
       </div>
       {missing ? <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning"><Paperclip className="mr-1.5 inline size-4" aria-hidden="true" />{missing} dépense{missing > 1 ? "s" : ""} sans justificatif. Gardez une preuve pour chaque frais, votre comptable vous la demandera.</p> : null}
 

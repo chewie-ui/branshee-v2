@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, bookingPageSettings, businesses, formQuestions, type PageSection } from "@/db/schema";
 import { resolveTheme, themeSchema } from "@/lib/booking-theme";

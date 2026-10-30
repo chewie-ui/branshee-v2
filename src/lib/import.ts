@@ -82,7 +82,7 @@ export const FIELDS: Record<ImportKind, { key: string; label: string; aliases: s
     { key: "price", label: "Prix de vente TVAC", aliases: ["prix", "prix ttc", "prix tvac", "prix de vente", "price", "verkoopprijs", "prijs", "pv", "sale price", "retail price"] },
     { key: "vatRate", label: "TVA (%)", aliases: ["tva", "taux tva", "vat", "vat rate", "btw", "tax"] },
     { key: "sku", label: "Référence", aliases: ["reference", "ref", "sku", "code", "code article", "artikelnummer"] },
-    { key: "barcode", label: "Code-barres", aliases: ["code barre", "code-barres", "codebarre", "ean", "barcode", "gtin", "upc", "streepjescode"] },
+    { key: "barcode", label: "Code-barres", aliases: ["code barre", "code barres", "code-barres", "codebarre", "ean", "barcode", "gtin", "upc", "streepjescode"] },
     { key: "category", label: "Catégorie", aliases: ["categorie", "category", "famille", "rayon", "categorie produit", "groep", "type"] },
     { key: "stockQty", label: "Stock", aliases: ["stock", "quantite", "qty", "quantity", "voorraad", "en stock", "inventory"] },
     { key: "minQty", label: "Seuil d'alerte", aliases: ["seuil", "stock minimum", "stock min", "min", "minimum", "alerte"] },
@@ -102,7 +102,7 @@ export function guessMapping(headers: string[], kind: ImportKind): Record<string
   for (const pass of ["exact", "loose"] as const) {
     for (const f of FIELDS[kind]) {
       if (out[f.key] !== undefined && out[f.key]! >= 0) continue;
-      const idx = h.findIndex((x, i) => !used.has(i) && f.aliases.some((a) => (pass === "exact" ? x === a : x.length > 2 && (x.startsWith(a + " ") || x.endsWith(" " + a)))));
+      const idx = h.findIndex((x, i) => !used.has(i) && f.aliases.map(norm).some((a) => (pass === "exact" ? x === a : x.length > 2 && (x.startsWith(a + " ") || x.endsWith(" " + a)))));
       out[f.key] = idx;
       if (idx >= 0) used.add(idx);
     }

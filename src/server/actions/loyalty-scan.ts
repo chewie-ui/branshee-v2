@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, customers, loyaltyCards } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";

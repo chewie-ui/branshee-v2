@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Repeat, Users } from "lucide-react";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { serviceHours, serviceMembers, services } from "@/db/schema";
 import { NewSessionForm, RecurrenceForm } from "@/components/services/group-sessions";

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, count, eq, isNotNull } from "drizzle-orm";
 import type Stripe from "stripe";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
 import { REFERRAL_MONTH_CENTS } from "@/lib/referral";

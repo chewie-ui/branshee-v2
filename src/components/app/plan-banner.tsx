@@ -27,7 +27,8 @@ export function PlanBanner({ plan, canManage, timezone, brand = "branshee" }: { 
       </div>
     );
   }
-  if (plan.source !== "granted" || !plan.isTrial || !plan.grantedUntil) return null;
+  // Essai : seulement pour qui gère l'abonnement (un collaborateur n'a rien à faire de ce bandeau).
+  if (!canManage || plan.source !== "granted" || !plan.isTrial || !plan.grantedUntil) return null;
   const days = daysUntil(plan.grantedUntil);
   const soon = days <= 7;
   const until = new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "long", timeZone: timezone }).format(plan.grantedUntil);

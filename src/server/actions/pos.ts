@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { customers, posSales, posSessions, products, stockMoves, type PosLine } from "@/db/schema";
 import { VAT_RATES, cartTotals, ticketNumber } from "@/lib/stock";
 import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { openSessionOf, sessionTotals, stockRights } from "@/server/stock";
+import { getSellerSettings } from "@/server/invoicing";
 
 type Result = { ok: true; message?: string; id?: string; number?: string; change?: number | null } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
@@ -89,6 +90,17 @@ export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
       if (!l.name || l.unitCents === undefined || !(VAT_RATES as readonly number[]).includes(l.vatRate ?? -1)) return { ok: false, error: "Ligne libre incomplète." };
       lines.push({ productId: null, name: l.name, qty: l.qty, unitCents: l.unitCents, vatRate: l.vatRate! });
     }
+  }
+  // Franchise de TVA : aucune TVA sur le ticket (mention de franchise à l'impression), comme sur les factures.
+  if ((await getSellerSettings(ctx.business.id)).vatRegime === "franchise") for (const l of lines) l.vatRate = 0;
+  const grossAll = lines.reduce((a, l) => a + l.qty * l.unitCents, 0);
+  if ((d.discountCents ?? 0) > grossAll) return { ok: false, error: "La remise dépasse le montant du ticket." };
+  // Stock suivi : on ne vend pas plus que ce qui est en stock (corrigez d'abord le stock si le chiffre est faux).
+  const want = new Map<string, number>();
+  for (const l of lines) if (l.productId && byId.get(l.productId)!.trackStock) want.set(l.productId, (want.get(l.productId) ?? 0) + l.qty);
+  for (const [pid, q] of want) {
+    const p = byId.get(pid)!;
+    if (p.stockQty < q) return { ok: false, error: `Stock insuffisant pour « ${p.name} » : ${Math.max(0, p.stockQty)} en stock. Corrigez le stock dans l'app Stock si le chiffre est faux.` };
   }
   if (d.discountCents && !stockRights(ctx).manage && d.discountCents > 0) {
     // Les remises restent possibles pour l'équipe, mais limitées à 50 % du ticket.

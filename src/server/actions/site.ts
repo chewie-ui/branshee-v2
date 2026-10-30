@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, ne } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, businesses, sites, users } from "@/db/schema";
 import { SITE_TEMPLATES } from "@/lib/site-templates";

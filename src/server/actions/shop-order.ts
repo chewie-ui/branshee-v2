@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { products, shopOrders, stockMoves, type ShopLine } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";

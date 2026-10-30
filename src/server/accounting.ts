@@ -41,7 +41,9 @@ export async function accountingFor(businessId: string, from: string, to: string
     const sign = d.docType === "credit" ? -1 : 1;
     const docRegime = d.seller?.vatRegime === "assujetti" || d.seller?.vatRegime === "franchise" ? d.seller.vatRegime : regime;
     const t = totals(d.lines as SalesLine[], docRegime);
-    if (docRegime === "assujetti") for (const r of t.vatRows) invoiceRows.push({ rate: r.rate, base: sign * c(r.base), vat: sign * c(r.amt) });
+    // Document sans lignes (ancienne note de crédit, import) : ses montants enregistrés font foi, comme dans l'export.
+    if (!(d.lines as SalesLine[]).length) invoiceRows.push({ rate: docRegime === "assujetti" && d.ht ? Math.round((d.vat / d.ht) * 100) : 0, base: sign * d.ht, vat: docRegime === "assujetti" ? sign * d.vat : 0 });
+    else if (docRegime === "assujetti") for (const r of t.vatRows) invoiceRows.push({ rate: r.rate, base: sign * c(r.base), vat: sign * c(r.amt) });
     else invoiceRows.push({ rate: 0, base: sign * c(t.ht), vat: 0 });
     if (sign > 0) { invoicesHt += d.ht; invoicesVat += d.vat; } else { credits += d.ht; creditsVat += d.vat; }
   }

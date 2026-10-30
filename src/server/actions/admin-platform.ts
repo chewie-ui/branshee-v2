@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { TZDate } from "@date-fns/tz";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { accessLinks, activityLogs, businesses, featureFlags, jobTitles, promoCampaigns, promoCodes, users } from "@/db/schema";
 import { APP_FEATURES, HIDDEN_FEATURES, PAGE_FEATURES, navKey } from "@/lib/features";

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 /** Validation commune des grilles hebdomadaires (horaires d'ouverture, plages d'une prestation). */
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure invalide");

@@ -8,7 +8,7 @@ import { currentBrand } from "@/server/brand";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, jobTitles, members, users } from "@/db/schema";
 import { isOfficialProfession, professionKey } from "@/lib/professions";

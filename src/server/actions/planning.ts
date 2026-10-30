@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, members, shifts } from "@/db/schema";
 import { addDays, isDay, isTime, mondayOf, weekRangeLabel } from "@/lib/planning";
@@ -49,6 +49,16 @@ export async function saveShift(input: z.input<typeof shiftSchema>): Promise<Res
   if (d.start === d.end) return { ok: false, error: "L'heure de fin doit être différente de l'heure de début." };
   if (d.id && (d.memberIds.length > 1 || d.days.length > 1)) return { ok: false, error: "Un horaire existant ne concerne qu'une personne et un jour." };
   if (!(await ownMembers(ctx, d.memberIds))) return { ok: false, error: "Membre introuvable." };
+  // Deux horaires qui se chevauchent pour la même personne le même jour : heures comptées deux fois (Planning, Paie).
+  const span = (a: string, b: string) => { const x = Number(a.slice(0, 2)) * 60 + Number(a.slice(3, 5)); let y = Number(b.slice(0, 2)) * 60 + Number(b.slice(3, 5)); if (y <= x) y += 1440; return [x, y] as const; };
+  const [ns, ne] = span(d.start, d.end);
+  const existing = await db
+    .select({ id: shifts.id, memberId: shifts.memberId, day: shifts.day, start: shifts.startTime, end: shifts.endTime, name: members.displayName })
+    .from(shifts)
+    .innerJoin(members, eq(members.id, shifts.memberId))
+    .where(and(eq(shifts.businessId, ctx.business.id), inArray(shifts.memberId, d.memberIds), inArray(shifts.day, d.days)));
+  const clash = existing.find((x) => x.id !== d.id && (() => { const [es, ee] = span(x.start, x.end); return ns < ee && es < ne; })());
+  if (clash) return { ok: false, error: `${clash.name} a déjà un horaire qui chevauche celui-ci le ${new Date(`${clash.day}T12:00:00`).toLocaleDateString("fr-BE", { weekday: "long", day: "numeric", month: "long" })} (${clash.start.slice(0, 5)}–${clash.end.slice(0, 5)}).` };
   const values = { startTime: d.start, endTime: d.end, breakMinutes: d.breakMinutes, label: d.label || null, note: d.note || null };
   if (d.id) {
     const updated = await db.update(shifts).set({ ...values, memberId: d.memberIds[0]!, day: d.days[0]!, updatedAt: new Date() }).where(and(eq(shifts.id, d.id), eq(shifts.businessId, ctx.business.id))).returning({ id: shifts.id });

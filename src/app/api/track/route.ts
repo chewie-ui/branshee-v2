@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { pageViews } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";

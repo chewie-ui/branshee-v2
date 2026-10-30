@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, count, eq, inArray, isNull, max } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { openingBounds } from "@/server/opening";
 import { outsideBounds, type Week } from "@/lib/opening";

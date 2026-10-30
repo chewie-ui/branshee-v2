@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn } from "@/lib/cn";
+import { cn, de } from "@/lib/cn";
 import { LEAVE_KINDS, belgianHolidays, datesBetween } from "@/lib/leave";
 import { addDays } from "@/lib/planning";
 import { requireContext } from "@/server/context";
@@ -44,17 +44,17 @@ export default async function LeaveCalendar({ searchParams }: { searchParams: Pr
         <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-muted">
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-accent" aria-hidden="true" />Validé</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-accent bg-accent-soft" aria-hidden="true" />En attente</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-muted" aria-hidden="true" />Week-end ou férié</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-border-strong bg-surface-muted" aria-hidden="true" />Week-end ou férié</span>
         </div>
       </div>
       <Card className="relative overflow-x-auto">
         <table className="w-full border-collapse text-xs">
-          <caption className="sr-only">Absences de {title}</caption>
+          <caption className="sr-only">Absences {de(title)}</caption>
           <thead>
             <tr className="border-b border-border">
-              <th scope="col" className="sticky left-0 z-10 w-40 min-w-40 bg-surface px-3 py-2 text-left text-sm font-medium text-muted">Personne</th>
+              <th scope="col" className="sticky left-0 z-10 w-32 min-w-32 bg-surface px-3 py-2 text-left text-sm font-medium text-muted">Personne</th>
               {days.map((d) => (
-                <th key={d} scope="col" title={holidays.get(d)} className={cn("min-w-7 px-0 py-1.5 text-center font-medium", d === today ? "text-accent" : "text-muted", holidays.has(d) || wd(d) >= 5 ? "bg-surface-muted" : "")}>
+                <th key={d} scope="col" title={holidays.get(d)} className={cn("min-w-6 px-0 py-1.5 text-center font-medium", d === today ? "text-accent" : "text-muted", holidays.has(d) || wd(d) >= 5 ? "bg-surface-muted" : "")}>
                   <span className="block">{INITIAL[wd(d)]}</span>
                   <span className={cn("block tabular-nums", d === today ? "font-bold" : "")}>{Number(d.slice(8))}</span>
                 </th>
@@ -66,7 +66,7 @@ export default async function LeaveCalendar({ searchParams }: { searchParams: Pr
               const off = absentDays(m.id);
               return (
                 <tr key={m.id}>
-                  <th scope="row" className="sticky left-0 z-10 truncate bg-surface px-3 py-2 text-left text-sm font-medium">{m.name}</th>
+                  <th scope="row" className="sticky left-0 z-10 max-w-32 truncate bg-surface px-3 py-2 text-left text-sm font-medium">{m.name}</th>
                   {days.map((d) => {
                     const l = off.get(d);
                     const label = l ? `${m.name} : ${LEAVE_KINDS[l.kind].label}${l.status === "pending" ? " (en attente)" : ""}${l.period !== "full" ? (l.period === "am" ? ", matin" : ", après-midi") : ""}` : undefined;

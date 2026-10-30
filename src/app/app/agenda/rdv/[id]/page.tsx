@@ -5,7 +5,7 @@ import { ArrowLeft, BadgeCheck, Clock, FolderOpen, Mail, MessageSquare, Phone, P
 import { and, asc, desc, eq } from "drizzle-orm";
 import { decrypt } from "@/lib/field-crypto";
 import { format } from "date-fns";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { appointmentPayments, appointments, customerNotes, customers, members, services, users } from "@/db/schema";
 import { CancelAppointmentButton, InternalNote, NoShowControl, PenaltyReview } from "@/components/app/appointment-actions";

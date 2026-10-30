@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, bookingSettings, members, scheduleExceptions, weeklyHours } from "@/db/schema";
 import type { PermissionKey } from "@/lib/permissions";

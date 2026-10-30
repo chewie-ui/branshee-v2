@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";

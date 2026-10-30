@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { and, asc, eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { appointments, members } from "@/db/schema";
 import { BlockForm } from "@/components/agenda/block-form";

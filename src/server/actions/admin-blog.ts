@@ -4,7 +4,7 @@ import { TZDate } from "@date-fns/tz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ne } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
 import { slugify } from "@/lib/slug";

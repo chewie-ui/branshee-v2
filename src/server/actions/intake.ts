@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, max, notInArray } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, intakeOptions, intakeQuestions, serviceIntakeRules, services } from "@/db/schema";
 import { requireContext } from "@/server/context";

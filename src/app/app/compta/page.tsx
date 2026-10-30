@@ -38,7 +38,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   ];
   return (
     <>
-      <PageHeader title="Comptabilité" description="Vos chiffres au même endroit : ventes, dépenses, TVA et argent à encaisser." />
+      <PageHeader title="Comptabilité" description="Vos chiffres au même endroit : factures, caisse, boutique en ligne, dépenses, TVA et argent à encaisser. Les commandes à table comptent quand elles passent par la Caisse." />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="inline-flex flex-wrap rounded-lg bg-surface-muted p-1" role="group" aria-label="Période">
           {choices.map(([l, p]) => <Link key={l} href={`/app/compta?p=${periodKey(p)}`} aria-current={periodKey(p) === periodKey(period) ? "page" : undefined} className={cn("h-8 rounded-md px-3 text-sm leading-8 font-medium", periodKey(p) === periodKey(period) ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>{l}</Link>)}

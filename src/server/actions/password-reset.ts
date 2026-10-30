@@ -4,7 +4,7 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { sessions, users, verificationCodes } from "@/db/schema";
 import { hashPassword } from "@/server/auth/password";

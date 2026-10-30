@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, members, supervisionRequests, users } from "@/db/schema";
 import { DisableUserButton } from "@/components/admin/admin-actions";

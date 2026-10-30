@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, createPublicKey, createVerify, randomInt, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { loginEvents, sessions, users, verificationCodes } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";

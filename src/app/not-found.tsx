@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Compass } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { currentBrand } from "@/server/brand";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const brand = await currentBrand();
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-16 text-center">
-      <Link href="/" aria-label="Branshee, accueil"><Brand /></Link>
+      <Link href="/" aria-label={`${brand.name}, accueil`}><Brand brand={brand.id} /></Link>
       <Compass className="mt-10 size-10 text-muted" aria-hidden="true" />
       <p className="mt-4 text-sm font-semibold text-accent">Erreur 404</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">Cette page n&apos;existe pas</h1>

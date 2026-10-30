@@ -6,7 +6,7 @@ import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, appointmentPayments, appointments, bookingSettings, customers, members, serviceMembers, services } from "@/db/schema";
 import { parseQuickTime } from "@/lib/time-input";

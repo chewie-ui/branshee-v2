@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { and, asc, count, desc, eq, gte } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, appointments, bookingPageSettings, businesses, members, services, subscriptions, users } from "@/db/schema";
 import { AdminEmbedCode } from "@/components/admin/embed-code";

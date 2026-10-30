@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, CalendarPlus, Mail, MessageCircle, Phone, Search } from "lucide-react";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { format } from "date-fns";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { appointmentPayments, appointments, customerNotes, customers, members, users } from "@/db/schema";
 import { StatusBadge } from "@/components/app/status-badge";

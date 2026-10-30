@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { customers, giftCardUses, giftCards, loyaltyCards, loyaltyMoves, loyaltySettings } from "@/db/schema";
 import { addMonths, giftCode, normalizeCode } from "@/lib/loyalty";

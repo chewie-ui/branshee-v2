@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { posSales, products, stockMoves } from "@/db/schema";
 import { VAT_RATES, parseEuros } from "@/lib/stock";
@@ -126,6 +126,7 @@ export async function moveStock(input: z.input<typeof moveSchema>): Promise<Resu
     const delta = d.reason === "in" ? d.qty : d.reason === "out" ? -d.qty : d.qty - p.qty;
     if (delta === 0) return { ok: true as const, message: "Stock inchangé." };
     const next = p.qty + delta;
+    if (d.reason === "out" && next < 0) return { ok: false as const, error: `Sortie impossible : il n'y a que ${p.qty} « ${p.name} » en stock. Faites un inventaire si le chiffre est faux.` };
     await tx.update(products).set({ stockQty: next, ...(delta > 0 ? { lowNotifiedAt: null } : {}), updatedAt: new Date() }).where(eq(products.id, d.productId));
     await tx.insert(stockMoves).values({ businessId: ctx.business.id, productId: d.productId, delta, reason: d.reason, note: d.note || null, memberId: ctx.member.id });
     refresh();

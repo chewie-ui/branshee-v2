@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, appointments, bookingSettings, customers, groupSessions, members, services } from "@/db/schema";
 import { isOccurrence, parseVirtualSessionId } from "@/lib/booking/recurrence";

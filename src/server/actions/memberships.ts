@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, businesses, grades, members, users } from "@/db/schema";
 import { rateLimit } from "@/server/auth/rate-limit";

@@ -22,7 +22,7 @@ export default async function Page() {
         app={app}
         title="Tél IA est actif sur votre abonnement"
         text="On vous contacte pour le configurer ensemble : ce que l'IA doit dire (services, horaires, questions fréquentes) et le renvoi de vos appels manqués. Une question en attendant ? Appelez-nous."
-        action={<ButtonLink href="tel:+32477443988" variant="secondary">0477 44 39 88</ButtonLink>}
+        action={<ButtonLink href="tel:+32477443988" variant="secondary">Nous appeler : 0477 44 39 88</ButtonLink>}
       />
     );
   return (
@@ -33,7 +33,7 @@ export default async function Page() {
       action={
         <>
           {ctx.can("billing.manage") ? <ButtonLink href="/app/reglages/abonnement">Ajouter à mon abonnement</ButtonLink> : null}
-          <ButtonLink href="tel:+32477443988" variant="secondary">0477 44 39 88</ButtonLink>
+          <ButtonLink href="tel:+32477443988" variant="secondary">Nous appeler : 0477 44 39 88</ButtonLink>
         </>
       }
     />

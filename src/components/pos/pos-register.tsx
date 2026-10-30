@@ -37,7 +37,7 @@ export function OpenRegister() {
 }
 
 /** Écran de vente : produits (recherche, catégories, scan), ticket, encaissement espèces ou carte. */
-export function PosRegister({ products, expectedCash, sessionInfo }: { products: ProductView[]; expectedCash: number; sessionInfo: string }) {
+export function PosRegister({ products, expectedCash, sessionInfo, franchise = false }: { products: ProductView[]; expectedCash: number; sessionInfo: string; franchise?: boolean }) {
   const router = useRouter();
   const [lines, setLines] = useState<Line[]>([]);
   const [q, setQ] = useState("");
@@ -169,7 +169,7 @@ export function PosRegister({ products, expectedCash, sessionInfo }: { products:
               <Input id="pos-disc" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0,00" className="h-9 w-28 text-right" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-sm text-muted">Total TVAC <span className="text-xs">(dont TVA {eur(t.vat)})</span></span>
+              <span className="text-sm text-muted">{franchise ? <>Total <span className="text-xs">(franchise de TVA)</span></> : <>Total TVAC <span className="text-xs">(dont TVA {eur(t.vat)})</span></>}</span>
               <span className="text-2xl font-semibold tabular-nums">{eur(t.total)}</span>
             </div>
             {pay === "cash" ? (

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ne, sql } from "drizzle-orm";
 import QRCode from "qrcode";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";

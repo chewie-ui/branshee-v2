@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { isDay } from "@/lib/planning";
 import { db } from "@/db";
 import { activityLogs, appointments, customers, invoiceProducts, invoiceSettings, salesDocuments, type SalesLine } from "@/db/schema";

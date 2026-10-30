@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { customers, interventions, members, type InterventionPhoto } from "@/db/schema";
 import { INTERVENTION_STATUS, isInterventionStatus } from "@/lib/interventions";

@@ -421,7 +421,7 @@ export const APPS: SkyApp[] = [
     href: "/app/tel-ia",
     status: "active",
     billing: "addon",
-    features: ["Répond à vos appels manqués", "Résumé de chaque appel par email", "Vous gardez votre numéro", "Forfait de minutes inclus, puis à l'usage"],
+    features: ["Répond à vos appels manqués", "Résumé de chaque appel par email", "Vous gardez votre numéro", "100 minutes incluses par mois"],
     nav: [{ href: "/app/tel-ia", label: "Tél IA", icon: "phone" }],
   },
   {

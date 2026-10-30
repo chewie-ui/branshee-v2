@@ -38,7 +38,7 @@ export function MenuEditor({ categories, items, canEdit }: { categories: MenuCat
       {canEdit ? (
         <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); run(() => saveCategory(null, newCat), () => setNewCat("")); }}>
           <label htmlFor="new-cat" className="sr-only">Nouvelle rubrique</label>
-          <Input id="new-cat" value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Nouvelle rubrique (Entrées, Plats, Boissons…)" maxLength={60} className="max-w-sm flex-1" />
+          <Input id="new-cat" value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Nouvelle rubrique : Entrées, Plats…" maxLength={60} className="max-w-sm flex-1" />
           <Button type="submit" variant="secondary" disabled={!newCat.trim() || pending} icon={<Plus className="size-4" aria-hidden="true" />}>Ajouter la rubrique</Button>
           <Button type="button" className="ml-auto" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => { setMsg(null); setEdit({ categoryId: categories[0]?.id ?? null }); }}>Nouveau plat</Button>
         </form>

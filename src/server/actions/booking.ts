@@ -5,7 +5,7 @@ import { LOCALES } from "@/i18n/config";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, appointmentPayments, appointments, customers, paymentSettings, waitlistEntries } from "@/db/schema";
 import { stripe } from "@/server/payments";

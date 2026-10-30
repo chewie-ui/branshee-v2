@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { members, payrollClosures, payrollEntries, payrollProfiles } from "@/db/schema";
 import { isMonth } from "@/lib/payroll";

@@ -21,6 +21,8 @@ export default async function PrintTicket({ params }: { params: Promise<{ id: st
   if (!s) notFound();
   const seller = await getSellerSettings(ctx.business.id);
   const t = cartTotals(s.lines, s.discountCents);
+  // Ticket sans aucune TVA (vendu en franchise) : mention de franchise au lieu du détail de TVA.
+  const franchise = s.vatCents === 0 && seller.vatRegime === "franchise";
   const when = new Intl.DateTimeFormat("fr-BE", { timeZone: ctx.business.timezone || "Europe/Brussels", dateStyle: "short", timeStyle: "short" }).format(s.createdAt);
   return (
     <div className="min-h-dvh bg-surface-muted py-6 print:bg-white print:py-0">
@@ -41,8 +43,17 @@ export default async function PrintTicket({ params }: { params: Promise<{ id: st
         ))}
         {s.discountCents ? <p className="flex justify-between"><span>Remise</span><span>-{eur(s.discountCents)}</span></p> : null}
         <div className="my-2 border-t border-dashed border-black" />
-        <p className="flex justify-between text-[14px] font-bold"><span>TOTAL TVAC</span><span>{eur(s.totalCents)}</span></p>
-        {t.byRate.map((r) => <p key={r.rate} className="flex justify-between"><span>dont TVA {r.rate} %</span><span>{eur(r.vat)}</span></p>)}
+        {franchise ? (
+          <>
+            <p className="flex justify-between text-[14px] font-bold"><span>TOTAL</span><span>{eur(s.totalCents)}</span></p>
+            <p className="text-[10px]">Petite entreprise soumise au régime de franchise de la TVA. TVA non applicable.</p>
+          </>
+        ) : (
+          <>
+            <p className="flex justify-between text-[14px] font-bold"><span>TOTAL TVAC</span><span>{eur(s.totalCents)}</span></p>
+            {t.byRate.map((r) => <p key={r.rate} className="flex justify-between"><span>dont TVA {r.rate} %</span><span>{eur(r.vat)}</span></p>)}
+          </>
+        )}
         <p className="mt-1 flex justify-between"><span>{PAY_METHODS[s.method as keyof typeof PAY_METHODS] ?? s.method}</span><span>{eur(s.cashGivenCents ?? s.totalCents)}</span></p>
         {s.cashGivenCents ? <p className="flex justify-between"><span>Rendu</span><span>{eur(s.cashGivenCents - s.totalCents)}</span></p> : null}
         <p className="mt-3 text-center">Merci et à bientôt !</p>

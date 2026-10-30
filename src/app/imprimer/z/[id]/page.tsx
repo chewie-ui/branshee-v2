@@ -32,12 +32,12 @@ export default async function PrintZ({ params }: { params: Promise<{ id: string 
         <p>Clôture : {s.closedAt ? fmt.format(s.closedAt) : "caisse ouverte"}</p>
         <div className="my-2 border-t border-dashed border-black" />
         {row("Tickets", String(t.tickets))}
-        {row("Espèces", eur(t.cash))}
-        {row("Carte", eur(t.card))}
-        {t.other ? row("Autre", eur(t.other)) : null}
+        {row("Ventes espèces", eur(t.cash))}
+        {row("Ventes carte", eur(t.card))}
+        {t.other ? row("Ventes autre", eur(t.other)) : null}
+        {t.refunded ? row("Remboursements", eur(-t.refunded)) : null}
         {row("TOTAL TVAC (net)", eur(t.total), true)}
         {row("dont TVA", eur(t.vat))}
-        {t.refunded ? row("Remboursements", eur(t.refunded)) : null}
         <div className="my-2 border-t border-dashed border-black" />
         {row("Fond de caisse", eur(s.openingCashCents))}
         {t.refundedCash ? row("Remboursé en espèces", eur(-t.refundedCash)) : null}

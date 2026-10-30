@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { customers, members, projectTasks, projects, timeEntries } from "@/db/schema";
 import { newLine } from "@/lib/invoicing";

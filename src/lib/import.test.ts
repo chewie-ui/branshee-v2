@@ -34,3 +34,9 @@ test("import : limites (colonnes, lignes vides, zip)", async () => {
   assert.equal(parseCsv(blank).length, 31);
   assert.equal(zipStats(new Uint8Array([1, 2, 3])), null);
 });
+
+test("colonne Code-barres reconnue", () => {
+  const m = guessMapping(["Nom", "Prix", "Code-barres"], "produits");
+  assert.equal(m.barcode, 2);
+  assert.equal(m.sku, -1);
+});

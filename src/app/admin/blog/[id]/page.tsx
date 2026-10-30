@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
 import { ArticleEditor } from "@/components/admin/article-editor";

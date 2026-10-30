@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronRight, Clock, Mail, Phone, UserRound, Users } from "lucide-react";
 import { and, asc, eq, ne } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { appointments, groupSessions, members, services } from "@/db/schema";
 import { CancelSessionButton, RestoreSessionButton } from "@/components/services/group-sessions";
