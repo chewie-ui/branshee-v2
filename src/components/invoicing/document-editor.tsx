@@ -209,7 +209,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                 <div key={l.id} className={cn("grid grid-cols-2 gap-3 rounded-lg border border-border p-3 sm:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_auto]", !fr && "sm:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)_84px_auto]")}>
                   <div className="col-span-full">
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-desc-${l.id}`}>Description</label>
-                    <Textarea id={`l-desc-${l.id}`} rows={2} className="min-h-10" value={l.desc} placeholder="Ex. : Séance de kinésithérapie" onChange={(e) => setLine(i, { desc: e.target.value })} />
+                    <Textarea id={`l-desc-${l.id}`} rows={2} className="min-h-10" value={l.desc} placeholder="Ex. : Prestation, produit ou main-d'œuvre" onChange={(e) => setLine(i, { desc: e.target.value })} />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-qty-${l.id}`}>Qté</label>

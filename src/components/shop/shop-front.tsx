@@ -79,7 +79,7 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
                   <div className="flex flex-1 flex-col p-3">
                     <p className="font-medium">{it.name}</p>
                     {it.description ? <p className="mt-0.5 line-clamp-3 text-sm text-muted">{it.description}</p> : null}
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
                       <span className="font-semibold tabular-nums">{eur(it.priceCents)}</span>
                       {out ? <span className="text-xs font-medium text-danger">{tx.soldOut}</span> : q ? (
                         <span className="inline-flex items-center rounded-full border border-border-strong">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLogs, customers, products, stockMoves } from "@/db/schema";
 import { MAX_CELL, MAX_COLS, MAX_ROWS, guessMapping, parseCsv, toClients, toProducts, zipStats, type ImportKind } from "@/lib/import";
@@ -92,7 +93,10 @@ export async function runImport(kind: ImportKind, fd: FormData, mapping: Record<
     const { ok, errors } = toClients(data, map);
     // Un même email deux fois dans le fichier : la première ligne gagne.
     const seen = new Set<string>();
-    const unique = ok.filter((c) => !c.email || (!seen.has(c.email) && !!seen.add(c.email)));
+    // Sans email : même nom et même téléphone qu'une fiche existante (ou qu'une ligne précédente) = doublon (ré-import).
+    const keyOf = (name: string | null | undefined, phone: string | null | undefined) => `${(name ?? "").trim().toLowerCase()}|${(phone ?? "").replace(/\D/g, "")}`;
+    const known = new Set((await db.select({ n: customers.fullName, p: customers.phone }).from(customers).where(and(eq(customers.businessId, ctx.business.id), isNull(customers.email)))).map((r) => keyOf(r.n, r.p)));
+    const unique = ok.filter((c) => (c.email ? !seen.has(c.email) && !!seen.add(c.email) : !known.has(keyOf(c.fullName, c.phone)) && !!known.add(keyOf(c.fullName, c.phone))));
     for (let i = 0; i < unique.length; i += 500) {
       const chunk = unique.slice(i, i + 500);
       const res = await db.insert(customers).values(chunk.map((c) => ({ ...c, businessId: ctx.business.id, createdManually: true }))).onConflictDoNothing().returning({ id: customers.id });

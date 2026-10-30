@@ -135,6 +135,27 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   );
 }
 
+/** Colonnes des RDV qui se chevauchent dans une journée : chaque groupe qui se recoupe partage la largeur. */
+function overlapLayout(list: { id: string; startsAt: Date; endsAt: Date }[]) {
+  const sorted = [...list].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime() || b.endsAt.getTime() - a.endsAt.getTime());
+  const out = new Map<string, { col: number; cols: number }>();
+  let group: { id: string; col: number }[] = [];
+  let colEnds: number[] = [];
+  let groupEnd = 0;
+  const flush = () => { for (const g of group) out.set(g.id, { col: g.col, cols: colEnds.length }); group = []; colEnds = []; };
+  for (const a of sorted) {
+    const s = a.startsAt.getTime();
+    if (group.length && s >= groupEnd) flush();
+    let col = colEnds.findIndex((end) => end <= s);
+    if (col === -1) { col = colEnds.length; colEnds.push(0); }
+    colEnds[col] = a.endsAt.getTime();
+    group.push({ id: a.id, col });
+    groupEnd = Math.max(groupEnd, a.endsAt.getTime());
+  }
+  flush();
+  return out;
+}
+
 function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
   // Vue « toute l'équipe » : une colonne par membre dans chaque journée, pour que les RDV simultanés ne se superposent pas.
   const lanes: (string | null)[] = memberFilter ? [memberFilter] : team.length < 2 ? [team[0]?.id ?? null] : team.map((m) => m.id);
@@ -158,7 +179,7 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
-        <div style={{ minWidth: 56 + 7 * Math.max(100, lanes.length * 70) }}>
+        <div style={{ minWidth: 56 + 7 * 110 }}>
           <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
             <div />
             {days.map((d) => {
@@ -182,6 +203,8 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
             {days.map((d) => {
               const key = dayKey(d);
               const dayItems = items.filter((a) => dayKey(a.startsAt) === key);
+              // Semaine : pas une colonne par personne (illisible à 7 jours), mais côte à côte seulement quand des RDV se chevauchent.
+              const place = overlapLayout(dayItems.filter((a) => !(a.kind === "block" && a.memberId === null)));
               return (
                 <div key={key} className="relative border-l border-border" style={{ height: hours.length * hourPx }}>
                   {hours.map((h) => (
@@ -197,8 +220,9 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                     const color = itemColor(a);
                     // Blocage de tout l'établissement : toute la largeur de la journée.
                     const fullWidth = a.kind === "block" && a.memberId === null;
-                    const width = fullWidth ? 100 : 100 / lanes.length;
-                    const left = fullWidth ? 0 : laneOf(a.memberId) * width;
+                    const slot = place.get(a.id) ?? { col: 0, cols: 1 };
+                    const width = fullWidth ? 100 : 100 / slot.cols;
+                    const left = fullWidth ? 0 : slot.col * width;
                     return (
                       <EventLink
                         key={a.id}

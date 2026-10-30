@@ -46,7 +46,7 @@ function NoteEditor({ customerId, note, today, onDone }: { customerId: string; n
         </Field>
       </div>
       <Field label="Constat / ce qui a été fait" htmlFor={`n-${k}`}>
-        <Textarea id={`n-${k}`} name="note" defaultValue={note?.note} rows={4} maxLength={10000} placeholder="Ex. douleur à l'épaule droite, amplitude limitée…" />
+        <Textarea id={`n-${k}`} name="note" defaultValue={note?.note} rows={4} maxLength={10000} placeholder="Ce qui a été fait, observé, à prévoir la prochaine fois…" />
       </Field>
       <Field label="À faire au prochain rendez-vous (facultatif)" htmlFor={`o-${k}`}>
         <Input id={`o-${k}`} name="todo" defaultValue={note?.todo} placeholder="Ex. continuer le renforcement, revoir la posture assise." maxLength={2000} />

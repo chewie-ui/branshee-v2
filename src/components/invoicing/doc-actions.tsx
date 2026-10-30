@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 type R = { ok: true; id?: string; message?: string } | { ok: false; error: string };
 
 /** Actions d'un document selon son type et son état (comme la fiche de Comptoir). */
-export function DocActions({ id, docType, state, today, mail, reminder, canManage }: { id: string; docType: DocType; state: DocState; today: string; mail: string; reminder: string | null; canManage: boolean }) {
+export function DocActions({ id, docType, state, today, mail, reminder, canManage, signed = false }: { signed?: boolean; id: string; docType: DocType; state: DocState; today: string; mail: string; reminder: string | null; canManage: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -74,7 +74,7 @@ export function DocActions({ id, docType, state, today, mail, reminder, canManag
               <Button icon={<FileText className="size-4" aria-hidden="true" />} loading={pending} onClick={() => run(() => quoteToInvoice(id), (r) => (r.id ? `/app/factures/${r.id}/modifier` : null))}>Transformer en facture</Button>
             )}
             {pdf}
-            {state !== "invoiced" ? <ButtonLink href={`/app/factures/${id}/modifier`} variant="secondary" icon={<Pencil className="size-4" aria-hidden="true" />}>Modifier</ButtonLink> : null}
+            {state !== "invoiced" && !signed ? <ButtonLink href={`/app/factures/${id}/modifier`} variant="secondary" icon={<Pencil className="size-4" aria-hidden="true" />}>Modifier</ButtonLink> : null}
             {state === "draft" ? <Button variant="ghost" icon={<Send className="size-4" aria-hidden="true" />} loading={pending} onClick={() => run(() => setQuoteStatus(id, "sent"))}>Marquer comme envoyé</Button> : null}
             {["draft", "sent", "expired"].includes(state) ? (
               <>

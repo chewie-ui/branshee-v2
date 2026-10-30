@@ -1,5 +1,6 @@
 "use server";
 
+import { humanDateTime } from "@/lib/time";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { and, eq, gt, ne } from "drizzle-orm";
@@ -91,7 +92,7 @@ export async function rescheduleByToken(token: string, date: string, time: strin
     if (e.code === "23P01" || e.cause?.code === "23P01") return { ok: false, error: "Ce créneau vient d'être pris. Choisissez-en un autre." };
     throw error;
   }
-  await db.insert(activityLogs).values({ businessId: row.a.businessId, actorName: row.a.contactName ?? "Client", action: "appointment.reschedule_by_customer", description: `Déplacé par le client : ${row.a.serviceName ?? "rendez-vous"}, ${date} ${time}` });
+  await db.insert(activityLogs).values({ businessId: row.a.businessId, actorName: row.a.contactName ?? "Client", action: "appointment.reschedule_by_customer", description: `Déplacé par le client : ${row.a.serviceName ?? "rendez-vous"}, ${humanDateTime(date, time)}` });
   const id = row.a.id;
   after(() => notifyRescheduledByCustomer(id, previous));
   revalidatePath(`/r/${token}`);

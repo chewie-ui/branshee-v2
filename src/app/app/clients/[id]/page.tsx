@@ -116,8 +116,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {customer.phone ? <ButtonLink href={`tel:${customer.phone}`} variant="secondary" icon={<Phone className="size-4" aria-hidden="true" />}>Appeler</ButtonLink> : null}
-          {customer.phone ? <ButtonLink href={`sms:${customer.phone}`} variant="secondary" icon={<MessageCircle className="size-4" aria-hidden="true" />} aria-label="Envoyer un SMS">SMS</ButtonLink> : null}
+          {customer.phone ? <ButtonLink href={`tel:${customer.phone.replace(/[^+0-9]/g, "")}`} variant="secondary" icon={<Phone className="size-4" aria-hidden="true" />}>Appeler</ButtonLink> : null}
+          {customer.phone ? <ButtonLink href={`sms:${customer.phone.replace(/[^+0-9]/g, "")}`} variant="secondary" icon={<MessageCircle className="size-4" aria-hidden="true" />} aria-label="Envoyer un SMS">SMS</ButtonLink> : null}
           {customer.email ? <ButtonLink href={`mailto:${customer.email}`} variant="secondary" icon={<Mail className="size-4" aria-hidden="true" />}>Email</ButtonLink> : null}
           {ctx.can("appointments.manage") ? <ButtonLink href={`/app/agenda/nouveau?client=${customer.id}`} icon={<CalendarPlus className="size-4" aria-hidden="true" />}>Nouveau RDV</ButtonLink> : null}
         </div>

@@ -54,7 +54,7 @@ export async function addStamp(customerId: string): Promise<Result> {
   const [c] = await db.select({ id: customers.id, name: customers.fullName, email: customers.email }).from(customers).where(and(eq(customers.id, customerId), eq(customers.businessId, ctx.business.id)));
   if (!c) return { ok: false, error: "Client introuvable." };
   const r = await giveStamp({ businessId: ctx.business.id, timezone: ctx.business.timezone, customerId: c.id, source: "manual", memberId: ctx.member.id });
-  if (!r.ok) return { ok: false, error: `${c.name} a déjà reçu un tampon il y a moins de 2 heures.` };
+  if (!r.ok) return { ok: false, error: `${c.name} a déjà reçu un tampon il y a moins de 2 heures (protection contre les doubles clics). Réessayez plus tard.` };
   if (r.first) await sendLoyaltyWelcome(ctx.business.id, ctx.business.name, c.email, r.token, r.goal, r.reward);
   refresh();
   const ready = r.stamps >= r.goal;

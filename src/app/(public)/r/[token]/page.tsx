@@ -14,6 +14,7 @@ import { db } from "@/db";
 import { appointmentPayments, paymentSettings } from "@/db/schema";
 import { cancellationQuote } from "@/server/payments";
 import { Brand } from "@/components/brand";
+import { businessBrand } from "@/server/brand";
 import { ButtonLink } from "@/components/ui/button";
 import { formatTime } from "@/lib/time";
 import { getAppointmentByToken } from "@/server/manage";
@@ -99,7 +100,7 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
           {pay && a.status !== "cancelled" ? (
             <div className="mt-4 space-y-2 rounded-lg border border-border p-4 text-sm">
               <p className="font-medium">{t("manage.payment")}</p>
-              {pay.status === "paid" ? <p className="text-success">{t("manage.paidOnline", { amount: euros(pay.amountCents) })}{pay.cardLast4 ? t("manage.cardSuffix", { last4: pay.cardLast4 }) : ""}</p> : null}
+              {pay.status === "paid" ? <p className="text-success">{t(pay.method === "online" || pay.method === "paypal" || pay.stripePaymentIntentId ? "manage.paidOnline" : "manage.paidOffline", { amount: euros(pay.amountCents) })}{pay.cardLast4 ? t("manage.cardSuffix", { last4: pay.cardLast4 }) : ""}</p> : null}
               {pay.status === "authorized" ? <p className="text-muted">{t("manage.cardGuarantee", { last4: pay.cardLast4 ?? "", amount: euros(pay.amountCents) })}</p> : null}
               {pay.status === "none" && pay.method === "bank_transfer" && acc?.bankTransfer.iban ? (
                 <div className="text-muted">
@@ -165,7 +166,7 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
         </p>
       </main>
       <footer className="mt-10 opacity-80">
-        <Brand />
+        <Brand brand={businessBrand(b)} />
       </footer>
     </div>
     </I18nProvider>

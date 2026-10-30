@@ -84,7 +84,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
 
       <Card className="space-y-5 p-5">
         <Field label="Nom" htmlFor="name" error={err.name}>
-          <Input id="name" name="name" defaultValue={initial.name} placeholder="Séance de kinésithérapie" maxLength={80} aria-invalid={!!err.name || undefined} />
+          <Input id="name" name="name" defaultValue={initial.name} placeholder="Ex. : Coupe homme, Séance de kiné, Rendez-vous conseil" maxLength={80} aria-invalid={!!err.name || undefined} />
         </Field>
         <fieldset hidden={!allowGroup && initial.kind !== "group"}>
           <legend className="mb-2 text-sm font-medium">Type</legend>

@@ -24,7 +24,7 @@ export async function getOrCreateSite(businessId: string) {
 
 /** Contenu nécessaire au rendu du site : prestations actives et avis réels. */
 export async function siteContent(businessId: string) {
-  const [svc, [stats], list] = await Promise.all([
+  const [svc, [stats], list, [biz]] = await Promise.all([
     db
       .select({ id: services.id, name: services.name, description: services.description, durationMin: services.durationMin, durationMaxMin: services.durationMaxMin, priceCents: services.priceCents, imageUrl: services.imageUrl })
       .from(services)
@@ -32,8 +32,11 @@ export async function siteContent(businessId: string) {
       .orderBy(asc(services.position), asc(services.name)),
     db.select({ n: count(), avg: avg(reviews.rating) }).from(reviews).where(eq(reviews.businessId, businessId)),
     db.select({ id: reviews.id, author: reviews.authorName, rating: reviews.rating, comment: reviews.comment }).from(reviews).where(and(eq(reviews.businessId, businessId), sql`coalesce(${reviews.comment}, '') <> ''`)).orderBy(desc(reviews.rating), desc(reviews.createdAt)).limit(6),
+    db.select({ aboutHtml: businesses.aboutHtml, address: businesses.address, postalCode: businesses.postalCode, city: businesses.city }).from(businesses).where(eq(businesses.id, businessId)),
   ]);
-  return { services: svc, reviews: { count: stats?.n ?? 0, average: stats?.avg ? Math.round(Number(stats.avg) * 10) / 10 : null, items: list } };
+  // Infos à jour de l'établissement : remplacent le texte d'exemple et une adresse incomplète figés à la création du site.
+  const fullAddress = [biz?.address, [biz?.postalCode, biz?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  return { services: svc, reviews: { count: stats?.n ?? 0, average: stats?.avg ? Math.round(Number(stats.avg) * 10) / 10 : null, items: list }, business: { aboutHtml: biz?.aboutHtml ?? "", address: fullAddress, city: biz?.city ?? "" } };
 }
 
 /** Site publié à afficher à l'adresse de l'établissement (forfait Pro+ requis), sinon null. */

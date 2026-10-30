@@ -109,7 +109,7 @@ export function ExpensesBoard({ year, years, rows, canManage, franchise, today }
 function ExpenseDialog({ row, franchise, today, onClose, onDone }: { row: ExpenseRow | null; franchise: boolean; today: string; onClose: () => void; onDone: (text: string) => void }) {
   const ref = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [amount, setAmount] = useState(row ? String(row.amountCents / 100) : "");
+  const [amount, setAmount] = useState(row ? (row.amountCents / 100).toFixed(2).replace(".", ",") : "");
   const [vat, setVat] = useState(row ? String(row.vatCents / 100) : "");
   const [file, setFile] = useState<string | null>(null);
   const [removeProof, setRemoveProof] = useState(false);

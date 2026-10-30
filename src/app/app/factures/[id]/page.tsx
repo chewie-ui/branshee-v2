@@ -57,7 +57,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <p className="mt-1 text-sm text-muted">{String(client?.name ?? "Sans client")} · {isQuote ? "du" : d.number ? "émise le" : "daté du"} {fdate(d.issueDate)}</p>
         </div>
-        <DocActions id={d.id} docType={d.docType} state={state} today={today} canManage={ctx.can("invoices.manage")} mail={mailText(view, sellerName, String(seller.iban ?? ""))} reminder={state === "overdue" ? mailText(view, sellerName, String(seller.iban ?? ""), true) : null} />
+        <DocActions id={d.id} docType={d.docType} state={state} signed={sigs.some((x) => !!x.signedAt)} today={today} canManage={ctx.can("invoices.manage")} mail={mailText(view, sellerName, String(seller.iban ?? ""))} reminder={state === "overdue" ? mailText(view, sellerName, String(seller.iban ?? ""), true) : null} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -90,7 +90,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 <CardHeader title="Facture électronique (Peppol)" description="Obligatoire entre entreprises assujetties en Belgique depuis 2026." />
                 <div className="space-y-2 p-5 text-sm">
                   {missing.includes("n° de TVA ou d'entreprise du client") ? <p className="text-muted">Client sans n° de TVA ni n° d&apos;entreprise : s&apos;il s&apos;agit d&apos;un particulier, pas de Peppol, le PDF suffit.</p> : missing.length ? <p className="text-warning">Il manque : {missing.join(", ")}. Complétez la fiche du client et les réglages de Factures, puis refaites une facture.</p> : <a href={`/app/factures/${d.id}/ubl`} download className="inline-flex h-9 items-center rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted">Télécharger le fichier UBL</a>}
-                  <p className="text-xs text-muted">Fichier au format Peppol BIS 3.0, à déposer chez votre point d&apos;accès Peppol (l&apos;envoi direct depuis Skydev arrive bientôt). Pour un client particulier, le PDF suffit.</p>
+                  <p className="text-xs text-muted">Fichier au format Peppol BIS 3.0, à déposer chez votre point d&apos;accès Peppol. Pour un client particulier, le PDF suffit.</p>
                 </div>
               </Card>
             );
@@ -111,7 +111,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 .map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 px-5 py-2.5">
                     <dt className="text-muted">{k}</dt>
-                    <dd className="text-right font-medium tabular-nums">{v}</dd>
+                    <dd className="min-w-0 text-right font-medium tabular-nums [overflow-wrap:anywhere]">{v}</dd>
                   </div>
                 ))}
               <div className="flex justify-between gap-3 px-5 py-2.5">

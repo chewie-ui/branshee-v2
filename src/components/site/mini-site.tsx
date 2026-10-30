@@ -25,7 +25,7 @@ type Reviews = { count: number; average: number | null; items: { id: string; aut
 type Props = {
   site: { sections: SiteSection[]; theme: SiteTheme; logoUrl: string | null; social: SocialLinks };
   business: { id: string; name: string; slug: string; noBranding: boolean; poweredBy?: { name: string; url: string } };
-  content: { services: Service[]; reviews: Reviews };
+  content: { services: Service[]; reviews: Reviews; business?: { aboutHtml: string; address: string; city: string } };
   preview?: boolean;
 };
 
@@ -58,7 +58,11 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
     fontFamily: "var(--s-font)",
   } as CSSProperties;
   const sections = site.sections.filter((x) => x.enabled);
-  const links = sections.filter((x) => NAV[x.type]).map((x) => ({ href: `#${x.id}`, label: NAV[x.type]! }));
+  // Pas de lien de menu vers une section qui ne s'affiche pas (ex. Avis sans aucun avis).
+  const hasReviews = (d: Record<string, unknown>) => (d.source === "manual" ? Array.isArray(d.items) && (d.items as { text?: string }[]).some((i) => i?.text) : content.reviews.items.length > 0);
+  // Adresse figée à la création du site (souvent la ville seule) : on prend l'adresse complète de l'établissement.
+  const addr = (d: Record<string, unknown>) => { const a = typeof d.address === "string" ? d.address.trim() : ""; const full = content.business?.address ?? ""; return full && (!a || a.toLowerCase() === (content.business?.city ?? "").toLowerCase()) ? full : a; };
+  const links = sections.filter((x) => NAV[x.type] && (x.type !== "testimonials" || hasReviews(x.data as Record<string, unknown>))).map((x) => ({ href: `#${x.id}`, label: NAV[x.type]! }));
   const hasBooking = sections.some((x) => x.type === "booking");
   const bookHref = hasBooking ? "#booking" : `/${business.slug}?reserver=1`;
   const fonts = fontUrl([t.fontFamily, t.headingFont ?? ""]);
@@ -164,7 +168,7 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                     <div className={img ? "" : "max-w-3xl"}>
                       {s(d.subtitle) ? <p className="text-sm font-semibold tracking-wide text-[var(--s-muted)] uppercase">{s(d.subtitle)}</p> : null}
                       <div className="mt-2"><H2>{s(d.title) || "À propos"}</H2></div>
-                      <div className="prose-article mt-5 text-[var(--s-muted)] [&_a]:text-current [&_strong]:text-[var(--s-text)]" dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(s(d.text)) }} />
+                      <div className="prose-article mt-5 text-[var(--s-muted)] [&_a]:text-current [&_strong]:text-[var(--s-text)]" dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(s(d.text).includes("Présentez ici votre parcours") && content.business?.aboutHtml ? content.business.aboutHtml : s(d.text)) }} />
                     </div>
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -289,12 +293,12 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                     <div>
                       <H2>{s(d.title) || "Nous trouver"}</H2>
                       <ul className="mt-6 space-y-4">
-                        {s(d.address) ? <li className="flex gap-3"><MapPin className="mt-0.5 size-5 shrink-0" aria-hidden="true" /><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s(d.address))}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{s(d.address)}</a></li> : null}
+                        {addr(d) ? <li className="flex gap-3"><MapPin className="mt-0.5 size-5 shrink-0" aria-hidden="true" /><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr(d))}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{addr(d)}</a></li> : null}
                         {s(d.phone) ? <li className="flex gap-3"><Phone className="mt-0.5 size-5 shrink-0" aria-hidden="true" /><a href={`tel:${s(d.phone).replace(/\s/g, "")}`} className="hover:underline">{s(d.phone)}</a></li> : null}
                         {s(d.email) ? <li className="flex gap-3"><Mail className="mt-0.5 size-5 shrink-0" aria-hidden="true" /><a href={`mailto:${s(d.email)}`} className="hover:underline">{s(d.email)}</a></li> : null}
                       </ul>
-                      {s(d.address) ? (
-                        <iframe title={`Plan — ${business.name}`} src={`https://www.google.com/maps?q=${encodeURIComponent(s(d.address))}&output=embed`} className="mt-6 h-60 w-full rounded-[var(--s-radius-sm)] border border-[var(--s-border)]" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                      {addr(d) ? (
+                        <iframe title={`Plan — ${business.name}`} src={`https://www.google.com/maps?q=${encodeURIComponent(addr(d))}&output=embed`} className="mt-6 h-60 w-full rounded-[var(--s-radius-sm)] border border-[var(--s-border)]" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
                       ) : null}
                     </div>
                     {d.showForm !== false ? (

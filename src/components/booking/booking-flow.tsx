@@ -263,7 +263,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     };
     if (cart.length) {
       // Les rendez-vous de la sélection, puis celui en cours : réservés un par un avec les mêmes coordonnées.
-      const items = [...cart, { serviceId: service.id, memberId, day, time }];
+      const items = [...cart, { serviceId: service.id, memberId, day, time }].sort((a, b) => `${a.day} ${a.time}`.localeCompare(`${b.day} ${b.time}`));
       startSubmit(async () => {
         const out: { label: string; token?: string; error?: string }[] = [];
         for (const it of items) {
@@ -708,7 +708,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
               type="button"
               onClick={() => {
                 if (clashes(day, time)) return setError(t("booking.alreadyInCart"));
-                setCart((l) => [...l, { serviceId: service.id, memberId, day, time }]);
+                setCart((l) => [...l, { serviceId: service.id, memberId, day, time }].sort((a, b) => `${a.day} ${a.time}`.localeCompare(`${b.day} ${b.time}`)));
                 setTime(null);
                 setDay(null);
                 setError(null);

@@ -1,5 +1,6 @@
 "use server";
 
+import { humanDateTime } from "@/lib/time";
 import { LOCALES } from "@/i18n/config";
 
 import { headers } from "next/headers";
@@ -205,7 +206,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
         .returning({ id: appointments.id, token: appointments.manageToken });
 
       if (payment) await tx.insert(appointmentPayments).values({ appointmentId: appt!.id, ...payment });
-      await tx.insert(activityLogs).values({ businessId: data.business.id, actorName: fullName, action: "appointment.online", description: `Réservation en ligne : ${service.name}, ${v.date} ${v.time}` });
+      await tx.insert(activityLogs).values({ businessId: data.business.id, actorName: fullName, action: "appointment.online", description: `Réservation en ligne : ${service.name}, ${humanDateTime(v.date, v.time)}` });
       return appt!;
     });
     after(() => notifyBookingCreated(created.id, "online"));

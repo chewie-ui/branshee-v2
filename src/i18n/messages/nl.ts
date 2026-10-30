@@ -148,6 +148,7 @@ const nl: Messages = {
     practitioner: "Behandelaar",
     address: "Adres",
     payment: "Betaling",
+    paidOffline: "Betaald: {amount}",
     paidOnline: "Online betaald: {amount}",
     cardSuffix: " (kaart •••• {last4})",
     cardGuarantee: "Kaart •••• {last4} als garantie opgeslagen. Ter plaatse te betalen: {amount}.",

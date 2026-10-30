@@ -41,7 +41,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
     .where(and(eq(appointments.id, id.data), eq(appointments.businessId, ctx.business.id)));
   if (!row) notFound();
   const { a, memberName, pay, account, priceCents } = row;
-  const euros = (c: number) => (c / 100).toString().replace(".", ",");
+  const euros = (c: number) => (c / 100).toFixed(2).replace(".", ",");
   if (a.kind === "block") redirect(`/app/agenda/bloquer?id=${a.id}`);
 
   const tz = ctx.business.timezone;

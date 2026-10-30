@@ -151,6 +151,7 @@ const fr = {
     practitioner: "Praticien",
     address: "Adresse",
     payment: "Paiement",
+    paidOffline: "Payé : {amount}",
     paidOnline: "Payé en ligne : {amount}",
     cardSuffix: " (carte •••• {last4})",
     cardGuarantee: "Carte •••• {last4} enregistrée en garantie. À régler sur place : {amount}.",

@@ -148,6 +148,7 @@ const de: Messages = {
     practitioner: "Fachkraft",
     address: "Adresse",
     payment: "Zahlung",
+    paidOffline: "Bezahlt: {amount}",
     paidOnline: "Online bezahlt: {amount}",
     cardSuffix: " (Karte •••• {last4})",
     cardGuarantee: "Karte •••• {last4} als Garantie gespeichert. Vor Ort zu zahlen: {amount}.",

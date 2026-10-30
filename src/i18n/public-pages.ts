@@ -19,7 +19,7 @@ const fr = {
     chooseRating: "Choisissez une note.", sent: "Merci, votre message a bien été transmis.",
   },
   sign: {
-    title: "Signer le devis", back: "Retour", amount: "Montant : {amount} TVAC", name: "Votre nom complet", signature: "Votre signature", erase: "Effacer", hint: "Signez ici avec le doigt ou la souris",
+    title: "Signer le devis", back: "Retour", amount: "Montant : {amount}", name: "Votre nom complet", signature: "Votre signature", erase: "Effacer", hint: "Signez ici avec le doigt ou la souris",
     agree: "Bon pour accord.", agreeText: "J'accepte ce devis et ses conditions.", submit: "Signer le devis", signing: "Signature…", refuse: "Refuser le devis", refuseTitle: "Refuser le devis",
     refuseNote: "Un mot pour votre fournisseur ? (facultatif)", confirmRefuse: "Refuser", legal: "Signature électronique : votre nom, votre tracé, la date, l'heure et l'adresse de connexion sont enregistrés avec une empreinte du devis.",
     signed: "Devis signé", signedBy: "Signé par {name} le {date}, « Bon pour accord ».", hash: "Empreinte du devis : {hash}", print: "Imprimer / PDF",
@@ -57,7 +57,7 @@ const nl: PublicTexts = {
     chooseRating: "Kies een score.", sent: "Bedankt, je bericht is doorgestuurd.",
   },
   sign: {
-    title: "Offerte ondertekenen", back: "Terug", amount: "Bedrag: {amount} incl. btw", name: "Je volledige naam", signature: "Je handtekening", erase: "Wissen", hint: "Teken hier met je vinger of muis",
+    title: "Offerte ondertekenen", back: "Terug", amount: "Bedrag: {amount}", name: "Je volledige naam", signature: "Je handtekening", erase: "Wissen", hint: "Teken hier met je vinger of muis",
     agree: "Voor akkoord.", agreeText: "Ik aanvaard deze offerte en de voorwaarden.", submit: "Offerte ondertekenen", signing: "Ondertekenen…", refuse: "Offerte weigeren", refuseTitle: "Offerte weigeren",
     refuseNote: "Een woordje voor je leverancier? (optioneel)", confirmRefuse: "Weigeren", legal: "Elektronische handtekening: je naam, handtekening, datum, uur en verbindingsadres worden bewaard met een vingerafdruk van de offerte.",
     signed: "Offerte ondertekend", signedBy: "Ondertekend door {name} op {date}, ‘Voor akkoord’.", hash: "Vingerafdruk van de offerte: {hash}", print: "Afdrukken / pdf",
@@ -94,7 +94,7 @@ const en: PublicTexts = {
     chooseRating: "Choose a rating.", sent: "Thank you, your message has been sent.",
   },
   sign: {
-    title: "Sign the quote", back: "Back", amount: "Amount: {amount} incl. VAT", name: "Your full name", signature: "Your signature", erase: "Clear", hint: "Sign here with your finger or mouse",
+    title: "Sign the quote", back: "Back", amount: "Amount: {amount}", name: "Your full name", signature: "Your signature", erase: "Clear", hint: "Sign here with your finger or mouse",
     agree: "Approved.", agreeText: "I accept this quote and its terms.", submit: "Sign the quote", signing: "Signing…", refuse: "Decline the quote", refuseTitle: "Decline the quote",
     refuseNote: "A note for your supplier? (optional)", confirmRefuse: "Decline", legal: "Electronic signature: your name, signature, date, time and connection address are stored with a fingerprint of the quote.",
     signed: "Quote signed", signedBy: "Signed by {name} on {date}, “Approved”.", hash: "Quote fingerprint: {hash}", print: "Print / PDF",

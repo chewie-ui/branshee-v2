@@ -55,3 +55,10 @@ export function parseIsoDay(value: string | undefined | null): Date | null {
   const d = new Date(value + "T12:00:00Z");
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+/** « 2026-11-02 », « 10:00 » → « lun. 2 nov. à 10:00 » (journal d'activité, e-mails). */
+export function humanDateTime(date: string, time: string) {
+  const d = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return `${date} ${time}`;
+  return `${new Intl.DateTimeFormat("fr-BE", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(d)} à ${time}`;
+}

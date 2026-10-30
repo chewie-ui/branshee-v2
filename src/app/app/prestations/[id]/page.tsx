@@ -56,7 +56,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           description: service.description ?? "",
           categoryId: service.categoryId ?? "",
           durationMin: service.durationMin,
-          price: service.priceCents == null ? "" : (service.priceCents / 100).toString().replace(".", ","),
+          price: service.priceCents == null ? "" : (service.priceCents / 100).toFixed(2).replace(".", ",").replace(/,00$/, ""),
           color: service.color ?? "#4f46e5",
           audience: service.audience,
           isActive: service.isActive,

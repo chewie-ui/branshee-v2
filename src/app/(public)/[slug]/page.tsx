@@ -95,7 +95,7 @@ function todayStatus(data: PublicBusiness, t: T): { open: boolean; label: string
 }
 
 /** Établissement en pause : page dédiée, avec les coordonnées pour joindre le pro. */
-function PausedPage({ data, t }: { data: PublicBusiness; t: T }) {
+function PausedPage({ data, t, brand }: { data: PublicBusiness; t: T; brand: "skydev" | "branshee" }) {
   const b = data.business;
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 text-center">
@@ -106,7 +106,7 @@ function PausedPage({ data, t }: { data: PublicBusiness; t: T }) {
         {b.phone ? <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Phone className="size-4" aria-hidden="true" />{b.phone}</a> : null}
         {b.email ? <a href={`mailto:${b.email}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 font-medium hover:bg-surface-muted"><Mail className="size-4" aria-hidden="true" />{b.email}</a> : null}
       </div>
-      <footer className="mt-12 opacity-70"><Brand /></footer>
+      <footer className="mt-12 opacity-70"><Brand brand={brand} /></footer>
     </div>
   );
 }
@@ -130,7 +130,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   const locale = await resolvePublicLocale(sp.lang);
   const t = createT(getMessages(locale));
-  if (data.closed) return <PausedPage data={data} t={t} />;
+  if (data.closed) return <PausedPage data={data} t={t} brand={(await currentBrand()).id} />;
   // Forfait Pro+ avec un site publié : le site remplace la page à cette adresse (la réservation y est intégrée).
   if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver) {
     const site = await publishedSiteFor(b.id);

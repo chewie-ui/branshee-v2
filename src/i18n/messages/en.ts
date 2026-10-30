@@ -148,6 +148,7 @@ const en: Messages = {
     practitioner: "Practitioner",
     address: "Address",
     payment: "Payment",
+    paidOffline: "Paid: {amount}",
     paidOnline: "Paid online: {amount}",
     cardSuffix: " (card •••• {last4})",
     cardGuarantee: "Card •••• {last4} saved as a guarantee. To pay on site: {amount}.",
