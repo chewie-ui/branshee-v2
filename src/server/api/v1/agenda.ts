@@ -4,7 +4,7 @@ import { addDays, addMonths, format, startOfDay, startOfMonth } from "date-fns";
 import { and, count, countDistinct, desc, eq, gte, isNotNull, lt, ne, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, services } from "@/db/schema";
-import { cancelAppointment, createAppointment, rescheduleAppointment, saveBlock, saveInternalNote, setNoShow } from "@/server/actions/appointments";
+import { cancelAppointment, confirmRequest, createAppointment, refuseRequest, rescheduleAppointment, restoreAppointment, saveBlock, saveInternalNote, setNoShow } from "@/server/actions/appointments";
 import { getAvailableSlots } from "@/server/availability";
 import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route } from "@/server/api/http";
 import { appContext, bookingById, isDay, isTime, loadBookings, needCtx } from "@/server/api/v1/shared";
@@ -195,6 +195,40 @@ export const agendaRoutes: Route[] = [
       await bookingById(ctx, r.params.id!);
       ensureOk(await cancelAppointment(r.params.id!));
       return { ok: true, id: r.params.id };
+    },
+  },
+  /* Demandes (réservations en ligne à valider) et restauration : mêmes actions que le site. */
+  {
+    method: "PATCH",
+    path: "/bookings/:id/confirm",
+    handler: async (r) => {
+      const ctx = await needCtx("appointments.manage");
+      await bookingById(ctx, r.params.id!);
+      const res = await confirmRequest(r.params.id!);
+      if (!res.ok) return fail(/déjà pris/.test(res.error) ? 409 : 400, /déjà pris/.test(res.error) ? "slot_taken" : "invalid", res.error);
+      return { booking: await bookingById(ctx, r.params.id!) };
+    },
+  },
+  {
+    method: "PATCH",
+    path: "/bookings/:id/refuse",
+    handler: async (r) => {
+      const ctx = await needCtx("appointments.manage");
+      await bookingById(ctx, r.params.id!);
+      const res = await refuseRequest(r.params.id!, str(r.body.reason, 500));
+      if (!res.ok) return invalid(res.error);
+      return { booking: await bookingById(ctx, r.params.id!) };
+    },
+  },
+  {
+    method: "PATCH",
+    path: "/bookings/:id/restore",
+    handler: async (r) => {
+      const ctx = await needCtx("appointments.manage");
+      await bookingById(ctx, r.params.id!);
+      const res = await restoreAppointment(r.params.id!);
+      if (!res.ok) return fail(/repris/.test(res.error ?? "") ? 409 : 400, /repris/.test(res.error ?? "") ? "slot_taken" : "invalid", res.error ?? "Action impossible.");
+      return { booking: await bookingById(ctx, r.params.id!) };
     },
   },
   {
