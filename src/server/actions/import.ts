@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, customers, products, stockMoves } from "@/db/schema";
-import { MAX_CELL, MAX_COLS, MAX_ROWS, guessMapping, parseCsv, toClients, toProducts, zipStats, type ImportKind } from "@/lib/import";
+import { activityLogs, customers, products, prospects, stockMoves } from "@/db/schema";
+import { MAX_CELL, MAX_COLS, MAX_ROWS, guessMapping, parseCsv, toClients, toProducts, toProspects, zipStats, type ImportKind } from "@/lib/import";
 import { currentBrand } from "@/server/brand";
 import { clientWord } from "@/lib/terminology";
 import { requireContext, type AppContext } from "@/server/context";
 import { stockRights } from "@/server/stock";
+import { salesRights } from "@/server/sales";
+import { phoneKey } from "@/lib/prospects";
 
 type Preview = { ok: true; headers: string[]; sample: string[][]; mapping: Record<string, number>; total: number } | { ok: false; error: string };
 type Done = { ok: true; created: number; skipped: number; errors: { line: number; reason: string }[] } | { ok: false; error: string };
@@ -17,8 +19,14 @@ type Done = { ok: true; created: number; skipped: number; errors: { line: number
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
 
 async function rightsFor(ctx: AppContext, kind: ImportKind) {
-  if (kind !== "clients" && kind !== "produits") return { ok: false as const, error: "Import inconnu." };
+  if (kind !== "clients" && kind !== "produits" && kind !== "prospects") return { ok: false as const, error: "Import inconnu." };
   if ((await currentBrand()).id !== "skydev") return { ok: false as const, error: "Import indisponible." };
+  if (kind === "prospects") {
+    if (!ctx.canApp("ventes")) return { ok: false as const, error: "Vous n'avez pas accès à cette app." };
+    if (ctx.impersonating) return SUPERVISION;
+    if (!salesRights(ctx).manage) return { ok: false as const, error: "Vous n'avez pas le droit de modifier la prospection." };
+    return null;
+  }
   if (!ctx.canApp(kind === "clients" ? "clients" : "stock")) return { ok: false as const, error: "Vous n'avez pas accès à cette app." };
   if (ctx.impersonating) return SUPERVISION;
   if (kind === "clients" && !ctx.can("customers.manage")) return { ok: false as const, error: "Vous n'avez pas le droit de créer des fiches." };
@@ -104,6 +112,30 @@ export async function runImport(kind: ImportKind, fd: FormData, mapping: Record<
     }
     await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "customer.import", description: `Import : ${created} fiche${created > 1 ? "s" : ""} ${clientWord(ctx.business.businessType, { plural: created > 1 })} créée${created > 1 ? "s" : ""}` });
     revalidatePath("/app/clients");
+    return { ok: true, created, skipped: ok.length - created, errors: errors.slice(0, 50) };
+  }
+
+  if (kind === "prospects") {
+    if (!(map.name! >= 0 || map.company! >= 0)) return { ok: false, error: "Indiquez au moins la colonne du nom." };
+    if (!(map.phone! >= 0 || map.email! >= 0)) return { ok: false, error: "Indiquez la colonne du téléphone ou de l'email." };
+    const { ok, errors } = toProspects(data, map);
+    // Doublons : même numéro ou même email que la liste existante ou qu'une ligne précédente.
+    const existing = await db.select({ phone: prospects.phone, email: prospects.email }).from(prospects).where(eq(prospects.businessId, ctx.business.id));
+    const phones = new Set(existing.map((e) => phoneKey(e.phone)).filter(Boolean));
+    const emails = new Set(existing.map((e) => e.email).filter(Boolean) as string[]);
+    const fresh = ok.filter((p) => {
+      const k = phoneKey(p.phone);
+      if ((k && phones.has(k)) || (p.email && emails.has(p.email))) return false;
+      if (k) phones.add(k);
+      if (p.email) emails.add(p.email);
+      return true;
+    });
+    for (let i = 0; i < fresh.length; i += 500) {
+      const res = await db.insert(prospects).values(fresh.slice(i, i + 500).map((p) => ({ ...p, businessId: ctx.business.id, ownerMemberId: ctx.member.id }))).returning({ id: prospects.id });
+      created += res.length;
+    }
+    await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "prospect.import", description: `Prospection : ${created} prospect${created > 1 ? "s" : ""} importé${created > 1 ? "s" : ""}` });
+    revalidatePath("/app/ventes", "layout");
     return { ok: true, created, skipped: ok.length - created, errors: errors.slice(0, 50) };
   }
 

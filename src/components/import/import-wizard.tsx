@@ -14,6 +14,7 @@ type Preview = { headers: string[]; sample: string[][]; mapping: Record<string, 
 type Done = { created: number; skipped: number; errors: { line: number; reason: string }[] };
 
 const TEMPLATES: Record<ImportKind, string> = {
+  prospects: "Nom;Entreprise;Téléphone;Email;Ville;Métier;Note\nJean Dupont;Salon Jean;0470 12 34 56;;Wavre;Coiffeur;Vu sur Google\n",
   clients: "Prénom;Nom;Email;Téléphone;Société;N° de TVA;Adresse;Code postal;Ville\nMarie;Dupont;marie@exemple.be;0470 12 34 56;;;Rue Haute 1;1300;Wavre\n",
   produits: "Nom;Prix TVAC;TVA;Référence;Code-barres;Catégorie;Stock;Seuil d'alerte;Prix d'achat;Fournisseur\nSavon lavande;6,50;21;SAV-01;5412345678901;Savons;24;5;2,10;Savonnerie Bea\n",
 };
@@ -53,7 +54,7 @@ export function ImportWizard({ kind, title, backHref, doneHref, noun }: { kind: 
     return (
       <Card className="max-w-2xl space-y-3 p-6">
         <p className="inline-flex items-center gap-2 text-lg font-semibold text-success" role="status"><CheckCircle2 className="size-5" aria-hidden="true" />{done.created} {done.created > 1 ? noun.many : noun.one} importé{done.created > 1 ? "s" : ""}</p>
-        {done.skipped ? <p className="text-sm text-muted">{done.skipped} déjà présent{done.skipped > 1 ? "s" : ""} (même {kind === "clients" ? "email" : "code-barres"}) : laissé{done.skipped > 1 ? "s" : ""} tel{done.skipped > 1 ? "s" : ""} quel{done.skipped > 1 ? "s" : ""}.</p> : null}
+        {done.skipped ? <p className="text-sm text-muted">{done.skipped} déjà présent{done.skipped > 1 ? "s" : ""} (même {kind === "clients" ? "email" : kind === "prospects" ? "téléphone ou email" : "code-barres"}) : laissé{done.skipped > 1 ? "s" : ""} tel{done.skipped > 1 ? "s" : ""} quel{done.skipped > 1 ? "s" : ""}.</p> : null}
         {done.errors.length ? (
           <div className="text-sm">
             <p className="font-medium text-warning">{done.errors.length} ligne{done.errors.length > 1 ? "s" : ""} ignorée{done.errors.length > 1 ? "s" : ""} :</p>
@@ -110,7 +111,7 @@ export function ImportWizard({ kind, title, backHref, doneHref, noun }: { kind: 
           </Card>
           <div className={cn("flex max-w-3xl flex-wrap items-center gap-3")}>
             <Button icon={<Upload className="size-4" aria-hidden="true" />} loading={pending} onClick={go}>Importer {preview.total} {preview.total > 1 ? noun.many : noun.one}</Button>
-            <p className="text-sm text-muted">{kind === "clients" ? "Un client déjà présent avec le même email n'est pas modifié." : "Un produit au code-barres déjà présent n'est pas modifié."}</p>
+            <p className="text-sm text-muted">{kind === "clients" ? "Un client déjà présent avec le même email n'est pas modifié." : kind === "prospects" ? "Un prospect déjà dans la liste (même téléphone ou email) n'est pas ajouté deux fois." : "Un produit au code-barres déjà présent n'est pas modifié."}</p>
           </div>
         </>
       ) : null}

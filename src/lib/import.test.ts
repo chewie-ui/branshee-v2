@@ -40,3 +40,13 @@ test("colonne Code-barres reconnue", () => {
   assert.equal(m.barcode, 2);
   assert.equal(m.sku, -1);
 });
+
+test("prospects : nom et contact obligatoires", async () => {
+  const { toProspects } = await import("./import");
+  const m = guessMapping(["Nom", "Entreprise", "GSM", "Ville", "Métier"], "prospects");
+  assert.equal(m.phone, 2);
+  assert.equal(m.trade, 4);
+  const { ok, errors } = toProspects([["Jean", "Salon Jean", "0470 12 34 56", "Wavre", "Coiffeur"], ["", "", "", "", ""], ["Paul", "", "", "Namur", ""]], m);
+  assert.equal(ok.length, 1);
+  assert.equal(errors.length, 2);
+});

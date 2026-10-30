@@ -61,7 +61,7 @@ export function parseCsv(text: string): string[][] {
   return rows.map((r) => r.map((c) => c.trim()));
 }
 
-export type ImportKind = "clients" | "produits";
+export type ImportKind = "clients" | "produits" | "prospects";
 
 export const FIELDS: Record<ImportKind, { key: string; label: string; aliases: string[] }[]> = {
   clients: [
@@ -76,6 +76,15 @@ export const FIELDS: Record<ImportKind, { key: string; label: string; aliases: s
     { key: "postalCode", label: "Code postal", aliases: ["code postal", "cp", "postal code", "zip", "postcode", "zip code"] },
     { key: "city", label: "Ville", aliases: ["ville", "localite", "city", "town", "gemeente", "stad", "commune"] },
     { key: "country", label: "Pays", aliases: ["pays", "country", "land"] },
+  ],
+  prospects: [
+    { key: "name", label: "Nom (personne ou entreprise)", aliases: ["nom", "name", "contact", "nom complet", "full name", "naam", "prospect", "client"] },
+    { key: "company", label: "Entreprise", aliases: ["entreprise", "societe", "company", "bedrijf", "firma", "raison sociale", "commerce", "etablissement"] },
+    { key: "phone", label: "Téléphone", aliases: ["telephone", "tel", "gsm", "mobile", "phone", "telefoon", "portable", "numero"] },
+    { key: "email", label: "Email", aliases: ["email", "e mail", "mail", "courriel", "adresse email"] },
+    { key: "city", label: "Ville", aliases: ["ville", "localite", "city", "commune", "gemeente", "stad"] },
+    { key: "trade", label: "Métier ou secteur", aliases: ["metier", "secteur", "activite", "categorie", "type", "sector", "beroep", "profession"] },
+    { key: "note", label: "Note", aliases: ["note", "notes", "commentaire", "remarque", "info", "opmerking"] },
   ],
   produits: [
     { key: "name", label: "Nom du produit", aliases: ["nom", "produit", "article", "name", "product", "product name", "naam", "libelle", "designation", "description"] },
@@ -141,6 +150,26 @@ export function toClients(rows: string[][], map: Record<string, number>) {
     if (!fullName) return errors.push({ line: k + 2, reason: "Pas de nom" });
     if (rawEmail && !isEmail(rawEmail)) return errors.push({ line: k + 2, reason: `Email invalide : ${rawEmail.slice(0, 60)}` });
     ok.push({ fullName: fullName.slice(0, 120), firstName: first, lastName: last, email: rawEmail || null, phone: g("phone", 40), companyName: company, vatNumber: g("vatNumber", 30), street: g("street"), postalCode: g("postalCode", 12), city: g("city", 80), country: g("country", 60) });
+  });
+  return { ok, errors };
+}
+
+export type ProspectRow = { name: string; company: string | null; phone: string | null; email: string | null; city: string | null; trade: string | null; note: string | null };
+
+/** Lignes du fichier → prospects (il faut un nom et un moyen de contact). */
+export function toProspects(rows: string[][], map: Record<string, number>) {
+  const ok: ProspectRow[] = [];
+  const errors: RowError[] = [];
+  rows.forEach((r, k) => {
+    const g = (key: string, max = 200) => cell(r, map[key]).slice(0, max) || null;
+    const company = g("company", 120);
+    const name = g("name", 120) ?? company;
+    const email = (g("email") ?? "").toLowerCase();
+    const phone = g("phone", 40);
+    if (!name) return errors.push({ line: k + 2, reason: "Pas de nom" });
+    if (email && !isEmail(email)) return errors.push({ line: k + 2, reason: `Email invalide : ${email.slice(0, 60)}` });
+    if (!phone && !email) return errors.push({ line: k + 2, reason: "Ni téléphone ni email" });
+    ok.push({ name, company, phone, email: email || null, city: g("city", 80), trade: g("trade", 80), note: g("note", 2000) });
   });
   return { ok, errors };
 }
