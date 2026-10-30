@@ -20,6 +20,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
             <Link href="/#sur-mesure">Sur mesure</Link>
             <Link href="/#realisations">Réalisations</Link>
             <Link href="/#tarifs">Tarifs</Link>
+            <Link href="/annuaire">Trouver un pro</Link>
           </nav>
           <div className="nav-r">
             {signedIn ? (
@@ -48,7 +49,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
           </div>
           <div>
             <h4>Skydev</h4>
-            <ul><li><Link href="/#sur-mesure">Sur mesure</Link></li><li><Link href="/#tarifs">Tarifs</Link></li><li><Link href="/connexion">Se connecter</Link></li><li><Link href="/conditions-utilisation">Conditions</Link></li><li><Link href="/confidentialite">Confidentialité</Link></li></ul>
+            <ul><li><Link href="/annuaire">Trouver un professionnel</Link></li><li><Link href="/annuaire/coiffeur/wavre">Coiffeur à Wavre</Link></li><li><Link href="/annuaire/kine/wavre">Kiné à Wavre</Link></li><li><Link href="/#sur-mesure">Sur mesure</Link></li><li><Link href="/#tarifs">Tarifs</Link></li><li><Link href="/connexion">Se connecter</Link></li><li><Link href="/conditions-utilisation">Conditions</Link></li><li><Link href="/confidentialite">Confidentialité</Link></li></ul>
           </div>
           <div>
             <h4>Contact</h4>

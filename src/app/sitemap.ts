@@ -3,17 +3,32 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { allSeoPages } from "@/lib/seo-landing";
-import { listArticles, siteUrl } from "@/server/site";
+import { knownMetiers, metierFromSlug } from "@/lib/directory";
+import { slugify } from "@/lib/slug";
+import { declaredTypesAndCities, listArticles, siteUrl } from "@/server/site";
 
 export const dynamic = "force-dynamic";
 
 /** Plan du site : pages publiques, pages SEO, articles et pages de réservation (hors pause / suppression). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
-  const [biz, blog] = await Promise.all([
-    db.select({ slug: businesses.slug, updatedAt: businesses.updatedAt }).from(businesses).innerJoin(users, eq(users.id, businesses.ownerId)).where(and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), sql`true`)),
+  const [biz, blog, declared] = await Promise.all([
+    db.select({ slug: businesses.slug, updatedAt: businesses.updatedAt }).from(businesses).innerJoin(users, eq(users.id, businesses.ownerId)).where(and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), eq(businesses.isDemo, false), sql`true`)),
     listArticles({ per: 1000 }),
+    declaredTypesAndCities(),
   ]);
+  // Annuaire : pages « métier » et seulement les « métier à ville » où au moins un pro figure (pas de page vide).
+  const metiers = new Set<string>();
+  const combos = new Set<string>();
+  for (const r of declared.rows) {
+    const type = (r.type ?? "").toLowerCase();
+    if (!type.trim()) continue;
+    const m = knownMetiers().find((x) => x.keywords.some((k) => type.includes(k.toLowerCase())))?.slug ?? slugify(type);
+    if (!metierFromSlug(m, [type])) continue; // métier qui est en fait une ville
+    metiers.add(m);
+    const v = slugify(r.city ?? "");
+    if (v) combos.add(`${m}/${v}`);
+  }
   const fixed: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/tarifs`, changeFrequency: "monthly", priority: 0.9 },
@@ -26,6 +41,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   return [
     ...fixed,
+    ...[...metiers].map((m) => ({ url: `${base}/annuaire/${m}`, changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...[...combos].map((c) => ({ url: `${base}/annuaire/${c}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...allSeoPages().map((p) => ({ url: `${base}/logiciel-rendez-vous/${p.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),
     ...blog.rows.map((a) => ({ url: `${base}/blog/${a.slug}`, lastModified: a.updatedAt, changeFrequency: "monthly" as const, priority: 0.6 })),
     ...biz.map((b) => ({ url: `${base}/${b.slug}`, lastModified: b.updatedAt, changeFrequency: "weekly" as const, priority: 0.7 })),

@@ -36,6 +36,14 @@ const LINKED: { icon: Icon; title: string; text: string }[] = [
   { icon: Smartphone, title: "Sur ordinateur et téléphone", text: "Tout fonctionne sur mobile, pour vous comme pour vos clients : réservation, carte de fidélité, commande." },
 ];
 
+// Être trouvé : l'annuaire public et la page de chaque entreprise.
+const FINDABLE: { icon: Icon; title: string; text: string }[] = [
+  { icon: MapPin, title: "Trouvé par métier et par ville", text: "Votre page apparaît dans « coiffeur à Wavre », « kiné à Namur »… les recherches que vos clients font vraiment." },
+  { icon: Globe, title: "Votre page, à votre image", text: "Photos, présentation, prestations, prix, avis. Vous la personnalisez, ou vous passez à un vrai site web." },
+  { icon: CalendarDays, title: "Réservé 24 h/24", text: "Le client réserve le créneau libre sans vous appeler. Vous recevez la réservation, il reçoit le rappel." },
+  { icon: Check, title: "Une page complète passe devant", text: "Plus votre page est remplie, plus elle ressort haut dans l'annuaire. L'app vous dit ce qu'il manque." },
+];
+
 function Li({ a, b }: { a: string; b: ReactNode }) {
   return <div className="li"><span>{a}</span>{b}</div>;
 }
@@ -87,6 +95,7 @@ export function SkydevLanding() {
             <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
             <Link className="btn btn-ghost btn-lg" href="/inscription">Créer mon compte gratuit</Link>
             <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
+            <p className="hero-note">Vous cherchez un professionnel ? <Link href="/annuaire" className="hero-find">Trouvez-le dans l&apos;annuaire</Link>.</p>
           </div>
 
           <div className="builder">
@@ -222,6 +231,25 @@ export function SkydevLanding() {
                 <p>{l.text}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="block" id="clients">
+        <div className="wrap">
+          <div className="head"><span className="eyebrow">Plus de clients</span><h2>Vos futurs clients vous cherchent déjà.</h2><p>Chaque entreprise sur Skydev a sa page dans l&apos;annuaire. Les particuliers y cherchent « coiffeur à Wavre » ou « kiné à Namur », trouvent votre page et réservent, même quand vous êtes occupé.</p></div>
+          <div className="linked">
+            {FINDABLE.map((l) => (
+              <div key={l.title} className="lk">
+                <span className="app-ic"><l.icon className="ico" aria-hidden="true" /></span>
+                <h3>{l.title}</h3>
+                <p>{l.text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="find-cta">
+            <Link className="btn btn-primary" href="/inscription">Créer ma page</Link>
+            <Link className="btn btn-ghost" href="/annuaire">Voir l&apos;annuaire</Link>
           </div>
         </div>
       </section>

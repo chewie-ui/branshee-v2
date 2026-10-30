@@ -46,11 +46,11 @@
 .sky .hero-txt { text-align: center; max-width: 860px; margin: 0 auto; }
 .sky .pill { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px 4px 4px; font-size: 13px; font-weight: 500; box-shadow: var(--shadow); }
 .sky .pill b { background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
-.sky h1 { font-size: 44px; line-height: 1.02; letter-spacing: -.045em; font-weight: 800; margin: 24px 0 0; text-wrap: balance; }
+.sky h1:not(.tw h1) { font-size: 44px; line-height: 1.02; letter-spacing: -.045em; font-weight: 800; margin: 24px 0 0; text-wrap: balance; }
 @media (min-width: 640px) {
-.sky h1 { font-size: 64px; } }
+.sky h1:not(.tw h1) { font-size: 64px; } }
 @media (min-width: 1024px) {
-.sky h1 { font-size: 80px; } }
+.sky h1:not(.tw h1) { font-size: 80px; } }
 .sky h1 .a { color: var(--accent); }
 .sky .lead { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 20px auto 0; line-height: 1.6; }
 @media (min-width: 640px) {
@@ -109,9 +109,9 @@
 .sky section.block { padding: 112px 0 0; }
 .sky .head { max-width: 680px; margin-bottom: 40px; }
 .sky .eyebrow { font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; }
-.sky h2 { font-size: 34px; line-height: 1.08; letter-spacing: -.035em; font-weight: 800; margin: 10px 0 0; text-wrap: balance; }
+.sky h2:not(.tw h2) { font-size: 34px; line-height: 1.08; letter-spacing: -.035em; font-weight: 800; margin: 10px 0 0; text-wrap: balance; }
 @media (min-width: 640px) {
-.sky h2 { font-size: 48px; } }
+.sky h2:not(.tw h2) { font-size: 48px; } }
 .sky .head p { margin: 14px 0 0; font-size: 18px; color: var(--text-muted); }/* Bento des apps */
 .sky .bento { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 @media (min-width: 768px) {
@@ -205,9 +205,9 @@
 @media (min-width: 640px) {
 .sky .row2 { grid-template-columns: 1fr 1fr; } }
 .sky label.f { display: grid; gap: 6px; font-size: 14px; font-weight: 500; }
-.sky input, .sky textarea.t { font: inherit; font-size: 15px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; min-height: 44px; }
-.sky input:hover, .sky textarea.t:hover { border-color: #a1a1aa; }
-.sky input:focus-visible, .sky textarea.t:focus-visible { outline: 2px solid rgba(79,70,229,.3); outline-offset: 0; border-color: var(--accent); }
+.sky input:not(.tw input), .sky textarea.t { font: inherit; font-size: 15px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; min-height: 44px; }
+.sky input:not(.tw input):hover, .sky textarea.t:hover { border-color: #a1a1aa; }
+.sky input:not(.tw input):focus-visible, .sky textarea.t:focus-visible { outline: 2px solid rgba(79,70,229,.3); outline-offset: 0; border-color: var(--accent); }
 .sky textarea.t { min-height: 110px; resize: vertical; }
 .sky .sel { font-size: 14px; color: var(--text-muted); background: var(--surface-muted); border-radius: 10px; padding: 10px 12px; }
 .sky .sel b { color: var(--text); font-weight: 600; }
@@ -275,3 +275,5 @@
 .sky .hero-cta .btn { width: 100%; } }
 @media (max-width: 639px) {
 .sky .nav-demo { display: none; } }
+.sky .find-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
+.sky .hero-find { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }

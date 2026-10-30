@@ -193,17 +193,17 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
           <BusinessSwitcher current={business} all={businesses} brand={brand} />
         </div>
         <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
-          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden xl:inline">Aller à…</span></button> : null}
+          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">Aller à…</span></button> : null}
           {invite ? (
             <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Parrainage : 1 mois offert par pro invité">
-              <Gift className="size-4" aria-hidden="true" /><span className="hidden sm:inline">1 mois offert</span>
+              <Gift className="size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap sm:inline">1 mois offert</span>
             </Link>
           ) : null}
           {user.isSuperadmin ? <Link href="/admin" className={iconBtn} aria-label="Administration de la plateforme"><Shield className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden lg:inline">Admin</span></Link> : null}
           {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
           {help ? (
             <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>
-              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden md:inline">Aide et support</span>
+              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap lg:inline">Aide et support</span>
               {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
             </Link>
           ) : null}

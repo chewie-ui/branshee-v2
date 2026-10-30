@@ -19,7 +19,7 @@ export async function professionList(opts: { allActivities?: boolean } = {}) {
 }
 
 /** Établissements visibles publiquement : ni supprimés, ni en pause, propriétaire actif. */
-const visible = and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt));
+const visible = and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), eq(businesses.isDemo, false));
 const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`).replace(/[\s'-]+/g, "%")}%`;
 
 export type DirectoryEntry = { id: string; name: string; slug: string; type: string | null; city: string | null; photoUrl: string | null; rating: number | null; reviews: number };
@@ -35,17 +35,35 @@ const entryCols = {
   reviews: sql<number>`(select count(*)::int from reviews r where r.business_id = ${businesses.id})`,
 };
 
+/** Points de complétude de la page (0 à 5), même liste que la carte « Votre page » dans l'app. */
+const completeness = sql`(case when ${businesses.photoUrl} is not null then 1 else 0 end)
+  + (case when coalesce(${businesses.description}, '') <> '' then 1 else 0 end)
+  + (case when coalesce(${businesses.city}, '') <> '' then 1 else 0 end)
+  + (case when exists (select 1 from services s where s.business_id = ${businesses.id} and s.is_active) then 1 else 0 end)
+  + (case when exists (select 1 from weekly_hours h where h.business_id = ${businesses.id}) then 1 else 0 end)`;
+
 /**
  * Annuaire : recherche par nom / métier, ville ou code postal, métier exact, note minimale.
  * Ordre : mis en avant (position), puis forfait payant, puis note et nombre d'avis.
  */
-export async function searchDirectory(q: { name?: string; location?: string; category?: string; minRating?: number | null; page?: number }) {
+export async function searchDirectory(q: { name?: string; keywords?: string[]; location?: string; category?: string; minRating?: number | null; page?: number; per?: number }) {
   const conds = [visible];
-  if (q.name) conds.push(or(ilike(businesses.name, like(q.name)), ilike(businesses.businessType, like(q.name)))!);
+  // Métier reconnu (« coiffeuse » → coiffeur, coiffure…) : tous ses mots-clés sur le métier déclaré.
+  if (q.keywords?.length) conds.push(or(...q.keywords.map((k) => ilike(businesses.businessType, like(k))))!);
+  // Texte libre : nom, métier, présentation ou nom d'une prestation (« drainage lymphatique »).
+  else if (q.name)
+    conds.push(
+      or(
+        ilike(businesses.name, like(q.name)),
+        ilike(businesses.businessType, like(q.name)),
+        ilike(businesses.description, like(q.name)),
+        sql`exists (select 1 from services s where s.business_id = ${businesses.id} and s.is_active and s.name ilike ${like(q.name)})`,
+      )!,
+    );
   if (q.location) conds.push(or(ilike(businesses.city, like(q.location)), ilike(businesses.postalCode, `${q.location.trim()}%`), ilike(businesses.address, like(q.location)))!);
   if (q.category) conds.push(sql`lower(trim(${businesses.businessType})) = ${q.category.trim().toLowerCase()}`);
   if (q.minRating) conds.push(sql`(select avg(r.rating) from reviews r where r.business_id = ${businesses.id}) >= ${q.minRating}`);
-  const per = 24;
+  const per = q.per ?? 24;
   const page = Math.max(1, q.page ?? 1);
   const where = and(...conds);
   const [rows, [total]] = await Promise.all([
@@ -58,6 +76,8 @@ export async function searchDirectory(q: { name?: string; location?: string; cat
       .orderBy(
         sql`case when ${businesses.boostPosition} > 0 then ${businesses.boostPosition} else 1000 end`,
         sql`case coalesce(${businessPlans.plan}, 'free') when 'pro_plus' then 0 when 'pro' then 1 else 2 end`,
+        // Page complète d'abord : c'est ce qui donne envie de réserver (et pousse les pros à la remplir).
+        sql`(${completeness}) desc`,
         sql`(select coalesce(avg(r.rating), 0) from reviews r where r.business_id = ${businesses.id}) desc`,
         sql`(select count(*) from reviews r where r.business_id = ${businesses.id}) desc`,
         asc(businesses.name),
@@ -79,6 +99,29 @@ export async function directoryCategories(limit = 16) {
     .groupBy(sql`lower(trim(${businesses.businessType}))`)
     .orderBy(sql`count(*) desc`)
     .limit(limit);
+}
+
+/** Métiers et villes déclarés par les pros visibles (pages « métier à ville » au-delà de la liste fixe). */
+export async function declaredTypesAndCities() {
+  const rows = await db
+    .select({ type: businesses.businessType, city: businesses.city })
+    .from(businesses)
+    .innerJoin(users, eq(users.id, businesses.ownerId))
+    .where(visible);
+  const clean = (xs: (string | null)[]) => [...new Set(xs.map((x) => (x ?? "").trim()).filter((x) => x.length > 1))];
+  return { rows, types: clean(rows.map((r) => r.type)), cities: clean(rows.map((r) => r.city)) };
+}
+
+/** Villes où un métier est présent, avec le nombre d'établissements. */
+export async function directoryCities(keywords: string[]) {
+  return db
+    .select({ city: sql<string>`min(trim(${businesses.city}))`, n: sql<number>`count(*)::int` })
+    .from(businesses)
+    .innerJoin(users, eq(users.id, businesses.ownerId))
+    .where(and(visible, sql`coalesce(trim(${businesses.city}), '') <> ''`, keywords.length ? or(...keywords.map((k) => ilike(businesses.businessType, like(k)))) : undefined))
+    .groupBy(sql`lower(trim(${businesses.city}))`)
+    .orderBy(sql`count(*) desc`)
+    .limit(40);
 }
 
 /** Établissements mis en avant (page d'accueil). */

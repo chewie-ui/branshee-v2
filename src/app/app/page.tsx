@@ -13,6 +13,10 @@ import { db } from "@/db";
 import { businessModules } from "@/db/schema";
 import { effectivePlan } from "@/server/plan";
 import { SubscriptionSummary } from "@/components/apps/subscription-summary";
+import { PageScoreCard } from "@/components/directory/page-score-card";
+import { matchMetier, metierVilleUrl, pageCompleteness } from "@/lib/directory";
+import { slugify } from "@/lib/slug";
+import { pageFacts } from "@/server/directory";
 
 /** Apps rangées dans « Administration » (patron et admins), pas dans la grille des apps. */
 const ADMIN_APPS = new Set(["employes", "reglages"]);
@@ -47,11 +51,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     { href: "/app/reglages", label: "Réglages", hint: "Paiements, SMS", icon: "settings", ok: ctx.can("settings.manage") },
   ] as const).filter((x) => x.ok).map(({ ok: _ok, ...x }) => x); // eslint-disable-line @typescript-eslint/no-unused-vars
   const firstName = ctx.user.name.split(" ")[0];
-  const [plan, mods, apps] = await Promise.all([
+  const showPage = ctx.member.isOwner || ctx.can("business.manage");
+  const [plan, mods, apps, facts] = await Promise.all([
     effectivePlan(ctx.business.id),
     db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)),
     visibleApps(ctx),
+    showPage ? pageFacts(ctx.business.id) : null,
   ]);
+  // Page publique : ce qu'il manque pour bien ressortir dans l'annuaire, et la page « métier à ville » où on la trouve.
+  const score = facts ? pageCompleteness(facts) : null;
+  const m = facts?.btype ? matchMetier(facts.btype) : null;
+  const mSlug = m?.slug ?? (facts?.btype ? slugify(facts.btype) : "");
+  const vSlug = facts?.city ? slugify(facts.city) : "";
+  const searchHref = mSlug && vSlug ? metierVilleUrl(mSlug, vSlug) : null;
+  const searchLabel = searchHref && facts ? `${(m?.nom ?? facts.btype ?? "").toLowerCase()} à ${facts.city?.trim()}` : null;
   // Clés de module (tel_ia) → identifiants d'app (tel-ia).
   const active = mods.map((m) => m.key.replace(/_/g, "-"));
   return (
@@ -60,6 +73,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bonjour {firstName}</h1>
         <p className="mt-1 text-sm text-muted">{ready ? "Votre espace est prêt. Ouvrez une app pour commencer." : `Les apps de ${ctx.business.name}.`}</p>
       </div>
+      {score ? <PageScoreCard items={score.items} percent={score.percent} slug={ctx.business.slug} searchHref={searchHref} searchLabel={searchLabel} /> : null}
       {ctx.can("billing.manage") ? (
         <Link href="/app/parrainage" className="group mx-auto mb-8 flex max-w-3xl items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>
