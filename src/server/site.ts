@@ -108,7 +108,7 @@ export async function declaredTypesAndCities() {
     .from(businesses)
     .innerJoin(users, eq(users.id, businesses.ownerId))
     .where(visible);
-  const clean = (xs: (string | null)[]) => [...new Set(xs.map((x) => (x ?? "").trim()).filter((x) => x.length > 1))];
+  const clean = (xs: (string | null)[]) => [...new Set(xs.map((x) => (x ?? "").trim()).filter((x) => x.length > 2 && /\p{L}{3}/u.test(x)))];
   return { rows, types: clean(rows.map((r) => r.type)), cities: clean(rows.map((r) => r.city)) };
 }
 
