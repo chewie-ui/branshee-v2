@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!metierFromSlug(m, [type])) continue; // métier qui est en fait une ville
     metiers.add(m);
     const v = slugify(r.city ?? "");
-    if (v) combos.add(`${m}/${v}`);
+    if (v.length > 2) combos.add(`${m}/${v}`);
   }
   const fixed: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
