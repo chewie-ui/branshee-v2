@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, X } from "lucide-react";
+import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
 import { openSwitcher } from "@/components/app/app-switcher";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
@@ -29,6 +29,8 @@ type Props = {
   activeHref?: string | null;
   /** Bouton « Aller à… » (Ctrl+K) pour passer d'une app à l'autre. */
   switcher?: boolean;
+  /** Lien « Sur mesure » propre à l'app ouverte (« Dans RDV, je voudrais… »). */
+  custom?: { href: string; label: string } | null;
 };
 
 function isActive(pathname: string, href: string) {
@@ -108,7 +110,7 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
   );
 }
 
-function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false }: Props & { pathname: string }) {
+function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false, custom }: Props & { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-3 p-3">
@@ -141,6 +143,15 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
       </nav>
 
       <div className="border-t border-border p-3">
+        {custom ? (
+          <Link href={custom.href} className="mb-2 flex items-start gap-3 rounded-lg border border-dashed border-border-strong px-2.5 py-2 text-sm transition-colors duration-150 hover:border-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Wand2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="block font-medium text-text">{custom.label}</span>
+              <span className="block text-xs text-muted">Décrivez-la, on la construit pour vous.</span>
+            </span>
+          </Link>
+        ) : null}
         <ul className="space-y-0.5">
           {footer.map((item) => (
             <li key={item.href}>
@@ -193,7 +204,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
           <BusinessSwitcher current={business} all={businesses} brand={brand} />
         </div>
         <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
-          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">Aller à…</span></button> : null}
+          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap 2xl:inline">Aller à…</span></button> : null}
           {invite ? (
             <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Parrainage : 1 mois offert par pro invité">
               <Gift className="size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap sm:inline">1 mois offert</span>
@@ -203,7 +214,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
           {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
           {help ? (
             <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>
-              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap lg:inline">Aide et support</span>
+              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap lg:inline">Aide</span>
               {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
             </Link>
           ) : null}

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Pin, Plus, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Minus, Pin, Plus, SlidersHorizontal, Wand2 } from "lucide-react";
 import type { VisibleApp } from "@/server/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -115,6 +115,17 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
           <ButtonLink href="/app/demarrer" variant="ghost" size="sm">Refaire le questionnaire</ButtonLink>
         </div>
       ) : null}
+
+      {/* Sur mesure : demander n'importe quelle modif d'une app, ou une app nouvelle. */}
+      <Link href="/app/sur-mesure" className="group mx-auto mt-12 flex max-w-3xl items-center gap-4 rounded-2xl border border-dashed border-border-strong bg-surface p-5 transition-colors duration-150 hover:border-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent group-hover:bg-surface" aria-hidden="true"><Wand2 className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">Il vous manque quelque chose ?</span>
+          <span className="block text-sm text-muted">Une modif dans n&apos;importe quelle app, ou une app entièrement nouvelle pour votre métier : décrivez-la, on vous donne un prix fixe et on la construit.</span>
+        </span>
+        <span className="hidden shrink-0 items-center gap-1 text-sm font-medium text-accent sm:inline-flex">Sur mesure<ArrowRight className="size-4" aria-hidden="true" /></span>
+        <ArrowRight className="size-5 shrink-0 text-accent sm:hidden" aria-hidden="true" />
+      </Link>
 
       {others.length ? (
         <section className="mt-12" aria-labelledby="more-apps">

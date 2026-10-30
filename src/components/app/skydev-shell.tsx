@@ -59,7 +59,7 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
     );
   return (
     <div className="min-h-dvh">
-      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} switcher />
+      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} switcher custom={app.id === "sur-mesure" ? null : { href: `/app/sur-mesure?app=${app.id}`, label: `Une idée pour ${app.name} ?` }} />
       <AppSwitcher apps={apps} />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>

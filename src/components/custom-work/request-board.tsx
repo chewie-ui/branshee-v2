@@ -15,9 +15,9 @@ type Res = { ok: boolean; message?: string; error?: string };
 const TONE: Record<string, string> = { neutral: "bg-surface-muted text-muted", accent: "bg-accent-soft text-accent", warning: "bg-warning-soft text-warning", success: "bg-success-soft text-success", danger: "bg-danger-soft text-danger" };
 
 /** Sur mesure : décrire une demande, suivre le prix et l'avancement. */
-export function RequestBoard({ requests, apps, canRequest, features }: { requests: Req[]; apps: { id: string; name: string }[]; canRequest: boolean; features: { label: string; monthly: number }[] }) {
+export function RequestBoard({ requests, apps, canRequest, features, defaultApp = "" }: { requests: Req[]; apps: { id: string; name: string }[]; canRequest: boolean; features: { label: string; monthly: number }[]; defaultApp?: string }) {
   const router = useRouter();
-  const [f, setF] = useState({ appId: "", title: "", description: "" });
+  const [f, setF] = useState({ appId: defaultApp, title: "", description: "" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const fmtDate = (iso: string) => new Intl.DateTimeFormat("fr-BE", { dateStyle: "medium" }).format(new Date(iso));
@@ -32,7 +32,7 @@ export function RequestBoard({ requests, apps, canRequest, features }: { request
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Sur mesure</h1>
-        <p className="mt-1 max-w-2xl text-muted">Une modif dans une de vos apps (« dans RDV, je voudrais… »), un outil pour votre métier, une automatisation : décrivez-le. Vous recevez un prix fixe ; une fois accepté, on le construit rien que pour vous, dans vos apps.</p>
+        <p className="mt-1 max-w-2xl text-muted">Une modif dans n&apos;importe quelle app (« dans RDV, je voudrais… »), ou une app entièrement nouvelle pour votre métier : décrivez-la. Vous recevez un prix fixe ; une fois accepté, on le construit rien que pour vous, dans vos apps.</p>
       </div>
       {msg ? <p className={cn("max-w-3xl rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
       {canRequest ? (
@@ -42,7 +42,7 @@ export function RequestBoard({ requests, apps, canRequest, features }: { request
             <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
               <Field label="Pour quelle app ?" htmlFor="cr-app">
                 <Select id="cr-app" value={f.appId} onChange={(e) => setF({ ...f, appId: e.target.value })}>
-                  <option value="">Nouvel outil</option>
+                  <option value="">Une nouvelle app, de zéro</option>
                   {apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </Select>
               </Field>
