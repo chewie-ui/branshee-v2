@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, like, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { chatChannels, members } from "@/db/schema";
 import type { AppContext } from "@/server/context";
@@ -38,7 +38,7 @@ export async function chatOverview(ctx: AppContext) {
     .from(chatChannels)
     .where(and(eq(chatChannels.businessId, ctx.business.id), or(eq(chatChannels.kind, "channel"), like(chatChannels.directKey, `%${me}%`))))
     .orderBy(asc(chatChannels.kind), asc(chatChannels.createdAt));
-  const team = await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"), eq(members.isActive, true))).orderBy(asc(members.displayName));
+  const team = await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"), eq(members.isActive, true), isNotNull(members.userId))).orderBy(asc(members.displayName));
   return { channels: rows.map((r) => ({ ...r, lastMessageAt: r.lastMessageAt?.toISOString() ?? null })), team };
 }
 

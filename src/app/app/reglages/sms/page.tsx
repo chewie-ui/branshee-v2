@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, notificationSettings } from "@/db/schema";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { Card, CardHeader } from "@/components/ui/card";
 import { SmsPanel } from "@/components/settings/sms-panel";
 import { LIMITS } from "@/lib/plans";
 import { requireContext } from "@/server/context";
@@ -21,6 +22,13 @@ export default async function SmsPage({ searchParams }: { searchParams: Promise<
   const usage = await usageThisMonth(b!.ownerId);
   const recharge = (await searchParams).recharge;
   if (plan.plan === "free") return <UpgradeNotice feature="Rappels par SMS et WhatsApp" required="pro">Le forfait Pro inclut {LIMITS.smsIncluded.pro} SMS par mois (Pro+ : {LIMITS.smsIncluded.pro_plus}), puis un solde prépayé si vous le souhaitez.</UpgradeNotice>;
+  // SMS et WhatsApp pas encore branchés sur ce serveur : rien à régler ni à recharger, on le dit simplement.
+  if (!smsConfigured() && !whatsappConfigured())
+    return (
+      <Card>
+        <CardHeader title="SMS et WhatsApp : bientôt" description="Les rappels et confirmations par SMS ou WhatsApp arrivent prochainement. En attendant, vos clients reçoivent tout par e-mail, automatiquement." />
+      </Card>
+    );
   return (
     <div className="space-y-4">
       {recharge === "ok" ? <p className="rounded-lg bg-success-soft p-3 text-sm text-success">Solde rechargé, merci !</p> : recharge === "erreur" ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-warning">La recharge n&apos;a pas pu être vérifiée. Si vous avez été débité, contactez le support.</p> : null}
@@ -33,6 +41,7 @@ export default async function SmsPage({ searchParams }: { searchParams: Promise<
         smsReady={smsConfigured()}
         waReady={whatsappConfigured()}
         isOwner={b!.ownerId === ctx.user.id}
+        businessName={ctx.business.name}
         prices={{ sms: SMS_PRICE_CENTS, wa: WHATSAPP_PRICE_CENTS }}
       />
     </div>

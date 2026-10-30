@@ -26,7 +26,7 @@ function Switch({ checked, onChange, label, description, disabled }: { checked: 
 
 const eur = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
-export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, smsReady, waReady, isOwner, prices }: { initial: Flags; included: number; used: number; balanceCents: number; autoRecharge: { enabled: boolean; thresholdCents: number; amountCents: number }; smsReady: boolean; waReady: boolean; isOwner: boolean; prices: { sms: number; wa: number } }) {
+export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, smsReady, waReady, isOwner, prices, businessName = "votre établissement" }: { businessName?: string; initial: Flags; included: number; used: number; balanceCents: number; autoRecharge: { enabled: boolean; thresholdCents: number; amountCents: number }; smsReady: boolean; waReady: boolean; isOwner: boolean; prices: { sms: number; wa: number } }) {
   const brandName = useBrandName();
   const [f, setF] = useState(initial);
   const [ar, setAr] = useState(autoRecharge);
@@ -59,7 +59,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
       </div>
 
       <Card>
-        <CardHeader title="SMS" description={smsReady ? "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place." : "Les SMS ne sont pas encore activés sur ce serveur."} />
+        <CardHeader title="SMS" description={smsReady ? "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place." : "Les SMS arrivent bientôt : en attendant, tout part par e-mail."} />
         <div className="divide-y divide-border">
           <Switch checked={f.smsReminders} onChange={set("smsReminders")} label="Rappel par SMS" description="Remplace l'email de rappel, au même moment." />
           <Switch checked={f.smsConfirmations} onChange={set("smsConfirmations")} label="SMS de confirmation" description="En plus de l'email de confirmation." />
@@ -67,12 +67,12 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
         </div>
         <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
           <p className="mb-1 flex items-center gap-2 font-medium"><Smartphone className="size-4" aria-hidden="true" />Aperçu</p>
-          <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">votre établissement</span> est jeudi 12 mars à 10:30. Gérer : {brandName === "Skydev" ? "skydev.be" : "branshee.com"}/r/…</p>
+          <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">{businessName}</span> est jeudi 12 mars à 10:30. Gérer : {brandName === "Skydev" ? "skydev.be" : "branshee.com"}/r/…</p>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="WhatsApp" description={waReady ? "Prioritaire et moins cher que le SMS ; repli SMS puis email." : "WhatsApp n'est pas encore configuré sur ce serveur (API Meta)."} />
+        <CardHeader title="WhatsApp" description={waReady ? "Prioritaire et moins cher que le SMS ; repli SMS puis email." : "WhatsApp arrive bientôt : en attendant, rappels par SMS ou e-mail."} />
         <div className="divide-y divide-border">
           <Switch checked={f.whatsappReminders} onChange={set("whatsappReminders")} label="Rappel par WhatsApp" disabled={!waReady && !f.whatsappReminders} />
           <Switch checked={f.whatsappConfirmations} onChange={set("whatsappConfirmations")} label="Confirmation par WhatsApp" disabled={!waReady && !f.whatsappConfirmations} />

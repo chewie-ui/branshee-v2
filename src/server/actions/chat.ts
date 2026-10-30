@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { chatChannels, chatMessages, chatReads, members } from "@/db/schema";
@@ -86,7 +86,7 @@ export async function deleteChannel(id: string): Promise<Result> {
 export async function openDirect(memberId: string): Promise<Result> {
   const ctx = await requireContext(undefined, { app: "messagerie" });
   if (!z.uuid().safeParse(memberId).success || memberId === ctx.member.id) return { ok: false, error: "Personne introuvable." };
-  const [m] = await db.select({ id: members.id }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id)));
+  const [m] = await db.select({ id: members.id }).from(members).where(and(eq(members.id, memberId), eq(members.businessId, ctx.business.id), isNotNull(members.userId)));
   if (!m) return { ok: false, error: "Personne introuvable." };
   const key = directKey(ctx.member.id, memberId);
   const [existing] = await db.select({ id: chatChannels.id }).from(chatChannels).where(and(eq(chatChannels.businessId, ctx.business.id), eq(chatChannels.directKey, key)));

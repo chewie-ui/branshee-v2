@@ -136,6 +136,23 @@ export function SalesBoard({ deals, team, me, canManage, canQuote, today, openId
               ))}
             </div>
           ) : null}
+          {/* Pistes gagnées ou perdues : on peut les rouvrir (changer d'étape, supprimer). */}
+          {list.some((d) => !isOpen(d.stage)) ? (
+            <details className="mt-3 rounded-xl border border-border bg-surface">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Pistes clôturées ({list.filter((d) => !isOpen(d.stage)).length})</summary>
+              <ul className="divide-y divide-border border-t border-border">
+                {list.filter((d) => !isOpen(d.stage)).map((d) => (
+                  <li key={d.id}>
+                    <button type="button" onClick={() => { setMsg(null); setSheet(d); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-surface-muted">
+                      <span className={cn("rounded px-1.5 text-xs font-medium", d.stage === "won" ? "bg-success-soft text-success" : "bg-danger-soft text-danger")}>{stageLabel(d.stage)}</span>
+                      <span className="min-w-0 flex-1 truncate">{d.title}</span>
+                      <span className="tabular-nums text-muted">{eur(d.valueCents)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </div>
       )}
 

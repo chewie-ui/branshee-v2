@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ne, sql } from "drizzle-orm";
 import QRCode from "qrcode";
-import { z } from "@/lib/zod";
+import { optionalPhone, z } from "@/lib/zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";
@@ -54,7 +54,7 @@ export async function verifyEmail(_prev: Result | undefined, fd: FormData): Prom
 
 const profileSchema = z.object({
   fullName: z.string().trim().min(2, "Indiquez votre nom.").max(120),
-  phone: z.string().trim().max(40),
+  phone: optionalPhone,
   gender: z.enum(["", "female", "male", "other"]),
   birthDate: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide.")]),
   address: z.string().trim().max(160),

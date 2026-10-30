@@ -94,7 +94,7 @@ export async function processCampaignQueue(limit = 300) {
     const [out] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, r.businessId), sql`lower(${customers.email}) = ${r.email}`, sql`(${customers.marketingOptOutAt} is not null or ${customers.blockedAt} is not null)`)).limit(1);
     if (out) { await db.update(campaignRecipients).set({ status: "skipped" }).where(eq(campaignRecipients.id, r.id)); continue; }
     const unsub = `${mkOrigin()}/desabonnement/${r.token}`;
-    const mail = emails.campaign({ businessName: tradeName || bizName, subject, body: body.replaceAll("{prenom}", r.firstName ?? "").replace(/Bonjour\s+,/g, "Bonjour,"), unsubscribeUrl: unsub });
+    const mail = emails.campaign({ businessName: tradeName || bizName, subject: subject.replaceAll("{prenom}", r.firstName ?? "").replace(/\s{2,}/g, " ").replace(/\s+([,!?.])/g, "$1").trim(), body: body.replaceAll("{prenom}", r.firstName ?? "").replace(/Bonjour\s+,/g, "Bonjour,"), unsubscribeUrl: unsub });
     const ok = await sendEmail({ to: r.email, ...mail, template: "campaign", businessId: r.businessId, replyTo: replyTo || null, headers: { "List-Unsubscribe": `<${unsub}/un-clic>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }).catch(() => false);
     await db.update(campaignRecipients).set({ status: ok ? "sent" : "failed", sentAt: new Date() }).where(eq(campaignRecipients.id, r.id));
     budget.set(r.businessId, (budget.get(r.businessId) ?? 0) - 1);

@@ -12,11 +12,11 @@ export function PageScoreCard({ items, percent, slug, searchHref, searchLabel }:
     return (
       <div className="mx-auto mb-8 flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border bg-surface px-5 py-4 text-sm">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success" aria-hidden="true"><Check className="size-4" /></span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 basis-[calc(100%-3rem)] sm:basis-0">
           <span className="block font-medium">Votre page est complète</span>
           <span className="block text-muted">{searchLabel ? `Les clients vous trouvent dans « ${searchLabel} ».` : "Elle ressort en priorité dans l'annuaire."}</span>
         </span>
-        <span className="flex gap-3">
+        <span className="flex gap-3 max-sm:pl-12">
           {searchHref ? <Link href={searchHref} target="_blank" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Voir dans l&apos;annuaire<ExternalLink className="size-3.5" aria-hidden="true" /></Link> : null}
         </span>
       </div>

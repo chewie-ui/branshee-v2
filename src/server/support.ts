@@ -56,3 +56,19 @@ export const DEFAULT_HELP: { title: string; videos: { id: string; title: string;
     ],
   },
 ];
+
+/** Aide de base Skydev (plateforme d'apps) quand le super-admin n'a encore rien rédigé. */
+export const DEFAULT_HELP_SKYDEV: typeof DEFAULT_HELP = [
+  {
+    title: "Questions fréquentes",
+    videos: [],
+    faqs: [
+      { id: "apps", question: "Comment ajouter ou retirer une app de mon accueil ?", answer: "Sur l'accueil, cliquez sur <strong>Modifier l'accueil</strong>. Les autres apps sont en dessous, dans « Ajouter des apps ». Toutes sont incluses dans l'abonnement, sauf les options." },
+      { id: "switch", question: "Comment passer vite d'une app à l'autre ?", answer: "Appuyez sur <strong>Ctrl + K</strong> (⌘ + K sur Mac) ou cliquez sur la loupe, puis tapez le nom de l'app ou de la page. Épinglez aussi vos apps favorites : elles apparaissent en raccourci dans chaque app." },
+      { id: "team", question: "Comment ajouter un collaborateur ?", answer: "Allez dans <strong>Équipe</strong>, « Ajouter un membre ». Avec son e-mail, il reçoit une invitation et crée son compte. Son grade décide des apps qu'il voit." },
+      { id: "plan", question: "Combien coûte Skydev et comment m'abonner ?", answer: "Toutes les apps sont incluses : 29 € par mois pour la première personne, puis moins cher par personne en plus. Allez dans <strong>Réglages → Abonnement</strong>." },
+      { id: "custom", question: "Il me manque une fonction, que faire ?", answer: "Ouvrez <strong>Sur mesure</strong> (ou le lien « Une idée pour… » dans chaque app) et décrivez ce que vous voulez. Vous recevez un prix fixe avant tout travail." },
+      { id: "find", question: "Comment les clients me trouvent-ils ?", answer: "Votre page publique apparaît dans l'annuaire de Skydev, par métier et par ville. Complétez-la (photo, présentation, adresse, prestations, horaires) : la carte « Faites-vous trouver » de l'accueil vous dit ce qu'il manque." },
+    ],
+  },
+];

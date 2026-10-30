@@ -36,4 +36,11 @@ z.config({
   },
 });
 
+/** Téléphone facultatif : vide, ou 8 à 15 chiffres (espaces, points, tirets, « + » permis). */
+export const optionalPhone = z
+  .string()
+  .trim()
+  .max(40)
+  .refine((s) => !s || (/^[+0-9 ./()-]+$/.test(s) && (s.match(/\d/g)?.length ?? 0) >= 8 && (s.match(/\d/g)?.length ?? 0) <= 15), "Numéro de téléphone invalide (ex. : 0477 12 34 56 ou +32 477 12 34 56).");
+
 export { z };

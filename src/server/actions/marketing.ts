@@ -66,7 +66,7 @@ export async function testCampaign(id: string): Promise<Result> {
   const [c] = await db.select().from(campaigns).where(and(eq(campaigns.id, id), eq(campaigns.businessId, ctx.business.id)));
   if (!c) return { ok: false, error: "Campagne introuvable." };
   const seller = await getSellerSettings(ctx.business.id);
-  const mail = emails.campaign({ businessName: seller.tradeName || ctx.business.name, subject: `[Test] ${c.subject}`, body: c.body.replaceAll("{prenom}", ctx.user.name.split(" ")[0] ?? ""), unsubscribeUrl: `${mkOrigin()}/app/marketing` });
+  const mail = emails.campaign({ businessName: seller.tradeName || ctx.business.name, subject: `[Test] ${c.subject.replaceAll("{prenom}", ctx.user.name.split(" ")[0] ?? "")}`, body: c.body.replaceAll("{prenom}", ctx.user.name.split(" ")[0] ?? ""), unsubscribeUrl: `${mkOrigin()}/app/marketing` });
   const ok = await sendEmail({ to: ctx.user.email, ...mail, template: "campaign_test", businessId: ctx.business.id });
   return ok ? { ok: true, message: `Test envoyé à ${ctx.user.email}.` } : { ok: false, error: "L'email de test n'a pas pu partir." };
 }

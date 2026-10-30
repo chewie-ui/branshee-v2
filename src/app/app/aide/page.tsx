@@ -6,14 +6,16 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { richTextToPlain, sanitizeArticleHtml } from "@/server/rich-text";
-import { DEFAULT_HELP, getSupportThread, listHelpSections } from "@/server/support";
+import { DEFAULT_HELP, DEFAULT_HELP_SKYDEV, getSupportThread, listHelpSections } from "@/server/support";
+import { currentBrand } from "@/server/brand";
 
 export const metadata: Metadata = { title: "Aide et support" };
 
 export default async function HelpPage() {
   const ctx = await requireContext();
   const [rows, thread] = await Promise.all([listHelpSections(), getSupportThread(ctx.user.id)]);
-  const source = rows.length ? rows : DEFAULT_HELP.map((s, i) => ({ ...s, id: `default-${i}` }));
+  const sky = (await currentBrand()).id === "skydev";
+  const source = rows.length ? rows : (sky ? DEFAULT_HELP_SKYDEV : DEFAULT_HELP).map((s, i) => ({ ...s, id: `default-${i}` }));
   // Les réponses sont rédigées dans l'éditeur du super-admin : HTML nettoyé avant affichage.
   const sections = source.map((s) => ({
     id: s.id,
@@ -28,7 +30,7 @@ export default async function HelpPage() {
     <>
       <PageHeader title="Aide et support" description="Visites guidées, vidéos, questions fréquentes, et une équipe humaine pour vous répondre." />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <HelpCenter sections={sections} />
+        <HelpCenter sections={sections} toursTitle={sky ? "Visites guidées de l'app RDV" : undefined} showTours={!sky || ctx.canApp("rdv")} />
         <div id="contact" className="scroll-mt-6 space-y-6 lg:sticky lg:top-6 lg:self-start">
           <Card>
             <CardHeader title="Écrire à l'équipe" description="Réponse humaine, souvent dans la journée." />

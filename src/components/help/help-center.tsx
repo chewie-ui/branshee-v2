@@ -16,11 +16,11 @@ function youtubeId(url: string) {
 }
 
 /** Centre d'aide : recherche, visites guidées, vidéos et questions fréquentes. */
-export function HelpCenter({ sections }: { sections: Section[] }) {
+export function HelpCenter({ sections, toursTitle = "Visites guidées", showTours = true }: { sections: Section[]; toursTitle?: string; showTours?: boolean }) {
   const [q, setQ] = useState("");
   const needle = norm(q.trim());
   const match = (...parts: string[]) => !needle || parts.some((p) => norm(p).includes(needle));
-  const tours = TOURS.filter((t) => match(t.title, t.desc));
+  const tours = showTours ? TOURS.filter((t) => match(t.title, t.desc)) : [];
   const filtered = sections
     .map((s) => ({ ...s, videos: s.videos.filter((v) => match(v.title, s.title)), faqs: s.faqs.filter((f) => match(f.question, f.answerText, s.title)) }))
     .filter((s) => s.videos.length || s.faqs.length);
@@ -42,7 +42,7 @@ export function HelpCenter({ sections }: { sections: Section[] }) {
 
       {!needle ? (
         <nav className="flex flex-wrap gap-2" aria-label="Chapitres">
-          {[{ id: "visites", title: "Visites guidées" }, ...sections.map((s) => ({ id: `s-${s.id}`, title: s.title })), { id: "contact", title: "Nous écrire" }].map((c) => (
+          {[...(showTours ? [{ id: "visites", title: "Visites guidées" }] : []), ...sections.map((s) => ({ id: `s-${s.id}`, title: s.title })), { id: "contact", title: "Nous écrire" }].map((c) => (
             <a key={c.id} href={`#${c.id}`} className="rounded-full border border-border px-3 py-1 text-sm text-muted hover:border-border-strong hover:text-text">
               {c.title}
             </a>
@@ -54,7 +54,7 @@ export function HelpCenter({ sections }: { sections: Section[] }) {
 
       {tours.length ? (
         <Card id="visites" className="scroll-mt-6">
-          <CardHeader title="Visites guidées" description="On vous montre exactement où cliquer, en direct sur la page." />
+          <CardHeader title={toursTitle} description="On vous montre exactement où cliquer, en direct sur la page." />
           <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
             {tours.map((t) => (
               <button key={t.key} type="button" onClick={() => startTour(t.key)} className="group flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-accent hover:bg-accent-soft/40">

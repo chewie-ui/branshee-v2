@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { z } from "@/lib/zod";
+import { optionalPhone, z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, bookingSettings, businesses, notificationSettings } from "@/db/schema";
 import { requireContext } from "@/server/context";
@@ -23,7 +23,7 @@ const businessSchema = z.object({
   businessType: z.string().max(60),
   description: z.string().max(1000),
   email: z.union([z.literal(""), z.email({ message: "Email invalide." })]),
-  phone: z.string().max(40),
+  phone: optionalPhone,
 });
 
 export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Promise<SettingsState> {

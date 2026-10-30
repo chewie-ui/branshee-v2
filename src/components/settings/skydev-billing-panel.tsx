@@ -124,7 +124,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
             </div>
 
             <div>
-              <p className="text-sm font-medium" id="users-label">Personnes dans votre équipe</p>
+              <p className="text-sm font-medium" id="users-label">Calculer le prix pour</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <div className="inline-flex items-center rounded-lg border border-border-strong" role="group" aria-labelledby="users-label">
                   <button type="button" className="flex size-11 items-center justify-center text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Une personne de moins" disabled={users <= 1} onClick={() => setUsers((n) => Math.max(1, n - 1))}><Minus className="size-4" aria-hidden="true" /></button>
@@ -132,7 +132,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
                   <button type="button" className="flex size-11 items-center justify-center text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40" aria-label="Une personne de plus" disabled={users >= 50} onClick={() => setUsers((n) => Math.min(50, n + 1))}><Plus className="size-4" aria-hidden="true" /></button>
                 </div>
                 {users !== teamUsers ? (
-                  <button type="button" className="text-sm font-medium text-accent hover:text-accent-hover" onClick={() => setUsers(teamUsers)}>Revenir à mon équipe ({teamUsers})</button>
+                  <span className="text-sm text-muted">Simulation. Vous payez pour les {teamUsers} personne{teamUsers > 1 ? "s" : ""} de votre équipe ; le prix suit quand vous en ajoutez dans Équipe. <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => setUsers(teamUsers)}>Revenir à {teamUsers}</button></span>
                 ) : (
                   <span className="text-sm text-muted">{teamUsers === 1 ? "Vous seul pour l'instant" : `Votre équipe actuelle`}</span>
                 )}

@@ -29,7 +29,8 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number } = 
     billing: a.billing,
     tagline: a.tagline,
     category: a.category,
-    pinned: a.id === "reglages" || !off.has(a.id) || favs.includes(a.id),
+    // Retirée de l'accueil par le responsable : elle n'y revient pas, même épinglée par un membre.
+    pinned: a.id === "reglages" || !off.has(a.id),
     fav: favs.includes(a.id),
     href: a.href,
     nav: a.nav

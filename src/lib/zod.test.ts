@@ -10,3 +10,12 @@ test("messages zod en français", () => {
   // Message propre à un schéma : il garde la priorité.
   assert.equal(z.string().min(1, "Nom requis").safeParse("").error?.issues[0]?.message, "Nom requis");
 });
+
+test("téléphone facultatif", async () => {
+  const { optionalPhone } = await import("./zod");
+  assert.ok(optionalPhone.safeParse("").success);
+  assert.ok(optionalPhone.safeParse("0477 12 34 56").success);
+  assert.ok(optionalPhone.safeParse("+32 477 12 34 56").success);
+  assert.ok(!optionalPhone.safeParse("abc").success);
+  assert.ok(!optionalPhone.safeParse("12").success);
+});

@@ -70,7 +70,7 @@ export function CampaignEditor({ initial, stats, initialCount }: { initial: Init
             </div>
           ) : null}
           <Field label="Objet" htmlFor="mk-subject"><Input id="mk-subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} disabled={!draft} /></Field>
-          <Field label="Message" htmlFor="mk-body" hint="{prenom} est remplacé par le prénom de chaque client."><Textarea id="mk-body" rows={10} value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} disabled={!draft} /></Field>
+          <Field label="Message" htmlFor="mk-body" hint="{prenom} (ici ou dans l'objet) est remplacé par le prénom de chaque client."><Textarea id="mk-body" rows={10} value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} disabled={!draft} /></Field>
           {draft ? (
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">À qui</legend>
@@ -97,7 +97,7 @@ export function CampaignEditor({ initial, stats, initialCount }: { initial: Init
         <Card className="h-fit">
           <CardHeader title="Aperçu" />
           <div className="space-y-3 p-5 text-sm">
-            <p className="font-semibold">{subject || "Objet de votre email"}</p>
+            <p className="font-semibold">{(subject || "Objet de votre email").replaceAll("{prenom}", "Marie")}</p>
             <p className="whitespace-pre-line text-muted">{(body || "Votre message…").replaceAll("{prenom}", "Marie")}</p>
             <p className="border-t border-border pt-3 text-xs text-muted">En bas de chaque email : un lien « Se désabonner ». Les clients désabonnés ne reçoivent plus vos campagnes (mais toujours leurs rappels de rendez-vous et factures).</p>
           </div>

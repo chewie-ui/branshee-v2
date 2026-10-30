@@ -208,6 +208,7 @@ export function ListDialog({ team, me, initial, onClose }: { team: Person[]; me:
   const router = useRouter();
   const [f, setF] = useState({ name: initial?.name ?? "", color: initial?.color ?? "blue", visibility: initial?.visibility ?? "team", memberIds: initial?.memberIds ?? [] });
   const [err, setErr] = useState<string | null>(null);
+  const [sure, setSure] = useState(false);
   const [pending, start] = useTransition();
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   const submit = (e: React.FormEvent) => {
@@ -241,7 +242,7 @@ export function ListDialog({ team, me, initial, onClose }: { team: Person[]; me:
         </fieldset>
         {err ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{err}</p> : null}
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
-          {initial ? <Button type="button" variant="ghost" className="text-danger sm:mr-auto" icon={<Archive className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => start(async () => { const r: Res = await archiveList(initial.id).catch(() => ({ ok: false, error: "Action impossible." })); if (!r.ok) return setErr(r.error ?? "Action impossible."); router.push("/app/taches/listes"); })}>Archiver</Button> : null}
+          {initial ? <Button type="button" variant="ghost" className="text-danger sm:mr-auto" icon={<Archive className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => { if (!sure) return setSure(true); start(async () => { const r: Res = await archiveList(initial.id).catch(() => ({ ok: false, error: "Action impossible." })); if (!r.ok) return setErr(r.error ?? "Action impossible."); router.push("/app/taches/listes"); }); }}>{sure ? "Oui, archiver (la liste disparaît)" : "Archiver"}</Button> : null}
           <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>Annuler</Button>
           <Button type="submit" loading={pending}>{initial ? "Enregistrer" : "Créer la liste"}</Button>
         </div>

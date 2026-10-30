@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { activityLogs, businesses, notificationSettings, smsWallets } from "@/db/schema";
 import { META, getOrCreateCustomer, vatRate } from "@/server/billing";
 import { requireContext } from "@/server/context";
+import { smsConfigured, whatsappConfigured } from "@/server/sms";
 import { stripe } from "@/server/payments";
 import { invoiceFooter } from "@/lib/legal";
 
@@ -34,6 +35,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const amount = z.union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)]).safeParse(amountEuros);
   if (!amount.success) return { ok: false, error: "Montant invalide." };
+  if (!smsConfigured() && !whatsappConfigured()) return { ok: false, error: "Les SMS ne sont pas encore disponibles : aucune recharge n'est nécessaire." };
   const s = stripe();
   if (!s) return { ok: false, error: "Paiement non configuré." };
   const owner = await ownerOf(ctx);

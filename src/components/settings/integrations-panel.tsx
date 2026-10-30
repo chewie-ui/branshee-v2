@@ -17,7 +17,7 @@ export function GoogleCalendarCard({ configured, allowed, connectedEmail }: { co
       <CardHeader title="Google Agenda" description={`Vos rendez-vous ${brandName} apparaissent dans votre Google Agenda, et vos événements personnels bloquent les créneaux en ligne.`} />
       <div className="p-5">
         {!configured ? (
-          <p className="text-sm text-muted">La connexion Google n&apos;est pas encore configurée sur ce serveur.</p>
+          <p className="text-sm text-muted">La synchronisation avec Google Agenda arrive bientôt.</p>
         ) : connectedEmail ? (
           <div className="flex flex-wrap items-center gap-3">
             <CheckCircle2 className="size-5 text-success" aria-hidden="true" />

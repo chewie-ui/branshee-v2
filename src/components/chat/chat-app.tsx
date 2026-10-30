@@ -91,7 +91,7 @@ export function ChatApp({ initialChannels, team, me, initial, canManage }: { ini
   const directs = channels.filter((c) => c.kind === "direct");
 
   return (
-    <div className="-mx-4 grid h-[72dvh] min-h-[420px] grid-cols-1 overflow-hidden border-border bg-surface sm:mx-0 sm:my-0 sm:h-[calc(100dvh-8rem)] sm:rounded-xl sm:border md:grid-cols-[260px_1fr]">
+    <div className="-mx-4 grid h-[72dvh] min-h-[420px] grid-cols-1 overflow-hidden border-border bg-surface sm:mx-0 sm:my-0 sm:h-[calc(100dvh-11rem)] sm:rounded-xl sm:border md:grid-cols-[260px_1fr]">
       <aside className={cn("min-h-0 flex-col overflow-y-auto border-r border-border bg-surface-muted/40 p-3", mobileList ? "flex" : "hidden md:flex")} aria-label="Discussions">
         <div className="flex items-center justify-between px-2 pt-1">
           <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">Salons</h2>

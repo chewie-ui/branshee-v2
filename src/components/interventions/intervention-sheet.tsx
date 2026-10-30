@@ -34,7 +34,8 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
   const [confirm, setConfirm] = useState<"delete" | "cancel" | null>(null);
   const [pending, start] = useTransition();
   const st = INTERVENTION_STATUS[d.status as InterventionStatus] ?? INTERVENTION_STATUS.planned;
-  const locked = !!d.invoiceId;
+  // Signée par le client ou facturée : le rapport, les fournitures et les photos sont figés (preuve).
+  const locked = !!d.invoiceId || !!d.signedAt;
   const run = (fn: () => Promise<Res>, after?: (r: Res) => void) =>
     start(async () => {
       const r: Res = await fn().catch(() => ({ ok: false, error: "Action impossible. Vérifiez votre connexion." }));
@@ -106,7 +107,7 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
                         {canWork && !locked ? <button type="button" onClick={() => run(() => removeInterventionPhoto(d.id, p.ref))} className="absolute top-1 right-1 flex size-7 items-center justify-center rounded-full bg-black/60 text-white" aria-label="Retirer la photo"><X className="size-4" aria-hidden="true" /></button> : null}
                       </div>
                     ))}
-                    {canWork ? (
+                    {canWork && !locked ? (
                       <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border text-xs text-muted hover:border-accent hover:text-accent focus-within:outline-2 focus-within:outline-accent">
                         <Camera className="size-5" aria-hidden="true" />Ajouter
                         <input type="file" accept="image/*" capture="environment" multiple className="sr-only" onChange={(e) => upload(k, e.target.files)} aria-label={`Photo ${k === "before" ? "avant" : "après"}`} />
@@ -183,7 +184,7 @@ export function InterventionSheet({ data: d, canWork, canManage, canInvoice, tea
             {canInvoice ? (d.invoiceId ? <Link href={`/app/factures/${d.invoiceId}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border-strong text-sm font-medium hover:bg-surface-muted"><FileText className="size-4" aria-hidden="true" />Voir la facture</Link> : <Button className="w-full" variant="secondary" loading={pending} disabled={!items.length} icon={<FileText className="size-4" aria-hidden="true" />} onClick={() => run(() => invoiceIntervention(d.id), (r) => r.url && router.push(r.url))}>Créer la facture</Button>) : null}
             {canManage ? (
               <div className="flex flex-wrap gap-2 pt-2">
-                <Button size="sm" variant="ghost" icon={<Pencil className="size-4" aria-hidden="true" />} onClick={() => setEdit(true)}>Modifier</Button>
+                {!d.signedAt ? <Button size="sm" variant="ghost" icon={<Pencil className="size-4" aria-hidden="true" />} onClick={() => setEdit(true)}>Modifier</Button> : null}
                 {d.status !== "done" && d.status !== "cancelled" ? <Button size="sm" variant="ghost" onClick={() => setConfirm("cancel")}>Annuler</Button> : null}
                 {!d.signedAt ? <Button size="sm" variant="ghost" className="text-danger" icon={<Trash2 className="size-4" aria-hidden="true" />} onClick={() => setConfirm("delete")}>Supprimer</Button> : null}
               </div>

@@ -1,5 +1,6 @@
 "use server";
 
+import { splitBeAddress } from "@/lib/address";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
@@ -126,6 +127,7 @@ export async function addInterventionPhoto(fd: FormData): Promise<Result> {
   const r = await interventionOf(ctx.business.id, id);
   if (!r) return NF;
   if (!canWork(ctx, r.i)) return { ok: false, error: "Cette intervention est confiée à quelqu'un d'autre." };
+  if (r.i.signedAt) return { ok: false, error: "Signée par le client : les photos ne changent plus." };
   if (!(file instanceof File) || !file.size) return { ok: false, error: "Choisissez une photo." };
   if (file.size > 10 * 1024 * 1024) return { ok: false, error: "Photo trop lourde (10 Mo maximum)." };
   if (r.i.photos.length >= 30) return { ok: false, error: "30 photos maximum par intervention." };
@@ -189,9 +191,14 @@ export async function invoiceIntervention(id: string): Promise<Result> {
   let customerId = r.i.customerId;
   if (!customerId) {
     const [existing] = r.i.clientEmail ? await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, ctx.business.id), sql`lower(${customers.email}) = ${r.i.clientEmail}`)) : [];
-    customerId = existing?.id ?? (await db.insert(customers).values({ businessId: ctx.business.id, fullName: r.i.clientName, email: r.i.clientEmail, phone: r.i.clientPhone, createdManually: true }).returning({ id: customers.id }))[0]!.id;
+    // L'adresse de l'intervention devient celle de la fiche client (mention obligatoire de la facture).
+    const addr = splitBeAddress(r.i.address);
+    customerId = existing?.id ?? (await db.insert(customers).values({ businessId: ctx.business.id, fullName: r.i.clientName, email: r.i.clientEmail, phone: r.i.clientPhone, createdManually: true, ...(addr ?? {}) }).returning({ id: customers.id }))[0]!.id;
     await db.update(interventions).set({ customerId }).where(eq(interventions.id, r.i.id));
   }
+  // Fiche client existante sans adresse : on reprend celle de l'intervention.
+  const addr = splitBeAddress(r.i.address);
+  if (addr) await db.update(customers).set({ ...addr, updatedAt: new Date() }).where(and(eq(customers.id, customerId), eq(customers.businessId, ctx.business.id), sql`coalesce(trim(${customers.street}), '') = ''`));
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`invoice-intervention:${r.i.id}`}))`);
     const [fresh] = await tx.select({ invoiceId: interventions.invoiceId }).from(interventions).where(eq(interventions.id, r.i.id));

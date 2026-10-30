@@ -79,7 +79,7 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     const sm = settingsMissing(seller);
     if (!seller.saved || sm.length) return { ok: false, error: `Complétez d'abord ${sm.length ? sm.join(", ") : "vos informations de facturation"} dans les réglages de facturation.` };
     const cm = clientMissing(billingOf(customer));
-    if (cm.length && v.docType === "invoice") return { ok: false, error: `Fiche client incomplète : ajoutez ${cm.join(", ")}.` };
+    if (cm.length && v.docType === "invoice") return { ok: false, error: `Fiche client de ${customer.fullName} incomplète : ajoutez ${cm.join(", ")} (app Clients), puis recommencez.` };
   }
   const t = totals(lines, seller.vatRegime);
   const values = {

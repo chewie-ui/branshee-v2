@@ -48,7 +48,7 @@ export function ProjectBoard({ project, tasks, entries, team, me, today, canMana
       <Link href="/app/projets" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />Projets</Link>
       <div className="flex flex-wrap items-start gap-3">
         <span className={cn("mt-2.5 size-3.5 shrink-0 rounded-full", colorClass(project.color))} aria-hidden="true" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-0">
           <h1 className="text-2xl font-semibold">{project.name}</h1>
           <p className="text-sm text-muted">
             {project.customerId ? <Link href={`/app/clients/${project.customerId}`} className="hover:text-text">{project.customerName}</Link> : "Projet interne"}
@@ -57,7 +57,7 @@ export function ProjectBoard({ project, tasks, entries, team, me, today, canMana
           </p>
         </div>
         {canManage ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 max-sm:pl-6">
             <Button variant="secondary" icon={<Pencil className="size-4" aria-hidden="true" />} onClick={() => setEdit(true)}>Modifier</Button>
             {project.status === "active" ? <Button variant="secondary" icon={<Check className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => run(() => setProjectStatus(project.id, "done"))}>Terminer</Button> : <Button variant="secondary" disabled={pending} onClick={() => run(() => setProjectStatus(project.id, "active"))}>Réouvrir</Button>}
           </div>
@@ -287,7 +287,7 @@ function TimerButton({ projectId, tasks, today, onLogged }: { projectId: string;
 
 function TaskDialog({ projectId, task, status, team, onClose, onDone }: { projectId: string; task: TaskView | null; status: string; team: Member[]; onClose: () => void; onDone: (t: string) => void }) {
   const ref = useRef<HTMLFormElement>(null);
-  const [f, setF] = useState({ title: task?.title ?? "", description: task?.description ?? "", assigneeMemberId: task?.assigneeMemberId ?? "", dueDate: task?.dueDate ?? "", estimate: task?.estimateMinutes ? fmtMinutes(task.estimateMinutes).replace(/\s/g, "") : "" });
+  const [f, setF] = useState({ title: task?.title ?? "", description: task?.description ?? "", assigneeMemberId: task?.assigneeMemberId ?? "", dueDate: task?.dueDate ?? "", estimate: task?.estimateMinutes ? fmtMinutes(task.estimateMinutes).replace(/\s/g, "") : "", status: task?.status ?? status });
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [pending, start] = useTransition();
@@ -303,8 +303,13 @@ function TaskDialog({ projectId, task, status, team, onClose, onDone }: { projec
     if (f.estimate.trim() && est === null) return setError("Estimation non comprise : écrivez par exemple 2h ou 30.");
     start(async () => {
       setError(null);
-      const r: Res = await saveTask({ id: task?.id, projectId, title: f.title, description: f.description, status, assigneeMemberId: f.assigneeMemberId, dueDate: f.dueDate, estimateMinutes: est ?? "" }).catch(() => ({ ok: false, error: "Envoi impossible. Vérifiez votre connexion et réessayez." }));
+      const r: Res = await saveTask({ id: task?.id, projectId, title: f.title, description: f.description, status: f.status, assigneeMemberId: f.assigneeMemberId, dueDate: f.dueDate, estimateMinutes: est ?? "" }).catch(() => ({ ok: false, error: "Envoi impossible. Vérifiez votre connexion et réessayez." }));
       if (!r.ok) return setError(r.error ?? "Envoi impossible.");
+      // Statut changé dans la fenêtre (sans glisser-déposer : téléphone, clavier).
+      if (task && f.status !== task.status) {
+        const m: Res = await moveTask(task.id, f.status).catch(() => ({ ok: false, error: "Statut non enregistré." }));
+        if (!m.ok) return setError(m.error ?? "Statut non enregistré.");
+      }
       onDone(r.message ?? "Enregistré.");
     });
   };
@@ -315,6 +320,11 @@ function TaskDialog({ projectId, task, status, team, onClose, onDone }: { projec
         <h2 id="tk-title" className="text-lg font-semibold">{task ? "Modifier la tâche" : "Nouvelle tâche"}</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Titre" htmlFor="tk-name" className="sm:col-span-2"><Input id="tk-name" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} maxLength={200} required /></Field>
+          <Field label="Statut" htmlFor="tk-status" className="sm:col-span-2">
+            <Select id="tk-status" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
+              {TASK_STATUS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </Select>
+          </Field>
           <Field label="Pour qui" htmlFor="tk-who">
             <Select id="tk-who" value={f.assigneeMemberId} onChange={(e) => setF({ ...f, assigneeMemberId: e.target.value })}>
               <option value="">Personne</option>

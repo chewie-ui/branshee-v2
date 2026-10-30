@@ -8,6 +8,9 @@ import { customers, dealActivities, deals, members } from "@/db/schema";
 import { ACTIVITY_KINDS, isStage, stageLabel } from "@/lib/sales";
 import { requireContext, type AppContext } from "@/server/context";
 import { dealDetailFor, salesRights } from "@/server/sales";
+import { newLine, todayIso } from "@/lib/invoicing";
+import { getSellerSettings } from "@/server/invoicing";
+import { saveDocument } from "@/server/actions/invoicing";
 
 type Result = { ok: true; message?: string; id?: string; url?: string } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
@@ -162,8 +165,14 @@ export async function quoteFromDeal(id: string): Promise<Result> {
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Piste introuvable." };
   const r = await ensureCustomer(ctx, id);
   if (!r.ok) return r;
-  const [d] = await db.select({ stage: deals.stage }).from(deals).where(eq(deals.id, id));
+  const [d] = await db.select({ stage: deals.stage, title: deals.title, value: deals.valueCents }).from(deals).where(and(eq(deals.id, id), eq(deals.businessId, ctx.business.id)));
   if (d && (d.stage === "lead" || d.stage === "contacted")) await moveDeal(id, "quote").catch((e) => console.error("[ventes] étape devis :", e));
+  // Devis prérempli avec le titre et le montant de la piste (montant = hors TVA, à ajuster dans le devis).
+  if (d) {
+    const seller = await getSellerSettings(ctx.business.id);
+    const doc = await saveDocument({ docType: "quote", customerId: r.customerId, issueDate: todayIso(ctx.business.timezone), notes: "", lines: [{ ...newLine(), desc: d.title, qty: 1, unit: "forfait", price: d.value / 100, vat: seller.vatRegime === "franchise" ? 0 : 21 }] }).catch(() => null);
+    if (doc?.ok && doc.id) { refresh(); return { ok: true, url: `/app/factures/${doc.id}` }; }
+  }
   refresh();
   return { ok: true, url: `/app/factures/nouvelle?type=devis&client=${r.customerId}` };
 }
