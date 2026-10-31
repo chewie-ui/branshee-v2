@@ -34,7 +34,7 @@
 .sky .btn-white:hover { background: #e4e4e7; }/* En-tête flottant */
 .sky header { position: sticky; top: 12px; z-index: 30; padding-inline: 12px; }
 .sky .nav { max-width: 1104px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 60px; padding: 0 10px 0 16px; background: rgba(255,255,255,.85); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
-.sky .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
+.sky .brand { display: inline-flex; align-items: center; gap: 10px; font-family: "Sora", var(--font-sans); font-weight: 700; font-size: 20px; letter-spacing: -.04em; }
 .sky .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
 .sky .navlinks { display: none; gap: 4px; font-size: 14px; font-weight: 500; color: var(--text-muted); }
 .sky .navlinks a { padding: 8px 12px; border-radius: 8px; }

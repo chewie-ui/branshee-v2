@@ -13,7 +13,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
         <div className="nav">
           <Link href="/" className="brand" aria-label="Skydev, accueil">
             <BrandMark brand="skydev" className="size-[30px]" />
-            Skydev
+            skydev
           </Link>
           <nav className="navlinks" aria-label="Navigation principale">
             <Link href="/#apps">Apps</Link>
@@ -40,7 +40,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
       <footer>
         <div className="wrap foot">
           <div>
-            <span className="brand"><BrandMark brand="skydev" className="size-[30px]" />Skydev</span>
+            <span className="brand"><BrandMark brand="skydev" className="size-[30px]" />skydev</span>
             <p className="muted" style={{ fontSize: 14, maxWidth: 300, margin: "12px 0 0" }}>Le logiciel de votre entreprise, composé app par app. Conçu à Wavre.</p>
           </div>
           <div>

@@ -15,7 +15,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description: sky ? "Toutes les apps de votre entreprise : rendez-vous, factures, site web, équipe." : "La prise de rendez-vous en ligne, simple, pour les indépendants et les petites équipes.",
     openGraph: { type: "website", siteName: name, locale: "fr_BE" },
     twitter: { card: "summary_large_image" },
-    icons: sky ? { icon: [{ url: "/skydev-icon.svg", type: "image/svg+xml" }] } : { icon: [{ url: "/favicon.ico" }] },
+    icons: sky
+      ? { icon: [{ url: "/skydev-icon.svg", type: "image/svg+xml" }, { url: "/skydev-icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/skydev-apple-icon.png", sizes: "180x180" }] }
+      : { icon: [{ url: "/favicon.ico" }], apple: [{ url: "/apple-icon.png" }] },
     // Google Search Console : code de la balise « google-site-verification » (sans la balise), dans l'environnement.
     verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
   };
