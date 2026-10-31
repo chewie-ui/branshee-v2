@@ -22,12 +22,13 @@ export function CustomerBillingForm({ customerId, initial }: { customerId: strin
     <Card>
       <CardHeader title="Facturation" description="Société, TVA et adresse, reprises sur les factures et devis." />
       <div className="space-y-4 p-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* La carte vit dans une colonne étroite : une info par ligne, code postal et ville côte à côte. */}
+        <div className="space-y-4">
           {f("company", "Société (facultatif)", { autoComplete: "organization" })}
           {f("vatNumber", "TVA / N° d'entreprise")}
           {f("street", "Rue et numéro", { autoComplete: "street-address" })}
-          <div className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] gap-3">
-            {f("postalCode", "Code postal", { autoComplete: "postal-code" })}
+          <div className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3">
+            {f("postalCode", "Code postal", { autoComplete: "postal-code", inputMode: "numeric" })}
             {f("city", "Ville", { autoComplete: "address-level2" })}
           </div>
         </div>

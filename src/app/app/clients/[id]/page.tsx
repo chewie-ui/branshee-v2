@@ -23,7 +23,7 @@ import { formatDay, formatPrice, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { CustomerBillingForm } from "@/components/invoicing/customer-billing-form";
-import { CustomerActivity } from "@/components/customers/customer-activity";
+import { CustomerActivity, activityLabel } from "@/components/customers/customer-activity";
 import { customerActivity } from "@/server/customer-activity";
 
 export const metadata: Metadata = { title: "Fiche" };
@@ -88,13 +88,16 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     </li>
   );
 
+  // Onglet des autres apps (factures, projets, ventes…) : nommé d'après ce qu'il contient.
+  const activity = skydev ? await customerActivity(ctx, { id: customer.id, email: customer.email }) : null;
+  const activityTab = activity ? activityLabel(activity) : null;
   const tabs = [
     { key: "apercu", label: "Aperçu", href: `/app/clients/${customer.id}` },
     { key: "rdv", label: `Rendez-vous (${history.length})`, href: `/app/clients/${customer.id}?onglet=rendez-vous` },
     { key: "dossier", label: "Dossier", href: `/app/clients/${customer.id}?onglet=dossier` },
-    ...(skydev ? [{ key: "tout", label: "Toutes les apps", href: `/app/clients/${customer.id}?onglet=tout` }] : []),
+    ...(skydev && activityTab ? [{ key: "tout", label: activityTab, href: `/app/clients/${customer.id}?onglet=tout` }] : []),
   ];
-  const activity = tab === "tout" ? await customerActivity(ctx, { id: customer.id, email: customer.email }) : null;
+
 
   return (
     <>
@@ -123,7 +126,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </div>
       </div>
 
-      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label="Onglets de la fiche" data-tour="customer-tabs">
+      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1" aria-label="Onglets de la fiche" data-tour="customer-tabs">
         {tabs.map((t) => (
           <Link key={t.key} href={t.href} aria-current={tab === t.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === t.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
             {t.label}
@@ -137,7 +140,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </p>
       ) : null}
 
-      {activity ? <CustomerActivity a={activity} customerId={customer.id} /> : null}
+      {activity && tab === "tout" ? <CustomerActivity a={activity} customerId={customer.id} /> : null}
 
       {tab === "apercu" ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

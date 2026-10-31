@@ -1,8 +1,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, customers, members, reviews } from "@/db/schema";
+import { appointments, businesses, customers, members, reviews, users } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
 
 /**
@@ -17,11 +17,27 @@ export async function linkCustomerRecords(userId: string, email: string) {
     .where(and(isNull(customers.userId), sql`lower(${customers.email}) = ${email.toLowerCase()}`));
 }
 
+/**
+ * Compte dont l'adresse VÉRIFIÉE est cet email (pour relier une fiche client créée par un pro à un compte existant).
+ * Comptes de démonstration et désactivés exclus.
+ */
+export async function verifiedAccountFor(email: string | null | undefined): Promise<string | null> {
+  if (!email) return null;
+  const [u] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(sql`lower(${users.email}) = ${email.toLowerCase()}`, isNotNull(users.emailVerifiedAt), eq(users.isDemo, false), isNull(users.disabledAt)))
+    .limit(1);
+  return u?.id ?? null;
+}
+
 /** Utilisateur connecté de l'espace client ; adresse non vérifiée → page de vérification. */
 export async function requireClient(next = "/espace-client") {
   const s = await getSessionUser();
   if (!s) redirect(`/connexion?suite=${encodeURIComponent(next)}`);
   if (!s.user.emailVerifiedAt) redirect(`/verifier-email?suite=${encodeURIComponent(next)}`);
+  // Fiches créées depuis la dernière visite par un pro, avec cet email : rattachées au compte.
+  await linkCustomerRecords(s.user.id, s.user.email);
   return s.user;
 }
 

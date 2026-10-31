@@ -1,5 +1,6 @@
 "use server";
 
+import { verifiedAccountFor } from "@/server/client-account";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -57,7 +58,8 @@ export async function createCustomer(_prev: CustomerState, fd: FormData): Promis
   try {
     const [c] = await db
       .insert(customers)
-      .values({ businessId: ctx.business.id, firstName: v.firstName || null, lastName: v.lastName || null, fullName, email: v.email || null, phone: v.phone || null, createdManually: true })
+      // Email d'une personne déjà inscrite (adresse vérifiée) : la fiche est reliée à son compte.
+      .values({ businessId: ctx.business.id, firstName: v.firstName || null, lastName: v.lastName || null, fullName, email: v.email || null, phone: v.phone || null, createdManually: true, userId: await verifiedAccountFor(v.email) })
       .returning({ id: customers.id });
     id = c!.id;
   } catch (e) {
@@ -88,7 +90,12 @@ export async function saveContact(customerId: string, _prev: CustomerState, fd: 
   const fullName = `${v.firstName} ${v.lastName}`.trim();
   if (!fullName) return { error: "Vérifiez les champs indiqués.", fieldErrors: { firstName: "Indiquez au moins un prénom ou un nom." } };
   try {
-    await db.update(customers).set({ firstName: v.firstName || null, lastName: v.lastName || null, fullName, email: v.email || null, phone: v.phone || null }).where(eq(customers.id, c.id));
+    // Email modifié : la fiche suit le compte de la nouvelle adresse (ou n'est plus reliée si personne ne l'utilise).
+    const emailChanged = (c.email ?? "").toLowerCase() !== (v.email || "");
+    await db
+      .update(customers)
+      .set({ firstName: v.firstName || null, lastName: v.lastName || null, fullName, email: v.email || null, phone: v.phone || null, ...(emailChanged ? { userId: await verifiedAccountFor(v.email) } : {}) })
+      .where(eq(customers.id, c.id));
   } catch (e) {
     if (isUnique(e)) return { error: "Vérifiez les champs indiqués.", fieldErrors: { email: "Une autre fiche utilise déjà cet email. Fusionnez les deux fiches si c'est la même personne." } };
     throw e;

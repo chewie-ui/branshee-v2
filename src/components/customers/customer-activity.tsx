@@ -12,6 +12,17 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 const day = (d: Date | string) => new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "short", year: "numeric" }).format(typeof d === "string" ? new Date(`${d}T12:00:00Z`) : d);
 const DOC_STATUS: Record<string, string> = { draft: "Brouillon", sent: "Envoyé", paid: "Payée", cancelled: "Annulée", accepted: "Accepté", refused: "Refusé", invoiced: "Facturé" };
 
+/**
+ * Nom de l'onglet : « Factures (n) » quand il n'y a que des devis et factures, « Activité (n) » quand d'autres apps
+ * ont des éléments liés, rien du tout si le grade n'ouvre aucune app concernée.
+ */
+export function activityLabel(a: Activity): string | null {
+  const others = a.deals.length + a.projects.length + a.interventions.length + a.orders.length + a.files.length + (a.pos?.n ? 1 : 0) + (a.card ? 1 : 0) + a.reviews.length;
+  if (others) return `Activité (${a.docs.length + a.deals.length + a.projects.length + a.interventions.length + a.orders.length + a.files.length})`;
+  if (a.finance) return a.docs.length ? `Factures (${a.docs.length})` : "Factures";
+  return null;
+}
+
 /** Onglet « Tout » de la fiche client : devis, factures, ventes, projets, interventions, commandes, fidélité, avis, fichiers. */
 export function CustomerActivity({ a, customerId }: { a: Activity; customerId: string }) {
   const blocks = [
@@ -26,7 +37,7 @@ export function CustomerActivity({ a, customerId }: { a: Activity; customerId: s
   const empty = blocks.every((b) => !b.items.length) && !a.card && !a.reviews.length && !a.pos?.n;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {empty ? <Card className="p-8 text-center text-sm text-muted lg:col-span-2">Rien d&apos;autre pour l&apos;instant : devis, factures, projets, commandes ou fichiers liés à cette fiche apparaîtront ici.</Card> : null}
+      {empty && !a.finance ? <Card className="p-8 text-center text-sm text-muted lg:col-span-2">Rien pour l&apos;instant : devis, factures, projets, commandes ou fichiers liés à cette fiche apparaîtront ici.</Card> : null}
       {(a.pos?.n || a.card || a.reviews.length) ? (
         <Card className="lg:col-span-2">
           <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
@@ -51,7 +62,7 @@ export function CustomerActivity({ a, customerId }: { a: Activity; customerId: s
                 </li>
               ))}
             </ul>
-          ) : <p className="px-5 py-4 text-sm text-muted">Aucun pour l&apos;instant.</p>}
+          ) : <p className="px-5 py-4 text-sm text-muted">{b.key === "docs" ? "Aucun devis ni facture pour l'instant." : "Aucun pour l'instant."}</p>}
         </Card>
       ))}
     </div>
