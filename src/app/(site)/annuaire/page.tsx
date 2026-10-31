@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { placeQuery } from "@/lib/postcodes";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Star } from "lucide-react";
@@ -32,6 +33,8 @@ export default async function DirectoryPage({ searchParams }: { searchParams: SP
   const note = sp.note === "4" || sp.note === "4.5" ? Number(sp.note) : null;
   const page = Math.max(1, Number(sp.page) || 1);
   const vocab = await directoryVocabulary();
+  // « 1300 » ou « 1300 Wavre » (suggestion choisie) → la localité.
+  if (ou) ou = placeQuery(ou, vocab.cities);
 
   // « coiffeur wavre » dans un seul champ : on sépare le métier de la ville.
   if (q && !ou) {

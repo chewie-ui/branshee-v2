@@ -50,6 +50,7 @@ function Li({ a, b }: { a: string; b: ReactNode }) {
 }
 
 const WORK = [
+  { url: "https://morgane-forzee.be", name: "Morgane Forzée", what: "Kinésithérapeute · Hamme-Mille" },
   { url: "https://themaddyfriterie.be", name: "The Maddy Friterie", what: "Friterie · Wavre" },
   { url: "https://car-world.be", name: "Car World", what: "Garage · Evere" },
   { url: "https://from-arusha.com", name: "From Arusha", what: "Boutique en ligne" },

@@ -19,7 +19,7 @@ export async function professionList(opts: { allActivities?: boolean } = {}) {
 }
 
 /** Établissements visibles publiquement : ni supprimés, ni en pause, propriétaire actif. */
-const visible = and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), eq(businesses.isDemo, false));
+export const visible = and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), eq(businesses.isDemo, false));
 const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`).replace(/[\s'-]+/g, "%")}%`;
 
 export type DirectoryEntry = { id: string; name: string; slug: string; type: string | null; city: string | null; photoUrl: string | null; rating: number | null; reviews: number };
