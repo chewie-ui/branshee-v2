@@ -5,9 +5,9 @@ import { BRANDS } from "@/lib/brand";
 export function SkydevSymbol({ className = "size-8" }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      <rect width="48" height="48" rx="12" fill="#1e1b4b" />
+      <rect width="48" height="48" rx="12" fill="#4f46e5" />
       <polyline points="33,13 16,14 15,23 33,25 32,35 15,36" fill="none" stroke="#fff" strokeOpacity="0.7" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx="15" cy="36" r="3" fill="#a5b4fc" />
+      <circle cx="15" cy="36" r="3" fill="#c7d2fe" />
       <path d="M33 5.5L34.8 11.2L40.5 13L34.8 14.8L33 20.5L31.2 14.8L25.5 13L31.2 11.2Z" fill="#fff" />
     </svg>
   );

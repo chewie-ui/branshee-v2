@@ -12,7 +12,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: "/",
     display: "standalone",
     background_color: "#f6f6f7",
-    theme_color: sky ? "#1e1b4b" : "#4f46e5",
+    theme_color: sky ? "#4f46e5" : "#4f46e5",
     lang: "fr",
     icons: sky
       ? [
