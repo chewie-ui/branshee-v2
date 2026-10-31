@@ -31,7 +31,7 @@ export async function publicShop(slug: string) {
   const s = await shopSettingsOf(b.id);
   if (!s.enabled || (await isLocked(b.id))) return null;
   const [items, [seller], dest] = await Promise.all([
-    db.select({ id: products.id, name: products.name, description: products.description, category: products.category, priceCents: products.priceCents, photoUrl: products.photoUrl, trackStock: products.trackStock, stockQty: products.stockQty }).from(products).where(and(eq(products.businessId, b.id), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(asc(products.category), asc(products.name)),
+    db.select({ id: products.id, name: products.name, description: products.description, category: products.category, priceCents: products.priceCents, photoUrl: products.photoUrl, trackStock: products.trackStock, stockQty: products.stockQty, isModel: products.isModel, parentId: products.parentId, size: products.size, color: products.color, sizeGrid: products.sizeGrid }).from(products).where(and(eq(products.businessId, b.id), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(asc(products.category), asc(products.name)),
     db.select({ iban: invoiceSettings.iban, legalName: invoiceSettings.legalName, street: invoiceSettings.street, zip: invoiceSettings.zip, city: invoiceSettings.city, vat: invoiceSettings.vatNumber, bce: invoiceSettings.bce, email: invoiceSettings.email }).from(invoiceSettings).where(eq(invoiceSettings.businessId, b.id)),
     stripeDestination(b.id),
   ]);

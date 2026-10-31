@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { businesses } from "./businesses";
 import { customers } from "./appointments";
@@ -31,11 +31,20 @@ export const products = pgTable(
     /** App Boutique : produit visible dans la boutique en ligne, avec sa description. */
     onlineEnabled: boolean("online_enabled").notNull().default(false),
     description: text("description"),
+    /**
+     * Tailles et couleurs : un « modèle » (isModel, jamais vendu tel quel) et ses déclinaisons
+     * (parentId = le modèle), chacune avec son stock, son code-barres et sa ligne de ticket.
+     */
+    isModel: boolean("is_model").notNull().default(false),
+    parentId: uuid("parent_id").references((): AnyPgColumn => products.id, { onDelete: "cascade" }),
+    size: text("size"),
+    color: text("color"),
+    sizeGrid: text("size_grid"),
     /** Alerte « stock bas » déjà envoyée (remise à zéro au réassort). */
     lowNotifiedAt: timestamp("low_notified_at", { withTimezone: true }),
     ...timestamps,
   },
-  (t) => [index("products_business_idx").on(t.businessId, t.active), uniqueIndex("products_business_barcode_uq").on(t.businessId, t.barcode).where(sql`${t.barcode} is not null`)],
+  (t) => [index("products_business_idx").on(t.businessId, t.active), index("products_parent_idx").on(t.parentId), uniqueIndex("products_business_barcode_uq").on(t.businessId, t.barcode).where(sql`${t.barcode} is not null`)],
 );
 
 /** Entrée ou sortie de stock (réception, vente, casse, inventaire…). */

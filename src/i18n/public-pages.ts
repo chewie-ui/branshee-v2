@@ -27,7 +27,7 @@ const fr = {
   },
   loyalty: { card: "Carte de fidélité", reward: "Récompense débloquée : {reward}. Demandez-la à votre prochain passage !", left: "Encore {n} passage(s) pour : {reward}", earned: "{n} récompense(s) déjà obtenue(s). Merci de votre fidélité !", stamps: "{n} tampons sur {goal}", added: "Tampon ajouté !", already: "Déjà tamponné aujourd'hui : revenez à votre prochaine visite.", history: "Derniers tampons", book: "Prendre rendez-vous", keep: "Ajoutez cette page à l'écran d'accueil de votre téléphone pour la retrouver en un geste.", src: { manual: "Passage", qr: "QR code scanné", appointment: "Rendez-vous", shop: "Achat en ligne", reward: "Récompense utilisée" } },
   shop: {
-    online: "Boutique en ligne", categories: "Catégories", all: "Tout", empty: "Aucun produit en vente pour l'instant.", soldOut: "Épuisé", add: "Ajouter", addAria: "Ajouter {name} au panier",
+    online: "Boutique en ligne", categories: "Catégories", all: "Tout", empty: "Aucun produit en vente pour l'instant.", soldOut: "Épuisé", option: "Taille / couleur", add: "Ajouter", addAria: "Ajouter {name} au panier",
     lessAria: "Un {name} de moins", moreAria: "Un {name} de plus", cart: "Panier ({n})", close: "Fermer", yourOrder: "Votre commande", howGet: "Retrait ou livraison", pickupFree: "Retrait sur place (gratuit)",
     delivery: "Livraison ({fee})", free: "gratuite", name: "Nom", phone: "Téléphone", email: "Email", address: "Adresse de livraison", note: "Un mot pour le vendeur (facultatif)", payment: "Paiement",
     payOnline: "Carte ou Bancontact (en ligne)", payOnDelivery: "À la livraison", payOnPickup: "Au retrait", payTransfer: "Virement bancaire",
@@ -65,7 +65,7 @@ const nl: PublicTexts = {
   },
   loyalty: { card: "Klantenkaart", reward: "Beloning vrijgespeeld: {reward}. Vraag ernaar bij je volgende bezoek!", left: "Nog {n} bezoek(en) voor: {reward}", earned: "Al {n} beloning(en) ontvangen. Bedankt voor je trouw!", stamps: "{n} stempels op {goal}", added: "Stempel toegevoegd!", already: "Vandaag al gestempeld: tot je volgende bezoek.", history: "Laatste stempels", book: "Afspraak maken", keep: "Zet deze pagina op het startscherm van je telefoon om ze snel terug te vinden.", src: { manual: "Bezoek", qr: "QR-code gescand", appointment: "Afspraak", shop: "Online aankoop", reward: "Beloning gebruikt" } },
   shop: {
-    online: "Webshop", categories: "Categorieën", all: "Alles", empty: "Nog geen producten te koop.", soldOut: "Uitverkocht", add: "Toevoegen", addAria: "{name} aan winkelmandje toevoegen",
+    online: "Webshop", categories: "Categorieën", all: "Alles", empty: "Nog geen producten te koop.", soldOut: "Uitverkocht", option: "Maat / kleur", add: "Toevoegen", addAria: "{name} aan winkelmandje toevoegen",
     lessAria: "Eén {name} minder", moreAria: "Eén {name} meer", cart: "Winkelmandje ({n})", close: "Sluiten", yourOrder: "Je bestelling", howGet: "Afhalen of levering", pickupFree: "Afhalen ter plaatse (gratis)",
     delivery: "Levering ({fee})", free: "gratis", name: "Naam", phone: "Telefoon", email: "E-mail", address: "Leveringsadres", note: "Een woordje voor de verkoper (optioneel)", payment: "Betaling",
     payOnline: "Kaart of Bancontact (online)", payOnDelivery: "Bij levering", payOnPickup: "Bij afhaling", payTransfer: "Overschrijving",
@@ -102,7 +102,7 @@ const en: PublicTexts = {
   },
   loyalty: { card: "Loyalty card", reward: "Reward unlocked: {reward}. Ask for it on your next visit!", left: "{n} more visit(s) for: {reward}", earned: "{n} reward(s) already earned. Thanks for your loyalty!", stamps: "{n} stamps out of {goal}", added: "Stamp added!", already: "Already stamped today: see you next visit.", history: "Latest stamps", book: "Book an appointment", keep: "Add this page to your phone's home screen to find it in one tap.", src: { manual: "Visit", qr: "QR code scanned", appointment: "Appointment", shop: "Online purchase", reward: "Reward used" } },
   shop: {
-    online: "Online shop", categories: "Categories", all: "All", empty: "No products for sale yet.", soldOut: "Sold out", add: "Add", addAria: "Add {name} to cart",
+    online: "Online shop", categories: "Categories", all: "All", empty: "No products for sale yet.", soldOut: "Sold out", option: "Size / colour", add: "Add", addAria: "Add {name} to cart",
     lessAria: "One less {name}", moreAria: "One more {name}", cart: "Cart ({n})", close: "Close", yourOrder: "Your order", howGet: "Pickup or delivery", pickupFree: "Pickup in store (free)",
     delivery: "Delivery ({fee})", free: "free", name: "Name", phone: "Phone", email: "Email", address: "Delivery address", note: "A note for the seller (optional)", payment: "Payment",
     payOnline: "Card or Bancontact (online)", payOnDelivery: "On delivery", payOnPickup: "On pickup", payTransfer: "Bank transfer",

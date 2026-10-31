@@ -1,5 +1,6 @@
 "use client";
 
+import { sizeHint } from "@/lib/sizes";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Minus, Package, Plus, ShoppingBag, Store, X } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -7,7 +8,7 @@ import { MAX_SHOP_QTY, deliveryFee } from "@/lib/shop";
 import { placeShopOrder } from "@/server/actions/shop-order";
 import { fill, type PublicTexts } from "@/i18n/public-pages";
 
-type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; photoUrl: string | null; trackStock: boolean; stockQty: number };
+type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; photoUrl: string | null; trackStock: boolean; stockQty: number; isModel?: boolean; parentId?: string | null; size?: string | null; color?: string | null; sizeGrid?: string | null };
 type Settings = { intro: string | null; pickup: boolean; pickupNote: string | null; delivery: boolean; deliveryCents: number; freeDeliveryFromCents: number | null; deliveryNote: string | null; payOnline: boolean; payOnPickup: boolean; payTransfer: boolean };
 type Seller = { iban: string; legalName: string; street: string; zip: string; city: string; vat: string; bce: string; email: string } | null;
 const input = "h-11 w-full rounded-lg border border-border bg-surface px-3";
@@ -32,7 +33,10 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
   const max = (it: Item) => (it.trackStock ? Math.min(MAX_SHOP_QTY, it.stockQty) : MAX_SHOP_QTY);
   const add = (it: Item, d: number) => setCart((c) => ({ ...c, [it.id]: Math.max(0, Math.min(max(it), (c[it.id] ?? 0) + d)) }));
   const cats = [...new Set(items.map((i) => i.category).filter((x): x is string => !!x))];
-  const shown = items.filter((i) => !cat || i.category === cat);
+  // Tailles et couleurs : une seule carte par modèle, la déclinaison se choisit dans la carte.
+  const variantsOf = (id: string) => items.filter((v) => v.parentId === id);
+  const [pick, setPick] = useState<Record<string, string>>({});
+  const shown = items.filter((i) => !i.parentId && (!i.isModel || variantsOf(i.id).length) && (!cat || i.category === cat));
   const payLabel = { online: tx.payOnline, pickup: f.fulfilment === "delivery" ? tx.payOnDelivery : tx.payOnPickup, transfer: tx.payTransfer };
 
   const submit = (e: React.FormEvent) => {
@@ -67,17 +71,29 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
         ) : null}
         {items.length === 0 ? <p className="py-16 text-center text-muted">{tx.empty}</p> : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {shown.map((it) => {
+            {shown.map((card) => {
+              const vars = card.isModel ? variantsOf(card.id) : [];
+              const avail = vars.filter((v) => !v.trackStock || v.stockQty > 0);
+              const it = card.isModel ? (vars.find((v) => v.id === pick[card.id]) ?? avail[0] ?? vars[0]!) : card;
               const q = cart[it.id] ?? 0;
               const out = it.trackStock && it.stockQty <= 0;
               return (
-                <li key={it.id} className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+                <li key={card.id} className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
                   {it.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={it.photoUrl} alt="" className="aspect-square w-full object-cover" loading="lazy" />
                   ) : <span className="flex aspect-square items-center justify-center bg-surface-muted text-muted" aria-hidden="true"><Package className="size-10" /></span>}
                   <div className="flex flex-1 flex-col p-3">
-                    <p className="font-medium">{it.name}</p>
+                    <p className="font-medium">{card.name}</p>
+                    {card.isModel ? (
+                      <select aria-label={`${tx.option} : ${card.name}`} value={it.id} onChange={(e) => setPick((p) => ({ ...p, [card.id]: e.target.value }))} className="mt-2 h-10 w-full rounded-lg border border-border-strong bg-surface px-2 text-sm">
+                        {vars.map((v) => (
+                          <option key={v.id} value={v.id} disabled={v.trackStock && v.stockQty <= 0}>
+                            {[v.size, v.color].filter(Boolean).join(" / ")}{v.size && sizeHint(v.sizeGrid, v.size) ? ` (${sizeHint(v.sizeGrid, v.size)})` : ""}{v.trackStock && v.stockQty <= 0 ? ` · ${tx.soldOut}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
                     {it.description ? <p className="mt-0.5 line-clamp-3 text-sm text-muted">{it.description}</p> : null}
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
                       <span className="font-semibold tabular-nums">{eur(it.priceCents)}</span>
