@@ -1,5 +1,6 @@
 "use client";
 
+import { SITE_FROM_EUR } from "@/lib/custom-services";
 import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, Eye, FileText, Gift, Globe, Home, LayoutTemplate, Mail, MapPin, Phone, ShieldCheck, Smartphone, Store, UsersRound } from "lucide-react";
@@ -307,8 +308,8 @@ export function SkydevLanding() {
               <ul className="pl"><li>2e personne : 25 €, 3e : 22 €, 4e : 20 €</li><li>Puis 18 €, 16 €, et 15 € pour toutes les suivantes</li><li>Exemple : équipe de 3, 76 € par mois</li></ul>
               <Link className="btn btn-ghost" href="/inscription">Commencer</Link></div>
             <div className="price"><span className="lbl">Sur mesure</span><b>Sur devis</b><small>prix fixe annoncé avant de commencer</small>
-              <ul className="pl"><li>Sites sur mesure, dès 600 €</li><li>Apps web et mobiles, logiciels, CRM</li><li>Automatisations et outils IA</li></ul>
-              <a className="btn btn-ghost" href="#contact">Demander un devis</a></div>
+              <ul className="pl"><li>Sites sur mesure, dès {SITE_FROM_EUR} €</li><li>Apps web et mobiles, logiciels, CRM</li><li>Automatisations et outils IA</li></ul>
+              <Link className="btn btn-ghost" href="/sur-mesure">Voir le sur mesure</Link></div>
           </div>
           <div className="addons">
             <span className="lbl">Options</span>

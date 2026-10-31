@@ -22,7 +22,7 @@ export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
   );
 }
 
-export function GrantPlanForm({ businessId, plan, until }: { businessId: string; plan: string; until: string }) {
+export function GrantPlanForm({ businessId, plan, until, skydev = false }: { businessId: string; plan: string; until: string; skydev?: boolean }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   return (
@@ -39,10 +39,17 @@ export function GrantPlanForm({ businessId, plan, until }: { businessId: string;
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Forfait offert" htmlFor="plan">
-          <Select id="plan" name="plan" defaultValue={plan === "free" ? "pro" : plan}>
-            <option value="pro">Pro</option>
-            <option value="pro_plus">Pro+</option>
-          </Select>
+          {/* Skydev : un seul abonnement, qui donne les droits Pro+ (toutes les apps). */}
+          {skydev ? (
+            <Select id="plan" name="plan" defaultValue="pro_plus">
+              <option value="pro_plus">Skydev (toutes les apps)</option>
+            </Select>
+          ) : (
+            <Select id="plan" name="plan" defaultValue={plan === "free" ? "pro" : plan}>
+              <option value="pro">Pro</option>
+              <option value="pro_plus">Pro+</option>
+            </Select>
+          )}
         </Field>
         <Field label="Jusqu'au" htmlFor="until" hint="Laisser vide pour retirer l'accès offert.">
           <Input id="until" name="until" type="date" defaultValue={until} />

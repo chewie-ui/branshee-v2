@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
+import { legacyRedirect } from "@/lib/custom-services";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -16,6 +18,16 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
   const path = request.nextUrl.pathname;
+  // Skydev : anciennes pages de l'ancien site (création de site par ville, services) → nouvelles pages, en 301.
+  if ((request.method === "GET" || request.method === "HEAD") && brandForHost(host) === "skydev") {
+    const to = legacyRedirect(path);
+    if (to) {
+      // Adresse de destination : jamais l'en-tête Host tel quel (une adresse inconnue renvoie vers skydev.be).
+      const known = skydevHosts().includes(bareHost(host)) ? host : "skydev.be";
+      const proto = known.endsWith(".localhost") || known.includes(".localhost:") ? "http" : "https";
+      return NextResponse.redirect(new URL(to, `${proto}://${known}`), 301);
+    }
+  }
   if (PROTECTED.some((r) => r.test(path)) && !request.cookies.has("bs_session")) {
     const url = request.nextUrl.clone();
     url.pathname = "/connexion";

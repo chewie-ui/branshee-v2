@@ -14,12 +14,12 @@ export default async function AdminAcquisition({ searchParams }: { searchParams:
   await requireSuperadmin();
   const days = [7, 30, 90].includes(Number((await searchParams).jours)) ? Number((await searchParams).jours) : 30;
   const since = sql`now() - make_interval(days => ${days})`;
-  const [[totals], sources, paths, campaigns, daily] = await Promise.all([
+  const [[totals], sources, paths, campaigns, daily, signupSources] = await Promise.all([
     db.execute<{ views: number; visitors: number; signups: number; businesses: number }>(sql`
       select (select count(*)::int from page_views where created_at > ${since}) as views,
              (select count(distinct visitor_id)::int from page_views where created_at > ${since}) as visitors,
-             (select count(*)::int from users where created_at > ${since}) as signups,
-             (select count(*)::int from businesses where created_at > ${since} and deleted_at is null) as businesses`),
+             (select count(*)::int from users where created_at > ${since} and not is_demo) as signups,
+             (select count(*)::int from businesses where created_at > ${since} and deleted_at is null and not is_demo) as businesses`),
     db.execute<{ source: string; medium: string; visitors: number; views: number }>(sql`
       select coalesce(nullif(source, ''), 'direct') as source, coalesce(nullif(medium, ''), '—') as medium,
              count(distinct visitor_id)::int as visitors, count(*)::int as views
@@ -31,8 +31,13 @@ export default async function AdminAcquisition({ searchParams }: { searchParams:
     db.execute<{ day: string; visitors: number; signups: number }>(sql`
       select to_char(d, 'DD/MM') as day,
              (select count(distinct visitor_id)::int from page_views where created_at >= d and created_at < d + interval '1 day') as visitors,
-             (select count(*)::int from users where created_at >= d and created_at < d + interval '1 day') as signups
+             (select count(*)::int from users where created_at >= d and created_at < d + interval '1 day' and not is_demo) as signups
       from generate_series(date_trunc('day', now()) - make_interval(days => ${Math.min(days, 30) - 1}), date_trunc('day', now()), interval '1 day') d order by d`),
+    // Inscriptions par première source de visite (cookie de /api/track lu à l'inscription).
+    db.execute<{ source: string; medium: string; signups: number }>(sql`
+      select coalesce(nullif(acquisition->>'source', ''), nullif(acquisition->>'referrer', ''), 'direct') as source,
+             coalesce(nullif(acquisition->>'medium', ''), '—') as medium, count(*)::int as signups
+      from users where created_at > ${since} and not is_demo group by 1, 2 order by signups desc limit 20`),
   ]);
   const max = Math.max(1, ...daily.map((d) => d.visitors));
   const stats = [
@@ -90,6 +95,18 @@ export default async function AdminAcquisition({ searchParams }: { searchParams:
                 <span className="tabular-nums">{p.views}</span>
               </li>
             ))}
+          </ul>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader title="Comptes créés par source" description="Première visite de la personne avant son inscription (liens ?utm_source=…, ou site d'où elle venait)." />
+          <ul className="divide-y divide-border text-sm">
+            {signupSources.map((s) => (
+              <li key={`${s.source}-${s.medium}`} className="flex items-center gap-3 px-5 py-2.5">
+                <span className="min-w-0 flex-1 truncate">{s.source} <span className="text-muted">/ {s.medium}</span></span>
+                <span className="tabular-nums">{s.signups}</span>
+              </li>
+            ))}
+            {signupSources.length === 0 ? <li className="px-5 py-4 text-muted">Aucune inscription sur la période.</li> : null}
           </ul>
         </Card>
         <Card className="lg:col-span-2">

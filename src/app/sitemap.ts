@@ -6,6 +6,8 @@ import { allSeoPages } from "@/lib/seo-landing";
 import { knownMetiers, metierFromSlug } from "@/lib/directory";
 import { slugify } from "@/lib/slug";
 import { declaredTypesAndCities, listArticles, siteUrl } from "@/server/site";
+import { CUSTOM_SERVICES, SERVICE_CITIES } from "@/lib/custom-services";
+import { currentBrand } from "@/server/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +41,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/confidentialite`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/conditions-utilisation`, changeFrequency: "yearly", priority: 0.2 },
   ];
+  // Skydev : pages sur mesure (services et création de site par ville).
+  const custom: MetadataRoute.Sitemap =
+    (await currentBrand()).id === "skydev"
+      ? [
+          { url: `${base}/sur-mesure`, changeFrequency: "monthly", priority: 0.9 },
+          ...CUSTOM_SERVICES.map((s) => ({ url: `${base}/sur-mesure/${s.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
+          ...SERVICE_CITIES.map((c) => ({ url: `${base}/sur-mesure/creation-site-internet/${c.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
+        ]
+      : [];
   return [
     ...fixed,
+    ...custom,
     ...[...metiers].map((m) => ({ url: `${base}/annuaire/${m}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...[...combos].map((c) => ({ url: `${base}/annuaire/${c}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...allSeoPages().map((p) => ({ url: `${base}/logiciel-rendez-vous/${p.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),

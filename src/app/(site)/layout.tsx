@@ -11,7 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   const session = await getSessionUser();
   // Adresses Skydev : en-tête et pied de page Skydev (connexion, inscription), même contenu derrière.
-  if ((await currentBrand()).id === "skydev") return <SkydevChrome signedIn={!!session}>{children}</SkydevChrome>;
+  if ((await currentBrand()).id === "skydev")
+    return (
+      <SkydevChrome signedIn={!!session}>
+        {children}
+        <Track />
+      </SkydevChrome>
+    );
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">Aller au contenu</a>

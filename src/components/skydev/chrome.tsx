@@ -17,7 +17,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
           </Link>
           <nav className="navlinks" aria-label="Navigation principale">
             <Link href="/#apps">Apps</Link>
-            <Link href="/#sur-mesure">Sur mesure</Link>
+            <Link href="/sur-mesure">Sur mesure</Link>
             <Link href="/#realisations">Réalisations</Link>
             <Link href="/#tarifs">Tarifs</Link>
             <Link href="/annuaire">Trouver un pro</Link>
@@ -44,12 +44,16 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
             <p className="muted" style={{ fontSize: 14, maxWidth: 300, margin: "12px 0 0" }}>Le logiciel de votre entreprise, composé app par app. Conçu à Wavre.</p>
           </div>
           <div>
+            <h4>Sur mesure</h4>
+            <ul><li><Link href="/sur-mesure/creation-site-internet">Création de site</Link></li><li><Link href="/sur-mesure/creation-site-internet/wavre">Site internet à Wavre</Link></li><li><Link href="/sur-mesure/boutique-en-ligne">Boutique en ligne</Link></li><li><Link href="/sur-mesure/application-web-saas">Apps web et SaaS</Link></li><li><Link href="/sur-mesure/application-mobile">Application mobile</Link></li></ul>
+          </div>
+          <div>
             <h4>Apps</h4>
             <ul><li><Link href="/#apps">Site web</Link></li><li><Link href="/#apps">RDV</Link></li><li><Link href="/#apps">Factures</Link></li><li><Link href="/#apps">Boutique</Link></li><li><Link href="/#apps">Tél IA</Link></li></ul>
           </div>
           <div>
             <h4>Skydev</h4>
-            <ul><li><Link href="/annuaire">Trouver un professionnel</Link></li><li><Link href="/annuaire/coiffeur/wavre">Coiffeur à Wavre</Link></li><li><Link href="/annuaire/kine/wavre">Kiné à Wavre</Link></li><li><Link href="/#sur-mesure">Sur mesure</Link></li><li><Link href="/#tarifs">Tarifs</Link></li><li><Link href="/connexion">Se connecter</Link></li><li><Link href="/conditions-utilisation">Conditions</Link></li><li><Link href="/confidentialite">Confidentialité</Link></li></ul>
+            <ul><li><Link href="/annuaire">Trouver un professionnel</Link></li><li><Link href="/annuaire/coiffeur/wavre">Coiffeur à Wavre</Link></li><li><Link href="/annuaire/kine/wavre">Kiné à Wavre</Link></li><li><Link href="/sur-mesure">Sur mesure</Link></li><li><Link href="/#tarifs">Tarifs</Link></li><li><Link href="/connexion">Se connecter</Link></li><li><Link href="/conditions-utilisation">Conditions</Link></li><li><Link href="/confidentialite">Confidentialité</Link></li></ul>
           </div>
           <div>
             <h4>Contact</h4>
