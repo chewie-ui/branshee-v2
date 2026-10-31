@@ -21,9 +21,15 @@ import { depensesRoutes } from "@/server/api/v1/depenses";
 import { comptaRoutes } from "@/server/api/v1/compta";
 import { documentsRoutes } from "@/server/api/v1/documents";
 import { signatureRoutes } from "@/server/api/v1/signature";
+import { marketingRoutes } from "@/server/api/v1/marketing";
+import { avisRoutes } from "@/server/api/v1/avis";
+import { fideliteRoutes } from "@/server/api/v1/fidelite";
+import { surMesureRoutes } from "@/server/api/v1/sur-mesure";
+import { telIaRoutes } from "@/server/api/v1/tel-ia";
+import { siteRoutes } from "@/server/api/v1/site";
 
 /**
  * Toutes les routes de l'API de l'application (mobile et bureau), préfixe /api/v1.
  * Les routes à chemin fixe passent avant celles à paramètre (« /bookings/slots » avant « /bookings/:id »).
  */
-export const routes: Route[] = [...rdvExtraRoutes, ...facturesRoutes, ...tachesRoutes, ...messagerieRoutes, ...planningRoutes, ...congesRoutes, ...paieRoutes, ...depensesRoutes, ...comptaRoutes, ...documentsRoutes, ...signatureRoutes, ...authRoutes, ...accountRoutes, ...establishmentRoutes, ...agendaRoutes, ...clientRoutes, ...catalogRoutes, ...scheduleRoutes, ...groupRoutes, ...teamRoutes, ...billingRoutes];
+export const routes: Route[] = [...rdvExtraRoutes, ...facturesRoutes, ...tachesRoutes, ...messagerieRoutes, ...planningRoutes, ...congesRoutes, ...paieRoutes, ...depensesRoutes, ...comptaRoutes, ...documentsRoutes, ...signatureRoutes, ...marketingRoutes, ...avisRoutes, ...fideliteRoutes, ...surMesureRoutes, ...telIaRoutes, ...siteRoutes, ...authRoutes, ...accountRoutes, ...establishmentRoutes, ...agendaRoutes, ...clientRoutes, ...catalogRoutes, ...scheduleRoutes, ...groupRoutes, ...teamRoutes, ...billingRoutes];
