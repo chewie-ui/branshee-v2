@@ -91,12 +91,14 @@ export function ServicePage({ service, ville, jsonLd }: { service: CustomService
         </ul>
         {service.villes ? (
           <>
-            <h2 className="mt-10 text-base font-semibold">Création de site internet près de chez vous</h2>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {SERVICE_CITIES.filter((c) => c.slug !== ville?.slug).map((c) => (
-                <li key={c.slug}><Link href={`/sur-mesure/creation-site-internet/${c.slug}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm text-muted transition-colors duration-150 hover:border-border-strong hover:text-text">{c.nom}</Link></li>
+            {/* Zones desservies : une phrase discrète (liens internes vers les pages par ville, utiles à Google). */}
+            <p className="mt-10 max-w-prose text-sm text-muted">
+              Skydev intervient à{" "}
+              {SERVICE_CITIES.filter((c) => c.slug !== ville?.slug).map((c, i, all) => (
+                <span key={c.slug}><Link href={`/sur-mesure/creation-site-internet/${c.slug}`} className="hover:text-text hover:underline">{c.nom}</Link>{i < all.length - 1 ? ", " : ""}</span>
               ))}
-            </ul>
+              {" "}et partout en Brabant wallon.
+            </p>
           </>
         ) : null}
       </section>

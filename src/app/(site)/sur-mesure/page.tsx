@@ -32,12 +32,13 @@ export default async function SurMesureHub() {
           </li>
         ))}
       </ul>
-      <h2 className="mt-12 text-base font-semibold">Création de site internet près de chez vous</h2>
-      <ul className="mt-3 flex flex-wrap gap-2">
-        {SERVICE_CITIES.map((c) => (
-          <li key={c.slug}><Link href={`/sur-mesure/creation-site-internet/${c.slug}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm text-muted transition-colors duration-150 hover:border-border-strong hover:text-text">{c.nom}</Link></li>
+      <p className="mt-12 max-w-prose text-sm text-muted">
+        Skydev intervient à{" "}
+        {SERVICE_CITIES.map((c, i) => (
+          <span key={c.slug}><Link href={`/sur-mesure/creation-site-internet/${c.slug}`} className="hover:text-text hover:underline">{c.nom}</Link>{i < SERVICE_CITIES.length - 1 ? ", " : ""}</span>
         ))}
-      </ul>
+        {" "}et partout en Brabant wallon.
+      </p>
     </div>
   );
 }
