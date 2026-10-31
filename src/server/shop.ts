@@ -1,4 +1,5 @@
 import "server-only";
+import { emitWebhook } from "@/server/connect";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { isLocked } from "@/server/plan";
@@ -52,6 +53,7 @@ export async function orderByToken(token: string) {
 export async function notifyNewOrder(orderId: string) {
   const [o] = await db.select().from(shopOrders).where(eq(shopOrders.id, orderId));
   if (!o) return;
+  await emitWebhook(o.businessId, "order.created", { id: o.id, number: o.number, status: o.status, totalCents: o.totalCents, fulfilment: o.fulfilment, payMethod: o.payMethod, customer: { name: o.name, email: o.email, phone: o.phone }, lines: o.lines.map((l) => ({ name: l.name, qty: l.qty, unitCents: l.unitCents })), url: `${shopOrigin()}/commande/${o.token}`, createdAt: o.createdAt.toISOString() });
   const shopName = (await db.execute<{ name: string }>(sql`select name from businesses where id = ${o.businessId}`))[0]?.name ?? "";
   await sendEmail({ to: o.email, ...emails.shopOrderConfirm({ shopName, number: o.number, total: eur(o.totalCents), lines: o.lines.map((l) => `${l.qty} × ${l.name}`), pay: o.payMethod, fulfilment: o.fulfilment, url: `${shopOrigin()}/commande/${o.token}` }), template: "shop_order_confirm", businessId: o.businessId }).catch(() => {});
   const [owner] = await db.select({ email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(and(eq(members.businessId, o.businessId), eq(members.isOwner, true)));

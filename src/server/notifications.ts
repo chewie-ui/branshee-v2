@@ -1,4 +1,5 @@
 import "server-only";
+import { emitWebhook } from "@/server/connect";
 import { isDemoBusiness } from "@/server/demo-flag";
 import { and, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -58,6 +59,18 @@ async function load(appointmentId: string) {
 }
 
 type Loaded = NonNullable<Awaited<ReturnType<typeof load>>>;
+
+/** Données envoyées aux webhooks des sites connectés (jamais de note interne ni de dossier). */
+const hookData = (row: Loaded) => ({
+  id: row.a.id,
+  status: row.a.status,
+  startsAt: row.a.startsAt.toISOString(),
+  endsAt: row.a.endsAt.toISOString(),
+  service: row.a.serviceName,
+  member: row.memberName,
+  customer: { name: row.a.contactName, email: row.a.contactEmail, phone: row.a.contactPhone },
+  manageUrl: row.info.manageUrl,
+});
 
 const reminderMail = (row: Loaded) => emails.reminder(row.clientInfo, row.settings?.reminderMessage, { methods: row.settings?.reminderPaymentMethods ?? [], note: row.settings?.reminderPaymentNote });
 
@@ -125,6 +138,7 @@ export function notifyBookingCreated(appointmentId: string, source: "online" | "
   return safely("création", async () => {
     const row = await load(appointmentId);
     if (!row) return;
+    await emitWebhook(row.business.id, "appointment.created", { ...hookData(row), source });
     const pending = row.a.status === "pending";
     await toClient(row, pending ? "booking_requested" : "booking_confirmed", pending ? emails.bookingRequested(row.clientInfo) : emails.bookingConfirmed(row.clientInfo, row.settings?.confirmationMessage));
     if (!pending) await toPhone(row, "confirmation");
@@ -153,6 +167,7 @@ export function notifyCancelledByCustomer(appointmentId: string) {
   return safely("annulation client", async () => {
     const row = await load(appointmentId);
     if (!row) return;
+    await emitWebhook(row.business.id, "appointment.cancelled", { ...hookData(row), cancelledBy: "customer" });
     // Annulation tardive : le client est informé des frais prélevés ou retenus.
     const [p] = await db.select({ status: appointmentPayments.status, penalty: appointmentPayments.penaltyCents, kept: appointmentPayments.keptCents, currency: appointmentPayments.currency }).from(appointmentPayments).where(eq(appointmentPayments.appointmentId, appointmentId));
     const lang = (row.a.locale ?? "fr") as Locale;
@@ -173,6 +188,7 @@ export function notifyCancelledByBusiness(appointmentId: string) {
   return safely("annulation établissement", async () => {
     const row = await load(appointmentId);
     if (!row) return;
+    await emitWebhook(row.business.id, "appointment.cancelled", { ...hookData(row), cancelledBy: "business" });
     await toClient(row, "cancelled_by_business", emails.cancelledForCustomer(row.clientInfo, row.bookingUrl, row.settings?.cancellationMessage));
   });
 }

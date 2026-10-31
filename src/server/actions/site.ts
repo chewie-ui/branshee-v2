@@ -1,5 +1,6 @@
 "use server";
 
+import { recordContact } from "@/server/contact-messages";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, ne } from "drizzle-orm";
@@ -9,8 +10,6 @@ import { activityLogs, businesses, sites, users } from "@/db/schema";
 import { SITE_TEMPLATES } from "@/lib/site-templates";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { requireContext } from "@/server/context";
-import { sendEmail } from "@/server/email/mailer";
-import { emails } from "@/server/email/templates";
 import { businessHas } from "@/server/plan";
 import { sanitizeArticleHtml } from "@/server/rich-text";
 import { getOrCreateSite } from "@/server/site-builder";
@@ -141,7 +140,7 @@ export async function sendSiteContact(businessId: string, input: { name: string;
     .innerJoin(sites, eq(sites.businessId, businesses.id))
     .where(and(eq(businesses.id, z.uuid().parse(businessId)), isNull(businesses.deletedAt)));
   if (!row?.published) return { ok: false, error: "Ce site n'est plus disponible." };
-  const mail = emails.siteContact({ businessName: row.name, ...parsed.data });
-  const ok = await sendEmail({ to: row.email, ...mail, template: "site_contact", replyTo: parsed.data.email, businessId });
-  return ok ? { ok: true, message: "Message envoyé, merci !" } : { ok: false, error: "L'envoi a échoué, réessayez." };
+  // Rangé dans « Messages » (app Clients), fiche client, email au responsable et webhook.
+  const done = await recordContact(businessId, { name: parsed.data.name, email: parsed.data.email, phone: null, subject: null, message: parsed.data.message, pageUrl: null }, "site");
+  return done ? { ok: true, message: "Message envoyé, merci !" } : { ok: false, error: "L'envoi a échoué, réessayez." };
 }

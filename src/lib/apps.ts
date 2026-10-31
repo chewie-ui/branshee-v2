@@ -354,7 +354,10 @@ export const APPS: SkyApp[] = [
     status: "active",
     billing: "included",
     features: ["Fiches clients et historique", "Notes et documents", "Import et export", "Partagé entre RDV, Factures et Boutique"],
-    nav: [{ href: "/app/clients", label: "Clients", icon: "users", permission: "customers.view" }],
+    nav: [
+      { href: "/app/clients", label: "Clients", icon: "users", permission: "customers.view" },
+      { href: "/app/clients/messages", label: "Messages du site", icon: "inbox", permission: "customers.view" },
+    ],
   },
   {
     id: "site",

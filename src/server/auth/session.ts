@@ -145,7 +145,7 @@ export async function endImpersonationsFor(userId: string) {
  * d'une entreprise de démo (voir mailer et notifications).
  * `x-method` et `x-pathname` sont toujours réécrits par le proxy : le navigateur ne peut pas les choisir.
  */
-const DEMO_BLOCKED = /^\/(app\/compte|app\/reglages\/abonnement|app\/reglages\/integrations|app\/reglages\/sms|app\/equipe|app\/parrainage|app\/sur-mesure|bienvenue|admin|espace-client)(\/|$)/;
+const DEMO_BLOCKED = /^\/(app\/compte|app\/reglages\/abonnement|app\/reglages\/integrations|app\/reglages\/site-connecte|app\/reglages\/sms|app\/equipe|app\/parrainage|app\/sur-mesure|bienvenue|admin|espace-client)(\/|$)/;
 async function guardDemo() {
   const h = await headers();
   const method = (h.get("x-method") ?? "GET").toUpperCase();

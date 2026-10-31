@@ -1,4 +1,5 @@
 import { cronAuthorized } from "@/server/cron-auth";
+import { retryWebhooks } from "@/server/connect";
 import { recordError, trackJob } from "@/server/health";
 import { publishScheduledArticles, sendAutoReviewRequests } from "@/server/jobs";
 import { processCampaignQueue } from "@/server/marketing";
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
     const shopExpired = await expireUnpaidShopOrders().catch(note("boutique"));
     const loyaltyStamps = await autoStamps().catch(note("fidélité"));
     const demosCleaned = await cleanupDemos().catch(note("démos"));
-    return { ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps, demosCleaned };
+    const webhooksRetried = await retryWebhooks().catch(note("webhooks"));
+    return { ...result, articlesPublished: published, reviewRequests, campaignEmails, shopExpired, loyaltyStamps, demosCleaned, webhooksRetried };
   }));
 }
