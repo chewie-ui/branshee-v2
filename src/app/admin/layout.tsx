@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </Link>
           <div className="ml-auto flex items-center gap-4 text-sm">
             <span className="hidden text-muted sm:inline">{admin.email}</span>
+            <Link href="/espace-client" className="font-medium text-muted hover:text-text">Mes RDV (client)</Link>
             <Link href="/app" className="inline-flex items-center gap-1 font-medium text-muted hover:text-text">
               <ArrowLeft className="size-4" aria-hidden="true" />
               Mon espace

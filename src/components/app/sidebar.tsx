@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
+import { CalendarHeart, Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
 import { openSwitcher } from "@/components/app/app-switcher";
 import { NAV_ICONS } from "@/components/app/nav-icons";
 import { logout } from "@/server/actions/auth";
@@ -174,6 +174,10 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
               <span className="block truncate text-xs text-muted">{user.email}</span>
             </span>
           </Link>
+          {/* Ses propres rendez-vous, comme client d'autres pros (espace client). */}
+          <Link href="/espace-client" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Mes rendez-vous en tant que client" title="Mes rendez-vous (côté client)">
+            <CalendarHeart className="size-4" aria-hidden="true" />
+          </Link>
           <form action={logout}>
             <button type="submit" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut className="size-4" aria-hidden="true" />
@@ -218,6 +222,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
               {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
             </Link>
           ) : null}
+          <Link href="/espace-client" className={iconBtn} aria-label="Mes rendez-vous en tant que client" title="Mes rendez-vous (côté client)"><CalendarHeart className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">Mes RDV</span></Link>
           <Link href="/app/compte" className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-muted" aria-label="Mon compte" title={user.email}>
             <Avatar name={user.name} src={user.avatarUrl} size="sm" />
             <span className="hidden max-w-32 truncate text-sm font-medium lg:block">{user.name}</span>
