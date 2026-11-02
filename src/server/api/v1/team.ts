@@ -6,13 +6,13 @@ import { addMember, deleteGrade, removeMember, saveGrade, updateMember } from "@
 import { decideJoinRequest } from "@/server/actions/memberships";
 import { collaboratorUsage } from "@/server/plan";
 import { PERMISSIONS, type Permissions } from "@/lib/permissions";
-import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route } from "@/server/api/http";
+import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route, isSuccessRedirect } from "@/server/api/http";
 import { needCtx, PLACEHOLDER_AVATAR } from "@/server/api/v1/shared";
 import type { AppContext } from "@/server/context";
 
 const uuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : "");
-const isRedirect = (e: unknown) => String((e as { digest?: string })?.digest ?? "").startsWith("NEXT_REDIRECT");
+const isRedirect = isSuccessRedirect;
 
 /** Appelle une action du site qui redirige en cas de succès. */
 async function run<T extends { error?: string; fieldErrors?: Record<string, string> } | { ok: boolean; error?: string } | undefined>(fn: () => Promise<T>) {
@@ -82,14 +82,14 @@ async function member(ctx: AppContext, id: string) {
 }
 
 async function invite(r: ApiRequest) {
-  await needCtx("team.manage");
+  const ctx = await needCtx("team.manage");
   const email = str(r.body.email, 200).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return invalid("Adresse email invalide.", { field: "email" });
   const [u] = await db.select({ name: users.fullName }).from(users).where(sql`lower(${users.email}) = ${email}`);
   const fullName = u?.name ?? email.split("@")[0]!;
   const gradeId = uuid(str(r.body.gradeId, 40)) ? str(r.body.gradeId, 40) : "";
   await run(() => addMember(undefined, formData({ displayName: fullName.length >= 2 ? fullName : email, email, roleLabel: "", gradeId, isBookable: true })));
-  const [g] = gradeId ? await db.select({ name: grades.name }).from(grades).where(eq(grades.id, gradeId)) : [];
+  const [g] = gradeId ? await db.select({ name: grades.name }).from(grades).where(and(eq(grades.id, gradeId), eq(grades.businessId, ctx.business.id))) : [];
   return { ok: true, invitation: { fullName, email, gradeName: g?.name ?? "" } };
 }
 
@@ -161,15 +161,14 @@ async function removeG(r: ApiRequest) {
   if (!uuid(id)) return fail(404, "not_found", "Grade introuvable.");
   const [{ n }] = await db.select({ n: count() }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.gradeId, id)));
   const target = str(r.body.reassignToGradeId, 40);
-  let reassigned = 0;
-  if (n > 0) {
-    if (!uuid(target) || target === id) return fail(409, "grade_in_use", `Ce grade est attribué à ${n} personne${n > 1 ? "s" : ""}. Choisissez le grade à leur donner.`, { count: n });
-    const [g] = await db.select({ id: grades.id }).from(grades).where(and(eq(grades.id, target), eq(grades.businessId, ctx.business.id)));
-    if (!g) return invalid("Grade de remplacement introuvable.");
-    reassigned = (await db.update(members).set({ gradeId: target }).where(and(eq(members.businessId, ctx.business.id), eq(members.gradeId, id))).returning({ id: members.id })).length;
-  }
-  await run(() => deleteGrade(id));
-  return { ok: true, id, reassigned };
+  if (n > 0 && (!uuid(target) || target === id)) return fail(409, "grade_in_use", `Ce grade est attribué à ${n} personne${n > 1 ? "s" : ""}. Choisissez le grade à leur donner.`, { count: n });
+  // La réaffectation se fait DANS l'action du site, après ses contrôles (pas son propre grade, pas plus de droits que soi).
+  const res = await deleteGrade(id, n > 0 ? target : undefined).catch((e) => {
+    if (isRedirect(e) && String((e as { digest?: string }).digest).includes("/app/equipe/grades")) return { ok: true, reassigned: n } as const;
+    throw e;
+  });
+  if (!res.ok) return invalid(("error" in res && res.error) || "Action impossible.");
+  return { ok: true, id, reassigned: res.reassigned ?? n };
 }
 
 export const teamRoutes: Route[] = [

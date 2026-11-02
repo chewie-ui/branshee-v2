@@ -2,9 +2,10 @@
 
 import { useState, type ComponentProps } from "react";
 import { Input } from "@/components/ui/field";
+import { parseDecimal } from "@/lib/decimal";
 
 const parse = (s: string) => {
-  const n = parseFloat(s.replace(/\s/g, "").replace(",", "."));
+  const n = parseDecimal(s);
   return Number.isFinite(n) ? n : 0;
 };
 const show = (n: number) => (n ? String(n).replace(".", ",") : "0");

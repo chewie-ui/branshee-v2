@@ -3,6 +3,7 @@
  * structurée, contrôles IBAN / n° d'entreprise, QR de paiement (EPC). Partagé serveur / interface.
  */
 import type { PartySnapshot, SalesLine } from "@/db/schema/invoicing";
+import { parseDecimal } from "@/lib/decimal";
 
 export type { SalesLine, PartySnapshot };
 export type DocType = "invoice" | "credit" | "quote";
@@ -16,7 +17,7 @@ export const PAID_METHODS = ["Virement", "Bancontact", "Carte", "Espèces", "Pay
 
 export const r2 = (n: number) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 export const num = (v: unknown) => {
-  const n = parseFloat(String(v ?? "").replace(",", "."));
+  const n = parseDecimal(v);
   return Number.isFinite(n) ? n : 0;
 };
 const EUR = new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" });

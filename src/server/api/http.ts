@@ -58,7 +58,22 @@ function fromRedirect(e: unknown): ApiError | null {
   if (url.startsWith("/connexion")) return new ApiError(401, "unauthorized", "Session expirée. Reconnectez-vous.");
   if (url.startsWith("/bienvenue")) return new ApiError(409, "no_establishment", "Créez ou rejoignez d'abord un établissement.");
   if (url.startsWith("/app/acces-refuse")) return new ApiError(403, "forbidden", "Votre grade ne permet pas cette action.");
+  if (url.includes("bloque=1")) return new ApiError(402, "subscription_required", "Votre essai est terminé : abonnez-vous pour continuer à modifier vos données.");
   return new ApiError(409, "redirect", "Action à terminer sur le site.", { url });
+}
+
+/** Redirections de refus posées par requireContext (connexion, grade, abonnement) : ce ne sont PAS des succès. */
+const DENIED = ["/connexion", "/bienvenue", "/app/acces-refuse"];
+
+/**
+ * Vrai si l'erreur est la redirection de SUCCÈS d'une action du site (ex. retour à la liste après enregistrement).
+ * Les redirections de refus sont renvoyées telles quelles et deviennent 401/403/402 dans dispatch().
+ */
+export function isSuccessRedirect(e: unknown): boolean {
+  const digest = String((e as { digest?: string })?.digest ?? "");
+  if (!digest.startsWith("NEXT_REDIRECT")) return false;
+  const url = digest.split(";")[2] ?? "";
+  return !DENIED.some((d) => url.startsWith(d)) && !url.includes("bloque=1");
 }
 
 export async function dispatch(routes: Route[], req: Request, segments: string[]) {
