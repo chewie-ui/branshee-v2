@@ -8,6 +8,7 @@ import { slugify } from "@/lib/slug";
 import { declaredTypesAndCities, listArticles, siteUrl } from "@/server/site";
 import { CUSTOM_SERVICES, SERVICE_CITIES } from "@/lib/custom-services";
 import { currentBrand } from "@/server/brand";
+import { sitemapVehicles } from "@/server/vehicles";
 
 export const dynamic = "force-dynamic";
 
@@ -50,9 +51,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ...SERVICE_CITIES.map((c) => ({ url: `${base}/sur-mesure/creation-site-internet/${c.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
         ]
       : [];
+  // Vitrines véhicules (garages) : la vitrine et chaque véhicule en vente.
+  const cars = await sitemapVehicles();
+  const garages = [...new Set(cars.map((c) => c.biz))];
   return [
     ...fixed,
     ...custom,
+    ...garages.map((g) => ({ url: `${base}/vehicules/${g}`, changeFrequency: "daily" as const, priority: 0.6 })),
+    ...cars.map((c) => ({ url: `${base}/vehicules/${c.biz}/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "weekly" as const, priority: 0.5 })),
     ...[...metiers].map((m) => ({ url: `${base}/annuaire/${m}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...[...combos].map((c) => ({ url: `${base}/annuaire/${c}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...allSeoPages().map((p) => ({ url: `${base}/logiciel-rendez-vous/${p.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),

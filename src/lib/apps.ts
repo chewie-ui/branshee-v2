@@ -13,7 +13,7 @@ export type AppId =
   | "rdv" | "clients" | "site" | "factures" | "employes" | "boutique" | "tel-ia" | "sur-mesure" | "reglages"
   // Apps à venir (page « bientôt » commune : /app/bientot/<id>)
   | "horaires" | "conges" | "commandes" | "paie" | "ventes" | "projets" | "interventions" | "stock" | "caisse" | "depenses" | "compta"
-  | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie" | "taches";
+  | "marketing" | "avis" | "fidelite" | "signature" | "documents" | "messagerie" | "taches" | "vehicules";
 
 export type AppIcon = NavItem["icon"];
 
@@ -415,6 +415,18 @@ export const APPS: SkyApp[] = [
       { href: "/app/boutique", label: "Commandes", icon: "bag" },
       { href: "/app/boutique/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
     ],
+  },
+  {
+    id: "vehicules",
+    category: "clients",
+    name: "Véhicules",
+    tagline: "Vos voitures en vente, en vitrine.",
+    icon: "car",
+    href: "/app/vehicules",
+    status: "active",
+    billing: "included",
+    features: ["Fiche complète : kilométrage, puissance, options, Car-Pass", "Jusqu'à 30 photos par véhicule", "Vitrine en ligne et fiche par voiture, prête pour Google", "Demandes d'info reçues dans les messages"],
+    nav: [{ href: "/app/vehicules", label: "Véhicules", icon: "car" }],
   },
   {
     id: "tel-ia",

@@ -1,4 +1,4 @@
-import { QrCode, ListChecks, CalendarRange, BookUser, Boxes, Calculator, CalendarClock, FolderOpen, Gift, Megaphone, MessagesSquare, Plane, Receipt, Signature, SquareKanban, Star, Store, Target, Timer, Truck, Wallet, ChartColumn, FilePen, Package, Blocks, CalendarDays, Clock, CreditCard, FileText, Globe, History, Inbox, LayoutGrid, LayoutTemplate, LifeBuoy, PhoneCall, Scissors, Settings, ShoppingBag, Sun, UserRound, Users, WandSparkles } from "lucide-react";
+import { CarFront, QrCode, ListChecks, CalendarRange, BookUser, Boxes, Calculator, CalendarClock, FolderOpen, Gift, Megaphone, MessagesSquare, Plane, Receipt, Signature, SquareKanban, Star, Store, Target, Timer, Truck, Wallet, ChartColumn, FilePen, Package, Blocks, CalendarDays, Clock, CreditCard, FileText, Globe, History, Inbox, LayoutGrid, LayoutTemplate, LifeBuoy, PhoneCall, Scissors, Settings, ShoppingBag, Sun, UserRound, Users, WandSparkles } from "lucide-react";
 import type { NavItem } from "@/lib/navigation";
 
 /** Icônes des menus de l'espace pro (barre latérale Branshee, onglets d'app Skydev). */
@@ -41,6 +41,7 @@ export const NAV_ICONS: Record<NavItem["icon"], typeof Sun> = {
   gift: Gift,
   message: MessagesSquare,
   truck: Truck,
+  car: CarFront,
   star: Star,
   timer: Timer,
   qr: QrCode,

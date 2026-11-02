@@ -27,3 +27,4 @@ export * from "./todos";
 export * from "./health";
 export * from "./prospects";
 export * from "./connect";
+export * from "./vehicles";

@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { publicVehicles } from "@/server/vehicles";
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { z } from "@/lib/zod";
@@ -114,6 +115,13 @@ async function handle(req: Request, { params }: Ctx) {
           ...(p.isModel ? { variants: rows.filter((v) => v.parentId === p.id).map((v) => ({ id: v.id, size: v.size, color: v.color, stock: inStock(v) })) } : { stock: inStock(p) }),
         }));
         return json({ data: { shopUrl: `${origin()}/boutique/${k.slug}`, products: list } });
+      }
+      case "GET vehicles": {
+        const k = await authenticate(req, "vehicles");
+        const d = await publicVehicles(k.slug);
+        if (!d) throw new ConnectError(404, "not_found", "Entreprise introuvable.");
+        const abs = (u: string) => `${origin()}${u}`;
+        return json({ data: { showroomUrl: `${origin()}/vehicules/${k.slug}`, vehicles: d.vehicles.map((v) => ({ ...v, photos: v.photos.map(abs), url: `${origin()}/vehicules/${k.slug}/${v.slug}` })) } });
       }
       case "GET reviews": {
         const k = await authenticate(req, "reviews");

@@ -1,0 +1,43 @@
+CREATE TABLE "vehicles" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"business_id" uuid NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"slug" text NOT NULL,
+	"make" text NOT NULL,
+	"model" text NOT NULL,
+	"version" text,
+	"body_type" text,
+	"fuel" text,
+	"gearbox" text,
+	"first_registration" text,
+	"mileage_km" integer,
+	"power_kw" integer,
+	"engine_cc" integer,
+	"co2" integer,
+	"euro_norm" text,
+	"color" text,
+	"interior" text,
+	"doors" integer,
+	"seats" integer,
+	"owners" integer,
+	"price_cents" integer,
+	"vat_mode" text DEFAULT 'margin' NOT NULL,
+	"warranty_months" integer,
+	"car_pass" boolean DEFAULT true NOT NULL,
+	"service_history" boolean DEFAULT false NOT NULL,
+	"equipment" text[] DEFAULT '{}'::text[] NOT NULL,
+	"description" text,
+	"photos" text[] DEFAULT '{}'::text[] NOT NULL,
+	"vin" text,
+	"plate" text,
+	"purchase_cents" integer,
+	"internal_note" text,
+	"published_at" timestamp with time zone,
+	"sold_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "vehicles" ADD CONSTRAINT "vehicles_business_id_businesses_id_fk" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "vehicles_business_slug_uq" ON "vehicles" USING btree ("business_id","slug");--> statement-breakpoint
+CREATE INDEX "vehicles_business_status_idx" ON "vehicles" USING btree ("business_id","status");

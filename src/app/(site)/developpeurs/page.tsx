@@ -18,6 +18,7 @@ const ROUTES: [string, string, string, string][] = [
   ["POST", "/bookings", "rdv", "Crée une réservation (le créneau est revérifié). Réponse 201 avec manageUrl, 409 si le créneau vient d'être pris."],
   ["POST", "/contacts", "contacts", "Message du formulaire de contact : rangé dans Clients › Messages, fiche client créée."],
   ["GET", "/products", "shop", "Produits en vente en ligne, avec tailles/couleurs et stock, et l'adresse de la boutique."],
+  ["GET", "/vehicles", "vehicles", "Véhicules en vente et réservés (fiche, équipements, photos, prix, adresse de la fiche publique), et l'adresse de la vitrine."],
   ["GET", "/reviews", "reviews", "Note moyenne et derniers avis."],
 ];
 

@@ -3,6 +3,7 @@ export const SCOPES = {
   rdv: { label: "Rendez-vous", desc: "Lire les prestations et les créneaux libres, créer des réservations." },
   contacts: { label: "Messages et clients", desc: "Envoyer les messages du formulaire de contact (la fiche client est créée)." },
   shop: { label: "Boutique", desc: "Lire les produits en vente en ligne et leur stock." },
+  vehicles: { label: "Véhicules", desc: "Lire les véhicules en vente (fiche, photos, prix), sans les infos internes." },
   reviews: { label: "Avis", desc: "Lire la note moyenne et les derniers avis." },
   business: { label: "Infos de l'entreprise", desc: "Lire le nom, l'adresse, le téléphone et les horaires." },
 } as const;

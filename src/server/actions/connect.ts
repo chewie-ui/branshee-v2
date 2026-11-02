@@ -1,5 +1,7 @@
 "use server";
 
+import { publicVehicle } from "@/server/vehicles";
+import { vehicleFullTitle } from "@/lib/vehicles";
 import { lookup } from "node:dns/promises";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -151,4 +153,29 @@ export async function submitContactWidget(input: z.input<typeof widgetSchema>): 
   if (!b) return { ok: false, error: "Formulaire indisponible." };
   const r = await recordContact(b.id, { name: v.data.name, email: v.data.email, phone: v.data.phone || null, subject: v.data.subject || null, message: v.data.message, pageUrl: v.data.pageUrl || null }, "widget");
   return r ? { ok: true, message: "Message envoyé, merci ! Nous vous répondons rapidement." } : { ok: false, error: "L'envoi a échoué, réessayez." };
+}
+
+const inquirySchema = z.object({
+  slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
+  vehicle: z.string().regex(/^[a-z0-9-]{1,100}$/),
+  name: z.string().trim().min(2, "Indiquez votre nom.").max(120),
+  email: z.email("Adresse email invalide."),
+  phone: z.string().trim().max(40).optional(),
+  message: z.string().trim().min(5, "Votre message est un peu court.").max(4000),
+  /** Champ piège invisible : rempli seulement par les robots. */
+  website: z.string().max(0).optional(),
+});
+
+/** Demande d'information sur un véhicule (vitrine publique) : rangée dans « Messages du site », email au garage. */
+export async function sendVehicleInquiry(input: z.input<typeof inquirySchema>): Promise<Result> {
+  if (input.website) return { ok: true, message: "Demande envoyée, merci !" };
+  const v = inquirySchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
+  const ip = clientIp(await headers()) ?? "local";
+  if (!rateLimit(`vehicle-inquiry:${ip}`, 5, 60 * 60_000).ok || !rateLimit(`vehicle-inquiry-biz:${v.data.slug}`, 60, 60 * 60_000).ok) return { ok: false, error: "Trop de demandes envoyées : réessayez plus tard." };
+  const found = await publicVehicle(v.data.slug, v.data.vehicle);
+  if (!found || found.vehicle.status === "sold") return { ok: false, error: "Ce véhicule n'est plus disponible." };
+  const title = vehicleFullTitle(found.vehicle);
+  const r = await recordContact(found.business.id, { name: v.data.name, email: v.data.email, phone: v.data.phone || null, subject: `Véhicule : ${title}`, message: v.data.message, pageUrl: `/vehicules/${v.data.slug}/${v.data.vehicle}` }, "site");
+  return r ? { ok: true, message: "Demande envoyée ! Le garage vous recontacte rapidement." } : { ok: false, error: "L'envoi a échoué, réessayez." };
 }
