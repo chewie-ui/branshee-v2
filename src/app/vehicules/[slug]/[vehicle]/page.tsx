@@ -9,6 +9,8 @@ import { VehicleInquiry } from "@/components/vehicles/vehicle-inquiry";
 import { FUELS, GEARBOXES, formatKm, formatPower, formatPrice, formatRegistration, publicSpecs, registrationYear, vehicleFullTitle } from "@/lib/vehicles";
 import { siteUrl } from "@/server/site";
 import { publicVehicle } from "@/server/vehicles";
+import { contactSettingsById } from "@/server/contact-settings";
+import { ContactBlock } from "@/components/contact/contact-block";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string; vehicle: string }>;
@@ -40,6 +42,8 @@ export default async function VehicleDetail({ params }: { params: P }) {
   const title = vehicleFullTitle(v);
   const base = `/vehicules/${slug}`;
   const sold = v.status === "sold";
+  const cs = await contactSettingsById(b.id);
+  const mode = cs?.mode ?? "form";
   const key = [
     { icon: CalendarDays, label: "Année", value: formatRegistration(v.firstRegistration) },
     { icon: Gauge, label: "Kilométrage", value: formatKm(v.mileageKm) },
@@ -124,7 +128,7 @@ export default async function VehicleDetail({ params }: { params: P }) {
               {v.warrantyMonths ? <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-success" aria-hidden="true" />Garantie {v.warrantyMonths} mois</li> : null}
               {v.serviceHistory ? <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Carnet d&apos;entretien complet</li> : null}
             </ul>
-            {b.phone && !sold ? (
+            {b.phone && !sold && mode !== "phone" ? (
               <a href={`tel:${b.phone.replace(/[^+0-9]/g, "")}`} className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface text-sm font-semibold hover:bg-surface-muted">
                 <Phone className="size-4" aria-hidden="true" />Appeler {b.phone}
               </a>
@@ -133,7 +137,7 @@ export default async function VehicleDetail({ params }: { params: P }) {
           {!sold ? (
             <div className="rounded-2xl border border-border bg-surface p-5">
               <h2 className="mb-3 font-semibold">Je suis intéressé(e)</h2>
-              <VehicleInquiry slug={slug} vehicle={vehicle} title={title} />
+              <ContactBlock mode={mode} slug={slug} phone={b.phone} note={cs?.note ?? null} about={title} form={<VehicleInquiry slug={slug} vehicle={vehicle} title={title} />} />
             </div>
           ) : (
             <Link href={base} className="flex h-11 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-accent-foreground hover:bg-accent-hover">Voir les véhicules disponibles</Link>

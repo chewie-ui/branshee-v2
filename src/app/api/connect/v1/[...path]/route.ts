@@ -1,4 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
+import { blockedMessage } from "@/lib/contact-mode";
+import { contactSettingsById } from "@/server/contact-settings";
 import { publicVehicles } from "@/server/vehicles";
 import { db } from "@/db";
 import { products } from "@/db/schema";
@@ -61,7 +63,8 @@ async function handle(req: Request, { params }: Ctx) {
         const d = await getPublicBusiness(k.slug);
         if (!d) throw new ConnectError(404, "not_found", "Entreprise introuvable.");
         const b = d.business;
-        return json({ data: { name: b.name, type: b.businessType, phone: b.phone, email: b.email, website: b.website, address: b.address, postalCode: b.postalCode, city: b.city, country: b.country, hours: d.hours, bookingUrl: `${origin()}/${b.slug}`, shopUrl: `${origin()}/boutique/${b.slug}` } });
+        const cs = await contactSettingsById(k.businessId);
+        return json({ data: { name: b.name, type: b.businessType, phone: b.phone, email: b.email, website: b.website, address: b.address, postalCode: b.postalCode, city: b.city, country: b.country, hours: d.hours, contactMode: cs?.mode ?? "form", contactNote: cs?.note ?? null, bookingUrl: `${origin()}/${b.slug}`, shopUrl: `${origin()}/boutique/${b.slug}` } });
       }
       case "GET services": {
         const k = await authenticate(req, "rdv");
@@ -98,6 +101,10 @@ async function handle(req: Request, { params }: Ctx) {
         const v = contactSchema.safeParse(await body(req));
         if (!v.success) throw new ConnectError(400, "invalid", `Champ invalide : ${v.error.issues[0]?.path.join(".")} (${v.error.issues[0]?.message}).`);
         if (!v.data.email && !v.data.phone) throw new ConnectError(400, "invalid", "Indiquez un email ou un téléphone pour pouvoir répondre.");
+        // Réglage « comment vous joindre » de l'entreprise : appel uniquement → refusé ; « rappelez-moi » → téléphone obligatoire.
+        const cs = await contactSettingsById(k.businessId);
+        if (cs?.mode === "phone") throw new ConnectError(409, "contact_disabled", blockedMessage("phone", cs.phone));
+        if (cs?.mode === "callback" && !v.data.phone) throw new ConnectError(400, "phone_required", "Cette entreprise rappelle ses clients : le téléphone est obligatoire.");
         const r = await recordContact(k.businessId, { name: v.data.name, email: v.data.email || null, phone: v.data.phone || null, subject: v.data.subject || null, message: v.data.message, pageUrl: v.data.pageUrl || null }, "api");
         if (!r) throw new ConnectError(404, "not_found", "Entreprise introuvable.");
         return json({ data: { id: r.id } }, 201);

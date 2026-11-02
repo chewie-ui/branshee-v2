@@ -1,10 +1,20 @@
 import { mix, muted, readable } from "@/lib/booking-theme";
+import type { ContactMode } from "@/lib/contact-mode";
+import { ContactBlock, type ContactStyle } from "@/components/contact/contact-block";
 import type { CSSProperties } from "react";
 import { Check, Clock, Facebook, Instagram, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Youtube } from "lucide-react";
 import type { SocialLinks } from "@/db/schema";
 import type { SiteSection, SiteTheme } from "@/lib/site-templates";
 import { sanitizeArticleHtml } from "@/server/rich-text";
 import { BookingFrame, SiteContactForm, SiteMobileMenu } from "@/components/site/mini-site-client";
+
+/** Bloc de contact aux couleurs du site (variables --s-*). */
+const SITE_CONTACT_STYLE: ContactStyle = {
+  input: "h-11 w-full rounded-[var(--s-radius-sm)] border border-[var(--s-border)] bg-[var(--s-surface)] px-3 text-sm text-[var(--s-text)] focus-visible:outline-2 focus-visible:outline-[var(--s-primary)]",
+  button: "inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--s-radius)] bg-[var(--s-primary)] px-5 text-sm font-semibold text-[var(--s-on-primary)] disabled:opacity-60",
+  ghost: "inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--s-radius)] border border-current px-5 text-sm font-semibold",
+  muted: "text-sm opacity-80",
+};
 
 /** Lien externe d'un réseau social : uniquement http(s) (un identifiant seul devient https://…). */
 const extLink = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v.replace(/^[a-z]+:/i, "").replace(/^\/+/, "")}`);
@@ -24,7 +34,7 @@ type Service = { id: string; name: string; description: string | null; durationM
 type Reviews = { count: number; average: number | null; items: { id: string; author: string; rating: number; comment: string | null }[] };
 type Props = {
   site: { sections: SiteSection[]; theme: SiteTheme; logoUrl: string | null; social: SocialLinks };
-  business: { id: string; name: string; slug: string; noBranding: boolean; poweredBy?: { name: string; url: string } };
+  business: { id: string; name: string; slug: string; noBranding: boolean; poweredBy?: { name: string; url: string }; contact?: { mode: ContactMode; phone: string | null; note: string | null } };
   content: { services: Service[]; reviews: Reviews; business?: { aboutHtml: string; address: string; city: string } };
   preview?: boolean;
 };
@@ -303,8 +313,15 @@ export function MiniSite({ site, business, content, preview = false }: Props) {
                     </div>
                     {d.showForm !== false ? (
                       <div className="rounded-[var(--s-radius-sm)] border border-[var(--s-border)] bg-[var(--s-bg)] p-6">
-                        <p className="mb-4 font-semibold">Écrivez-nous</p>
-                        <SiteContactForm businessId={business.id} preview={preview} />
+                        <p className="mb-4 font-semibold">{business.contact?.mode === "phone" ? "Appelez-nous" : business.contact?.mode === "callback" ? "On vous rappelle" : "Écrivez-nous"}</p>
+                        <ContactBlock
+                          mode={business.contact?.mode ?? "form"}
+                          slug={business.slug}
+                          phone={business.contact?.phone ?? null}
+                          note={business.contact?.note ?? null}
+                          style={SITE_CONTACT_STYLE}
+                          form={<SiteContactForm businessId={business.id} preview={preview} />}
+                        />
                       </div>
                     ) : null}
                   </div>

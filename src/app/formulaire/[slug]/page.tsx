@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { ContactBlock } from "@/components/contact/contact-block";
+import { contactSettingsBySlug } from "@/server/contact-settings";
 import { notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -19,10 +21,13 @@ export default async function ContactFormPage({ params, searchParams }: { params
   const fromTheme = b.theme?.accentColor;
   const color = /^#[0-9a-f]{6}$/i.test(sp.couleur ?? "") ? sp.couleur! : /^#[0-9a-f]{6}$/i.test(fromTheme ?? "") ? fromTheme! : "#4f46e5";
   const title = (sp.titre ?? "").slice(0, 80);
+  const cs = await contactSettingsBySlug(slug);
   return (
     <main className="min-h-0 bg-white p-4 sm:p-6" data-embed-root>
       {title ? <h1 className="mb-4 text-xl font-semibold text-zinc-900">{title}</h1> : null}
-      <ContactWidget slug={slug} businessName={b.name} color={color} />
+      <div style={{ "--accent": color, "--accent-hover": color, "--accent-foreground": "#ffffff" } as React.CSSProperties}>
+        <ContactBlock mode={cs?.mode ?? "form"} slug={slug} phone={cs?.phone ?? null} note={cs?.note ?? null} form={<ContactWidget slug={slug} businessName={b.name} color={color} />} />
+      </div>
       <EmbedResize />
     </main>
   );

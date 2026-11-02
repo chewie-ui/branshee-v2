@@ -1,5 +1,7 @@
 "use server";
 
+import { blockedMessage, contactModeOf } from "@/lib/contact-mode";
+import { contactSettingsById } from "@/server/contact-settings";
 import { publicVehicle } from "@/server/vehicles";
 import { vehicleFullTitle } from "@/lib/vehicles";
 import { lookup } from "node:dns/promises";
@@ -149,8 +151,11 @@ export async function submitContactWidget(input: z.input<typeof widgetSchema>): 
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
   const ip = clientIp(await headers()) ?? "local";
   if (!rateLimit(`contact-widget:${ip}`, 5, 60 * 60_000).ok || !rateLimit(`contact-widget-biz:${v.data.slug}`, 60, 60 * 60_000).ok) return { ok: false, error: "Trop de messages envoyés : réessayez plus tard." };
-  const [b] = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, v.data.slug), isNull(businesses.deletedAt)));
+  const [b] = await db.select({ id: businesses.id, mode: businesses.contactMode, phone: businesses.phone }).from(businesses).where(and(eq(businesses.slug, v.data.slug), isNull(businesses.deletedAt)));
   if (!b) return { ok: false, error: "Formulaire indisponible." };
+  // Réglage « comment vous joindre » : le formulaire de message n'est accepté qu'en mode « Formulaire ».
+  const mode = contactModeOf(b.mode);
+  if (mode !== "form") return { ok: false, error: blockedMessage(mode, b.phone) };
   const r = await recordContact(b.id, { name: v.data.name, email: v.data.email, phone: v.data.phone || null, subject: v.data.subject || null, message: v.data.message, pageUrl: v.data.pageUrl || null }, "widget");
   return r ? { ok: true, message: "Message envoyé, merci ! Nous vous répondons rapidement." } : { ok: false, error: "L'envoi a échoué, réessayez." };
 }
@@ -175,6 +180,8 @@ export async function sendVehicleInquiry(input: z.input<typeof inquirySchema>): 
   if (!rateLimit(`vehicle-inquiry:${ip}`, 5, 60 * 60_000).ok || !rateLimit(`vehicle-inquiry-biz:${v.data.slug}`, 60, 60 * 60_000).ok) return { ok: false, error: "Trop de demandes envoyées : réessayez plus tard." };
   const found = await publicVehicle(v.data.slug, v.data.vehicle);
   if (!found || found.vehicle.status === "sold") return { ok: false, error: "Ce véhicule n'est plus disponible." };
+  const cs = await contactSettingsById(found.business.id);
+  if (cs && cs.mode !== "form") return { ok: false, error: blockedMessage(cs.mode, cs.phone) };
   const title = vehicleFullTitle(found.vehicle);
   const r = await recordContact(found.business.id, { name: v.data.name, email: v.data.email, phone: v.data.phone || null, subject: `Véhicule : ${title}`, message: v.data.message, pageUrl: `/vehicules/${v.data.slug}/${v.data.vehicle}` }, "site");
   return r ? { ok: true, message: "Demande envoyée ! Le garage vous recontacte rapidement." } : { ok: false, error: "L'envoi a échoué, réessayez." };

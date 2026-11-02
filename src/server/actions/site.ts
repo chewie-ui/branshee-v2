@@ -1,5 +1,7 @@
 "use server";
 
+import { blockedMessage } from "@/lib/contact-mode";
+import { contactSettingsById } from "@/server/contact-settings";
 import { recordContact } from "@/server/contact-messages";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -140,6 +142,8 @@ export async function sendSiteContact(businessId: string, input: { name: string;
     .innerJoin(sites, eq(sites.businessId, businesses.id))
     .where(and(eq(businesses.id, z.uuid().parse(businessId)), isNull(businesses.deletedAt)));
   if (!row?.published) return { ok: false, error: "Ce site n'est plus disponible." };
+  const cs = await contactSettingsById(businessId);
+  if (cs && cs.mode !== "form") return { ok: false, error: blockedMessage(cs.mode, cs.phone) };
   // Rangé dans « Messages » (app Clients), fiche client, email au responsable et webhook.
   const done = await recordContact(businessId, { name: parsed.data.name, email: parsed.data.email, phone: null, subject: null, message: parsed.data.message, pageUrl: null }, "site");
   return done ? { ok: true, message: "Message envoyé, merci !" } : { ok: false, error: "L'envoi a échoué, réessayez." };

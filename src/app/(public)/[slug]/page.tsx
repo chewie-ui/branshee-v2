@@ -1,4 +1,5 @@
 import { currentBrand } from "@/server/brand";
+import { contactSettingsById } from "@/server/contact-settings";
 import type { Metadata } from "next";
 import { after } from "next/server";
 import { MiniSite } from "@/components/site/mini-site";
@@ -136,7 +137,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
     const site = await publishedSiteFor(b.id);
     if (site) {
       after(() => countSiteVisit(site.id));
-      return <MiniSite site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: b.id, name: b.name, slug: b.slug, noBranding: data.features.noBranding , poweredBy: await poweredByFor(b.id, await currentBrand()) }} content={await siteContent(b.id)} />;
+      return <MiniSite site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: b.id, name: b.name, slug: b.slug, noBranding: data.features.noBranding , poweredBy: await poweredByFor(b.id, await currentBrand()), contact: (await contactSettingsById(b.id)) ?? undefined }} content={await siteContent(b.id)} />;
     }
   }
   const session = await getSessionUser();

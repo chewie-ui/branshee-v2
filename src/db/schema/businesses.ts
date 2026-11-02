@@ -39,6 +39,13 @@ export const businesses = pgTable(
     phone: text("phone"),
     website: text("website"),
     social: jsonb("social").$type<SocialLinks>().notNull().default({}),
+    /**
+     * Comment les clients joignent l'entreprise depuis ses pages publiques (site, vitrine, widget) :
+     * form (formulaire de message) · callback (« rappelez-moi » : nom + téléphone) · phone (appel uniquement).
+     */
+    contactMode: text("contact_mode").notNull().default("form"),
+    /** Phrase affichée près du bouton d'appel, ex. « Du lundi au samedi, de 8 h à 18 h ». */
+    contactNote: text("contact_note"),
 
     locationMode: locationModeEnum("location_mode").notNull().default("on_site"),
     address: text("address"),

@@ -1,4 +1,5 @@
 import { currentBrand } from "@/server/brand";
+import { contactSettingsById } from "@/server/contact-settings";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -20,5 +21,5 @@ export default async function SitePreview() {
   const [site] = await db.select().from(sites).where(eq(sites.businessId, ctx.business.id));
   if (!site) notFound();
   const noBranding = await businessHas(ctx.business.id, "noBranding");
-  return <MiniSite preview site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: ctx.business.id, name: ctx.business.name, slug: ctx.business.slug, noBranding , poweredBy: (await currentBrand()).id === "skydev" ? { name: "Skydev", url: "https://skydev.be" } : undefined }} content={await siteContent(ctx.business.id)} />;
+  return <MiniSite preview site={{ sections: site.sections as SiteSection[], theme: site.theme, logoUrl: site.logoUrl, social: site.social }} business={{ id: ctx.business.id, name: ctx.business.name, slug: ctx.business.slug, noBranding , poweredBy: (await currentBrand()).id === "skydev" ? { name: "Skydev", url: "https://skydev.be" } : undefined, contact: (await contactSettingsById(ctx.business.id)) ?? undefined }} content={await siteContent(ctx.business.id)} />;
 }
