@@ -4,6 +4,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { pageViews } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";
+import { rateLimit } from "@/server/auth/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
   const h = await headers();
   const ua = h.get("user-agent") ?? "";
   if (BOTS.test(ua)) return new Response(null, { status: 204 });
+  // Route publique : on borne le nombre de vues enregistrées par IP (une page = un appel).
+  if (!rateLimit(`track:${clientIp(h) ?? "?"}`, 60, 60_000).ok) return new Response(null, { status: 204 });
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new Response(null, { status: 204 });
   const d = parsed.data;

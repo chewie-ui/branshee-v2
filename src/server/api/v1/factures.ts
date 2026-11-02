@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { DocParty } from "@/components/invoicing/invoice-document";
 import { db } from "@/db";
 import { invoiceMailings } from "@/db/schema";
-import { settingsMissing, todayIso, totals, type DocType } from "@/lib/invoicing";
+import { num, settingsMissing, todayIso, totals, type DocType } from "@/lib/invoicing";
 import {
   createCreditNote,
   deleteDocument,
@@ -142,7 +142,7 @@ async function save(r: ApiRequest, id: string | null) {
       dueDate: str(b.dueDate, 10) || null,
       validUntil: str(b.validUntil, 10) || null,
       notes: str(b.notes, 2000),
-      lines: Array.isArray(b.lines) ? (b.lines as Record<string, unknown>[]).slice(0, 200).map((l) => ({ id: str(l.id, 40), desc: str(l.desc, 2000), qty: Number(l.qty) || 0, unit: str(l.unit, 30) || "forfait", price: Number(l.price) || 0, vat: Number(l.vat) || 0 })) : [],
+      lines: Array.isArray(b.lines) ? (b.lines as Record<string, unknown>[]).slice(0, 200).map((l) => ({ id: str(l.id, 40), desc: str(l.desc, 2000), qty: num(l.qty), unit: str(l.unit, 30) || "forfait", price: num(l.price), vat: num(l.vat) })) : [],
       relatedId: uuid(b.relatedId) ? (b.relatedId as string) : null,
       appointmentId: uuid(b.appointmentId) ? (b.appointmentId as string) : null,
     }),
@@ -235,7 +235,7 @@ export const facturesRoutes: Route[] = [
     path: "/invoices/products",
     handler: async (r) => {
       const ctx = await needFactures("invoices.manage");
-      ok(await saveProduct(null, { name: str(r.body.name, 200), unit: str(r.body.unit, 30) || "forfait", price: Number(r.body.price) || 0, vat: Number(r.body.vat) || 0 }));
+      ok(await saveProduct(null, { name: str(r.body.name, 200), unit: str(r.body.unit, 30) || "forfait", price: num(r.body.price), vat: num(r.body.vat) }));
       return catalog(ctx.business.id);
     },
   },
@@ -245,7 +245,7 @@ export const facturesRoutes: Route[] = [
     handler: async (r) => {
       const ctx = await needFactures("invoices.manage");
       if (!uuid(r.params.id)) return fail(404, "not_found", "Produit introuvable.");
-      ok(await saveProduct(r.params.id!, { name: str(r.body.name, 200), unit: str(r.body.unit, 30) || "forfait", price: Number(r.body.price) || 0, vat: Number(r.body.vat) || 0 }));
+      ok(await saveProduct(r.params.id!, { name: str(r.body.name, 200), unit: str(r.body.unit, 30) || "forfait", price: num(r.body.price), vat: num(r.body.vat) }));
       return catalog(ctx.business.id);
     },
   },

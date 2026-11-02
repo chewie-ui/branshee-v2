@@ -74,3 +74,22 @@ export function can(perms: Permissions | null | undefined, key: PermissionKey, i
   const group = perms[domain] as Record<string, boolean> | undefined;
   return group?.[action] === true;
 }
+
+/**
+ * Pas d'élévation : un grade ne peut être donné (à un membre, ou par réaffectation) que par quelqu'un
+ * qui a déjà toutes ses permissions et toutes ses apps. Le titulaire peut tout donner.
+ */
+export function gradeWithin(
+  grade: { permissions: Permissions | Record<string, Record<string, boolean>> | null; appAccess: string[] | null },
+  caller: { isOwner: boolean; can: (key: PermissionKey) => boolean; appAccess: string[] | null },
+): boolean {
+  if (caller.isOwner) return true;
+  for (const [domain, acts] of Object.entries(grade.permissions ?? {})) {
+    for (const [action, on] of Object.entries(acts ?? {})) if (on && !caller.can(`${domain}.${action}` as PermissionKey)) return false;
+  }
+  if (caller.appAccess) {
+    if (!grade.appAccess) return false;
+    if (grade.appAccess.some((a) => !caller.appAccess!.includes(a))) return false;
+  }
+  return true;
+}

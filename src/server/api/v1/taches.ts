@@ -114,8 +114,10 @@ export const tachesRoutes: Route[] = [
     method: "GET",
     path: "/task-lists/:id/members",
     handler: async (r) => {
-      await needTaches();
+      const ctx = await needTaches();
       if (!uuid(r.params.id)) return fail(404, "not_found", "Liste introuvable.");
+      // Seulement une liste de MON entreprise que je peux voir (pas les listes privées des autres).
+      if (!(await visibleLists(ctx)).some((l) => l.id === r.params.id)) return fail(404, "not_found", "Liste introuvable.");
       return { memberIds: await listMembersOf(r.params.id!) };
     },
   },

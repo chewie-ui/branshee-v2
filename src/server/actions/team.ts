@@ -7,7 +7,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { APPS } from "@/lib/apps";
 import { activityLogs, grades, members, users } from "@/db/schema";
-import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions";
+import { gradeWithin, NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions";
 import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, collaboratorUsage } from "@/server/plan";
@@ -24,6 +24,14 @@ async function ownGrade(ctx: AppContext, gradeId: string) {
   if (!gradeId) return null;
   const [g] = await db.select({ id: grades.id }).from(grades).where(and(eq(grades.id, gradeId), eq(grades.businessId, ctx.business.id)));
   return g?.id ?? null;
+}
+
+/** Pas d'élévation : on ne donne un grade que si on a soi-même toutes ses permissions et ses apps. */
+async function gradeError(ctx: AppContext, gradeId: string): Promise<string | null> {
+  if (!gradeId || ctx.member.isOwner) return null;
+  const [g] = await db.select({ permissions: grades.permissions, appAccess: grades.appAccess }).from(grades).where(and(eq(grades.id, gradeId), eq(grades.businessId, ctx.business.id)));
+  if (!g) return null; // grade inconnu : ownGrade() le remplace par « aucun grade »
+  return gradeWithin(g, { ...ctx, isOwner: ctx.member.isOwner }) ? null : "Vous ne pouvez pas donner un grade qui a plus de droits que le vôtre : demandez au titulaire.";
 }
 
 const addSchema = z.object({
@@ -60,6 +68,9 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
       .where(and(eq(members.businessId, ctx.business.id), userId ? eq(members.userId, userId) : sql`lower(${members.inviteEmail}) = ${v.email}`));
     if (dup) return { error: "Vérifiez les champs indiqués.", fieldErrors: { email: "Cette personne fait déjà partie de l'équipe." } };
   }
+
+  const gErr = await gradeError(ctx, v.gradeId);
+  if (gErr) return { error: "Vérifiez les champs indiqués.", fieldErrors: { gradeId: gErr } };
 
   await db.insert(members).values({
     businessId: ctx.business.id,
@@ -128,6 +139,10 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
   const v = parsed.data;
   // On ne peut pas retirer ses propres droits d'administration par erreur.
   if (m.id === ctx.member.id && !m.isOwner && v.gradeId !== (m.gradeId ?? "")) return { error: "Vous ne pouvez pas changer votre propre grade." };
+  if (!m.isOwner && v.gradeId !== (m.gradeId ?? "")) {
+    const gErr = await gradeError(ctx, v.gradeId);
+    if (gErr) return { error: "Vérifiez les champs indiqués.", fieldErrors: { gradeId: gErr } };
+  }
 
   await db
     .update(members)
@@ -214,13 +229,30 @@ export async function saveGrade(gradeId: string | null, _prev: TeamState, fd: Fo
   redirect("/app/equipe/grades");
 }
 
-export async function deleteGrade(gradeId: string): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Supprime un grade. `reassignToGradeId` (application mobile) : donne d'abord ce grade aux membres concernés,
+ * avec les mêmes garde-fous que la modification d'un membre (pas son propre grade, pas plus de droits que soi).
+ */
+export async function deleteGrade(gradeId: string, reassignToGradeId?: string): Promise<{ ok: boolean; error?: string; reassigned?: number }> {
   const ctx = await requireContext("grades.manage", { write: true, app: "employes" });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const id = z.uuid().parse(gradeId);
   const [g] = await db.select().from(grades).where(and(eq(grades.id, id), eq(grades.businessId, ctx.business.id)));
   if (!g) return { ok: false, error: "Grade introuvable." };
   if (g.isBuiltIn) return { ok: false, error: "Les grades intégrés ne peuvent pas être supprimés." };
+  let reassigned = 0;
+  if (reassignToGradeId) {
+    const target = z.uuid().parse(reassignToGradeId);
+    if (target === id) return { ok: false, error: "Choisissez un autre grade." };
+    const [t] = await db.select({ permissions: grades.permissions, appAccess: grades.appAccess }).from(grades).where(and(eq(grades.id, target), eq(grades.businessId, ctx.business.id)));
+    if (!t) return { ok: false, error: "Grade de remplacement introuvable." };
+    if (!ctx.member.isOwner) {
+      const [me] = await db.select({ gradeId: members.gradeId }).from(members).where(eq(members.id, ctx.member.id));
+      if (me?.gradeId === id) return { ok: false, error: "Vous ne pouvez pas changer votre propre grade : demandez au titulaire." };
+      if (!gradeWithin(t, { ...ctx, isOwner: ctx.member.isOwner })) return { ok: false, error: "Vous ne pouvez pas donner un grade qui a plus de droits que le vôtre : demandez au titulaire." };
+    }
+    reassigned = (await db.update(members).set({ gradeId: target }).where(and(eq(members.businessId, ctx.business.id), eq(members.gradeId, id))).returning({ id: members.id })).length;
+  }
   const [{ n }] = await db.select({ n: count() }).from(members).where(eq(members.gradeId, id));
   if (n > 0) return { ok: false, error: `Ce grade est attribué à ${n} membre${n > 1 ? "s" : ""}. Changez-leur de grade d'abord.` };
   await db.delete(grades).where(eq(grades.id, id));

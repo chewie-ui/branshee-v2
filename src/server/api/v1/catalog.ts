@@ -6,7 +6,7 @@ import { deleteService, saveService, toggleService } from "@/server/actions/serv
 import { saveFormQuestions } from "@/server/actions/booking-page";
 import { effectivePlan } from "@/server/plan";
 import { limitOf } from "@/lib/plans";
-import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route } from "@/server/api/http";
+import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route, isSuccessRedirect } from "@/server/api/http";
 import { membersOf, needCtx, splitName } from "@/server/api/v1/shared";
 
 const uuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
@@ -40,7 +40,7 @@ async function serviceDto(businessId: string, id: string) {
   return s ?? fail(404, "not_found", "Prestation introuvable.");
 }
 
-const isRedirect = (e: unknown) => String((e as { digest?: string })?.digest ?? "").startsWith("NEXT_REDIRECT");
+const isRedirect = isSuccessRedirect;
 
 /** Création / modification : on complète avec les valeurs actuelles (plages horaires, frais d'annulation…) pour ne rien perdre. */
 async function save(r: ApiRequest, id: string | null) {

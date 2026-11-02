@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { appointments, services } from "@/db/schema";
 import { cancelAppointment, confirmRequest, createAppointment, refuseRequest, rescheduleAppointment, restoreAppointment, saveBlock, saveInternalNote, setNoShow } from "@/server/actions/appointments";
 import { getAvailableSlots } from "@/server/availability";
-import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route } from "@/server/api/http";
+import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route, isSuccessRedirect } from "@/server/api/http";
 import { appContext, bookingById, isDay, isTime, loadBookings, needCtx } from "@/server/api/v1/shared";
 
 const uuid = (v: unknown) => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
@@ -88,7 +88,7 @@ async function lastCreated(businessId: string, userId: string, kind: "appointmen
   return a?.id ?? null;
 }
 
-const isRedirect = (e: unknown) => String((e as { digest?: string })?.digest ?? "").startsWith("NEXT_REDIRECT");
+const isRedirect = isSuccessRedirect;
 
 async function create(r: ApiRequest) {
   const ctx = await needCtx("appointments.manage");

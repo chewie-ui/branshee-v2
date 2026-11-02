@@ -372,8 +372,8 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     return (
       <div className="space-y-4" role="status">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-full bg-success-soft text-success"><Check className="size-5" aria-hidden="true" /></span>
-          <h2 className="text-lg font-semibold">{t("booking.multiDone", { n: ok.length })}</h2>
+          {ok.length ? <span className="flex size-10 items-center justify-center rounded-full bg-success-soft text-success"><Check className="size-5" aria-hidden="true" /></span> : null}
+          <h2 className="text-lg font-semibold">{ok.length === 0 ? t("booking.multiNone") : ok.length === 1 ? t("booking.multiDoneOne") : t("booking.multiDone", { n: ok.length })}</h2>
         </div>
         {ok.length ? (
           <ul className="divide-y divide-border rounded-lg border border-border">
