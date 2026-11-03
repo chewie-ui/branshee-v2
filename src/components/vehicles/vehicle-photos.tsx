@@ -92,7 +92,7 @@ export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id
                 <img src={p} alt={`Photo ${i + 1}`} className="aspect-[4/3] w-full object-cover" loading="lazy" />
                 {i === 0 ? <span className="absolute top-2 left-2 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">Principale</span> : null}
                 {canManage ? (
-                  <div className="flex items-center justify-between gap-1 border-t border-border bg-surface p-1">
+                  <div className="flex items-center justify-between gap-1 border-t border-border bg-surface px-2 py-1.5">
                     <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Déplacer vers la gauche"><ArrowLeft className="size-4" aria-hidden="true" /></button>
                     {i > 0 ? <button type="button" onClick={() => main(i)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label="Choisir comme photo principale" title="Photo principale"><Star className="size-4" aria-hidden="true" /></button> : null}
                     <button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Déplacer vers la droite"><ArrowRight className="size-4" aria-hidden="true" /></button>
