@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -355,7 +356,7 @@ export default async function HomePage() {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((b) => (
               <li key={b.id}>
-                <Link href={`/${b.slug}`} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+                <Link href={appPagePath(b.slug)} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
                   {b.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={b.photoUrl} alt="" className="size-12 rounded-full object-cover" loading="lazy" />

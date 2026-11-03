@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import { NextResponse, type NextRequest } from "next/server";
 import { and, eq, ilike } from "drizzle-orm";
 import { db } from "@/db";
@@ -35,6 +36,6 @@ export async function GET(req: NextRequest) {
     .innerJoin(users, eq(users.id, businesses.ownerId))
     .where(and(visible, ilike(businesses.name, pattern)))
     .limit(5);
-  const items = [...metiers, ...pros.map((p) => ({ kind: "pro" as const, label: p.name, value: p.name, sub: [p.type, p.city].filter(Boolean).join(" · "), href: `/${p.slug}` }))];
+  const items = [...metiers, ...pros.map((p) => ({ kind: "pro" as const, label: p.name, value: p.name, sub: [p.type, p.city].filter(Boolean).join(" · "), href: appPagePath(p.slug) }))];
   return NextResponse.json({ items });
 }

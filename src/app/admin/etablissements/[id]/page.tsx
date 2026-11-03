@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -69,7 +70,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
           </div>
           <p className="mt-1 text-sm text-muted">{[b.businessType, b.city].filter(Boolean).join(" · ") || "—"} · créé le {formatDay(b.createdAt, tz, "d MMMM yyyy")}</p>
         </div>
-        <a href={`/${b.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover">
+        <a href={appPagePath(b.slug)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover">
           Page publique
           <ExternalLink className="size-4" aria-hidden="true" />
         </a>

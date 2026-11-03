@@ -1,4 +1,6 @@
-import { currentBrand } from "@/server/brand";
+import { appPagePath } from "@/lib/brand";
+import { currentBrand, publicPagePath } from "@/server/brand";
+import { headers } from "next/headers";
 import { contactSettingsById } from "@/server/contact-settings";
 import type { Metadata } from "next";
 import { after } from "next/server";
@@ -7,7 +9,7 @@ import type { SiteSection } from "@/lib/site-templates";
 import { countSiteVisit, publishedSiteFor, siteContent } from "@/server/site-builder";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { featureStatus } from "@/server/features";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { Clock, Facebook, Globe, Instagram, Languages, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Video, Youtube } from "lucide-react";
 import { format } from "date-fns";
@@ -65,7 +67,7 @@ export async function generateMetadata({ params, searchParams }: { params: Param
   const { business: b } = data;
   const sp = await searchParams;
   const site = typeof sp.sections !== "string" && !sp.reserver ? await publishedSiteFor(b.id) : null;
-  if (site) return { title: { absolute: site.seo.title || b.name }, description: site.seo.description || b.description || undefined, openGraph: b.photoUrl ? { images: [b.photoUrl] } : undefined, alternates: { canonical: `/${b.slug}` } };
+  if (site) return { title: { absolute: site.seo.title || b.name }, description: site.seo.description || b.description || undefined, openGraph: b.photoUrl ? { images: [b.photoUrl] } : undefined, alternates: { canonical: await publicPagePath(b.slug) } };
   const about = b.description ?? (data.aboutHtml ? richTextToPlain(data.aboutHtml).slice(0, 160) : null);
   // Référencement local : « Nom — Métier à Ville | Prendre rendez-vous », une seule adresse canonique (sans ?sections=…).
   const title = `${localTitle(b.name, b.businessType, b.city)} | Prendre rendez-vous`;
@@ -73,8 +75,8 @@ export async function generateMetadata({ params, searchParams }: { params: Param
   return {
     title: { absolute: title },
     description,
-    alternates: { canonical: `/${b.slug}` },
-    openGraph: { title, description, type: "website", url: `/${b.slug}`, images: b.photoUrl ? [b.photoUrl] : undefined },
+    alternates: { canonical: await publicPagePath(b.slug) },
+    openGraph: { title, description, type: "website", url: await publicPagePath(b.slug), images: b.photoUrl ? [b.photoUrl] : undefined },
   };
 }
 
@@ -127,6 +129,15 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const data = await getPublicBusiness((await params).slug);
   if (!data) notFound();
   const sp = await searchParams;
+  // Skydev : l'adresse publique est /pro/<adresse> ; l'ancienne /<adresse> (liens, QR codes déjà imprimés) y redirige.
+  const wanted = await publicPagePath(data.business.slug);
+  const asked = (await headers()).get("x-pathname") ?? "";
+  // Seulement l'ancienne adresse exacte : un domaine personnalisé affiche aussi cette page (à « / »), sans redirection.
+  if (wanted !== `/${data.business.slug}` && asked.replace(/\/+$/, "") === `/${data.business.slug}`) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) for (const x of Array.isArray(v) ? v : v != null ? [v] : []) q.append(k, x);
+    permanentRedirect(q.size ? `${wanted}?${q}` : wanted);
+  }
   const { business: b, theme } = data;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   const locale = await resolvePublicLocale(sp.lang);
@@ -423,12 +434,12 @@ function SectionBlock({ kind, data, review, t, locale }: { kind: string; data: P
             {review.state === "can" ? <ReviewForm slug={review.slug} /> : null}
             {review.state === "anon" ? (
               <p className="text-sm text-muted">
-                <Link href={`/connexion?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.login")}</Link>{t("page.loginToReview", { link: "" })}
+                <Link href={`/connexion?suite=${encodeURIComponent(`${appPagePath(review.slug)}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.login")}</Link>{t("page.loginToReview", { link: "" })}
               </p>
             ) : null}
             {review.state === "unverified" ? (
               <p className="text-sm text-muted">
-                <Link href={`/verifier-email?suite=${encodeURIComponent(`/${review.slug}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.confirmEmail")}</Link>{t("page.confirmEmailToReview", { link: "" })}
+                <Link href={`/verifier-email?suite=${encodeURIComponent(`${appPagePath(review.slug)}#avis`)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.confirmEmail")}</Link>{t("page.confirmEmailToReview", { link: "" })}
               </p>
             ) : null}
             {review.state === "done" ? <p className="text-sm text-muted">{t("page.alreadyReviewed")}</p> : null}

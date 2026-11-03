@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -65,6 +66,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...[...combos].map((c) => ({ url: `${base}/annuaire/${c}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...allSeoPages().map((p) => ({ url: `${base}/logiciel-rendez-vous/${p.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),
     ...blog.rows.map((a) => ({ url: `${base}/blog/${a.slug}`, lastModified: a.updatedAt, changeFrequency: "monthly" as const, priority: 0.6 })),
-    ...biz.map((b) => ({ url: `${base}/${b.slug}`, lastModified: b.updatedAt, changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...biz.map((b) => ({ url: `${base}${appPagePath(b.slug)}`, lastModified: b.updatedAt, changeFrequency: "weekly" as const, priority: 0.7 })),
   ];
 }

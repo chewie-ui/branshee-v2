@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -116,7 +117,7 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
             <span><strong className="tabular-nums">{openDays}</strong> jour{openDays > 1 ? "s" : ""} ouvert{openDays > 1 ? "s" : ""}</span>
             <span><strong className="tabular-nums">{fmtH(weekMin)}</strong> par semaine</span>
             <span title={`Départs possibles toutes les ${interval} min`}>≈ <strong className="tabular-nums">{slotsPerWeek}</strong> créneaux de {interval} min</span>
-            <Link href={`/${ctx.business.slug}`} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">Voir comme un client ↗</Link>
+            <Link href={appPagePath(ctx.business.slug)} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">Voir comme un client ↗</Link>
           </div>
           <WeeklyHoursEditor key={`${mode}-${editingMemberId}`} memberId={editingMemberId} initial={week} canEdit={canEditWeek} />
         </Card>

@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import { EmbedResize } from "@/components/public/frame-bridge";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -139,7 +140,7 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
           ) : null}
 
           {past && a.status === "confirmed" ? (
-            <ButtonLink href={`/${b.slug}#avis`} variant="secondary" className="mt-6 w-full" icon={<Star className="size-4" aria-hidden="true" />}>
+            <ButtonLink href={`${appPagePath(b.slug)}#avis`} variant="secondary" className="mt-6 w-full" icon={<Star className="size-4" aria-hidden="true" />}>
               {t("manage.leaveReview", { name: b.name })}
             </ButtonLink>
           ) : null}
@@ -160,7 +161,7 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
           </p>
         </div>
         <p className="mt-6 text-center">
-          <Link href={`/${b.slug}`} className="text-sm font-medium text-accent hover:text-accent-hover">
+          <Link href={appPagePath(b.slug)} className="text-sm font-medium text-accent hover:text-accent-hover">
             {t("manage.bookAgain", { name: b.name })}
           </Link>
         </p>

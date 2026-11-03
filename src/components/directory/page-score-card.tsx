@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import Link from "next/link";
 import { ArrowRight, Check, ExternalLink, Globe } from "lucide-react";
 import type { PageItem } from "@/lib/directory";
@@ -55,7 +56,7 @@ export function PageScoreCard({ items, percent, slug, searchHref, searchLabel }:
         ))}
       </ul>
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-        <Link href={`/${slug}`} target="_blank" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Voir ma page<ExternalLink className="size-3.5" aria-hidden="true" /></Link>
+        <Link href={appPagePath(slug)} target="_blank" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Voir ma page<ExternalLink className="size-3.5" aria-hidden="true" /></Link>
         <Link href="/app/page-de-reservation" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Personnaliser ma page</Link>
         <Link href="/app/site" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Créer mon site web</Link>
       </div>

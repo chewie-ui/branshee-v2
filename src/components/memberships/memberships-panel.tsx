@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ export function MyBusinesses({ rows, userId: _userId }: { rows: Rows; userId: st
                 </p>
                 <p className="text-muted">{[r.business.businessType, r.business.city].filter(Boolean).join(" · ")}</p>
               </div>
-              <Link href={`/${r.business.slug}`} target="_blank" className="text-sm font-medium text-accent hover:text-accent-hover">Voir la page</Link>
+              <Link href={appPagePath(r.business.slug)} target="_blank" className="text-sm font-medium text-accent hover:text-accent-hover">Voir la page</Link>
             </div>
             {r.isOwner ? <OwnerControls businessId={r.business.id} name={r.business.name} paused={!!r.business.pausedAt} /> : <LeaveButton businessId={r.business.id} />}
           </li>

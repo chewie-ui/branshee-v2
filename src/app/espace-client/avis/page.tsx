@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Star } from "lucide-react";
@@ -22,7 +23,7 @@ export default async function MyReviews() {
             {list.map((r) => (
               <li key={r.id} className="space-y-1 px-5 py-4 text-sm">
                 <div className="flex items-center gap-3">
-                  <Link href={`/${r.business.slug}`} className="font-medium hover:text-accent">{r.business.name}</Link>
+                  <Link href={appPagePath(r.business.slug)} className="font-medium hover:text-accent">{r.business.name}</Link>
                   <span className="flex text-warning" aria-label={`${r.rating} sur 5`}>
                     {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-current" : "opacity-30")} aria-hidden="true" />)}
                   </span>

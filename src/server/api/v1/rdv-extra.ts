@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import "server-only";
 import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -80,7 +81,7 @@ async function saveCat(r: ApiRequest, id: string | null) {
 
 async function bookingPage() {
   const ctx = await needCtx();
-  const url = `${origin()}/${ctx.business.slug}`;
+  const url = `${origin()}${appPagePath(ctx.business.slug)}`;
   return { slug: ctx.business.slug, url, name: ctx.business.name, canCustomize: ctx.can("customization.manage") };
 }
 

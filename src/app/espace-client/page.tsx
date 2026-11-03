@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
@@ -113,10 +114,10 @@ export default async function ClientDashboard() {
                     </p>
                   </div>
                   {a.status !== "cancelled" && !reviewed.has(a.business.id) ? (
-                    <Link href={`/${a.business.slug}#avis`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Star className="size-4" aria-hidden="true" />Laisser un avis</Link>
+                    <Link href={`${appPagePath(a.business.slug)}#avis`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Star className="size-4" aria-hidden="true" />Laisser un avis</Link>
                   ) : null}
                   {!a.business.pausedAt ? (
-                    <Link href={`/${a.business.slug}`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><RotateCcw className="size-4" aria-hidden="true" />Reprendre RDV</Link>
+                    <Link href={appPagePath(a.business.slug)} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><RotateCcw className="size-4" aria-hidden="true" />Reprendre RDV</Link>
                   ) : null}
                 </li>
               ))}

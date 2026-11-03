@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
@@ -29,7 +30,7 @@ export default async function BookingPageContent() {
       <PageHeader
         title="Page de réservation"
         description="Ce que vos clients voient quand ils réservent en ligne."
-        action={<ButtonLink href={`/${ctx.business.slug}`} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>Voir ma page</ButtonLink>}
+        action={<ButtonLink href={appPagePath(ctx.business.slug)} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>Voir ma page</ButtonLink>}
       />
       <PageTabs />
       <div className="mx-auto max-w-3xl space-y-6">

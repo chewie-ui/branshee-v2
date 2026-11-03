@@ -33,3 +33,18 @@ export function brandForHost(rawHost: string | null | undefined): BrandId {
 export function visitedHost(h: { get(name: string): string | null }) {
   return h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host");
 }
+
+/**
+ * Adresse de la page publique d'une entreprise : sur Skydev sous « /pro/<adresse> » (le nom du client n'est pas à la
+ * racine du site), sur Branshee à la racine (adresses déjà partagées par les clients, inchangées).
+ * L'ancienne adresse Skydev « /<adresse> » redirige (301) vers la nouvelle.
+ */
+export const SKYDEV_PAGE_PREFIX = "/pro";
+export const pagePath = (slug: string, brand: BrandId) => (brand === "skydev" ? `${SKYDEV_PAGE_PREFIX}/${slug}` : `/${slug}`);
+
+/** Même chose hors requête (emails, API, composants synchrones) : marque du serveur (FORCE_BRAND, sinon APP_URL). */
+export function appPagePath(slug: string) {
+  let host: string | null = null;
+  try { host = process.env.APP_URL ? new URL(process.env.APP_URL).host : null; } catch { host = null; }
+  return pagePath(slug, brandForHost(host));
+}

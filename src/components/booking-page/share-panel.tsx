@@ -11,12 +11,12 @@ import { cn } from "@/lib/cn";
 import { PLATFORMS, embedCode, type EmbedFormat } from "@/lib/embed-platforms";
 import { saveEmbed, saveSlug } from "@/server/actions/booking-page";
 
-export function SlugCard({ origin, slug }: { origin: string; slug: string }) {
+export function SlugCard({ origin, slug, prefix = "" }: { origin: string; slug: string; prefix?: string }) {
   const [saved, setSaved] = useState(slug);
   const [value, setValue] = useState(slug);
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
-  const url = `${origin}/${saved}`;
+  const url = `${origin}${prefix}/${saved}`;
   return (
     <Card>
       <CardHeader title="Votre lien de réservation" description="À mettre sur Google, Instagram, WhatsApp, vos cartes de visite…" />
@@ -36,7 +36,7 @@ export function SlugCard({ origin, slug }: { origin: string; slug: string }) {
           <label htmlFor="slug" className="text-sm font-medium">Adresse personnalisée</label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="flex flex-1 items-stretch overflow-hidden rounded-lg border border-border-strong focus-within:border-accent">
-              <span className="flex items-center bg-surface-muted px-3 text-sm text-muted">{origin.replace(/^https?:\/\//, "")}/</span>
+              <span className="flex items-center bg-surface-muted px-3 text-sm text-muted">{origin.replace(/^https?:\/\//, "")}{prefix}/</span>
               <input id="slug" value={value} onChange={(e) => { setValue(e.target.value); setStatus(null); }} maxLength={60} className="h-10 min-w-0 flex-1 bg-surface px-3 text-sm focus-visible:outline-none" />
             </div>
             <Button type="submit" variant="secondary" loading={pending} disabled={value === saved}>Enregistrer</Button>
@@ -90,7 +90,7 @@ const SECTIONS = [
   { k: "hours", l: "Horaires" },
 ];
 
-export function EmbedBuilder({ origin, slug, accent, initial }: { origin: string; slug: string; accent: string; initial: { title: string; fontUrl: string; fontFamily: string } }) {
+export function EmbedBuilder({ origin, slug, prefix = "", accent, initial }: { origin: string; slug: string; prefix?: string; accent: string; initial: { title: string; fontUrl: string; fontFamily: string } }) {
   const [format, setFormat] = useState<EmbedFormat>("inline");
   const [plat, setPlat] = useState("wordpress");
   const platform = PLATFORMS.find((p) => p.key === plat) ?? PLATFORMS[PLATFORMS.length - 1]!;
@@ -108,7 +108,7 @@ export function EmbedBuilder({ origin, slug, accent, initial }: { origin: string
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const overlay = format === "popup" || format === "bubble";
   const autoHeight = platform.script && !noScript;
-  const code = embedCode({ origin, pageUrl: `${origin}/${slug}`, format, sections, autoHeight, width, height, label, color, side });
+  const code = embedCode({ origin, pageUrl: `${origin}${prefix}/${slug}`, format, sections, autoHeight, width, height, label, color, side });
   const note = overlay ? platform.noteScript : platform.note;
   const blocked = overlay && platform.overlay === false;
 

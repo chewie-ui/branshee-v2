@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import "server-only";
 import { headers } from "next/headers";
 import { deleteContactMessage, setMessageRead } from "@/server/actions/connect";
@@ -37,7 +38,7 @@ async function overview() {
     available: true,
     editorPath: "/app/site",
     published: !!site.publishedAt,
-    publicUrl: site.customDomain ? `https://${site.customDomain}` : `${base()}/${ctx.business.slug}`,
+    publicUrl: site.customDomain ? `https://${site.customDomain}` : `${base()}${appPagePath(ctx.business.slug)}`,
     visits: site.visitCount,
     template: site.template ?? null,
     seo: { title: site.seo.title ?? "", description: site.seo.description ?? "" },

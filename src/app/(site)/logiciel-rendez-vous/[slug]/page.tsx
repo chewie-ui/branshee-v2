@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
@@ -63,7 +64,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
               <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {pros.map((b) => (
                   <li key={b.id}>
-                    <Link href={`/${b.slug}`} className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 hover:border-border-strong">
+                    <Link href={appPagePath(b.slug)} className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 hover:border-border-strong">
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent-soft-foreground" aria-hidden="true">{b.name.slice(0, 2).toUpperCase()}</span>
                       <span className="min-w-0"><span className="block truncate text-sm font-medium">{b.name}</span><span className="block truncate text-xs text-muted">{b.type ?? "Professionnel"}</span></span>
                     </Link>

@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
 import { CalendarCheck, CalendarDays, Check, Clock, Inbox, Plus, UserPlus } from "lucide-react";
@@ -92,7 +93,7 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
     { done: serviceCount > 0, title: "Créez votre première prestation", desc: "Ce que vos clients pourront réserver.", href: "/app/prestations/nouvelle", cta: "Ajouter" },
     { done: !!biz?.photoUrl, title: "Ajoutez votre logo ou une photo", desc: "Il s'affiche sur votre page de réservation.", href: "/app/page-de-reservation", cta: "Ajouter" },
     { done: !!ob.linkSharedAt, title: "Partagez votre lien de réservation", desc: "Sur Google, Instagram, WhatsApp, votre site…", href: "#lien", cta: "Copier le lien" },
-    { done: bookingCount > 0, title: "Recevez votre premier rendez-vous", desc: "Testez vous-même votre page pour voir ce que voit un client.", href: `/${ctx.business.slug}`, cta: "Voir ma page" },
+    { done: bookingCount > 0, title: "Recevez votre premier rendez-vous", desc: "Testez vous-même votre page pour voir ce que voit un client.", href: appPagePath(ctx.business.slug), cta: "Voir ma page" },
   ];
   const doneCount = steps.filter((s) => s.done).length;
   const showOnboarding = ctx.member.isOwner && !ob.dismissedAt && doneCount < steps.length;
@@ -252,7 +253,7 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
             <div className="space-y-3 p-5">
               <CopyLink url={bookingUrl} trackShare />
               <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <Link href={`/${ctx.business.slug}`} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">Voir ma page</Link>
+                <Link href={appPagePath(ctx.business.slug)} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">Voir ma page</Link>
                 <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-muted hover:text-text">Personnaliser</Link>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -53,7 +54,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
             </ul>
           </section>
         ) : null}
-        <Link href={`/${c.slug}`} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link>
+        <Link href={appPagePath(c.slug)} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link>
         <p className="text-center text-xs text-muted">{tx.keep}</p>
       </div>
     </div>

@@ -41,6 +41,13 @@ export function proxy(request: NextRequest) {
   headers.set("x-pathname", path);
   // Méthode réelle (une action = POST, avec ou sans JavaScript) : sert à la lecture seule, jamais fournie par le navigateur.
   headers.set("x-method", request.method);
+  // Skydev : page publique d'une entreprise sous /pro/<adresse>, servie par la page /<adresse>.
+  const pro = /^\/pro\/([a-z0-9-]{1,80})\/?$/.exec(path);
+  if (pro && brandForHost(host) === "skydev") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${pro[1]}`;
+    return NextResponse.rewrite(url, { request: { headers } });
+  }
   return NextResponse.next({ request: { headers } });
 }
 

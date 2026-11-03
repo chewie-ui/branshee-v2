@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { Check, LayoutTemplate } from "lucide-react";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
@@ -44,7 +45,7 @@ export default async function MySitePage() {
           customDomain: site.customDomain ?? "",
         }}
         published={!!site.publishedAt}
-        publicUrl={site.customDomain ? `https://${site.customDomain}` : `${base}/${ctx.business.slug}`}
+        publicUrl={site.customDomain ? `https://${site.customDomain}` : `${base}${appPagePath(ctx.business.slug)}`}
         visits={site.visitCount}
         appHost={new URL(base).hostname}
       />

@@ -14,10 +14,10 @@ const FORMATS: { v: EmbedFormat; l: string }[] = [
 ];
 
 /** Code d'intégration d'un établissement, pour l'installer sur son site sans passer par son compte. */
-export function AdminEmbedCode({ origin, slug, accent }: { origin: string; slug: string; accent: string }) {
+export function AdminEmbedCode({ origin, slug, prefix = "", accent }: { origin: string; slug: string; prefix?: string; accent: string }) {
   const [format, setFormat] = useState<EmbedFormat>("inline");
   const [copied, setCopied] = useState(false);
-  const code = embedCode({ origin, pageUrl: `${origin}/${slug}`, format, sections: ["booking", "profile", "reviews", "about", "hours"], autoHeight: true, width: "100%", height: 800, label: "Prendre rendez-vous", color: accent, side: "right" });
+  const code = embedCode({ origin, pageUrl: `${origin}${prefix}/${slug}`, format, sections: ["booking", "profile", "reviews", "about", "hours"], autoHeight: true, width: "100%", height: 800, label: "Prendre rendez-vous", color: accent, side: "right" });
   return (
     <div className="space-y-3 p-5">
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Format">

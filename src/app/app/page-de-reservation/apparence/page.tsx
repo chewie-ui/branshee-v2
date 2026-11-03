@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -21,7 +22,7 @@ export default async function AppearancePage() {
       <PageHeader title="Page de réservation" description="Couleurs, police et style de votre page : l'aperçu se met à jour en direct." />
       <PageTabs />
       {locked ? <div className="mb-4"><UpgradeNotice feature="Personnalisation de la page" required="pro">Essayez librement : l&apos;aperçu montre le résultat. L&apos;enregistrement est disponible à partir du forfait Pro.</UpgradeNotice></div> : null}
-      <ThemeEditor initial={resolveTheme(page?.theme)} previewUrl={`/${ctx.business.slug}?apercu=1`} locked={locked} />
+      <ThemeEditor initial={resolveTheme(page?.theme)} previewUrl={`${appPagePath(ctx.business.slug)}?apercu=1`} locked={locked} />
     </>
   );
 }

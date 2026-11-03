@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import { and, asc, eq } from "drizzle-orm";
 import { blockedMessage } from "@/lib/contact-mode";
 import { contactSettingsById } from "@/server/contact-settings";
@@ -64,7 +65,7 @@ async function handle(req: Request, { params }: Ctx) {
         if (!d) throw new ConnectError(404, "not_found", "Entreprise introuvable.");
         const b = d.business;
         const cs = await contactSettingsById(k.businessId);
-        return json({ data: { name: b.name, type: b.businessType, phone: b.phone, email: b.email, website: b.website, address: b.address, postalCode: b.postalCode, city: b.city, country: b.country, hours: d.hours, contactMode: cs?.mode ?? "form", contactNote: cs?.note ?? null, bookingUrl: `${origin()}/${b.slug}`, shopUrl: `${origin()}/boutique/${b.slug}` } });
+        return json({ data: { name: b.name, type: b.businessType, phone: b.phone, email: b.email, website: b.website, address: b.address, postalCode: b.postalCode, city: b.city, country: b.country, hours: d.hours, contactMode: cs?.mode ?? "form", contactNote: cs?.note ?? null, bookingUrl: `${origin()}${appPagePath(b.slug)}`, shopUrl: `${origin()}/boutique/${b.slug}` } });
       }
       case "GET services": {
         const k = await authenticate(req, "rdv");

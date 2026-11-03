@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import Link from "next/link";
 import { MapPin, Star } from "lucide-react";
 import type { DirectoryEntry } from "@/server/site";
@@ -5,7 +6,7 @@ import type { DirectoryEntry } from "@/server/site";
 /** Carte d'un pro dans l'annuaire : photo, métier, ville, note réelle, bouton de réservation. */
 export function DirectoryCard({ b }: { b: DirectoryEntry }) {
   return (
-    <Link href={`/${b.slug}`} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 transition-colors duration-150 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+    <Link href={appPagePath(b.slug)} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 transition-colors duration-150 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
       <span className="flex items-center gap-3">
         {b.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

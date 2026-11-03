@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Star } from "lucide-react";
@@ -40,7 +41,7 @@ export default async function AdminReports({ searchParams }: { searchParams: Pro
         {list.map(({ r, business, slug }) => (
           <Card key={r.id} className="p-5">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Link href={`/${slug}`} target="_blank" className="font-semibold hover:underline">{business}</Link>
+              <Link href={appPagePath(slug)} target="_blank" className="font-semibold hover:underline">{business}</Link>
               <Badge tone="warning">{REASONS[r.reason]}</Badge>
               <span className="text-muted">par {WHO[r.reporterKind]} · {formatDay(r.createdAt, "Europe/Brussels", "d MMM yyyy")}</span>
               {r.status !== "pending" ? <Badge tone={r.status === "accepted" ? "danger" : "success"}>{r.status === "accepted" ? "Avis supprimé" : "Avis conservé"}</Badge> : null}

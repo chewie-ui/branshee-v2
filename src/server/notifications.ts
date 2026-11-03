@@ -1,3 +1,4 @@
+import { appPagePath } from "@/lib/brand";
 import "server-only";
 import { emitWebhook } from "@/server/connect";
 import { isDemoBusiness } from "@/server/demo-flag";
@@ -55,7 +56,7 @@ async function load(appointmentId: string) {
     locale === "fr"
       ? info
       : { ...info, locale, when: capFirst(dayAndTime(a.startsAt, b.timezone, locale)), serviceName: a.serviceName ?? getMessages(locale).manage.appointment, address: b.locationMode === "online" ? getMessages(locale).common.online : info.address, customerName: info.customerName };
-  return { ...row, info, clientInfo, locale, bookingUrl: `${appUrl()}/${b.slug}` };
+  return { ...row, info, clientInfo, locale, bookingUrl: `${appUrl()}${appPagePath(b.slug)}` };
 }
 
 type Loaded = NonNullable<Awaited<ReturnType<typeof load>>>;
