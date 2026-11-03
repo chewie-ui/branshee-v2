@@ -177,6 +177,9 @@ export function legacyRedirect(path: string): string | null {
   if (p === "/index.php" || p === "/index.html") return "/";
   if (p === "/brabant-wallon") return "/sur-mesure/creation-site-internet/wavre";
   if (p === "/reservation-en-ligne") return "/logiciel-rendez-vous";
+  // Pages héritées de Branshee (tarifs Pro / Pro+, contact Branshee) : sur Skydev, les sections de l'accueil.
+  if (p === "/tarifs") return "/#tarifs";
+  if (p === "/contact") return "/#contact";
   const m = /^\/creation-site-internet-([a-z-]+)$/.exec(p);
   if (m && serviceCity(m[1]!)) return `/sur-mesure/creation-site-internet/${m[1]}`;
   const slug = p.slice(1);

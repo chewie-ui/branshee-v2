@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionTitle } from "@/components/site/section";
 import { METIERS, villesFor } from "@/lib/seo-landing";
+import { currentBrand } from "@/server/brand";
 
 export const metadata: Metadata = {
   title: "Logiciel de prise de rendez-vous par métier et par ville",
@@ -9,10 +10,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/logiciel-rendez-vous" },
 };
 
-export default function SeoHub() {
+export default async function SeoHub() {
+  const brand = (await currentBrand()).name;
   return (
     <Section>
-      <SectionTitle title="La prise de rendez-vous en ligne, par métier et par ville" sub="Choisissez votre métier et votre ville : ce que Branshee change concrètement pour vous, et les professionnels déjà présents près de chez vous." />
+      <SectionTitle title="La prise de rendez-vous en ligne, par métier et par ville" sub={`Choisissez votre métier et votre ville : ce que ${brand} change concrètement pour vous, et les professionnels déjà présents près de chez vous.`} />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {METIERS.map((m) => (
           <div key={m.slug} className="rounded-2xl border border-border bg-surface p-6">

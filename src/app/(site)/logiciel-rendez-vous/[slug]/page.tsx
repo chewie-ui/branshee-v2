@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { currentBrand } from "@/server/brand";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, MapPin } from "lucide-react";
@@ -57,7 +58,7 @@ export default async function SeoLanding({ params }: { params: Params }) {
             <p className="mt-4 text-sm text-muted">Quartiers et communes : {ville.zones.join(", ")}.</p>
           </div>
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Déjà sur Branshee à {ville.nom}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Déjà sur {(await currentBrand()).name} à {ville.nom}</h2>
             {pros.length ? (
               <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {pros.map((b) => (

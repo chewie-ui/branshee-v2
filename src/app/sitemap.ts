@@ -32,19 +32,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const v = slugify(r.city ?? "");
     if (v.length > 2) combos.add(`${m}/${v}`);
   }
+  const sky = (await currentBrand()).id === "skydev";
   const fixed: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/tarifs`, changeFrequency: "monthly", priority: 0.9 },
+    // Skydev : tarifs et contact sont des sections de l'accueil (les anciennes pages redirigent).
+    ...(sky ? [] : [{ url: `${base}/tarifs`, changeFrequency: "monthly" as const, priority: 0.9 }]),
     { url: `${base}/annuaire`, changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/blog`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${base}/logiciel-rendez-vous`, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${base}/contact`, changeFrequency: "yearly", priority: 0.4 },
+    ...(sky ? [] : [{ url: `${base}/contact`, changeFrequency: "yearly" as const, priority: 0.4 }]),
     { url: `${base}/confidentialite`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/conditions-utilisation`, changeFrequency: "yearly", priority: 0.2 },
   ];
   // Skydev : pages sur mesure (services et création de site par ville).
   const custom: MetadataRoute.Sitemap =
-    (await currentBrand()).id === "skydev"
+    sky
       ? [
           { url: `${base}/sur-mesure`, changeFrequency: "monthly", priority: 0.9 },
           ...CUSTOM_SERVICES.map((s) => ({ url: `${base}/sur-mesure/${s.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
