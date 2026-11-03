@@ -31,7 +31,7 @@ export function BusinessForm({ b }: { b: B }) {
                 <Input id="email" name="email" type="email" defaultValue={b.email} aria-invalid={!!err.email || undefined} />
               </Field>
               <Field label="Téléphone" htmlFor="phone" error={err.phone}>
-                <Input id="phone" name="phone" type="tel" defaultValue={b.phone} />
+                <Input id="phone" name="phone" type="tel" defaultValue={b.phone} className="data-[missing]:border-warning data-[missing]:bg-warning-soft data-[missing]:ring-4 data-[missing]:ring-warning/25" />
               </Field>
             </div>
           </Section>

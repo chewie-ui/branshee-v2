@@ -31,7 +31,7 @@ export default async function AdminCustomRequest({ params }: { params: Promise<{
       />
       <Card>
         <CardHeader title="Comment livrer une modif rien que pour ce client" />
-        <ol className="list-decimal space-y-1 px-10 pb-5 text-sm text-muted">
+        <ol className="list-decimal space-y-1 px-10 py-5 text-sm text-muted">
           <li>Ajouter une clé dans <code>CUSTOM_FEATURES</code> (src/lib/custom-work.ts).</li>
           <li>Dans le code de l&apos;app : <code>if (await hasCustomFeature(businessId, &quot;clé&quot;))</code> autour de la modif.</li>
           <li>Publier, puis activer la clé ici pour cette entreprise et passer la demande à « Livrée ».</li>

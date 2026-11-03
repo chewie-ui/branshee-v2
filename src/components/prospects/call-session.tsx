@@ -161,7 +161,7 @@ export function CallSession({ current, remaining, skipped, script, today, histor
 
         <Card className="h-fit lg:sticky lg:top-6">
           <CardHeader title="Votre script" description="Ce que vous dites au téléphone, toujours sous les yeux." action={!scriptEdit ? <Button size="sm" variant="ghost" icon={<FileText className="size-4" aria-hidden="true" />} onClick={() => setScriptEdit(true)}>Modifier</Button> : undefined} />
-          <div className="px-5 pb-5">
+          <div className="p-5">
             {scriptEdit ? (
               <div className="space-y-2">
                 <Textarea aria-label="Script d'appel" rows={12} value={scriptText} onChange={(e) => { setScriptText(e.target.value); setScriptSaved(null); }} maxLength={8000} placeholder={"Bonjour, je suis … de …\nJe vous appelle parce que …\nEst-ce que vous avez 2 minutes ?\n\nSi « déjà équipé » : …\nSi « trop cher » : …"} />

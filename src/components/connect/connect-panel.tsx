@@ -96,14 +96,14 @@ export function ConnectPanel({ origin, slug, shopEnabled, keys, hooks, deliverie
         </div>
         <Card>
           <CardHeader title="Prise de rendez-vous" description="Calendrier dans la page, bouton qui ouvre la réservation, ou bulle flottante sur tout le site." />
-          <div className="flex flex-wrap items-center gap-3 px-5 pb-5">
+          <div className="flex flex-wrap items-center gap-3 p-5">
             <Link href="/app/page-de-reservation/partager" className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"><CalendarDays className="size-4" aria-hidden="true" />Choisir le format et copier le code</Link>
             <span className="text-sm text-muted">Les rendez-vous arrivent dans l&apos;app RDV, la fiche client est créée.</span>
           </div>
         </Card>
         <Card>
           <CardHeader title="Formulaire de contact" description="Les messages arrivent dans Clients › Messages (et par e-mail), avec la fiche client créée." />
-          <div className="space-y-3 px-5 pb-5">
+          <div className="space-y-3 p-5">
             <CopyBlock label="formulaire de contact" code={`<iframe src="${formUrl}" style="width:100%;height:560px;border:0;" title="Formulaire de contact" loading="lazy"></iframe>\n${resize}`} />
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
               <a href={formUrl} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover">Voir le formulaire<ExternalLink className="size-3.5" aria-hidden="true" /></a>
@@ -113,7 +113,7 @@ export function ConnectPanel({ origin, slug, shopEnabled, keys, hooks, deliverie
         </Card>
         <Card>
           <CardHeader title="Boutique en ligne" description={shopEnabled ? "Vos produits en vente, avec panier et paiement : le stock et les commandes restent dans Skydev." : "Ouvrez d'abord votre boutique dans l'app Boutique."} />
-          <div className="space-y-3 px-5 pb-5">
+          <div className="space-y-3 p-5">
             {shopEnabled ? (
               <>
                 <CopyBlock label="bouton boutique" code={`<a href="${shopUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#4f46e5;color:#fff;font-weight:600;text-decoration:none;">Voir la boutique</a>`} />
@@ -133,7 +133,7 @@ export function ConnectPanel({ origin, slug, shopEnabled, keys, hooks, deliverie
 
         <Card>
           <CardHeader title="Clés API" description="Une clé par site. Elle s'utilise uniquement côté serveur : Skydev refuse une clé envoyée depuis un navigateur." />
-          <div className="space-y-4 px-5 pb-5">
+          <div className="space-y-4 p-5">
             {secret?.kind === "key" ? <SecretOnce value={secret.value} onClose={() => setSecret(null)} /> : null}
             {active.length ? (
               <ul className="divide-y divide-border rounded-lg border border-border">
@@ -169,7 +169,7 @@ export function ConnectPanel({ origin, slug, shopEnabled, keys, hooks, deliverie
 
         <Card>
           <CardHeader title="Webhooks" description="Skydev prévient votre site en direct (nouveau rendez-vous, annulation, commande, message). Chaque envoi est signé : votre site vérifie qu'il vient bien de Skydev." />
-          <div className="space-y-4 px-5 pb-5">
+          <div className="space-y-4 p-5">
             {secret?.kind === "hook" ? <SecretOnce value={secret.value} onClose={() => setSecret(null)} /> : null}
             {hooks.length ? (
               <ul className="divide-y divide-border rounded-lg border border-border">

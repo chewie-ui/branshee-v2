@@ -84,7 +84,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         )}
         <Card>
           <CardHeader title="Recettes et dépenses" description="12 derniers mois, HTVA" />
-          <div className="flex h-52 items-end gap-1.5 px-5 pb-2" role="img" aria-label={series.map((s) => `${monthLabel(s.month)} : recettes ${eur(s.income)}, dépenses ${eur(s.expenses)}`).join(" ; ")}>
+          <div className="flex h-52 items-end gap-1.5 px-5 pt-5 pb-2" role="img" aria-label={series.map((s) => `${monthLabel(s.month)} : recettes ${eur(s.income)}, dépenses ${eur(s.expenses)}`).join(" ; ")}>
             {series.map((s) => (
               <div key={s.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                 <div className="flex h-full w-full items-end justify-center gap-0.5">

@@ -38,7 +38,7 @@ export function RequestBoard({ requests, apps, canRequest, features, defaultApp 
       {canRequest ? (
         <Card className="max-w-3xl">
           <CardHeader title="Nouvelle demande" />
-          <form className="grid gap-4 px-5 pb-5" onSubmit={(e) => { e.preventDefault(); run(() => submitCustomRequest(f), () => setF({ appId: "", title: "", description: "" })); }}>
+          <form className="grid gap-4 p-5" onSubmit={(e) => { e.preventDefault(); run(() => submitCustomRequest(f), () => setF({ appId: "", title: "", description: "" })); }}>
             <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
               <Field label="Pour quelle app ?" htmlFor="cr-app">
                 <Select id="cr-app" value={f.appId} onChange={(e) => setF({ ...f, appId: e.target.value })}>

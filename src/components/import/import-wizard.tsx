@@ -88,7 +88,7 @@ export function ImportWizard({ kind, title, backHref, doneHref, noun }: { kind: 
         <>
           <Card className="max-w-3xl">
             <CardHeader title={`${preview.total} ligne${preview.total > 1 ? "s" : ""} trouvée${preview.total > 1 ? "s" : ""}`} description="Vérifiez quelle colonne de votre fichier va dans chaque champ." />
-            <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
+            <div className="grid gap-3 p-5 sm:grid-cols-2">
               {fields.map((f) => (
                 <div key={f.key} className="grid gap-1 text-sm">
                   <label htmlFor={`imp-${f.key}`} className="font-medium">{f.label}</label>

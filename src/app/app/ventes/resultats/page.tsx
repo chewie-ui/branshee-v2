@@ -34,7 +34,7 @@ export default async function SalesResultsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader title="Gagné par mois" description={`Panier moyen : ${eur(avg)} · ${won.length} vente${won.length > 1 ? "s" : ""}`} />
-            <div className="flex h-48 items-end gap-3 px-5 pb-5" role="img" aria-label={byMonth.map((x) => `${monthLabel(x.m)} : ${eur(x.v)}`).join(", ")}>
+            <div className="flex h-48 items-end gap-3 p-5" role="img" aria-label={byMonth.map((x) => `${monthLabel(x.m)} : ${eur(x.v)}`).join(", ")}>
               {byMonth.map((x) => (
                 <div key={x.m} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                   <span className="text-[11px] text-muted tabular-nums">{x.v ? eur(x.v) : ""}</span>

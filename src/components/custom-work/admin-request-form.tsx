@@ -24,7 +24,7 @@ export function AdminRequestForm({ id, businessId, initial, catalog, active }: {
     <>
       <Card>
         <CardHeader title="Réponse au client" />
-        <form className="grid gap-4 px-5 pb-5" onSubmit={(e) => { e.preventDefault(); const s = toCents(f.setup), m = toCents(f.monthly); if ((s !== null && !Number.isFinite(s)) || (m !== null && !Number.isFinite(m))) return setMsg({ ok: false, text: "Prix invalide." }); run(() => adminUpdateCustomRequest(id, { status: f.status, setupCents: s, monthlyCents: m, reply: f.reply, notify: f.notify })); }}>
+        <form className="grid gap-4 p-5" onSubmit={(e) => { e.preventDefault(); const s = toCents(f.setup), m = toCents(f.monthly); if ((s !== null && !Number.isFinite(s)) || (m !== null && !Number.isFinite(m))) return setMsg({ ok: false, text: "Prix invalide." }); run(() => adminUpdateCustomRequest(id, { status: f.status, setupCents: s, monthlyCents: m, reply: f.reply, notify: f.notify })); }}>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Statut" htmlFor="ar-status"><Select id="ar-status" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>{Object.entries(REQUEST_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select></Field>
             <Field label="Mise en place (€ TVAC)" htmlFor="ar-setup"><Input id="ar-setup" inputMode="decimal" value={f.setup} onChange={(e) => setF({ ...f, setup: e.target.value })} /></Field>

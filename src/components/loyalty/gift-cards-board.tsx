@@ -31,7 +31,7 @@ export function GiftCardsBoard({ rows, today, canManage }: { rows: Row[]; today:
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader title="Vendre une carte" />
-          <form className="grid gap-3 px-5 pb-5 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => createGiftCard({ ...f, months: Number(f.months) }), () => setF({ amount: "", buyerName: "", recipientName: "", message: "", months: f.months })); }}>
+          <form className="grid gap-3 p-5 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(() => createGiftCard({ ...f, months: Number(f.months) }), () => setF({ amount: "", buyerName: "", recipientName: "", message: "", months: f.months })); }}>
             <Field label="Montant (€)" htmlFor="gc-amount"><Input id="gc-amount" inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} placeholder="50" /></Field>
             <Field label="Valable" htmlFor="gc-months"><Select id="gc-months" value={f.months} onChange={(e) => setF({ ...f, months: e.target.value })}><option value="12">1 an</option><option value="18">18 mois</option><option value="24">2 ans</option></Select></Field>
             <Field label="Offerte par (facultatif)" htmlFor="gc-buyer"><Input id="gc-buyer" value={f.buyerName} onChange={(e) => setF({ ...f, buyerName: e.target.value })} maxLength={120} /></Field>
@@ -42,7 +42,7 @@ export function GiftCardsBoard({ rows, today, canManage }: { rows: Row[]; today:
         </Card>
         <Card>
           <CardHeader title="Utiliser une carte" description={`${active.length} carte${active.length > 1 ? "s" : ""} en cours · ${eur(outstanding)} à honorer`} />
-          <form className="grid gap-3 px-5 pb-5 sm:grid-cols-[1fr_120px_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); run(() => redeemGiftCard(use), () => setUse({ code: "", amount: "" })); }}>
+          <form className="grid gap-3 p-5 sm:grid-cols-[1fr_120px_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); run(() => redeemGiftCard(use), () => setUse({ code: "", amount: "" })); }}>
             <Field label="Code" htmlFor="gc-code"><Input id="gc-code" value={use.code} onChange={(e) => setUse({ ...use, code: e.target.value })} placeholder="ABCD-EFGH" maxLength={12} autoCapitalize="characters" /></Field>
             <Field label="Montant (€)" htmlFor="gc-use"><Input id="gc-use" inputMode="decimal" value={use.amount} onChange={(e) => setUse({ ...use, amount: e.target.value })} /></Field>
             <Button type="submit" loading={pending}>Déduire</Button>

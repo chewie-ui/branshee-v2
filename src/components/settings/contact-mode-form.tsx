@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
@@ -14,6 +15,31 @@ export function ContactModeForm({ mode, note, hasPhone }: { mode: ContactMode; n
   const [n, setN] = useState(note);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const [phoneFilled, setPhoneFilled] = useState(hasPhone);
+  const needsPhone = m === "phone" && !phoneFilled;
+  // « Appel uniquement » sans numéro : le champ Téléphone (formulaire Coordonnées, plus haut) est entouré en orange
+  // jusqu'à ce qu'il soit rempli.
+  useEffect(() => {
+    const input = document.getElementById("phone") as HTMLInputElement | null;
+    if (!input) return;
+    const sync = () => setPhoneFilled(hasPhone || input.value.trim().length > 0);
+    sync();
+    input.addEventListener("input", sync);
+    return () => input.removeEventListener("input", sync);
+  }, [hasPhone]);
+  useEffect(() => {
+    const input = document.getElementById("phone");
+    if (!input) return;
+    if (needsPhone) input.setAttribute("data-missing", "");
+    else input.removeAttribute("data-missing");
+    return () => input.removeAttribute("data-missing");
+  }, [needsPhone]);
+  const goToPhone = () => {
+    const input = document.getElementById("phone") as HTMLInputElement | null;
+    if (!input) return;
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    input.focus({ preventScroll: true });
+  };
   return (
     <Card className="mt-6">
       <CardHeader title="Comment vos clients vous joignent" description="S'applique à votre site, votre page, vos vitrines (véhicules…) et au formulaire de contact intégré sur un autre site." />
@@ -29,7 +55,7 @@ export function ContactModeForm({ mode, note, hasPhone }: { mode: ContactMode; n
               <span>
                 <span className="block font-medium">{CONTACT_MODES[k].label}</span>
                 <span className="block text-sm text-muted">{CONTACT_MODES[k].desc}</span>
-                {k === "phone" && !hasPhone ? <span className="mt-1 block text-xs text-warning">Ajoutez votre téléphone ci-dessus pour choisir cette option.</span> : null}
+                {k === "phone" && !phoneFilled ? <span className="mt-1 block text-xs text-warning">Ajoutez votre téléphone dans « Coordonnées », plus haut, pour choisir cette option.</span> : null}
               </span>
             </label>
           ))}
@@ -39,7 +65,13 @@ export function ContactModeForm({ mode, note, hasPhone }: { mode: ContactMode; n
             <Input id="contact-note" value={n} maxLength={160} onChange={(e) => setN(e.target.value)} />
           </Field>
         ) : null}
-        {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+        {needsPhone ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-warning bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between" role="alert">
+            <p className="text-sm text-warning">Il manque votre numéro de téléphone : remplissez le champ <strong>Téléphone</strong> entouré en orange dans « Coordonnées », enregistrez, puis revenez ici.</p>
+            <Button type="button" variant="secondary" onClick={goToPhone} icon={<ArrowUp className="size-4" aria-hidden="true" />} className="shrink-0">Ajouter mon numéro</Button>
+          </div>
+        ) : null}
+        {msg && !(needsPhone && !msg.ok) ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
         <Button type="submit" loading={pending}>Enregistrer</Button>
       </form>
     </Card>
