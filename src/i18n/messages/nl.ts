@@ -46,6 +46,8 @@ const nl: Messages = {
     confirmEmail: "Bevestig uw e-mailadres",
     alreadyReviewed: "Bedankt, u hebt al een review gegeven.",
     team: "Het team",
+    bookWith: "Afspraak met {name}",
+    wholeTeam: "Bekijk het hele team",
     faq: "Veelgestelde vragen",
     pausedText: "Online reserveren is tijdelijk onderbroken. Neem rechtstreeks contact op met de zaak om een afspraak te maken.",
     map: "Kaart — {name}",

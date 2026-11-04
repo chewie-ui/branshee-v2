@@ -49,6 +49,8 @@ const fr = {
     confirmEmail: "Confirmez votre email",
     alreadyReviewed: "Merci, vous avez déjà donné votre avis.",
     team: "L'équipe",
+    bookWith: "Rendez-vous avec {name}",
+    wholeTeam: "Voir toute l'équipe",
     faq: "Questions fréquentes",
     pausedText: "La réservation en ligne est momentanément suspendue. Contactez directement l'établissement pour prendre rendez-vous.",
     map: "Carte — {name}",

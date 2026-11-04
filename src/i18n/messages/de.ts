@@ -46,6 +46,8 @@ const de: Messages = {
     confirmEmail: "Bestätigen Sie Ihre E-Mail-Adresse",
     alreadyReviewed: "Danke, Sie haben bereits eine Bewertung abgegeben.",
     team: "Das Team",
+    bookWith: "Termin bei {name}",
+    wholeTeam: "Das ganze Team ansehen",
     faq: "Häufige Fragen",
     pausedText: "Die Online-Buchung ist vorübergehend ausgesetzt. Bitte kontaktieren Sie den Betrieb direkt, um einen Termin zu vereinbaren.",
     map: "Karte — {name}",

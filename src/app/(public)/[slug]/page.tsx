@@ -1,6 +1,7 @@
 import { appPagePath } from "@/lib/brand";
 import { currentBrand, publicPagePath } from "@/server/brand";
 import { headers } from "next/headers";
+import { memberFromSlug, memberSlug } from "@/lib/team-booking";
 import { contactSettingsById } from "@/server/contact-settings";
 import type { Metadata } from "next";
 import { after } from "next/server";
@@ -41,7 +42,7 @@ import { poweredByFor } from "@/server/referral";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type Search = Promise<{ sections?: string; apercu?: string; reserver?: string; lang?: string; s?: string; m?: string; d?: string; h?: string; v?: string; q?: string | string[] }>;
+type Search = Promise<{ sections?: string; apercu?: string; reserver?: string; lang?: string; s?: string; m?: string; d?: string; h?: string; v?: string; q?: string | string[]; avec?: string }>;
 
 const UUID = /^[0-9a-f-]{36}$/i;
 /** Réservation reprise après connexion / inscription : prestation, praticien, créneau et réponses déjà choisis. */
@@ -144,7 +145,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   const t = createT(getMessages(locale));
   if (data.closed) return <PausedPage data={data} t={t} brand={(await currentBrand()).id} />;
   // Forfait Pro+ avec un site publié : le site remplace la page à cette adresse (la réservation y est intégrée).
-  if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver) {
+  if (typeof sp.sections !== "string" && !sp.apercu && !sp.reserver && !sp.avec) {
     const site = await publishedSiteFor(b.id);
     if (site) {
       after(() => countSiteVisit(site.id));
@@ -171,6 +172,9 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   if (embedded && data.embed.fontUrl && data.embed.fontFamily) vars["--font-sans"] = `"${data.embed.fontFamily}", ui-sans-serif, system-ui, sans-serif`;
 
   const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} review={review} t={t} locale={locale} />);
+  // Page d'un praticien (« ?avec=lea-salle ») : seulement ses prestations et son agenda.
+  const solo = memberFromSlug(sp.avec, data.team);
+  const flowData = solo ? { ...data, team: [solo], services: data.services.filter((x) => x.kind !== "group" && x.memberIds.includes(solo.id)).map((x) => ({ ...x, memberIds: [solo.id] })) } : data;
 
   return (
     <I18nProvider locale={locale}>
@@ -211,7 +215,16 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
       <main className={cn("mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
         <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label={t("page.bookingLabel")}>
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
-          <BookingFlow data={data} today={today} resume={resumeFrom(sp)} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
+          {solo ? (
+            <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
+              <Avatar name={solo.name} src={solo.photoUrl} size="lg" />
+              <div className="min-w-0">
+                <p className="font-semibold">{t("page.bookWith", { name: solo.name })}</p>
+                {data.team.length > 1 ? <Link href={await publicPagePath(b.slug)} className="text-sm text-muted hover:text-text">{t("page.wholeTeam")}</Link> : null}
+              </div>
+            </div>
+          ) : null}
+          <BookingFlow data={flowData} today={today} resume={resumeFrom(sp)} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
         </section>
 
         {aside.length ? <aside className="space-y-4 lg:group-data-[layout=split]:order-first">{aside}</aside> : null}
@@ -457,6 +470,7 @@ function SectionBlock({ kind, data, review, t, locale }: { kind: string; data: P
                 <div className="min-w-0 text-sm">
                   <p className="font-medium">{m.name}</p>
                   {m.role ? <p className="truncate text-muted">{m.role}</p> : null}
+                  {data.team.length > 1 ? <a href={`?avec=${memberSlug(m, data.team)}`} className="font-medium text-accent hover:text-accent-hover">{t("page.bookWith", { name: m.name.split(" ")[0] ?? m.name })}</a> : null}
                   {m.bio ? <p className="mt-1 text-muted">{m.bio}</p> : null}
                   {m.customInfo.length ? (
                     <dl className="mt-1 space-y-0.5 text-xs text-muted">

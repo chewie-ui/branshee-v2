@@ -1,4 +1,5 @@
 import "server-only";
+import { teamChoiceOf } from "@/lib/team-booking";
 import { cache } from "react";
 import { and, asc, avg, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -99,7 +100,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
     /** Réservation en ligne fermée : mise en pause par le pro, ou pas d'abonnement actif (essai terminé). */
     closed: !!biz.pausedAt || !bookingOpen(plan.plan),
     intake,
-    settings: settings ? { waitlistEnabled: settings.waitlistEnabled, minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion } : null,
+    settings: settings ? { waitlistEnabled: settings.waitlistEnabled, minLeadMin: settings.minLeadMin, phoneRequired: settings.phoneRequired, autoConfirm: settings.autoConfirm, horizonDays: settings.horizonDays, scheduleMode: settings.scheduleMode, firstVisitQuestion: settings.firstVisitQuestion, teamChoice: teamChoiceOf(settings.teamChoice) } : null,
     services: servicesWithMembers,
     categories: cats,
     team: team.map((m) => ({ id: m.id, name: m.name, photoUrl: m.photoUrl, role: m.showRole ? m.roleLabel : null, bio: m.bio, customInfo: m.customInfo })),

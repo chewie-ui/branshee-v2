@@ -1,0 +1,1 @@
+ALTER TABLE "booking_settings" ADD COLUMN "team_choice" text DEFAULT 'choose' NOT NULL;

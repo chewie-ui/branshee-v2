@@ -98,6 +98,8 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   const service = services.find((s) => s.id === serviceId) ?? null;
   const member = team.find((m) => m.id === memberId) ?? null;
   const candidates = service ? team.filter((m) => service.memberIds.includes(m.id)) : [];
+  // « Premier disponible » : le client ne choisit pas la personne, seulement le créneau.
+  const chooseMember = settings?.teamChoice !== "auto";
   // Plusieurs rendez-vous d'un coup : seulement sans paiement en ligne ni carte en garantie (un paiement = un rendez-vous).
   const multiOk = (svc: { kind: string; priceCents: number | null } | null) => !!svc && svc.kind !== "group" && !((svc.priceCents ?? 0) > 0 && (data.payment.required || data.payment.guarantee));
   const [cart, setCart] = useState<{ serviceId: string; memberId: string | null; day: string; time: string }[]>([]);
@@ -178,8 +180,8 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
       return;
     }
     const options = team.filter((m) => s.memberIds.includes(m.id));
-    if (options.length <= 1) {
-      setMemberId(options[0]?.id ?? null);
+    if (options.length <= 1 || !chooseMember) {
+      setMemberId(options.length === 1 ? options[0]!.id : null);
       setStep("time");
     } else {
       setMemberId(null);
@@ -341,7 +343,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           <span className="font-semibold tabular-nums">{formatPrice(service.priceCents)}</span>
         </div>
       ) : null}
-      {candidates.length > 1 ? (
+      {candidates.length > 1 && chooseMember ? (
         <p className="flex items-center gap-2 text-muted">
           <UserRound className="size-4" aria-hidden="true" />
           {member ? t("common.with", { name: member.name }) : t("booking.noPreferenceSummary")}
@@ -403,7 +405,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           type="button"
           onClick={() => {
             if (step === "service" && intakeOrder.length > 0) return setIntakeOrder((o) => o.slice(0, -1));
-            setStep(step === "details" ? (service?.kind === "group" ? "session" : "time") : step === "time" && candidates.length > 1 ? "member" : step === "service" ? "visit" : "service");
+            setStep(step === "details" ? (service?.kind === "group" ? "session" : "time") : step === "time" && candidates.length > 1 && chooseMember ? "member" : step === "service" ? "visit" : "service");
           }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"
         >

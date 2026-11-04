@@ -106,6 +106,8 @@ export const bookingSettings = pgTable("booking_settings", {
   waitlistEnabled: boolean("waitlist_enabled").notNull().default(false),
   allowOverbooking: boolean("allow_overbooking").notNull().default(false),
   phoneRequired: boolean("phone_required").notNull().default(true),
+  /** Équipe : « choose » = le client choisit son praticien (ou « sans préférence »), « auto » = premier disponible, sans choix. */
+  teamChoice: text("team_choice").notNull().default("choose"),
   /** Regroupement intelligent : ne proposer que les créneaux proches des RDV existants. */
   smartGrouping: jsonb("smart_grouping")
     .$type<{ enabled: boolean; windowHours: number; weekdays: number[] }>()
