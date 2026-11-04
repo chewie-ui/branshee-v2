@@ -9,6 +9,9 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
   return (
     <div className="sky">
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">Aller au contenu</a>
+      {!signedIn ? (
+        <p className="promo-bar"><b>1er mois offert : 0 €</b>, sans carte bancaire et sans engagement.<Link href="/inscription">Essayer gratuitement</Link></p>
+      ) : null}
       <header>
         <div className="nav">
           <Link href="/" className="brand" aria-label="Skydev, accueil">

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ChevronRight } from "lucide-react";
-import { AppTile, CustomTile, StoreFooterCta, TRIAL_TEXT } from "@/components/store/store-parts";
+import { AppTile, CustomTile, TRIAL_TEXT } from "@/components/store/store-parts";
 import { METIERS, metierBySlug, storeApps } from "@/lib/app-store";
 import { currentBrand } from "@/server/brand";
+import { StoreFooterCta } from "@/components/store/store-cta";
+import { getSessionUser } from "@/server/auth/session";
 
 type Params = Promise<{ metier: string }>;
 
@@ -20,6 +22,7 @@ export default async function MetierPage({ params }: { params: Params }) {
   const m = metierBySlug((await params).metier);
   if (!m) notFound();
   const all = storeApps();
+  const signedIn = !!(await getSessionUser());
   const others = all.filter(({ app }) => app.billing !== "quote" && !m.apps.some((a) => a.id === app.id));
 
   return (
@@ -29,11 +32,11 @@ export default async function MetierPage({ params }: { params: Params }) {
         <ChevronRight className="size-3.5" aria-hidden="true" />
         <span aria-current="page" className="text-text">{m.nom}</span>
       </nav>
-      <span className="mt-6 inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">{TRIAL_TEXT}</span>
+      {!signedIn ? <span className="mt-6 inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">{TRIAL_TEXT}</span> : <span className="mt-6 block" />}
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{m.titre}</h1>
       <p className="mt-4 max-w-prose text-lg text-muted">{m.intro}</p>
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/inscription" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors duration-150 hover:bg-accent-hover"><span className="inline-flex items-center gap-2 text-accent-foreground">Essayer gratuitement<ArrowRight className="size-4" aria-hidden="true" /></span></Link>
+        <Link href={signedIn ? "/app/apps" : "/inscription"} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors duration-150 hover:bg-accent-hover"><span className="inline-flex items-center gap-2 text-accent-foreground">{signedIn ? "Ouvrir mes apps" : "Essayer gratuitement"}<ArrowRight className="size-4" aria-hidden="true" /></span></Link>
         <Link href="/#contact" className="inline-flex min-h-11 items-center rounded-xl border border-border-strong bg-surface px-5 text-sm font-semibold transition-colors duration-150 hover:bg-surface-muted"><span>Nous parler de votre activité</span></Link>
       </div>
 

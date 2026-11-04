@@ -18,9 +18,46 @@ export type StoreApp = {
   usages: string[];
   /** Apps qui vont bien avec. */
   avec: AppId[];
+  /** Métiers concernés (étiquettes affichées et recherchables). Rempli depuis `TAGS`. */
+  tags: string[];
 };
 
-export const STORE_APPS: StoreApp[] = [
+/**
+ * Étiquettes « métiers concernés » par app : affichées sur les cartes et la fiche, et utilisées par la recherche
+ * du catalogue (« garagiste » trouve Véhicules). Ajouter une étiquette = l'ajouter ici.
+ */
+const TAGS: Record<AppId, string[]> = {
+  rdv: ["Kiné", "Coiffeur", "Esthéticienne", "Ostéopathe", "Coach sportif", "Garagiste", "Psychologue", "Consultant"],
+  clients: ["Tous les métiers", "Indépendant", "Commerçant", "Artisan", "Kiné", "Garagiste"],
+  site: ["Tous les métiers", "Indépendant", "Restaurant", "Artisan", "Commerçant", "Kiné"],
+  factures: ["Tous les métiers", "Artisan", "Consultant", "Freelance", "Garagiste", "Entrepreneur"],
+  employes: ["PME", "Commerce avec équipe", "Restaurant", "Garage", "Cabinet"],
+  boutique: ["Commerçant", "Boutique", "Créateur", "Producteur local", "Fleuriste", "Caviste"],
+  vehicules: ["Garagiste", "Concessionnaire", "Négociant auto", "Vendeur de motos", "Location de véhicules", "Carrossier"],
+  "tel-ia": ["Artisan", "Garagiste", "Kiné", "Restaurant", "Plombier", "Indépendant"],
+  "sur-mesure": ["Tous les métiers"],
+  horaires: ["Restaurant", "Commerce", "Salon de coiffure", "PME", "Boulangerie"],
+  conges: ["PME", "Commerce avec équipe", "Restaurant", "Cabinet", "Garage"],
+  commandes: ["Restaurant", "Bar", "Snack", "Food truck", "Café", "Hôtel"],
+  paie: ["PME", "Restaurant", "Commerce avec équipe", "Employeur"],
+  ventes: ["Consultant", "Agence", "Commercial", "Freelance", "Courtier", "Entreprise B2B"],
+  projets: ["Entrepreneur", "Agence", "Architecte", "Artisan", "Bureau d'études"],
+  interventions: ["Plombier", "Chauffagiste", "Électricien", "Garagiste", "Technicien", "Dépanneur"],
+  stock: ["Commerçant", "Garagiste", "Restaurant", "Grossiste", "Pharmacie", "Atelier"],
+  caisse: ["Commerçant", "Restaurant", "Salon de coiffure", "Boulangerie", "Marché", "Bar"],
+  depenses: ["Tous les métiers", "Indépendant", "Artisan", "Consultant"],
+  compta: ["Tous les métiers", "Indépendant", "PME", "Commerçant"],
+  marketing: ["Commerçant", "Salon de coiffure", "Restaurant", "Institut de beauté", "Salle de sport"],
+  avis: ["Restaurant", "Kiné", "Coiffeur", "Garagiste", "Commerçant", "Artisan"],
+  fidelite: ["Café", "Boulangerie", "Salon de coiffure", "Restaurant", "Commerçant", "Institut de beauté"],
+  signature: ["Artisan", "Entrepreneur", "Consultant", "Agence", "Courtier"],
+  documents: ["Architecte", "Entrepreneur", "Comptable", "Agence", "Cabinet"],
+  taches: ["Tous les métiers", "PME", "Agence", "Artisan"],
+  messagerie: ["PME", "Commerce avec équipe", "Restaurant", "Équipe terrain"],
+  reglages: [],
+};
+
+const STORE_BASE: Omit<StoreApp, "tags">[] = [
   { id: "rdv", slug: "rendez-vous", titre: "Prise de rendez-vous en ligne", description: "Agenda en ligne, page de réservation 24 h/24, rappels automatiques, acompte ou carte en garantie. Pour indépendants et PME en Belgique.", intro: "Vos clients voient vos disponibilités et réservent seuls, de jour comme de nuit. Vous recevez le rendez-vous dans votre agenda, le client reçoit une confirmation puis un rappel la veille.", usages: ["Un kiné qui laisse ses patients réserver leurs séances", "Un coiffeur qui réduit les absences avec un acompte", "Un garage qui planifie les entretiens et les contrôles"], avec: ["clients", "avis", "site"] },
   { id: "clients", slug: "fichier-clients", titre: "Fichier clients (CRM)", description: "Fichier clients partagé par toutes vos apps : historique, notes, documents, import Excel. Simple, sécurisé, hébergé en Europe.", intro: "Un seul fichier clients pour toute votre activité : chaque rendez-vous, facture, achat ou message s'ajoute à la fiche du client, sans double encodage.", usages: ["Retrouver l'historique complet d'un client avant de le rappeler", "Importer votre ancien fichier Excel en quelques minutes", "Recevoir les messages de votre site directement dans la fiche"], avec: ["rdv", "factures", "marketing"] },
   { id: "site", slug: "site-web", titre: "Site web relié à vos outils", description: "Votre site internet généré à partir de vos infos, rapide sur mobile, pensé pour Google et relié à vos rendez-vous et à votre boutique.", intro: "Un site propre et rapide, créé à partir de ce que vous avez déjà encodé : prestations, horaires, photos, avis. La réservation et la boutique y sont intégrées.", usages: ["Avoir un site en ligne le jour même, sans développeur", "Mettre votre nom de domaine (option)", "Passer à un site sur mesure plus tard, sans rien perdre"], avec: ["rdv", "boutique", "avis"] },
@@ -49,6 +86,11 @@ export const STORE_APPS: StoreApp[] = [
   { id: "messagerie", slug: "messagerie", titre: "Messagerie d'équipe", description: "Discutez avec votre équipe sans WhatsApp : salons, messages privés, séparé de vos messages personnels.", intro: "Les messages de travail restent au travail : des salons par sujet, des messages privés, et rien qui se mélange avec la vie perso.", usages: ["Un salon par chantier ou par magasin", "Prévenir l'équipe d'un changement", "Garder l'historique quand quelqu'un part"], avec: ["taches", "employes"] },
   { id: "sur-mesure", slug: "sur-mesure", titre: "Fonctions et apps sur mesure", description: "Il vous manque une fonction ? On l'ajoute à votre espace Skydev, ou on construit votre site, votre app ou votre logiciel métier.", intro: "Vous avez une façon de travailler bien à vous ? Décrivez ce qui vous manque : on l'ajoute à votre espace, relié à vos clients et à vos données. Prix fixe annoncé avant de commencer.", usages: ["Un suivi des réparations pour un garage", "Un formulaire d'inscription pour un club", "Un outil interne qui remplace un tableur"], avec: ["clients", "site"] },
 ];
+
+export const STORE_APPS: StoreApp[] = STORE_BASE.map((a) => ({ ...a, tags: TAGS[a.id] ?? [] }));
+
+/** Texte de recherche d'une app : nom, accroche, étiquettes métiers (sans accents, en minuscules). */
+export const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 const BY_SLUG = new Map(STORE_APPS.map((s) => [s.slug, s]));
 export const storeAppBySlug = (slug: string) => BY_SLUG.get(slug) ?? null;

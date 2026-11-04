@@ -62,7 +62,7 @@ const WORK = [
 
 const IDEAS = ["Espace client", "Suivi de chantier", "App mobile", "Automatisation"];
 
-export function SkydevLanding() {
+export function SkydevLanding({ signedIn = false }: { signedIn?: boolean }) {
   const [picked, setPicked] = useState<Set<AppId>>(new Set(["site", "rdv", "factures"]));
   const [wish, setWish] = useState("");
   const [details, setDetails] = useState("");
@@ -93,14 +93,22 @@ export function SkydevLanding() {
             <p className="lead lead-tight">Rendez-vous, factures, site web, caisse, boutique, stock, planning, fidélité, tâches… {CATALOG.length} apps qui partagent vos clients et votre agenda. Et ce qui manque, on le construit sur mesure.</p>
           </div>
 
-          <div className="hero-cta">
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
-            <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
-            <Link className="btn btn-ghost btn-lg" href="/inscription">Essayer 1 mois gratuit</Link>
-            <p className="hero-note"><b>1 mois offert</b>, sans carte bancaire et sans engagement.</p>
-            <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
-            <p className="hero-note">Vous cherchez un professionnel ? <Link href="/annuaire" className="hero-find">Trouvez-le dans l&apos;annuaire</Link>.</p>
-          </div>
+          {signedIn ? (
+            <div className="hero-cta">
+              <Link className="btn btn-primary btn-lg" href="/app">Ouvrir mon espace<ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
+              <Link className="btn btn-ghost btn-lg" href="/apps">Découvrir toutes les apps</Link>
+              <p className="hero-note">Il vous manque une fonction ? <Link href="/app/sur-mesure" className="hero-find">Demandez-la, on la construit</Link>.</p>
+            </div>
+          ) : (
+            <div className="hero-cta">
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
+              <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
+              <Link className="btn btn-ghost btn-lg" href="/inscription">Essayer 1 mois gratuit</Link>
+              <p className="hero-note"><b>1 mois offert</b>, sans carte bancaire et sans engagement.</p>
+              <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
+              <p className="hero-note">Vous cherchez un professionnel ? <Link href="/annuaire" className="hero-find">Trouvez-le dans l&apos;annuaire</Link>.</p>
+            </div>
+          )}
 
           <div className="builder">
             <ul className="picker" aria-label="Choisissez vos apps">
@@ -145,8 +153,18 @@ export function SkydevLanding() {
 
             <div className="builder-cta">
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
-              <a className="btn btn-primary" href="/demo">Essayer ces apps dans la démo <ArrowRight className="ico ico-sm" aria-hidden="true" /></a>
-              <Link className="btn btn-ghost" href="/inscription">Créer mon compte</Link>
+              {signedIn ? (
+                <>
+                  <Link className="btn btn-primary" href="/app/apps">Activer ces apps <ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
+                  <Link className="btn btn-ghost" href="/app">Mon espace</Link>
+                </>
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
+                  <a className="btn btn-primary" href="/demo">Essayer ces apps dans la démo <ArrowRight className="ico ico-sm" aria-hidden="true" /></a>
+                  <Link className="btn btn-ghost" href="/inscription">Créer mon compte</Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -255,7 +273,7 @@ export function SkydevLanding() {
             ))}
           </div>
           <div className="find-cta">
-            <Link className="btn btn-primary" href="/inscription">Créer ma page</Link>
+            <Link className="btn btn-primary" href={signedIn ? "/app/page-de-reservation" : "/inscription"}>{signedIn ? "Ma page" : "Créer ma page"}</Link>
             <Link className="btn btn-ghost" href="/annuaire">Voir l&apos;annuaire</Link>
           </div>
         </div>
@@ -307,12 +325,14 @@ export function SkydevLanding() {
         <div className="wrap">
           <div className="head"><span className="eyebrow">Tarifs</span><h2>Un abonnement, toutes les apps.</h2><p>Pas un abonnement par app : vous payez par personne de l&apos;équipe, et vous utilisez tout ce qui est inclus. Plus l&apos;équipe grandit, moins chaque personne coûte.</p></div>
           <div className="prices">
-            <div className="price hl"><span className="lbl">Toutes les apps</span><b>29 €</b><small>par mois, TVAC · pour vous, le 1er utilisateur</small>
-              <ul className="pl"><li>Les {CATALOG.length - 2} apps incluses (hors options)</li><li>Les nouvelles apps incluses</li><li>30 jours d&apos;essai gratuit, sans carte</li></ul>
-              <Link className="btn btn-primary" href="/inscription">Commencer</Link></div>
+            <div className="price hl"><span className="lbl">Toutes les apps <em className="promo">1er mois offert</em></span>
+              <b><s aria-hidden="true">29 €</s> 0 €<span className="sr-only"> le premier mois, puis 29 € par mois</span></b>
+              <small>le 1er mois, puis 29 € par mois TVAC · pour vous, le 1er utilisateur</small>
+              <ul className="pl"><li>Les {CATALOG.length - 2} apps incluses (hors options)</li><li>Les nouvelles apps incluses</li><li>Sans carte bancaire, sans engagement</li></ul>
+              <Link className="btn btn-primary" href={signedIn ? "/app/reglages/abonnement" : "/inscription"}>{signedIn ? "Mon abonnement" : "Essayer gratuitement"}</Link></div>
             <div className="price"><span className="lbl">Votre équipe</span><b>dès 15 €</b><small>par personne ajoutée, TVAC · le prix baisse à chaque ajout</small>
               <ul className="pl"><li>2e personne : 25 €, 3e : 22 €, 4e : 20 €</li><li>Puis 18 €, 16 €, et 15 € pour toutes les suivantes</li><li>Exemple : équipe de 3, 76 € par mois</li></ul>
-              <Link className="btn btn-ghost" href="/inscription">Commencer</Link></div>
+              <Link className="btn btn-ghost" href={signedIn ? "/app/equipe" : "/inscription"}>{signedIn ? "Mon équipe" : "Commencer"}</Link></div>
             <div className="price"><span className="lbl">Sur mesure</span><b>Sur devis</b><small>prix fixe annoncé avant de commencer</small>
               <ul className="pl"><li>Sites sur mesure, dès {SITE_FROM_EUR} €</li><li>Apps web et mobiles, logiciels, CRM</li><li>Automatisations et outils IA</li></ul>
               <Link className="btn btn-ghost" href="/sur-mesure">Voir le sur mesure</Link></div>

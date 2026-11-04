@@ -187,6 +187,10 @@
 .sky .price .lbl { font-size: 14px; font-weight: 600; color: var(--text-muted); }
 .sky .price b { display: block; font-size: 40px; letter-spacing: -.04em; font-weight: 800; margin-top: 10px; line-height: 1; }
 .sky .price small { display: block; margin-top: 8px; font-size: 14px; color: var(--text-muted); }
+.sky .price b s { font-size: 24px; font-weight: 600; color: var(--text-muted); text-decoration-thickness: 2px; margin-right: 6px; vertical-align: middle; }
+.sky .price .promo { font-style: normal; margin-left: 8px; display: inline-flex; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-foreground); font-size: 12px; font-weight: 600; vertical-align: middle; }
+.sky .promo-bar { background: var(--accent); color: var(--accent-foreground); text-align: center; font-size: 14px; padding: 8px 16px; line-height: 1.4; }
+.sky .promo-bar a { color: var(--accent-foreground); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; margin-left: 6px; white-space: nowrap; }
 .sky .price.hl { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .sky .pl { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 8px; font-size: 14px; }
 .sky .pl li { display: flex; gap: 8px; align-items: center; }

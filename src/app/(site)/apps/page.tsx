@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check } from "lucide-react";
-import { AppTile, CustomTile, StoreFooterCta, TRIAL_TEXT } from "@/components/store/store-parts";
-import { CATEGORY_LABEL, type AppCategory } from "@/lib/apps";
-import { METIERS, metierBySlug, storeApps, storeCount } from "@/lib/app-store";
+import { AppTile, CustomTile, TRIAL_TEXT } from "@/components/store/store-parts";
+import type { AppCategory } from "@/lib/apps";
+import { METIERS, metierBySlug, metiersOfApp, storeApps, storeCount } from "@/lib/app-store";
+import { StoreBrowser } from "@/components/store/store-browser";
 import { cn } from "@/lib/cn";
 import { currentBrand } from "@/server/brand";
+import { getSessionUser } from "@/server/auth/session";
+import { StoreFooterCta } from "@/components/store/store-cta";
 
 type Search = Promise<{ metier?: string }>;
 
@@ -31,8 +34,8 @@ export default async function AppStore({ searchParams }: { searchParams: Search 
 
   return (
     <div className="tw mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-      <span className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">{TRIAL_TEXT}</span>
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{storeCount()} apps pour gérer toute votre activité</h1>
+      {!(await getSessionUser()) ? <span className="mb-4 inline-flex rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-soft-foreground">{TRIAL_TEXT}</span> : null}
+      <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{storeCount()} apps pour gérer toute votre activité</h1>
       <p className="mt-4 max-w-prose text-lg text-muted">Activez seulement celles dont vous avez besoin. Elles partagent vos clients, votre agenda et votre stock : rien à encoder deux fois. Toutes sont incluses dans un seul abonnement dès 29 € par mois, sauf les options. Et s&apos;il manque une fonction, on l&apos;ajoute pour vous.</p>
 
       <nav aria-label="Filtrer par métier" className="mt-8">
@@ -64,20 +67,7 @@ export default async function AppStore({ searchParams }: { searchParams: Search 
           <p className="mt-8 text-sm text-muted">Les autres apps restent disponibles à tout moment, sans supplément.</p>
         </section>
       ) : (
-        ORDER.map((cat, i) => {
-          const list = all.filter(({ app }) => app.category === cat);
-          if (!list.length) return null;
-          const last = i === ORDER.length - 1;
-          return (
-            <section key={cat} className="mt-12" aria-labelledby={`cat-${cat}`}>
-              <h2 id={`cat-${cat}`} className="text-xl font-semibold tracking-tight">{CATEGORY_LABEL[cat]}</h2>
-              <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map(({ app, store }) => <li key={app.id}><AppTile app={app} store={store} /></li>)}
-                {last ? <li><CustomTile /></li> : null}
-              </ul>
-            </section>
-          );
-        })
+        <StoreBrowser items={all.map((x) => ({ ...x, metiers: metiersOfApp(x.app.id).map((m) => `${m.nom} ${m.titre}`) }))} order={ORDER} />
       )}
 
       <section className="mt-16 grid gap-6 rounded-3xl border border-border bg-surface p-6 sm:p-8 lg:grid-cols-2" aria-labelledby="pourquoi">

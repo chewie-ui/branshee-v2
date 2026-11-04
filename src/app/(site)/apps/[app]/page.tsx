@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowRight, Check, ChevronRight, Lightbulb } from "lucide-react";
 import { AppIcon } from "@/components/apps/app-icon";
-import { AppTile, BillingBadge, StoreFooterCta, TRIAL_TEXT } from "@/components/store/store-parts";
+import { AppTile, BillingBadge, TRIAL_TEXT } from "@/components/store/store-parts";
 import { appById } from "@/lib/apps";
 import { metiersOfApp, storeAppById, storeAppBySlug } from "@/lib/app-store";
 import { currentBrand } from "@/server/brand";
+import { StoreFooterCta } from "@/components/store/store-cta";
+import { getSessionUser } from "@/server/auth/session";
 import { siteUrl } from "@/server/site";
 
 type Params = Promise<{ app: string }>;
@@ -33,6 +35,7 @@ export default async function AppPage({ params }: { params: Params }) {
   // Le sur mesure a ses propres pages.
   if (d.app.billing === "quote") permanentRedirect("/sur-mesure");
   const { app, store } = d;
+  const signedIn = !!(await getSessionUser());
   const quote = app.billing === "quote";
   const metiers = metiersOfApp(app.id);
   const related = store.avec.map((id) => ({ app: appById(id), store: storeAppById(id) })).filter((x) => x.app?.status === "active");
@@ -68,6 +71,14 @@ export default async function AppPage({ params }: { params: Params }) {
           </div>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{store.titre}</h1>
           <p className="mt-4 max-w-prose text-lg text-muted">{store.intro}</p>
+          {store.tags.length ? (
+            <div className="mt-5">
+              <p className="text-sm font-medium">Métiers concernés</p>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {store.tags.map((t) => <li key={t} className="rounded-md bg-surface-muted px-2.5 py-1 text-sm text-muted">{t}</li>)}
+              </ul>
+            </div>
+          ) : null}
 
           {app.features.length ? (
             <section className="mt-10" aria-labelledby="fonctions">
@@ -113,9 +124,9 @@ export default async function AppPage({ params }: { params: Params }) {
               <>
                 <p className="font-semibold">{app.billing === "addon" ? "En option sur l'abonnement Skydev" : "Incluse dans l'abonnement Skydev"}</p>
                 <p className="mt-1 text-sm text-muted">{app.billing === "addon" ? "Activez-la quand vous voulez depuis votre espace." : "Dès 29 € par mois, toutes les apps incluses, sans engagement."}</p>
-                <p className="mt-3 inline-flex rounded-md bg-success-soft px-2 py-0.5 text-xs font-semibold text-success">{TRIAL_TEXT}</p>
-                <Link href="/inscription" className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"><span className="inline-flex items-center gap-2 text-accent-foreground">Essayer gratuitement<ArrowRight className="size-4" aria-hidden="true" /></span></Link>
-                <Link href="/#tarifs" className="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-border-strong bg-surface px-5 text-sm font-semibold hover:bg-surface-muted"><span>Voir les tarifs</span></Link>
+                {!signedIn ? <p className="mt-3 inline-flex rounded-md bg-success-soft px-2 py-0.5 text-xs font-semibold text-success">{TRIAL_TEXT}</p> : null}
+                <Link href={signedIn ? app.href : "/inscription"} className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"><span className="inline-flex items-center gap-2 text-accent-foreground">{signedIn ? `Ouvrir ${app.name}` : "Essayer gratuitement"}<ArrowRight className="size-4" aria-hidden="true" /></span></Link>
+                <Link href={signedIn ? "/app/reglages/abonnement" : "/#tarifs"} className="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-border-strong bg-surface px-5 text-sm font-semibold hover:bg-surface-muted"><span>{signedIn ? "Mon abonnement" : "Voir les tarifs"}</span></Link>
               </>
             )}
           </div>
@@ -123,7 +134,7 @@ export default async function AppPage({ params }: { params: Params }) {
             <div className="rounded-2xl border border-border bg-surface p-5 text-sm">
               <p className="font-semibold">Il manque une fonction à {app.name} ?</p>
               <p className="mt-1 text-muted">Dites-nous laquelle : on l&apos;ajoute à votre espace, adaptée à votre façon de travailler.</p>
-              <Link href="/#contact" className="mt-3 inline-flex items-center gap-1 font-medium"><span className="text-accent hover:underline">Demander une fonction</span><ArrowRight className="size-4 text-accent" aria-hidden="true" /></Link>
+              <Link href={signedIn ? "/app/sur-mesure" : "/#contact"} className="mt-3 inline-flex items-center gap-1 font-medium"><span className="text-accent hover:underline">Demander une fonction</span><ArrowRight className="size-4 text-accent" aria-hidden="true" /></Link>
             </div>
           ) : null}
         </aside>

@@ -14,6 +14,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { customHostOf } from "@/lib/custom-host";
 import { SkydevLanding } from "@/components/skydev/landing";
+import { getSessionUser } from "@/server/auth/session";
 import { currentBrand } from "@/server/brand";
 import PublicBusinessPage from "@/app/(public)/[slug]/page";
 import { businessSlugForDomain } from "@/server/site-builder";
@@ -125,7 +126,7 @@ export default async function HomePage() {
     if (!slug) notFound();
     return PublicBusinessPage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
   }
-  if ((await currentBrand()).id === "skydev") return <SkydevLanding />;
+  if ((await currentBrand()).id === "skydev") return <SkydevLanding signedIn={!!(await getSessionUser())} />;
   const gate = await featureStatus("home");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const featured = await featuredBusinesses(6);
