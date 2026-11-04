@@ -5,7 +5,8 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, members } from "@/db/schema";
-import { APPS, NEEDS, TEAM_SIZES, hiddenAppsFor, type NeedId, type TeamSize } from "@/lib/apps";
+import { ALWAYS_SHOWN, APPS, NEEDS, TEAM_SIZES, hiddenAppsFor, type AppId, type NeedId, type TeamSize } from "@/lib/apps";
+import { recommendedApps } from "@/lib/app-store";
 import { requireContext } from "@/server/context";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
@@ -21,14 +22,18 @@ export async function saveAppSetup(input: { teamSize: string; needs: string[] })
   if (!ctx.member.isOwner && !ctx.can("settings.manage")) return { ok: false, error: "Seul le responsable peut choisir les apps de l'entreprise." };
   const v = setupSchema.safeParse(input);
   if (!v.success) return { ok: false, error: "Réponses invalides." };
-  const hiddenApps = hiddenAppsFor(v.data.teamSize, v.data.needs);
+  // Les apps du métier (« Plombier » → Interventions, Factures…) sont installées d'office ; le reste se prend dans l'App store.
+  const rec = new Set<AppId>(recommendedApps(ctx.business.businessType));
+  const hiddenApps = v.data.needs.length
+    ? hiddenAppsFor(v.data.teamSize, v.data.needs).filter((id) => !rec.has(id))
+    : APPS.map((a) => a.id).filter((id) => !rec.has(id) && !ALWAYS_SHOWN.includes(id) && !(id === "employes" && v.data.teamSize !== "solo"));
   const patch = { appsSetupAt: new Date().toISOString(), teamSize: v.data.teamSize, needs: v.data.needs, hiddenApps };
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify(patch)}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app", "layout");
   return { ok: true };
 }
 
-/** Mettre une app sur l'accueil, ou l'en retirer (elle reste accessible dans « Toutes les apps »). */
+/** Ajouter une app à l'entreprise (App store), ou la retirer : elle reste disponible dans l'App store. */
 export async function setAppPinned(appId: string, pinned: boolean): Promise<Result> {
   const ctx = await requireContext(undefined, { allowLocked: true });
   if (!ctx.member.isOwner && !ctx.can("settings.manage")) return { ok: false, error: "Seul le responsable peut changer les apps de l'accueil." };
@@ -39,7 +44,7 @@ export async function setAppPinned(appId: string, pinned: boolean): Promise<Resu
   else hidden.add(appId);
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ hiddenApps: [...hidden] })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app", "layout");
-  return { ok: true, message: pinned ? "App ajoutée à l'accueil." : "App retirée de l'accueil." };
+  return { ok: true, message: pinned ? "App ajoutée." : "App retirée." };
 }
 
 /** Épingler une app en favori (préférence personnelle) : elle passe en tête de l'accueil et dans les raccourcis. */

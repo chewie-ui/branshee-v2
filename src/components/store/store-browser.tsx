@@ -26,7 +26,7 @@ export function StoreBrowser({ items, order }: { items: Item[]; order: AppCatego
       <div className="relative mt-8 max-w-xl">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <label htmlFor="store-q" className="sr-only">Rechercher une app ou un métier</label>
-        <input id="store-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher : garagiste, caisse, facture, restaurant…" autoComplete="off" className="h-12 w-full rounded-xl border border-border-strong bg-surface pr-11 pl-10 text-base focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent/30" />
+        <input id="store-q" type="text" inputMode="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher : garagiste, caisse, facture, restaurant…" autoComplete="off" className="h-12 w-full rounded-xl border border-border-strong bg-surface pr-11 pl-10 text-base focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent/30" />
         {q ? <button type="button" onClick={() => setQ("")} className="absolute top-1/2 right-2 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label="Effacer la recherche"><X className="size-4" aria-hidden="true" /></button> : null}
       </div>
 

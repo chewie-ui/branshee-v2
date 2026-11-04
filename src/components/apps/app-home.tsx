@@ -7,11 +7,9 @@ import { ArrowRight, Minus, Pin, Plus, SlidersHorizontal, Wand2 } from "lucide-r
 import type { VisibleApp } from "@/server/apps";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName } from "@/lib/apps";
+import type { AppIcon as AppIconName } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 import { setAppPinned, setFavoriteApp } from "@/server/actions/apps";
-
-const ORDER: AppCategory[] = ["clients", "finance", "equipe", "operations", "marketing", "services"];
 
 function tagOf(app: VisibleApp, activeAddons: string[]) {
   if (app.status === "soon") return { text: "Bientôt", cls: "bg-warning-soft text-warning" };
@@ -22,7 +20,7 @@ function tagOf(app: VisibleApp, activeAddons: string[]) {
 
 /**
  * Accueil Skydev : les apps de l'entreprise en grandes icônes (comme un écran de téléphone),
- * puis le catalogue des autres apps, à ajouter en un clic. Le responsable peut ranger son accueil.
+ * puis la tuile « App store » pour en ajouter d'autres. Le responsable peut ranger son accueil.
  */
 export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: VisibleApp[]; activeAddons: string[]; canEdit: boolean; admin?: { href: string; label: string; hint: string; icon: AppIconName }[] }) {
   const router = useRouter();
@@ -105,6 +103,15 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
             </li>
           );
         })}
+        <li>
+          <Link href="/app/apps" className="group flex flex-col items-center gap-2.5 rounded-2xl p-2 text-center outline-offset-4">
+            <span className="relative flex size-16 items-center justify-center rounded-2xl border border-dashed border-accent/50 bg-accent-soft text-accent transition-[transform,border-color] duration-150 group-hover:-translate-y-0.5 group-hover:border-accent sm:size-20">
+              <Plus className="size-7 sm:size-8" aria-hidden="true" />
+            </span>
+            <span className="text-sm font-medium text-text">App store</span>
+            {others.length ? <span className="-mt-1.5 text-[11px] text-muted">{others.length} à découvrir</span> : null}
+          </Link>
+        </li>
       </ul>
 
       {canEdit ? (
@@ -121,53 +128,12 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent group-hover:bg-surface" aria-hidden="true"><Wand2 className="size-5" /></span>
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">Il vous manque quelque chose ?</span>
-          <span className="block text-sm text-muted">Une modif dans n&apos;importe quelle app, ou une app entièrement nouvelle pour votre métier : décrivez-la, on vous donne un prix fixe et on la construit.</span>
+          <span className="block text-sm text-muted">Une modif dans une app, ou une app créée de zéro pour votre métier : prix fixe, on la construit.</span>
         </span>
         <span className="hidden shrink-0 items-center gap-1 text-sm font-medium text-accent sm:inline-flex">Sur mesure<ArrowRight className="size-4" aria-hidden="true" /></span>
         <ArrowRight className="size-5 shrink-0 text-accent sm:hidden" aria-hidden="true" />
       </Link>
 
-      {others.length ? (
-        <section className="mt-12" aria-labelledby="more-apps">
-          <h2 id="more-apps" className="text-lg font-semibold tracking-tight">Ajouter des apps</h2>
-          <p className="mt-1 text-sm text-muted">Toutes sont incluses dans votre abonnement, sauf les options. Ajoutez-les à votre accueil quand vous en avez besoin.</p>
-          <div className="mt-6 space-y-8">
-            {ORDER.map((cat) => {
-              const list = others.filter((a) => a.category === cat);
-              if (!list.length) return null;
-              return (
-                <div key={cat}>
-                  <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted uppercase">{CATEGORY_LABEL[cat]}</h3>
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {list.map((app) => {
-                      const tag = tagOf(app, activeAddons);
-                      return (
-                        <li key={app.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3">
-                          <Link href={app.href} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-offset-2">
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={app.icon} /></span>
-                            <span className="min-w-0">
-                              <span className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{app.name}</span>
-                                {tag ? <span className={cn("rounded px-1.5 text-[11px] font-semibold", tag.cls)}>{tag.text}</span> : null}
-                              </span>
-                              <span className="block truncate text-sm text-muted">{app.tagline}</span>
-                            </span>
-                          </Link>
-                          {canEdit ? (
-                            <Button size="sm" variant="secondary" loading={busy === app.id} onClick={() => toggle(app.id, true)} aria-label={`Ajouter ${app.name} à l'accueil`} icon={<Plus className="size-4" aria-hidden="true" />}>
-                              Ajouter
-                            </Button>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

@@ -84,7 +84,7 @@ export function AppSetup({ firstName, initial }: { firstName: string; initial?: 
         {step === 1 ? (
           <Button variant="secondary" icon={<ArrowLeft className="size-4" aria-hidden="true" />} onClick={() => setStep(0)} disabled={pending}>Retour</Button>
         ) : null}
-        <p className="flex-1 text-sm text-muted">{step === 1 ? (needs.length ? `${needs.length} besoin${needs.length > 1 ? "s" : ""} choisi${needs.length > 1 ? "s" : ""}` : "Rien de coché : toutes les apps resteront disponibles.") : "Toutes les apps restent incluses dans votre abonnement."}</p>
+        <p className="flex-1 text-sm text-muted">{step === 1 ? (needs.length ? `${needs.length} besoin${needs.length > 1 ? "s" : ""} choisi${needs.length > 1 ? "s" : ""}` : "Rien de coché : on installe les apps de votre métier, le reste est dans l'App store.") : "Toutes les apps restent incluses dans votre abonnement."}</p>
         {step === 0 ? (
           <Button onClick={() => setStep(1)} disabled={!size}>Continuer <ArrowRight className="size-4" aria-hidden="true" /></Button>
         ) : (

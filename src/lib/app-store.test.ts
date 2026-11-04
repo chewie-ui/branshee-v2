@@ -26,3 +26,18 @@ test("descriptions courtes pour Google", () => {
   for (const m of METIERS) assert.ok(m.description.length <= 170, `${m.slug} : ${m.description.length}`);
   assert.ok(storeApps().length >= 20);
 });
+
+test("métier saisi → pack métier", async () => {
+  const { metierForType, recommendedApps } = await import("@/lib/app-store");
+  assert.equal(metierForType("Plombier")?.slug, "artisan");
+  assert.equal(metierForType("Garagiste")?.slug, "garage");
+  assert.equal(metierForType("Kinésithérapeute")?.slug, "kine");
+  assert.equal(metierForType("Barbier")?.slug, "coiffure-beaute");
+  assert.equal(metierForType("Restaurant italien")?.slug, "restaurant");
+  assert.equal(metierForType("Menuisier")?.slug, "artisan");
+  assert.equal(metierForType(""), null);
+  assert.equal(metierForType("Astronaute"), null);
+  assert.ok(recommendedApps("Garagiste").includes("vehicules"));
+  assert.ok(!recommendedApps("Kiné").includes("vehicules"));
+  assert.ok(recommendedApps(null).includes("factures"));
+});

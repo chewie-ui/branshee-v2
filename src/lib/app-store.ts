@@ -233,3 +233,28 @@ export const metiersOfApp = (id: AppId) => METIERS.filter((m) => m.apps.some((a)
 
 /** Nombre d'apps présentées (pour les titres) : le même chiffre que l'accueil (Sur mesure compris). */
 export const storeCount = () => storeApps().length;
+
+/** Mots du métier saisi à l'inscription → pack métier (le premier qui correspond). */
+const METIER_WORDS: [string, string[]][] = [
+  ["garage", ["garag", "carross", "mecani", "automobile", "auto ", "moto", "pneu", "concession"]],
+  ["kine", ["kine", "physio", "osteo", "infirm", "psy", "medec", "dentist", "logoped", "podolog", "dieteti", "sage-femme", "sante", "therapeut", "chiropr"]],
+  ["coiffure-beaute", ["coiff", "barb", "esthet", "beaute", "ongl", "manucur", "massage", "spa", "tatou", "maquill", "institut"]],
+  ["restaurant", ["restau", "bar", "cafe", "snack", "traiteur", "brasserie", "friterie", "pizz", "food", "hotel"]],
+  ["commerce", ["magasin", "boutique", "commer", "fleur", "librair", "boulang", "patiss", "bouch", "epicer", "pharma", "opticien", "vetement", "caviste"]],
+  ["artisan", ["plomb", "electric", "menuis", "chauffag", "peintr", "macon", "couvreur", "carrel", "jardin", "construct", "renov", "toitur", "charpent", "serrur", "vitrier", "parquet", "isolation", "artisan", "batiment"]],
+  ["independant-services", ["consult", "freelance", "avocat", "comptab", "agence", "graphi", "develop", "photograph", "coach", "formateur", "architect", "courtier", "assuran", "immobil", "notaire", "traduct"]],
+];
+
+/** Pack métier correspondant au métier saisi (« Plombier » → artisan), ou null. */
+export function metierForType(businessType: string | null | undefined): Metier | null {
+  const t = ` ${fold(businessType ?? "")} `;
+  if (!t.trim()) return null;
+  const hit = METIER_WORDS.find(([, words]) => words.some((w) => t.includes(w)));
+  return hit ? metierBySlug(hit[0]) : null;
+}
+
+/** Apps installées d'office pour un métier (sinon les essentiels d'un indépendant). */
+export function recommendedApps(businessType: string | null | undefined): AppId[] {
+  const m = metierForType(businessType);
+  return m ? m.apps.map((a) => a.id) : ["rdv", "factures", "site", "avis", "taches"];
+}
