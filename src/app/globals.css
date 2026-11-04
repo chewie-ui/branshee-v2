@@ -130,3 +130,6 @@ body {
 #bp-root .hover\:bg-accent-hover:hover {
   color: var(--accent-hover-foreground, var(--accent-foreground));
 }
+
+/* Fenêtre ou menu ouvert par-dessus la page (tiroir mobile, modale) : la page derrière ne défile plus. */
+html:has([aria-modal="true"]) { overflow: hidden; }

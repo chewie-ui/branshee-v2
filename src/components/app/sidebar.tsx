@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarHeart, Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
 import { openSwitcher } from "@/components/app/app-switcher";
 import { NAV_ICONS } from "@/components/app/nav-icons";
@@ -110,9 +110,10 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
   );
 }
 
-function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false, custom }: Props & { pathname: string }) {
+function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false, custom, drawer = false }: Props & { pathname: string; drawer?: boolean }) {
+  // Tiroir mobile : tout le contenu défile d'un bloc (sur un petit écran, le bas fixe ne laisserait presque rien au menu).
   return (
-    <div className="flex h-full flex-col">
+    <div className={drawer ? "flex min-h-full flex-col" : "flex h-full flex-col"}>
       <div className="space-y-3 p-3">
         <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label="Accueil">
           <Brand brand={brand} small />
@@ -127,7 +128,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
         ) : null}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-3" aria-label="Navigation principale">
+      <nav className={cn("flex-1 px-3 pb-3", !drawer && "overflow-y-auto")} aria-label="Navigation principale">
         {groups.map((group) => (
           <div key={group.label ?? "main"} className="mt-4 first:mt-1">
             {group.label ? <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-muted uppercase">{group.label}</p> : null}
@@ -244,6 +245,13 @@ export function Sidebar(props: Props) {
   const [openedOn, setOpenedOn] = useState<string | null>(null);
   const open = openedOn === pathname;
   const setOpen = (value: boolean) => setOpenedOn(value ? pathname : null);
+  // Échap ferme le tiroir.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpenedOn(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <>
@@ -260,11 +268,11 @@ export function Sidebar(props: Props) {
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <button type="button" className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-label="Fermer le menu" />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-surface shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto overscroll-contain bg-surface shadow-xl">
             <button type="button" onClick={() => setOpen(false)} className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label="Fermer le menu">
               <X className="size-5" aria-hidden="true" />
             </button>
-            <SidebarContent {...props} pathname={pathname} />
+            <SidebarContent {...props} pathname={pathname} drawer />
           </div>
         </div>
       ) : null}
