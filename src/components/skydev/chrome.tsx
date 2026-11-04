@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Menu } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { LEGAL, legalAddress } from "@/lib/legal";
 import "./skydev.css";
@@ -32,10 +33,21 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
               <>
                 {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
                 <a className="nav-login nav-demo" href="/demo">Voir la démo</a>
-                <Link className="nav-login" href="/connexion">Se connecter</Link>
+                <Link className="nav-login nav-signin" href="/connexion">Se connecter</Link>
                 <Link className="btn btn-primary btn-sm" href="/inscription"><span className="lg-only">Créer mon compte</span><span className="sm-only">S&apos;inscrire</span></Link>
               </>
             )}
+            <details className="mnav">
+              <summary aria-label="Menu"><Menu className="ico" aria-hidden="true" /></summary>
+              <nav className="mnav-panel" aria-label="Navigation principale (mobile)">
+                <Link href="/apps">Apps</Link>
+                <Link href="/sur-mesure">Sur mesure</Link>
+                <Link href="/#realisations">Réalisations</Link>
+                <Link href="/#tarifs">Tarifs</Link>
+                <Link href="/annuaire">Trouver un pro</Link>
+                {!signedIn ? <Link href="/connexion">Se connecter</Link> : null}
+              </nav>
+            </details>
           </div>
         </div>
       </header>
