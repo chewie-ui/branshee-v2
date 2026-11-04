@@ -191,7 +191,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: businessJsonLd({
-              url: `${(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")}/${b.slug}`,
+              url: `${(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")}${await publicPagePath(b.slug)}`,
               name: b.name,
               businessType: b.businessType,
               description: b.description,

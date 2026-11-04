@@ -77,7 +77,7 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
   const next = todayAppointments.find((a) => a.endsAt > now);
   const firstName = ctx.user.name.split(" ")[0];
   const hour = Number(formatTime(now, tz).slice(0, 2));
-  const bookingUrl = `${process.env.APP_URL ?? "https://branshee.com"}/${ctx.business.slug}`;
+  const bookingUrl = `${(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")}${appPagePath(ctx.business.slug)}`;
   const expiredCount = pending.filter((p) => p.startsAt < now).length;
 
   const delta = (cur: number, prev: number) => (cur === prev ? null : { up: cur > prev, text: `${cur > prev ? "+" : "−"}${Math.abs(cur - prev)}` });

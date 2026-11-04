@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Hammer, Plus, Search, Sparkles, Wand2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Hammer, Plus, Search, Sparkles, Wand2, X } from "lucide-react";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName, type AppId, type SkyApp } from "@/lib/apps";
@@ -84,8 +84,14 @@ export function AppStore({ items, canEdit, activeAddons, metiers, mine }: { item
             <ButtonLink href={a.href} size="sm" variant="secondary">Voir</ButtonLink>
           )}
           {a.installed ? <span className="inline-flex items-center gap-1 text-xs font-medium text-success"><Check className="size-3.5" aria-hidden="true" />Installée</span> : null}
-          {a.billing === "included" ? <Link href={`/app/sur-mesure?app=${a.id}`} className="ml-auto text-xs font-medium text-muted hover:text-accent">Demander une modif</Link> : null}
         </div>
+        {a.billing === "included" ? (
+          <Link href={`/app/sur-mesure?app=${a.id}`} className="group/p -mx-4 -mb-4 mt-4 flex items-center gap-2 rounded-b-2xl border-t border-border px-4 py-3 text-sm font-medium text-accent transition-colors duration-150 hover:bg-accent-soft">
+            <Wand2 className="size-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">Personnaliser {a.name} à votre façon</span>
+            <ChevronRight className="size-4 shrink-0 transition-transform duration-150 group-hover/p:translate-x-0.5" aria-hidden="true" />
+          </Link>
+        ) : null}
       </li>
     );
   };
@@ -127,7 +133,7 @@ export function AppStore({ items, canEdit, activeAddons, metiers, mine }: { item
         </Link>
         <Link href="/app/sur-mesure" className="group flex items-center gap-4 rounded-2xl border border-dashed border-border-strong bg-surface p-4 transition-colors duration-150 hover:border-accent hover:bg-accent-soft">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent group-hover:bg-surface"><Wand2 className="size-5" aria-hidden="true" /></span>
-          <span><span className="block font-semibold">Modifier une app</span><span className="block text-sm text-muted">Une fonction en plus, adaptée à votre façon de travailler.</span></span>
+          <span><span className="block font-semibold">Personnaliser une app</span><span className="block text-sm text-muted">On l&apos;adapte à votre façon de travailler, rien que pour vous.</span></span>
         </Link>
       </div>
 
