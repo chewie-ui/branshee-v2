@@ -5,6 +5,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, Eye, FileText, Gift, Globe, Home, LayoutTemplate, Mail, MapPin, Phone, ShieldCheck, Smartphone, Store, UsersRound } from "lucide-react";
 import { APPS, CATEGORY_LABEL, appById, type AppCategory, type AppId } from "@/lib/apps";
+import { storeHref } from "@/lib/app-store";
 import { AppIcon } from "@/components/apps/app-icon";
 import { sendContact, type ContactState } from "@/server/actions/contact";
 
@@ -95,7 +96,8 @@ export function SkydevLanding() {
           <div className="hero-cta">
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
             <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
-            <Link className="btn btn-ghost btn-lg" href="/inscription">Créer mon compte gratuit</Link>
+            <Link className="btn btn-ghost btn-lg" href="/inscription">Essayer 1 mois gratuit</Link>
+            <p className="hero-note"><b>1 mois offert</b>, sans carte bancaire et sans engagement.</p>
             <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
             <p className="hero-note">Vous cherchez un professionnel ? <Link href="/annuaire" className="hero-find">Trouvez-le dans l&apos;annuaire</Link>.</p>
           </div>
@@ -111,7 +113,7 @@ export function SkydevLanding() {
                   </button>
                 </li>
               ))}
-              <li><a className="chip chip-more" href="#apps">+ {CATALOG.length - PICK.length} autres apps</a></li>
+              <li><Link className="chip chip-more" href="/apps">+ {CATALOG.length - PICK.length} autres apps</Link></li>
             </ul>
 
             <div className="app-win" aria-label="Aperçu de votre espace Skydev">
@@ -210,8 +212,10 @@ export function SkydevLanding() {
                   <ul>
                     {apps.map((a) => (
                       <li key={a.id}>
-                        <span className="cat-ic"><AppIcon icon={a.icon} className="ico" /></span>
-                        <span className="cat-t"><b>{a.name}{a.billing === "addon" ? <em className="badge b-acc">Option</em> : a.billing === "quote" ? <em className="badge b-acc">Sur devis</em> : null}</b><small>{a.tagline}</small></span>
+                        <Link className="cat-a" href={a.billing === "quote" ? "/sur-mesure" : storeHref(a.id)}>
+                          <span className="cat-ic"><AppIcon icon={a.icon} className="ico" /></span>
+                          <span className="cat-t"><b>{a.name}{a.billing === "addon" ? <em className="badge b-acc">Option</em> : a.billing === "quote" ? <em className="badge b-acc">Sur devis</em> : null}</b><small>{a.tagline}</small></span>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -219,6 +223,7 @@ export function SkydevLanding() {
               );
             })}
           </div>
+          <div className="cat-more"><Link className="btn btn-ghost btn-lg" href="/apps">Voir toutes les apps, par métier</Link></div>
         </div>
       </section>
 

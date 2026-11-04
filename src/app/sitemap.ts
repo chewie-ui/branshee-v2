@@ -1,3 +1,4 @@
+import { METIERS, storeApps } from "@/lib/app-store";
 import { appPagePath } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -52,6 +53,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           { url: `${base}/sur-mesure`, changeFrequency: "monthly", priority: 0.9 },
           ...CUSTOM_SERVICES.map((s) => ({ url: `${base}/sur-mesure/${s.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
           ...SERVICE_CITIES.map((c) => ({ url: `${base}/sur-mesure/creation-site-internet/${c.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
+          // App store : catalogue, une page par app, une page par métier.
+          { url: `${base}/apps`, changeFrequency: "weekly", priority: 0.9 },
+          ...storeApps().filter(({ app }) => app.billing !== "quote").map(({ store }) => ({ url: `${base}/apps/${store.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
+          ...METIERS.map((m) => ({ url: `${base}/logiciel/${m.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
         ]
       : [];
   // Vitrines véhicules (garages) : la vitrine et chaque véhicule en vente.

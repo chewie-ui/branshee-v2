@@ -250,7 +250,11 @@
 .sky .catalog { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .sky .cat h3 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; }
 .sky .cat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.sky .cat li { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.sky .cat li { display: flex; }
+.sky .cat-a { flex: 1; display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; transition: border-color .15s; }
+.sky .cat-a:hover { border-color: var(--border-strong); }
+.sky .cat-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sky .cat-more { margin-top: 32px; display: flex; justify-content: center; }
 .sky .cat-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
 .sky .cat-ic .ico { width: 18px; height: 18px; }
 .sky .cat-t { min-width: 0; display: flex; flex-direction: column; }

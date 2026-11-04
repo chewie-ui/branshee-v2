@@ -16,7 +16,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
             skydev
           </Link>
           <nav className="navlinks" aria-label="Navigation principale">
-            <Link href="/#apps">Apps</Link>
+            <Link href="/apps">Apps</Link>
             <Link href="/sur-mesure">Sur mesure</Link>
             <Link href="/#realisations">Réalisations</Link>
             <Link href="/#tarifs">Tarifs</Link>
@@ -49,7 +49,7 @@ export function SkydevChrome({ signedIn, children }: { signedIn: boolean; childr
           </div>
           <div>
             <h4>Apps</h4>
-            <ul><li><Link href="/#apps">Site web</Link></li><li><Link href="/#apps">RDV</Link></li><li><Link href="/#apps">Factures</Link></li><li><Link href="/#apps">Boutique</Link></li><li><Link href="/#apps">Tél IA</Link></li></ul>
+            <ul><li><Link href="/apps">Toutes les apps</Link></li><li><Link href="/apps/rendez-vous">Rendez-vous en ligne</Link></li><li><Link href="/apps/factures">Devis et factures</Link></li><li><Link href="/apps/caisse">Caisse</Link></li><li><Link href="/apps/site-web">Site web</Link></li><li><Link href="/logiciel/garage">Logiciel pour garage</Link></li><li><Link href="/logiciel/kine">Logiciel pour kiné</Link></li></ul>
           </div>
           <div>
             <h4>Skydev</h4>
