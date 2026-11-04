@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { AppTile, CustomTile } from "@/components/store/store-parts";
 import { CATEGORY_LABEL, type AppCategory, type SkyApp } from "@/lib/apps";
-import { fold, type StoreApp } from "@/lib/app-store";
+import { fold, searchApps, type StoreApp } from "@/lib/app-store";
 
 type Item = { app: SkyApp; store: StoreApp; metiers: string[] };
 
@@ -14,11 +14,8 @@ export function StoreBrowser({ items, order }: { items: Item[]; order: AppCatego
   const query = fold(q.trim());
   const results = useMemo(() => {
     if (!query) return [];
-    const words = query.split(/\s+/);
-    return items.filter(({ app, store, metiers }) => {
-      const hay = fold([app.name, app.tagline, store.titre, ...store.tags, ...metiers].join(" "));
-      return words.every((w) => hay.includes(w));
-    });
+    const flat = items.map((x) => ({ id: x.app.id, name: x.app.name, tagline: x.app.tagline, tags: x.store.tags, extra: [x.store.titre, ...x.metiers].join(" "), x }));
+    return searchApps(flat, query).map((f) => f.x);
   }, [items, query]);
 
   return (

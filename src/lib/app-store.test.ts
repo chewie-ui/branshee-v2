@@ -41,3 +41,18 @@ test("métier saisi → pack métier", async () => {
   assert.ok(!recommendedApps("Kiné").includes("vehicules"));
   assert.ok(recommendedApps(null).includes("factures"));
 });
+
+test("recherche tolérante : les mots des gens trouvent la bonne app", async () => {
+  const { searchApps, STORE_APPS } = await import("@/lib/app-store");
+  const { appById } = await import("@/lib/apps");
+  const items = STORE_APPS.map((s) => ({ id: s.id, name: appById(s.id).name, tagline: appById(s.id).tagline, tags: s.tags }));
+  const first = (q: string) => searchApps(items, q)[0]?.id;
+  assert.equal(first("vendre voiture"), "vehicules");
+  assert.equal(first("vendre des voitures d'occasion"), "vehicules");
+  assert.equal(first("faire signer mes devis"), "signature");
+  assert.equal(first("horaires de l'équipe"), "horaires");
+  assert.equal(first("encaisser au comptoir"), "caisse");
+  assert.equal(first("garagiste")?.length ? true : false, true);
+  assert.deepEqual(searchApps(items, "de la"), []);
+  assert.deepEqual(searchApps(items, "zzzz"), []);
+});

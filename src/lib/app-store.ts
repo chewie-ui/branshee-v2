@@ -258,3 +258,60 @@ export function recommendedApps(businessType: string | null | undefined): AppId[
   const m = metierForType(businessType);
   return m ? m.apps.map((a) => a.id) : ["rdv", "factures", "site", "avis", "taches"];
 }
+
+/**
+ * Mots que les gens tapent pour chaque app (synonymes, verbes, objets), en plus du nom, de l'accroche et des métiers.
+ * « vendre voiture » → Véhicules, « payer » → Caisse, « horaire » → Planning.
+ */
+const KEYWORDS: Partial<Record<AppId, string>> = {
+  rdv: "rendez-vous agenda reserver reservation calendrier creneau seance consultation rappel absence acompte prendre",
+  clients: "client patient fichier crm contact carnet adresse historique fiche importer excel",
+  site: "site internet web page vitrine domaine google referencement en ligne",
+  factures: "facture devis facturer note de credit tva paiement payer qr relance impaye encaisser",
+  employes: "employe equipe salarie collaborateur acces droit grade utilisateur personnel",
+  boutique: "boutique en ligne e-commerce vendre vente produit commande click collect livraison panier shop",
+  vehicules: "vehicule voiture auto automobile occasion vendre vente moto camionnette utilitaire annonce garage concession car-pass kilometrage",
+  "tel-ia": "telephone appel repondeur ia intelligence artificielle standard secretaire decrocher manque",
+  horaires: "planning horaire semaine shift service tournee roulement",
+  conges: "conge vacances absence maladie recuperation solde jour ferie",
+  commandes: "commande table qr menu carte restaurant cuisine serveur allergene",
+  paie: "paie salaire fiche secretariat social prestation cheque-repas prime kilometre",
+  ventes: "vente prospect prospection appel pipeline piste commercial relance chiffre affaires signer",
+  projets: "projet chantier tache kanban temps passe suivi etape",
+  interventions: "intervention technicien depannage reparation terrain bon signature photo chantier entretien",
+  stock: "stock inventaire produit piece quantite code-barre reception rupture entrepot",
+  caisse: "caisse encaisser payer paiement ticket comptoir vente especes carte terminal z cloture",
+  depenses: "depense achat ticket frais note de frais carburant fournisseur recu",
+  compta: "comptabilite compta tva tresorerie bilan comptable declaration intervat",
+  marketing: "email emailing newsletter campagne promo promotion mailing relancer",
+  avis: "avis google note etoile review reputation commentaire",
+  fidelite: "fidelite carte tampon point recompense cadeau bon cadeau",
+  signature: "signature signer electronique devis contrat accord",
+  documents: "document fichier dossier partage pdf stockage cloud drive",
+  taches: "tache todo to-do liste rappel oubli checklist",
+  messagerie: "message messagerie chat discussion whatsapp equipe",
+};
+
+const STOP = new Set(["de", "du", "des", "la", "le", "les", "un", "une", "et", "ou", "a", "au", "aux", "en", "pour", "par", "mes", "mon", "ma", "je", "j", "l", "d", "avec", "sur", "dans", "qui", "que", "faire", "veux", "voudrais", "besoin", "app", "application", "logiciel", "outil"]);
+
+/** Racine d'un mot tapé : « vendre » → « vend », « voitures » → « voitu » (tolère pluriels et conjugaisons). */
+const stem = (w: string) => (w.length <= 4 ? w : w.slice(0, Math.max(4, w.length - 2)));
+
+/**
+ * Recherche tolérante : chaque mot tapé qui correspond (nom, accroche, métiers, synonymes) rapporte des points ;
+ * les apps sont rangées de la plus pertinente à la moins pertinente. Pas besoin que tous les mots correspondent.
+ */
+export function searchApps<T extends { id: AppId; name: string; tagline: string; tags: string[]; extra?: string }>(items: T[], query: string): T[] {
+  const words = fold(query).split(/[^a-z0-9-]+/).filter((w) => w.length >= 2 && !STOP.has(w)).map(stem);
+  if (!words.length) return [];
+  return items
+    .map((a) => {
+      const name = fold(a.name);
+      const hay = fold([a.tagline, ...a.tags, KEYWORDS[a.id] ?? "", a.extra ?? ""].join(" "));
+      const score = words.reduce((s, w) => s + (name.includes(w) ? 3 : 0) + (hay.includes(w) ? 1 : 0), 0);
+      return { a, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((x, y) => y.score - x.score)
+    .map((x) => x.a);
+}

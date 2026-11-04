@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Hammer, Plus, Search, Sparkles, Wand2, X } from "lucide-react";
 import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName, type SkyApp } from "@/lib/apps";
-import { fold } from "@/lib/app-store";
+import { CATEGORY_LABEL, type AppCategory, type AppIcon as AppIconName, type AppId, type SkyApp } from "@/lib/apps";
+import { fold, searchApps } from "@/lib/app-store";
 import { cn } from "@/lib/cn";
 import { setAppPinned } from "@/server/actions/apps";
 
@@ -26,8 +26,8 @@ export function AppStore({ items, canEdit, activeAddons, metiers, mine }: { item
   const query = fold(q.trim());
 
   const shown = useMemo(() => {
-    const words = query ? query.split(/\s+/) : [];
-    return items.filter((a) => (!metier || a.metiers.includes(metier)) && words.every((w) => fold([a.name, a.tagline, ...a.tags].join(" ")).includes(w)));
+    const pool = items.filter((a) => !metier || a.metiers.includes(metier));
+    return query ? searchApps(pool as (Item & { id: AppId })[], query) : pool;
   }, [items, query, metier]);
   const filtering = !!query || !!metier;
   const installed = items.filter((a) => a.installed).length;
