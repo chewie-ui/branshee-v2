@@ -21,7 +21,7 @@ export function ContactWidget({ slug, businessName, color }: { slug: string; bus
       setSent(r.message ?? "Message envoyé, merci !");
     });
   };
-  const input = "h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-[15px] text-zinc-900 outline-none focus:border-[var(--c)] focus:ring-2 focus:ring-[var(--c)]/25";
+  const input = "h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-[var(--c)] focus:ring-2 focus:ring-[var(--c)]/25";
   if (sent)
     return (
       <div className="flex flex-col items-center gap-3 py-10 text-center" role="status">

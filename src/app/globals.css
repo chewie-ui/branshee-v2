@@ -133,3 +133,25 @@ body {
 
 /* Fenêtre ou menu ouvert par-dessus la page (tiroir mobile, modale) : la page derrière ne défile plus. */
 html:has([aria-modal="true"]) { overflow: hidden; }
+
+/*
+ * Champs de date et d'heure sur iPhone (Safari) : sans ça, ils gardent une largeur et une hauteur à eux,
+ * débordent de leur colonne et centrent le texte.
+ */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+input::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input::-webkit-datetime-edit { padding: 0; }
+
+/* Sur téléphone, un champ en dessous de 16 px fait zoomer la page à la saisie (iPhone) : 16 px minimum. */
+@media (max-width: 639px) {
+  input.text-sm, input.text-xs, select.text-sm, select.text-xs, textarea.text-sm, textarea.text-xs { font-size: 16px; }
+}

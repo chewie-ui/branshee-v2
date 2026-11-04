@@ -23,7 +23,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           router.replace(url.pathname + url.search + url.hash);
           router.refresh();
         }}
-        className="cursor-pointer rounded-md bg-transparent py-1 pr-1 text-sm hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
+        className="min-h-10 cursor-pointer rounded-md bg-transparent py-1 pr-1 text-sm hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
       >
         {LOCALES.map((l) => <option key={l} value={l}>{LOCALE_NAMES[l]}</option>)}
       </select>
