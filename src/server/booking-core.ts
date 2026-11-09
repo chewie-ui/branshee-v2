@@ -14,6 +14,7 @@ import { notifyAutoConfirmLimit, notifyBookingCreated } from "@/server/notificat
 import { checkIntake, getPublicBusiness } from "@/server/public";
 import { policyAmounts } from "@/lib/cancellation";
 import { policyText } from "@/lib/cancellation-text";
+import { paymentLockKey } from "@/lib/booking-payment";
 import { getSessionUser } from "@/server/auth/session";
 
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -140,6 +141,18 @@ export async function bookPublic(input: BookingInput, opts: { ip: string; source
 
   try {
     const created = await db.transaction(async (tx) => {
+      // Même paiement envoyé deux fois en même temps : la vérification plus haut ne suffit pas (les deux la passent).
+      // Sous verrou, on revérifie : la seconde réservation est refusée et le paiement n'est PAS remboursé
+      // (il appartient à la première).
+      const lockKey = paymentLockKey(payment);
+      if (lockKey) {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
+        const [dup] = await tx
+          .select({ id: appointmentPayments.appointmentId })
+          .from(appointmentPayments)
+          .where(payment!.stripePaymentIntentId ? eq(appointmentPayments.stripePaymentIntentId, payment!.stripePaymentIntentId) : eq(appointmentPayments.stripeSetupIntentId, payment!.stripeSetupIntentId!));
+        if (dup) throw new PaymentReusedError();
+      }
       const [existing] = await tx.select().from(customers).where(and(eq(customers.businessId, data.business.id), sql`lower(${customers.email}) = ${v.email}`));
       if (existing?.blockedAt) throw new BlockedError();
       let customerId = existing?.id;
@@ -182,6 +195,7 @@ export async function bookPublic(input: BookingInput, opts: { ip: string; source
     after(() => notifyBookingCreated(created.id, "online"));
     return { ok: true, token: created.token };
   } catch (error) {
+    if (error instanceof PaymentReusedError) return { ok: false, error: "Ce paiement a déjà servi pour une réservation." };
     await refundIfPaid();
     if (error instanceof BlockedError) return { ok: false, error: "La réservation en ligne n'est pas disponible. Contactez directement l'établissement." };
     const e = error as { code?: string; cause?: { code?: string } };
@@ -191,4 +205,5 @@ export async function bookPublic(input: BookingInput, opts: { ip: string; source
 }
 
 class BlockedError extends Error {}
+class PaymentReusedError extends Error {}
 
