@@ -291,6 +291,7 @@
 @media (max-width: 520px) {
 .sky .hero-cta .btn { width: 100%; } }
 @media (max-width: 639px) {
-.sky .nav-demo { display: none; } }
+.sky .nav-demo, .sky .nav-lang { display: none; } }
 .sky .find-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 28px; }
 .sky .hero-find { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.sky .nav-lang { font-weight: 600; color: var(--text-muted); }

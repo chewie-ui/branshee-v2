@@ -1,12 +1,14 @@
 "use client";
 
 import { useEmbedded } from "@/lib/use-embedded";
+import type { SiteLocale } from "@/lib/site-locale";
 
 /**
  * « Continuer avec Google » — affiché seulement si Google est configuré sur le serveur,
  * et jamais dans un calendrier intégré sur le site d'un pro (Google refuse de s'ouvrir dans une iframe).
  */
-export function GoogleButton({ suite, label = "Continuer avec Google", refCode }: { suite?: string; label?: string; refCode?: string }) {
+export function GoogleButton({ suite, label, refCode, locale = "fr" }: { suite?: string; label?: string; refCode?: string; locale?: SiteLocale }) {
+  label ??= locale === "en" ? "Continue with Google" : "Continuer avec Google";
   const embedded = useEmbedded();
   if (embedded) return null;
   return (
@@ -20,7 +22,7 @@ export function GoogleButton({ suite, label = "Continuer avec Google", refCode }
         </svg>
         {label}
       </a>
-      <p className="my-4 flex items-center gap-3 text-xs text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">ou</p>
+      <p className="my-4 flex items-center gap-3 text-xs text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">{locale === "en" ? "or" : "ou"}</p>
     </>
   );
 }

@@ -4,10 +4,13 @@ import { ServicePage } from "@/components/custom/service-page";
 import { customService, serviceCity } from "@/lib/custom-services";
 import { currentBrand } from "@/server/brand";
 import { siteUrl } from "@/server/site";
+import { siteLocale } from "@/server/site-locale";
 
 type P = Promise<{ service: string; ville: string }>;
 
 async function resolve(params: P) {
+  // Pages par ville : seulement en français (clientèle locale).
+  if ((await siteLocale()) === "en") return null;
   const { service, ville } = await params;
   const s = customService(service);
   const v = serviceCity(ville);

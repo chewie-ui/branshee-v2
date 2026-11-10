@@ -12,8 +12,21 @@ const nextConfig: NextConfig = {
   // (clickjacking). Les pages publiques de réservation, elles, sont faites pour être intégrées.
   // Skydev : page publique d'une entreprise sous /pro/<adresse>, servie par la page /<adresse> (réécriture interne).
   // Pas dans le proxy : derrière nginx, une réécriture du proxy vise https://localhost et part en requête externe.
+  // Site Skydev en anglais : /en/… sert les mêmes pages (la langue se lit dans l'adresse demandée, voir server/site-locale).
   async rewrites() {
-    return [{ source: "/pro/:slug([a-z0-9-]{1,80})", destination: "/:slug" }];
+    return [
+      { source: "/pro/:slug([a-z0-9-]{1,80})", destination: "/:slug" },
+      { source: "/en", destination: "/" },
+      { source: "/en/custom", destination: "/sur-mesure" },
+      { source: "/en/custom/:path*", destination: "/sur-mesure/:path*" },
+      { source: "/en/software/:path*", destination: "/logiciel/:path*" },
+      { source: "/en/signup", destination: "/inscription" },
+      { source: "/en/login", destination: "/connexion" },
+      { source: "/en/forgot-password", destination: "/mot-de-passe-oublie" },
+      { source: "/en/welcome", destination: "/bienvenue" },
+      { source: "/en/verify-email", destination: "/verifier-email" },
+      { source: "/en/:path*", destination: "/:path*" },
+    ];
   },
   // Anciennes adresses de Branshee (liens partagés, favoris, Google) → nouvelles pages.
   async redirects() {

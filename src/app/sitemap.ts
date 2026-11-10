@@ -10,6 +10,8 @@ import { slugify } from "@/lib/slug";
 import { declaredTypesAndCities, listArticles, siteUrl } from "@/server/site";
 import { CUSTOM_SERVICES, SERVICE_CITIES } from "@/lib/custom-services";
 import { currentBrand } from "@/server/brand";
+import { customServicesL } from "@/lib/custom-services-i18n";
+import { metierHrefL, storeHrefL } from "@/lib/app-store-i18n";
 import { sitemapVehicles } from "@/server/vehicles";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +59,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           { url: `${base}/apps`, changeFrequency: "weekly", priority: 0.9 },
           ...storeApps().filter(({ app }) => app.billing !== "quote").map(({ store }) => ({ url: `${base}/apps/${store.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
           ...METIERS.map((m) => ({ url: `${base}/logiciel/${m.slug}`, changeFrequency: "monthly" as const, priority: 0.8 })),
+          // Site anglais (/en) : accueil, sur mesure, app store, métiers.
+          { url: `${base}/en`, changeFrequency: "weekly", priority: 0.9 },
+          { url: `${base}/en/custom`, changeFrequency: "monthly", priority: 0.8 },
+          ...customServicesL("en").map((s) => ({ url: `${base}/en/custom/${s.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
+          { url: `${base}/en/apps`, changeFrequency: "weekly", priority: 0.8 },
+          ...storeApps().filter(({ app }) => app.billing !== "quote").map(({ app }) => ({ url: `${base}${storeHrefL(app.id, "en")}`, changeFrequency: "monthly" as const, priority: 0.7 })),
+          ...METIERS.map((m) => ({ url: `${base}${metierHrefL(m, "en")}`, changeFrequency: "monthly" as const, priority: 0.7 })),
         ]
       : [];
   // Vitrines véhicules (garages) : la vitrine et chaque véhicule en vente.

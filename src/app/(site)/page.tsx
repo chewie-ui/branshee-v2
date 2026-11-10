@@ -14,6 +14,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { customHostOf } from "@/lib/custom-host";
 import { SkydevLanding } from "@/components/skydev/landing";
+import { SkydevLandingEn } from "@/components/skydev/landing-en";
+import { siteLocale } from "@/server/site-locale";
 import { getSessionUser } from "@/server/auth/session";
 import { currentBrand } from "@/server/brand";
 import PublicBusinessPage from "@/app/(public)/[slug]/page";
@@ -31,8 +33,16 @@ const SKYDEV_META: Metadata = {
   openGraph: { siteName: "Skydev", title: "Skydev — Tout le logiciel de votre entreprise" },
 };
 
+const SKYDEV_META_EN: Metadata = {
+  title: { absolute: "Skydev — Custom websites, web apps and SaaS · Business software" },
+  description: `Custom websites from €690, web apps, SaaS, mobile apps and automation, plus ready-made business apps from €29/month. Based in Belgium, working with clients worldwide.`,
+  alternates: { canonical: "/en", languages: { fr: "/", en: "/en" } },
+  openGraph: { siteName: "Skydev", title: "Skydev — Websites and software, built for your business", locale: "en" },
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  return (await currentBrand()).id === "skydev" ? SKYDEV_META : BRANSHEE_META;
+  if ((await currentBrand()).id !== "skydev") return BRANSHEE_META;
+  return (await siteLocale()) === "en" ? SKYDEV_META_EN : { ...SKYDEV_META, alternates: { canonical: "/", languages: { fr: "/", en: "/en" } } };
 }
 
 const COMPARE = [
@@ -126,7 +136,10 @@ export default async function HomePage() {
     if (!slug) notFound();
     return PublicBusinessPage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
   }
-  if ((await currentBrand()).id === "skydev") return <SkydevLanding signedIn={!!(await getSessionUser())} />;
+  if ((await currentBrand()).id === "skydev") {
+    const signedIn = !!(await getSessionUser());
+    return (await siteLocale()) === "en" ? <SkydevLandingEn signedIn={signedIn} /> : <SkydevLanding signedIn={signedIn} />;
+  }
   const gate = await featureStatus("home");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const featured = await featuredBusinesses(6);
