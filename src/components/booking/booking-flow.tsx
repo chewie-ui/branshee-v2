@@ -23,7 +23,7 @@ import type { Locale } from "@/i18n/config";
 
 type Step = "visit" | "service" | "member" | "time" | "session" | "details";
 export type BookingResume = { serviceId: string; memberId: string | null; day: string | null; time: string | null; visit: "new" | "existing" | null; intake: { questionId: string; optionId: string }[] };
-type Props = { data: PublicBusiness; today: string; resume?: BookingResume | null; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
+type Props = { data: PublicBusiness; /** Aperçu de l'éditeur d'apparence : prestation d'exemple, créneaux fictifs, rien n'est réservé. */ demo?: boolean; today: string; resume?: BookingResume | null; viewer?: { firstName: string; lastName: string; email: string; phone: string } | null };
 
 /** Formats de date dans la langue de la page. */
 function fmts(locale: Locale) {
@@ -50,7 +50,7 @@ const sessionParts = (iso: string, timeZone: string) => {
   return { day, time };
 };
 
-export function BookingFlow({ data, today, resume: resumeProp = null, viewer = null }: Props) {
+export function BookingFlow({ data, demo = false, today, resume: resumeProp = null, viewer = null }: Props) {
   // Reprise après connexion : seulement si la prestation existe toujours.
   const resumeSvc = resumeProp ? data.services.find((s) => s.id === resumeProp.serviceId) : null;
   const resume = resumeSvc ? resumeProp : null;
@@ -65,7 +65,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   const { categories, team, questions, settings } = data;
   const fv = settings?.firstVisitQuestion;
   const [visit, setVisit] = useState<"new" | "existing" | null>(resume?.visit ?? null);
-  const [step, setStep] = useState<Step>(resume ? (resumeSvc?.kind === "group" ? "session" : resumeAt ? "details" : "time") : fv?.enabled ? "visit" : "service");
+  const [step, setStep] = useState<Step>(demo ? "time" : resume ? (resumeSvc?.kind === "group" ? "session" : resumeAt ? "details" : "time") : fv?.enabled ? "visit" : "service");
   // Prestations proposées selon la réponse à « première visite ? ».
   const byAudience = useMemo(() => (visit ? data.services.filter((s) => s.audience === "all" || s.audience === visit) : data.services), [data.services, visit]);
   // Questionnaire d'orientation : réponses dans l'ordre où elles ont été données (pour pouvoir revenir en arrière).
@@ -77,7 +77,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
   }, [byAudience, data.intake, intakeAnswers]);
   // Prochaine question utile : non répondue, et dont la réponse change encore les prestations proposées.
   const nextQuestion = data.intake.find((q) => !intakeAnswers[q.id] && questionMatters(q, services.map((s) => s.id))) ?? null;
-  const [serviceId, setServiceId] = useState<string | null>(resume?.serviceId ?? null);
+  const [serviceId, setServiceId] = useState<string | null>(demo ? (data.services[0]?.id ?? null) : (resume?.serviceId ?? null));
   const [memberId, setMemberId] = useState<string | null>(resume?.memberId ?? null);
   const [weekStart, setWeekStart] = useState(resumeAt ? resume!.day! : today);
   const [days, setDays] = useState<PublicDay[] | null>(null);
@@ -115,7 +115,16 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     if (step !== "time" || !serviceId) return;
     let cancelled = false;
     startSlots(async () => {
-      const res = await getPublicSlots(data.business.slug, serviceId, memberId, weekStart, 7);
+      // Aperçu : semaine fictive (fermé le week-end, journées plus ou moins remplies).
+      const res: PublicDay[] = demo
+        ? Array.from({ length: 7 }, (_, i) => {
+            const date = addDays(weekStart, i);
+            const wd = utc(date).getUTCDay();
+            if (wd === 0 || wd === 6) return { date, slots: [], closed: true };
+            const times = ["09:00", "09:45", "10:30", "11:15", "13:30", "14:15", "15:00", "15:45", "16:30"].filter((_, k) => (k + i) % (wd === 3 ? 3 : 1) === 0);
+            return { date, slots: wd === 4 ? [] : times.map((time) => ({ time, memberIds: [] })) };
+          })
+        : await getPublicSlots(data.business.slug, serviceId, memberId, weekStart, 7);
       if (cancelled) return;
       const next = addDays(weekStart, 7);
       const withinHorizon = horizonDays == null || next <= addDays(today, horizonDays);
@@ -131,7 +140,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
     return () => {
       cancelled = true;
     };
-  }, [step, serviceId, memberId, weekStart, data.business.slug, today, horizonDays]);
+  }, [step, serviceId, memberId, weekStart, data.business.slug, today, horizonDays, demo]);
 
   // Cours collectif : charge les séances à venir.
   useEffect(() => {
@@ -337,6 +346,8 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
           <div>
             <p className="font-semibold">{service.name}</p>
             <p className="text-muted">{formatDuration(service.durationMin, service.durationMaxMin)}</p>
+            {/* Description complète (la liste des prestations n'en montre que le début). */}
+            {service.description ? <p className="mt-2 whitespace-pre-line text-muted">{service.description}</p> : null}
           </div>
           <span className="font-semibold tabular-nums">{formatPrice(service.priceCents)}</span>
         </div>
@@ -470,7 +481,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{s.name}</p>
-                        {s.description ? <p className="mt-0.5 line-clamp-2 text-sm text-muted">{s.description}</p> : null}
+                        {s.description ? <p className="mt-0.5 line-clamp-3 text-sm whitespace-pre-line text-muted">{s.description}</p> : null}
                         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted">
                           <span className="inline-flex items-center gap-1"><Clock className="size-3.5" aria-hidden="true" />{formatDuration(s.durationMin, s.durationMaxMin)}</span>
                           {s.kind === "group" ? (
@@ -610,7 +621,7 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
                         <button
                           key={s.time}
                           type="button"
-                          onClick={() => { setTime(s.time); setError(null); setStep("details"); }}
+                          onClick={() => { setTime(s.time); setError(null); if (!demo) setStep("details"); }}
                           className={cn("relative h-10 rounded-lg border text-sm font-medium tabular-nums transition-colors", time === s.time ? "border-accent bg-accent text-accent-foreground" : s.grouped ? "border-warning/60 bg-warning-soft text-text hover:border-accent" : "border-border-strong bg-surface hover:border-accent hover:text-accent")}
                           aria-label={s.grouped ? t("booking.recommendedSlot", { time: s.time }) : undefined}
                         >

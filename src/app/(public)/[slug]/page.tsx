@@ -156,6 +156,13 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
   if (embedded && data.embed.fontUrl && data.embed.fontFamily) vars["--font-sans"] = `"${data.embed.fontFamily}", ui-sans-serif, system-ui, sans-serif`;
 
   const aside = asideSections.filter((s) => hasContent(s, data)).map((s) => <SectionBlock key={s} kind={s} data={data} review={review} t={t} locale={locale} />);
+  const flowData0 = data;
+  // Aperçu de l'éditeur d'apparence sans aucune prestation : une prestation d'exemple et un calendrier fictif,
+  // pour voir les couleurs des jours, des créneaux et des boutons.
+  const demo = sp.apercu === "1" && flowData0.services.length === 0;
+  const flowData = demo
+    ? { ...flowData0, services: [{ id: "00000000-0000-4000-8000-000000000000", name: "Exemple de prestation", color: "#4f46e5", description: "Aperçu : vos prestations s'afficheront ici.", priceCents: 4500, durationMin: 45, durationMaxMin: null, categoryId: null, kind: "individual" as const, capacity: null, audience: "all" as const, imageUrl: null, location: null, cancellationFeeType: null, cancellationFeeValue: null, memberIds: flowData0.team.map((m) => m.id) }] as unknown as typeof flowData0.services }
+    : flowData0;
 
   return (
     <I18nProvider locale={locale}>
@@ -196,7 +203,7 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
       <main className={cn("mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 sm:px-6", aside.length ? "lg:grid-cols-[1fr_320px]" : "max-w-3xl", embedded ? "lg:py-6" : "lg:py-10")}>
         <section className={cn(CARD, "min-w-0 p-5 sm:p-6")} aria-label={t("page.bookingLabel")}>
           {embedded && data.embed.title ? <h2 className="mb-4 text-xl font-semibold">{data.embed.title}</h2> : null}
-          <BookingFlow data={data} today={today} resume={resumeFrom(sp)} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
+          <BookingFlow data={flowData} demo={demo} today={today} resume={resumeFrom(sp)} viewer={session ? { firstName: session.user.fullName.split(" ")[0] ?? "", lastName: session.user.fullName.split(" ").slice(1).join(" "), email: session.user.email, phone: session.user.phone ?? "" } : null} />
         </section>
 
         {aside.length ? <aside className="space-y-4 lg:group-data-[layout=split]:order-first">{aside}</aside> : null}

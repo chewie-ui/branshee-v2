@@ -74,7 +74,7 @@ async function save(r: ApiRequest, id: string | null) {
   const employeeIds = has(b, "employeeIds") && Array.isArray(b.employeeIds) ? (b.employeeIds as unknown[]).filter((x): x is string => typeof x === "string" && uuid(x)) : currentMembers;
   const fd = formData({
     name: has(b, "name") ? str(b.name, 80) : (cur?.name ?? ""),
-    description: has(b, "description") ? str(b.description, 500) : (cur?.description ?? ""),
+    description: has(b, "description") ? str(b.description, 2000) : (cur?.description ?? ""),
     categoryId,
     newCategory,
     durationMin: has(b, "duration") ? Number(b.duration) : (cur?.durationMin ?? 30),

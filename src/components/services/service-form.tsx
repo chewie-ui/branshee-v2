@@ -115,7 +115,7 @@ export function ServiceForm({ initial, categories, team, showAudience, allowGrou
           </label>
         ) : null}
         <Field label="Description (facultatif)" htmlFor="description" hint="Affichée aux clients sous le nom de la prestation.">
-          <Textarea id="description" name="description" defaultValue={initial.description} rows={3} maxLength={500} />
+          <Textarea id="description" name="description" defaultValue={initial.description} rows={5} maxLength={2000} className="resize-y" />
         </Field>
         <div>
           <p className="mb-1.5 text-sm font-medium">Image (facultatif)</p>

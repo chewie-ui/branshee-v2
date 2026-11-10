@@ -27,7 +27,7 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 
 const schema = z.object({
   name: z.string().trim().min(2, "Donnez un nom à la prestation.").max(80),
-  description: z.string().trim().max(500),
+  description: z.string().trim().max(2000, "Description trop longue (2 000 caractères maximum)."),
   categoryId: z.string(),
   newCategory: z.string().trim().max(50),
   durationMin: z.coerce.number().int().min(5, "Durée minimum : 5 min.").max(720, "Durée maximum : 12 h."),
