@@ -1,5 +1,6 @@
 "use server";
 
+import { questionApplies } from "@/lib/booking/questions";
 import { LOCALES } from "@/i18n/config";
 
 import { TZDate } from "@date-fns/tz";
@@ -206,8 +207,11 @@ export async function bookGroupSession(input: z.input<typeof bookingSchema>): Pr
   if (data.closed) return { ok: false, error: "Cet établissement ne prend pas de réservation en ligne pour le moment." };
   if (data.settings.phoneRequired && v.phone.replace(/\D/g, "").length < 8) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { phone: "Indiquez un numéro de téléphone." } };
 
+  // Prestation de la séance : pour ne poser que les questions qui la concernent.
+  const virtualSvc = parseVirtualSessionId(v.sessionId)?.serviceId;
+  const sessionSvc = virtualSvc ?? (z.uuid().safeParse(v.sessionId).success ? (await db.select({ serviceId: groupSessions.serviceId }).from(groupSessions).where(eq(groupSessions.id, v.sessionId)))[0]?.serviceId : undefined);
   const answers: { question: string; answer: string }[] = [];
-  for (const q of data.questions) {
+  for (const q of data.questions.filter((x) => !sessionSvc || questionApplies(x, sessionSvc))) {
     const a = (v.answers[q.id] ?? "").trim();
     if (q.isRequired && !a) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { [`q_${q.id}`]: "Réponse obligatoire." } };
     if (a && q.type === "choice" && !q.options.includes(a)) return { ok: false, error: "Réponse invalide." };

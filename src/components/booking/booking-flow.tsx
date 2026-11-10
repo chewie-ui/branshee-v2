@@ -1,5 +1,6 @@
 "use client";
 
+import { questionApplies } from "@/lib/booking/questions";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BellRing, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, Star, Trash2, UserRound, Users } from "lucide-react";
@@ -215,6 +216,8 @@ export function BookingFlow({ data, demo = false, today, resume: resumeProp = nu
   const [pendingPay, setPendingPay] = useState<{ mode: "pay" | "guarantee"; clientSecret: string; payload: Parameters<typeof createPublicBooking>[0] } | null>(null);
   const ruleText = data.payment.rule === "half_24h" ? t("booking.ruleHalf") : data.payment.rule === "full_12h" ? t("booking.ruleFull") : null;
   // Frais d'annulation / d'absence qui pourront être prélevés : le client les accepte explicitement (case à cocher).
+  // Questions du formulaire qui concernent la prestation choisie (ou une de la sélection).
+  const shownQuestions = service ? questions.filter((q) => questionApplies(q, [service.id, ...cart.map((c) => c.serviceId)])) : [];
   const policy =
     service && service.kind !== "group"
       ? policyAmounts(data.payment.rule, service.priceCents ?? 0, service.cancellationFeeType ? { type: service.cancellationFeeType, value: service.cancellationFeeValue } : null)
@@ -225,7 +228,7 @@ export function BookingFlow({ data, demo = false, today, resume: resumeProp = nu
     setError(null);
     setFieldErrors({});
     const answers: Record<string, string> = {};
-    for (const q of questions) answers[q.id] = String(formData.get(`q_${q.id}`) ?? "");
+    for (const q of shownQuestions) answers[q.id] = String(formData.get(`q_${q.id}`) ?? "");
     if (policy && formData.get("acceptPolicy") !== "on") {
       setFieldErrors({ acceptPolicy: tr("Acceptez les conditions d'annulation pour réserver.") });
       return;
@@ -759,7 +762,7 @@ export function BookingFlow({ data, demo = false, today, resume: resumeProp = nu
               <Input id="phone" name="phone" type="tel" autoComplete="tel" defaultValue={viewer?.phone} required={settings?.phoneRequired} aria-invalid={!!fieldErrors.phone || undefined} />
             </Field>
           </div>
-          {questions.map((q) => {
+          {shownQuestions.map((q) => {
             const key = `q_${q.id}`;
             const label = q.isRequired ? q.label : t("common.optional", { label: q.label });
             return (

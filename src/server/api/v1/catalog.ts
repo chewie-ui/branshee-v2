@@ -120,7 +120,7 @@ async function form() {
   return {
     form: {
       active: rows.length > 0,
-      questions: rows.map((q) => ({ id: q.id, label: q.label, type: q.type, required: q.isRequired, options: q.options, order: q.position })),
+      questions: rows.map((q) => ({ id: q.id, label: q.label, type: q.type, required: q.isRequired, options: q.options, serviceIds: q.serviceIds, order: q.position })),
       maxQuestions: limitOf(plan, "formQuestions"),
     },
   };
@@ -179,7 +179,7 @@ export const catalogRoutes: Route[] = [
       const list = Array.isArray(r.body.questions) ? (r.body.questions as Record<string, unknown>[]) : [];
       // « Désactiver » le formulaire = ne plus poser de question.
       const questions = bool(r.body.active ?? true)
-        ? list.map((q) => ({ label: str(q.label, 200), type: ["text", "choice", "yes_no"].includes(String(q.type)) ? q.type : "text", isRequired: bool(q.required), options: Array.isArray(q.options) ? (q.options as unknown[]).map((o) => str(o, 80)).filter(Boolean) : [] }))
+        ? list.map((q) => ({ label: str(q.label, 200), type: ["text", "choice", "yes_no"].includes(String(q.type)) ? q.type : "text", isRequired: bool(q.required), options: Array.isArray(q.options) ? (q.options as unknown[]).map((o) => str(o, 80)).filter(Boolean) : [], serviceIds: Array.isArray(q.serviceIds) ? (q.serviceIds as unknown[]).map(String) : [] }))
         : [];
       ensureOk(await saveFormQuestions(questions));
       return form();

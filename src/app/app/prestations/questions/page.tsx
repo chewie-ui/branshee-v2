@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { services } from "@/db/schema";
+import { formQuestions, services } from "@/db/schema";
+import { FormQuestionsEditor } from "@/components/booking-page/editors";
 import { IntakeQuestionCard, NewIntakeQuestion } from "@/components/services/intake-editor";
 import { PageHeader } from "@/components/ui/page-header";
 import { ServiceTabs } from "@/components/services/service-tabs";
@@ -12,9 +13,10 @@ export const metadata: Metadata = { title: "Questions avant réservation" };
 
 export default async function IntakePage() {
   const ctx = await requireContext("services.manage");
-  const [questions, svc] = await Promise.all([
+  const [questions, svc, formQs] = await Promise.all([
     listIntake(ctx.business.id),
     db.select({ id: services.id, name: services.name, isActive: services.isActive }).from(services).where(eq(services.businessId, ctx.business.id)).orderBy(asc(services.position), asc(services.name)),
+    ctx.can("forms.manage") ? db.select().from(formQuestions).where(eq(formQuestions.businessId, ctx.business.id)).orderBy(asc(formQuestions.position)) : Promise.resolve(null),
   ]);
 
   return (
@@ -22,7 +24,8 @@ export default async function IntakePage() {
       <PageHeader title="Prestations" />
       <ServiceTabs />
       <div className="mx-auto max-w-3xl space-y-4">
-        <div>
+        {formQs ? <FormQuestionsEditor initial={formQs.map((q) => ({ label: q.label, type: q.type, isRequired: q.isRequired, options: q.options, serviceIds: q.serviceIds }))} services={svc} /> : null}
+        <div className="pt-4">
           <h2 className="text-lg font-semibold">Orienter le client vers les bonnes prestations</h2>
           <p className="mt-1 text-sm text-muted">
             Ces questions sont posées sur votre page de réservation, avant le choix de la prestation. Selon la réponse, le client ne voit que les prestations qui le concernent. Exemple : « Êtes-vous enceinte ? » → Oui : kiné prénatale uniquement.

@@ -1,5 +1,6 @@
 "use server";
 
+import { questionApplies } from "@/lib/booking/questions";
 import { LOCALES } from "@/i18n/config";
 
 import { headers } from "next/headers";
@@ -104,7 +105,7 @@ export async function createPublicBooking(input: z.input<typeof bookingSchema>):
 
   // Questions du formulaire : obligatoires remplies, réponses aux questions à choix valides.
   const answers: { question: string; answer: string }[] = [...intake.lines];
-  for (const q of data.questions) {
+  for (const q of data.questions.filter((x) => questionApplies(x, service.id))) {
     const a = (v.answers[q.id] ?? "").trim();
     if (q.isRequired && !a) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { [`q_${q.id}`]: "Réponse obligatoire." } };
     if (a && q.type === "choice" && !q.options.includes(a)) return { ok: false, error: "Réponse invalide." };

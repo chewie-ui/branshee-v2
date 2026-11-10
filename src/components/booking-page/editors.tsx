@@ -8,7 +8,8 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { saveFaq, saveFormQuestions } from "@/server/actions/booking-page";
 
-type Q = { key: string; label: string; type: "text" | "choice" | "yes_no"; isRequired: boolean; options: string[] };
+type Q = { key: string; label: string; type: "text" | "choice" | "yes_no"; isRequired: boolean; options: string[]; serviceIds: string[] };
+type Svc = { id: string; name: string; isActive?: boolean };
 let seq = 0;
 const key = () => `q${++seq}`;
 
@@ -22,13 +23,13 @@ export function SaveBar({ dirty, pending, status, onSave, onReset }: { dirty: bo
   );
 }
 
-export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) {
+export function FormQuestionsEditor({ initial, services = [] }: { initial: Omit<Q, "key">[]; services?: Svc[] }) {
   const start0 = initial.map((q) => ({ ...q, key: key() }));
   const [saved, setSaved] = useState(start0);
   const [list, setList] = useState(start0);
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
-  const toPayload = (l: Q[]) => l.map((q) => ({ label: q.label, type: q.type, isRequired: q.isRequired, options: q.options }));
+  const toPayload = (l: Q[]) => l.map((q) => ({ label: q.label, type: q.type, isRequired: q.isRequired, options: q.options, serviceIds: q.serviceIds }));
   const strip = (l: Q[]) => JSON.stringify(toPayload(l));
   const dirty = strip(list) !== strip(saved);
   const update = (i: number, patch: Partial<Q>) => {
@@ -43,7 +44,7 @@ export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) 
 
   return (
     <Card data-tour="form-questions">
-      <CardHeader title="Questions avant la réservation" description="Posées au client à la dernière étape. Les réponses apparaissent sur le rendez-vous." />
+      <CardHeader title="Questions avant la réservation" description="Champs en plus du nom, de l'email et du téléphone, posés au client à la dernière étape. Pour toutes les prestations ou seulement certaines. Les réponses apparaissent sur le rendez-vous." />
       <div className="space-y-4 p-5">
         {list.length === 0 ? <p className="text-sm text-muted">Aucune question : le client donne seulement ses coordonnées.</p> : null}
         {list.map((q, i) => (
@@ -71,6 +72,39 @@ export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) 
                 Réponse obligatoire
               </label>
             </div>
+            {services.length ? (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Pour quelles prestations ?</legend>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name={`${q.key}-scope`} checked={q.serviceIds.length === 0} onChange={() => update(i, { serviceIds: [] })} className="size-4 accent-[var(--accent)]" />
+                    Toutes les prestations
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name={`${q.key}-scope`} checked={q.serviceIds.length > 0} onChange={() => update(i, { serviceIds: q.serviceIds.length ? q.serviceIds : [services[0]!.id] })} className="size-4 accent-[var(--accent)]" />
+                    Seulement certaines
+                  </label>
+                </div>
+                {q.serviceIds.length ? (
+                  <div className="grid gap-2 rounded-lg bg-surface-muted p-3 sm:grid-cols-2">
+                    {services.map((s) => (
+                      <label key={s.id} className="flex min-h-9 items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={q.serviceIds.includes(s.id)}
+                          onChange={(e) => {
+                            const next = e.target.checked ? [...q.serviceIds, s.id] : q.serviceIds.filter((x) => x !== s.id);
+                            update(i, { serviceIds: next });
+                          }}
+                          className="size-4 accent-[var(--accent)]"
+                        />
+                        <span className={cn(s.isActive === false && "text-muted")}>{s.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </fieldset>
+            ) : null}
             {q.type === "choice" ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Choix proposés</p>
@@ -85,8 +119,8 @@ export function FormQuestionsEditor({ initial }: { initial: Omit<Q, "key">[] }) 
             ) : null}
           </div>
         ))}
-        <Button variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} disabled={list.length >= 10} onClick={() => setList((l) => [...l, { key: key(), label: "", type: "text", isRequired: false, options: [] }])}>
-          Ajouter une question
+        <Button variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} disabled={list.length >= 10} onClick={() => setList((l) => [...l, { key: key(), label: "", type: "text", isRequired: false, options: [], serviceIds: [] }])}>
+          Ajouter un champ au formulaire
         </Button>
       </div>
       <SaveBar
