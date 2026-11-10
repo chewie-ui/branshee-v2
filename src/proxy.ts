@@ -13,6 +13,12 @@ const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bi
  */
 export function proxy(request: NextRequest) {
   const host = (request.headers.get("host") ?? "").toLowerCase();
+  // Après le passage à Skydev (BRANSHEE_TO_SKYDEV=1) : toute adresse branshee.com renvoie vers la même page sur skydev.be
+  // (agendas des pros, espace pro, liens des e-mails…), en 301, le temps que chacun change ses liens.
+  // Pas en POST, ni pour les webhooks, les retours de connexion (Google) et les flux d'agenda, qui restent servis ici.
+  if (process.env.BRANSHEE_TO_SKYDEV === "1" && (host === "branshee.com" || host === "www.branshee.com") && (request.method === "GET" || request.method === "HEAD") && !/^\/(api|auth|account|ical|_next|\.well-known)(\/|$)/.test(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL(request.nextUrl.pathname + request.nextUrl.search, "https://skydev.be"), 301);
+  }
   if (host === "www.branshee.com" && (request.method === "GET" || request.method === "HEAD")) {
     const url = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://branshee.com");
     return NextResponse.redirect(url, 301);
