@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { db } from "@/db";
 import { appointments, bookingSettings, businesses, members, scheduleExceptions, serviceHours, serviceMembers, services, weeklyHours } from "@/db/schema";
-import { computeSlots, type DayException, type MemberAvailability } from "@/lib/booking/slots";
+import { closedDays, computeSlots, type DayException, type MemberAvailability, type Slot } from "@/lib/booking/slots";
 import { groupBusy } from "@/server/group-sessions";
 import { googleBusy } from "@/server/google";
 
@@ -12,15 +12,23 @@ const hhmm = (t: string) => t.slice(0, 5);
  * Charge tout ce qu'il faut depuis la base puis délègue au moteur pur `computeSlots`.
  * `days` : jours "YYYY-MM-DD" dans le fuseau de l'établissement.
  */
-export async function getAvailableSlots(params: { businessId: string; serviceId?: string | null; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean; excludeAppointmentId?: string; /** Durée libre (RDV sans prestation, créé par le pro). */ durationMin?: number }) {
+type AvailabilityParams = { businessId: string; serviceId?: string | null; days: string[]; memberId?: string; now?: Date; ignoreOnlineRules?: boolean; excludeAppointmentId?: string; /** Durée libre (RDV sans prestation, créé par le pro). */ durationMin?: number };
+
+export async function getAvailableSlots(params: AvailabilityParams): Promise<Record<string, Slot[]>> {
+  return (await getAvailability(params)).slots;
+}
+
+/** Créneaux libres, et jours où personne ne travaille (congé, fermeture) : un jour fermé n'est pas un jour complet. */
+export async function getAvailability(params: AvailabilityParams): Promise<{ slots: Record<string, Slot[]>; closed: string[]; notOffered: string[] }> {
+  const EMPTY = { slots: {}, closed: [], notOffered: [] };
   const { businessId, serviceId, days } = params;
-  if (days.length === 0) return {};
+  if (days.length === 0) return EMPTY;
 
   const [biz] = await db.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId));
   const [settings] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, businessId));
   const [service] = serviceId ? await db.select().from(services).where(and(eq(services.id, serviceId), eq(services.businessId, businessId), eq(services.isActive, true))) : [null];
-  if (!biz || !settings) return {};
-  if (serviceId ? !service || service.kind !== "individual" : !params.durationMin) return {};
+  if (!biz || !settings) return EMPTY;
+  if (serviceId ? !service || service.kind !== "individual" : !params.durationMin) return EMPTY;
 
   // Membres qui réalisent la prestation (aucune restriction = toute l'équipe réservable).
   const restricted = service ? (await db.select({ id: serviceMembers.memberId }).from(serviceMembers).where(eq(serviceMembers.serviceId, service.id))).map((r) => r.id) : [];
@@ -30,7 +38,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId?
     .where(and(eq(members.businessId, businessId), eq(members.status, "active"), eq(members.isActive, true), eq(members.isBookable, true)));
   if (restricted.length) team = team.filter((m) => restricted.includes(m.id));
   if (params.memberId) team = team.filter((m) => m.id === params.memberId);
-  if (team.length === 0) return {};
+  if (team.length === 0) return EMPTY;
   const ids = team.map((m) => m.id);
 
   const sorted = [...days].sort();
@@ -103,7 +111,7 @@ export async function getAvailableSlots(params: { businessId: string; serviceId?
       ? { windowHours: sg.windowHours, weekdays: sg.weekdays, anchors: busyRows.filter((b): b is typeof b & { memberId: string } => !!b.memberId && b.kind === "appointment" && b.status === "confirmed").map((b) => ({ memberId: b.memberId, start: b.start, end: b.end })) }
       : null;
 
-  return computeSlots({
+  const slots = computeSlots({
     serviceWindows,
     grouping,
     timezone: biz.timezone,
@@ -123,4 +131,8 @@ export async function getAvailableSlots(params: { businessId: string; serviceId?
     businessExceptions: exceptionsFor(null),
     busy,
   });
+  // Fermé = personne ne travaille (congé, fermeture, jour non ouvré) ; non proposé = la prestation n'a pas de plage ce jour-là.
+  const closed = closedDays({ days: sorted, members: availability, businessExceptions: exceptionsFor(null), serviceWindows: null, timezone: biz.timezone });
+  const notOffered = serviceWindows ? closedDays({ days: sorted, members: availability, businessExceptions: exceptionsFor(null), serviceWindows, timezone: biz.timezone }).filter((d) => !closed.includes(d)) : [];
+  return { slots, closed, notOffered };
 }

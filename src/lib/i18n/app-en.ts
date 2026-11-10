@@ -3303,4 +3303,6 @@ export const EN: Record<string, string> = {
   "Afficher le mot de passe": "Show password",
   "Insérer une image": "Insert an image",
   "Vos modifications ne sont pas enregistrées. Quitter quand même ?": "Your changes aren't saved. Leave anyway?",
+  "Fermé": "Closed",
+  "Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué, congé ou fermeture.": "Dotted border: request awaiting confirmation. Hatched area: blocked slot, time off or closure.",
 };

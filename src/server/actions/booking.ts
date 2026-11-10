@@ -8,7 +8,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { paymentSettings, waitlistEntries } from "@/db/schema";
 import { stripe } from "@/server/payments";
-import { getAvailableSlots } from "@/server/availability";
+import { getAvailability, getAvailableSlots } from "@/server/availability";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { getPublicBusiness } from "@/server/public";
 import { bookPublic, type BookingInput, type BookingResult } from "@/server/booking-core";
@@ -31,7 +31,7 @@ function nextDays(from: string, count: number) {
   return out;
 }
 
-export type PublicDay = { date: string; slots: { time: string; memberIds: string[]; grouped?: boolean }[] };
+export type PublicDay = { date: string; slots: { time: string; memberIds: string[]; grouped?: boolean }[]; /** Personne ne travaille ce jour-là (congé, fermeture). */ closed?: boolean; /** La prestation n'est pas proposée ce jour-là. */ notOffered?: boolean };
 
 /** Créneaux libres d'une prestation sur quelques jours (page publique, sans connexion). */
 export async function getPublicSlots(slug: string, serviceId: string, memberId: string | null, fromDay: string, count = 7): Promise<PublicDay[]> {
@@ -44,8 +44,8 @@ export async function getPublicSlots(slug: string, serviceId: string, memberId: 
   if (!service || (memberId && !service.memberIds.includes(memberId))) return [];
 
   const days = nextDays(fromDay, count);
-  const slots = await getAvailableSlots({ businessId: data.business.id, serviceId, memberId: memberId ?? undefined, days });
-  return days.map((date) => ({ date, slots: (slots[date] ?? []).map((s) => ({ time: s.time, memberIds: s.memberIds, ...(s.grouped ? { grouped: true } : {}) })) }));
+  const { slots, closed, notOffered } = await getAvailability({ businessId: data.business.id, serviceId, memberId: memberId ?? undefined, days });
+  return days.map((date) => ({ date, slots: (slots[date] ?? []).map((s) => ({ time: s.time, memberIds: s.memberIds, ...(s.grouped ? { grouped: true } : {}) })), ...(closed.includes(date) ? { closed: true } : notOffered.includes(date) ? { notOffered: true } : {}) }));
 }
 
 export type { BookingResult } from "@/server/booking-core";

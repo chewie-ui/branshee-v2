@@ -68,6 +68,8 @@ const en: Messages = {
     chooseSlot: "Choose a time slot",
     slotsCount: "{n} slots",
     full: "full",
+    closed: "closed",
+    unavailable: "unavailable",
     noSlotsWeek: "No free slots this week. Try the next week.",
     noSlotsWeekWaitlist: "No free slots this week. Try the next week, or choose a day to be notified if a spot opens up.",
     recommended: "Recommended slots",

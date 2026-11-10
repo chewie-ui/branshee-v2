@@ -14,7 +14,7 @@ import { businessPlans } from "@/db/schema";
 import { BusinessInfoForm, TypeToDelete } from "@/components/admin/platform";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
-import { format } from "date-fns";
+import { addYears, format } from "date-fns";
 import { formatDay, formatTime, zoned } from "@/lib/time";
 import { requireSuperadmin } from "@/server/admin";
 import { effectivePlan } from "@/server/plan";
@@ -100,9 +100,9 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
         </Card>
 
         <Card>
-          <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${eff.source === "granted" ? (granted ? ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})` : " (offert)") : eff.source === "stripe" ? " (Stripe)" : eff.source === "account" ? " (ancien abonnement du compte)" : ""}`} />
+          <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${eff.source === "granted" ? (granted ? (granted.getUTCFullYear() >= 2099 ? " (offert à vie)" : ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})`) : " (offert)") : eff.source === "stripe" ? " (Stripe)" : eff.source === "account" ? " (ancien abonnement du compte)" : ""}`} />
           <div className="p-5">
-            <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} skydev={(b.brand ?? (await currentBrand()).id) === "skydev"} />
+            <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} suggested={format(zoned(addYears(new Date(), 1), tz), "yyyy-MM-dd")} skydev={(b.brand ?? (await currentBrand()).id) === "skydev"} />
           </div>
         </Card>
 
