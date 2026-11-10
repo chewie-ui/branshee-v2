@@ -8,6 +8,7 @@ import { isLow } from "@/lib/stock";
 import { sizeHint, sortSizes } from "@/lib/sizes";
 import { countVariants } from "@/server/actions/stock";
 import type { ProductView } from "@/server/stock";
+import { useT } from "@/components/app-locale";
 
 type Res = { ok: boolean; message?: string; error?: string };
 
@@ -16,6 +17,7 @@ type Res = { ok: boolean; message?: string; error?: string };
  * réception/sortie/inventaire de cette déclinaison ; « Inventaire » permet de tout recompter d'un coup.
  */
 export function VariantGrid({ model, variants, onPick, onDone }: { model: ProductView; variants: ProductView[]; onPick: (v: ProductView) => void; onDone: (text: string, ok: boolean) => void }) {
+  const t = useT();
   const sizes = sortSizes(model.sizeGrid, [...new Set(variants.map((v) => v.size ?? ""))]);
   const colors = [...new Set(variants.map((v) => v.color ?? ""))].sort((a, b) => a.localeCompare(b, "fr"));
   const at = (s: string, c: string) => variants.find((v) => (v.size ?? "") === s && (v.color ?? "") === c);
@@ -27,8 +29,8 @@ export function VariantGrid({ model, variants, onPick, onDone }: { model: Produc
     start(async () => {
       const list = variants.filter((v) => v.trackStock && counts[v.id] !== undefined && counts[v.id] !== "").map((v) => ({ id: v.id, qty: Number(counts[v.id]) }));
       if (!list.length) return setCounting(false);
-      const r: Res = await countVariants(model.id, list).catch(() => ({ ok: false, error: "Envoi impossible. Vérifiez votre connexion." }));
-      onDone(r.ok ? (r.message ?? "Inventaire enregistré.") : (r.error ?? "Inventaire impossible."), r.ok);
+      const r: Res = await countVariants(model.id, list).catch(() => ({ ok: false, error: t("Envoi impossible. Vérifiez votre connexion.") }));
+      onDone(r.ok ? (r.message ?? t("Inventaire enregistré.")) : (r.error ?? t("Inventaire impossible.")), r.ok);
       if (r.ok) { setCounting(false); setCounts({}); }
     });
 
@@ -39,7 +41,7 @@ export function VariantGrid({ model, variants, onPick, onDone }: { model: Produc
           <thead>
             <tr className="text-left text-xs text-muted">
               <th scope="col" className="py-1.5 pr-4 font-medium">Taille</th>
-              {colors.map((c) => <th key={c || "-"} scope="col" className="px-1.5 py-1.5 text-center font-medium">{c || "Stock"}</th>)}
+              {colors.map((c) => <th key={c || "-"} scope="col" className="px-1.5 py-1.5 text-center font-medium">{c || t("Stock")}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -74,14 +76,14 @@ export function VariantGrid({ model, variants, onPick, onDone }: { model: Produc
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {counting ? (
             <>
-              <Button size="sm" loading={pending} onClick={save}>Enregistrer l&apos;inventaire</Button>
-              <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setCounting(false); setCounts({}); }}>Annuler</Button>
-              <span className="text-xs text-muted">Tapez la quantité comptée pour chaque case.</span>
+              <Button size="sm" loading={pending} onClick={save}>{t("Enregistrer l'inventaire")}</Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setCounting(false); setCounts({}); }}>{t("Annuler")}</Button>
+              <span className="text-xs text-muted">{t("Tapez la quantité comptée pour chaque case.")}</span>
             </>
           ) : (
             <>
-              <Button size="sm" variant="secondary" icon={<ClipboardCheck className="size-4" aria-hidden="true" />} onClick={() => setCounting(true)}>Inventaire de toutes les tailles</Button>
-              <span className="text-xs text-muted">Cliquez sur une case pour une réception, une sortie ou un inventaire.</span>
+              <Button size="sm" variant="secondary" icon={<ClipboardCheck className="size-4" aria-hidden="true" />} onClick={() => setCounting(true)}>{t("Inventaire de toutes les tailles")}</Button>
+              <span className="text-xs text-muted">{t("Cliquez sur une case pour une réception, une sortie ou un inventaire.")}</span>
             </>
           )}
         </div>

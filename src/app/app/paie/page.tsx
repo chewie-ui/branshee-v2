@@ -7,10 +7,12 @@ import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { payrollMonth, payrollRights } from "@/server/payroll";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Paie");
 
 export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   if (!payrollRights(ctx).manage) redirect("/app/acces-refuse");
   const q = (await searchParams).mois;
@@ -18,7 +20,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   const data = await payrollMonth(ctx.business.id, month);
   return (
     <>
-      <PageHeader title="Paie" description="Les prestations du mois, prêtes pour votre secrétariat social : heures du Planning, absences, chèques-repas, primes." />
+      <PageHeader title={t("Paie")} description={t("Les prestations du mois, prêtes pour votre secrétariat social : heures du Planning, absences, chèques-repas, primes.")} />
       <PayrollBoard month={month} rows={data.rows} closedAt={data.closedAt?.toISOString() ?? null} />
     </>
   );

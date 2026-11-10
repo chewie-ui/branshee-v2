@@ -1,11 +1,10 @@
 import "server-only";
+import { cache } from "react";
 import { makeT, tr, type AppLocale } from "@/lib/i18n/app";
-import { requireUser } from "@/server/context";
+import { getSessionUser } from "@/server/auth/session";
 
-/** Langue de l'espace pro pour l'utilisateur connecté. */
-export async function appLocale(): Promise<AppLocale> {
-  return (await requireUser()).locale === "en" ? "en" : "fr";
-}
+/** Langue de l'espace pro pour l'utilisateur connecté (français pour un visiteur : jamais de redirection). */
+export const appLocale = cache(async (): Promise<AppLocale> => ((await getSessionUser())?.user.locale === "en" ? "en" : "fr"));
 
 /** `const t = await appT(); t("Factures")` dans une page serveur de l'espace pro. */
 export async function appT() {

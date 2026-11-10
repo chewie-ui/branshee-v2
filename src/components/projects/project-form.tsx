@@ -8,11 +8,13 @@ import { cn } from "@/lib/cn";
 import { COLOR_LABELS, PROJECT_COLORS, type ProjectColor } from "@/lib/projects";
 import { saveProject } from "@/server/actions/projects";
 import type { ProjectCard } from "@/server/projects";
+import { useT } from "@/components/app-locale";
 
 export type CustomerOption = { id: string; name: string };
 
 /** Fenêtre « Nouveau projet » / « Modifier le projet ». */
 export function ProjectDialog({ project, customers, onClose, onDone }: { project: ProjectCard | null; customers: CustomerOption[]; onClose: () => void; onDone: (text: string) => void }) {
+  const t = useT();
   const router = useRouter();
   const ref = useRef<HTMLFormElement>(null);
   const [f, setF] = useState({
@@ -37,27 +39,27 @@ export function ProjectDialog({ project, customers, onClose, onDone }: { project
     e.preventDefault();
     start(async () => {
       setError(null);
-      const r = await saveProject({ ...f, id: project?.id }).catch(() => ({ ok: false as const, error: "Envoi impossible. Vérifiez votre connexion et réessayez." }));
+      const r = await saveProject({ ...f, id: project?.id }).catch(() => ({ ok: false as const, error: t("Envoi impossible. Vérifiez votre connexion et réessayez.") }));
       if (!r.ok) return setError(r.error);
-      onDone(r.message ?? "Enregistré.");
+      onDone(r.message ?? t("Enregistré."));
       if (!project && r.url) router.push(r.url);
     });
   };
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="pj-title">
-      <button type="button" className="absolute inset-0 bg-black/30" aria-label="Fermer" tabIndex={-1} onClick={onClose} />
+      <button type="button" className="absolute inset-0 bg-black/30" aria-label={t("Fermer")} tabIndex={-1} onClick={onClose} />
       <form ref={ref} onSubmit={submit} className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 shadow-xl sm:rounded-2xl" noValidate>
-        <h2 id="pj-title" className="text-lg font-semibold">{project ? "Modifier le projet" : "Nouveau projet"}</h2>
+        <h2 id="pj-title" className="text-lg font-semibold">{project ? t("Modifier le projet") : t("Nouveau projet")}</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Nom du projet" htmlFor="pj-name" className="sm:col-span-2"><Input id="pj-name" value={f.name} onChange={set("name")} maxLength={120} placeholder="Ex. : Rénovation cuisine Dupont" required /></Field>
+          <Field label={t("Nom du projet")} htmlFor="pj-name" className="sm:col-span-2"><Input id="pj-name" value={f.name} onChange={set("name")} maxLength={120} placeholder={t("Ex. : Rénovation cuisine Dupont")} required /></Field>
           <Field label="Client" htmlFor="pj-customer" className="sm:col-span-2">
             <Select id="pj-customer" value={f.customerId} onChange={set("customerId")}>
-              <option value="">Pas de client (projet interne)</option>
+              <option value="">{t("Pas de client (projet interne)")}</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </Field>
-          <Field label="Tarif horaire (€ HTVA)" htmlFor="pj-rate" hint="Pour facturer le temps passé"><Input id="pj-rate" inputMode="decimal" value={f.rate} onChange={set("rate")} placeholder="0" /></Field>
-          <Field label="Budget (heures)" htmlFor="pj-budget" hint="Facultatif"><Input id="pj-budget" inputMode="decimal" value={f.budgetHours} onChange={set("budgetHours")} /></Field>
+          <Field label={t("Tarif horaire (€ HTVA)")} htmlFor="pj-rate" hint={t("Pour facturer le temps passé")}><Input id="pj-rate" inputMode="decimal" value={f.rate} onChange={set("rate")} placeholder="0" /></Field>
+          <Field label={t("Budget (heures)")} htmlFor="pj-budget" hint="Facultatif"><Input id="pj-budget" inputMode="decimal" value={f.budgetHours} onChange={set("budgetHours")} /></Field>
           <Field label="Échéance" htmlFor="pj-deadline"><Input id="pj-deadline" type="date" value={f.deadline} onChange={set("deadline")} /></Field>
           <div>
             <p className="text-sm font-medium" id="pj-color">Couleur</p>
@@ -67,12 +69,12 @@ export function ProjectDialog({ project, customers, onClose, onDone }: { project
               ))}
             </div>
           </div>
-          <Field label="Description (facultatif)" htmlFor="pj-desc" className="sm:col-span-2"><Textarea id="pj-desc" rows={3} value={f.description} onChange={set("description")} maxLength={1000} /></Field>
+          <Field label={t("Description (facultatif)")} htmlFor="pj-desc" className="sm:col-span-2"><Textarea id="pj-desc" rows={3} value={f.description} onChange={set("description")} maxLength={1000} /></Field>
         </div>
         {error ? <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>Annuler</Button>
-          <Button type="submit" loading={pending}>{project ? "Enregistrer" : "Créer le projet"}</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>{t("Annuler")}</Button>
+          <Button type="submit" loading={pending}>{project ? t("Enregistrer") : t("Créer le projet")}</Button>
         </div>
       </form>
     </div>

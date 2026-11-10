@@ -3,9 +3,11 @@
 import { useRef } from "react";
 import { Eraser } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/app-locale";
 
 /** Cadre de signature au doigt ou à la souris ; renvoie un chemin SVG (cadre 400 × 160). */
 export function SignaturePad({ value, onChange, labelId, label }: { value: string; onChange: (path: string) => void; labelId: string; label: string }) {
+  const t = useT();
   const svg = useRef<SVGSVGElement>(null);
   const drawing = useRef(false);
   const pt = (e: React.PointerEvent) => {
@@ -30,7 +32,7 @@ export function SignaturePad({ value, onChange, labelId, label }: { value: strin
         className={cn("mt-1 h-36 w-full touch-none rounded-lg border-2 border-dashed bg-surface-muted/40", value ? "border-border-strong" : "border-border")}
       >
         <path d={value} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="text-text" />
-        {!value ? <text x="200" y="85" textAnchor="middle" className="fill-muted text-[14px]">Signez ici avec le doigt</text> : null}
+        {!value ? <text x="200" y="85" textAnchor="middle" className="fill-muted text-[14px]">{t("Signez ici avec le doigt")}</text> : null}
       </svg>
     </div>
   );

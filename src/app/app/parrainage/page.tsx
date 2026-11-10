@@ -11,10 +11,12 @@ import { effectivePlan } from "@/server/plan";
 import { ensureReferralCode } from "@/server/referral";
 import { referralStatus } from "@/server/referral-status";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Parrainage");
 
 export default async function ReferralPage() {
+  const t = await appT();
   const ctx = await requireContext();
   if (!ctx.can("billing.manage")) return <AccessDeniedPage />;
   const brand = await currentBrand();
@@ -27,7 +29,7 @@ export default async function ReferralPage() {
   const base = (brand.id === "skydev" ? (process.env.SKYDEV_APP_URL ?? "https://skydev.be") : (process.env.APP_URL ?? "https://branshee.com")).replace(/\/$/, "");
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Parrainage" description={`Invitez des pros sur ${brand.name}, gagnez des mois gratuits.`} />
+      <PageHeader title={t("Parrainage")} description={`Invitez des pros sur ${brand.name}, gagnez des mois gratuits.`} />
       <ReferralPanel
         brand={brand.name}
         code={code}

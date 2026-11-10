@@ -4,6 +4,7 @@ import { AppPlaceholder } from "@/components/apps/app-placeholder";
 import { ButtonLink } from "@/components/ui/button";
 import { APPS } from "@/lib/apps";
 import { requireContext } from "@/server/context";
+import { appT } from "@/server/app-locale";
 
 type Params = Promise<{ id: string }>;
 const find = (id: string) => APPS.find((a) => a.id === id && a.status === "soon" && a.href === `/app/bientot/${a.id}`);
@@ -14,6 +15,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 /** Page commune des apps à venir : ce qu'elles feront, et un moyen de dire qu'on en a besoin. */
 export default async function UpcomingApp({ params }: { params: Params }) {
+  const t = await appT();
   await requireContext();
   const app = find((await params).id);
   if (!app) notFound();
@@ -21,9 +23,9 @@ export default async function UpcomingApp({ params }: { params: Params }) {
   return (
     <AppPlaceholder
       app={app}
-      title="Arrive bientôt, inclus dans votre abonnement"
+      title={t("Arrive bientôt, inclus dans votre abonnement")}
       text={`${app.name} rejoindra vos autres apps, sans supplément. Vous en avez besoin maintenant ? Dites-le-nous : les apps les plus demandées sortent en premier, et on peut aussi la construire sur mesure pour vous.`}
-      action={<><ButtonLink href={`mailto:info@skydev.be?subject=${subject}`}>J&apos;en ai besoin</ButtonLink><ButtonLink href="/app/sur-mesure" variant="secondary">Sur mesure</ButtonLink></>}
+      action={<><ButtonLink href={`mailto:info@skydev.be?subject=${subject}`}>{t("J'en ai besoin")}</ButtonLink><ButtonLink href="/app/sur-mesure" variant="secondary">{t("Sur mesure")}</ButtonLink></>}
     />
   );
 }

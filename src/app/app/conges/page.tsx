@@ -6,6 +6,7 @@ import { fmtDays } from "@/lib/leave";
 import { requireContext } from "@/server/context";
 import { leaveBalances, leaveMembers, leaveRights, listLeave } from "@/server/leave";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Congés");
 
@@ -13,6 +14,7 @@ const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz,
 
 /** Congés : demandes à valider, mon solde, absences à venir et passées. */
 export default async function LeavePage() {
+  const t = await appT();
   const ctx = await requireContext();
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
   const year = Number(today.slice(0, 4));
@@ -27,11 +29,11 @@ export default async function LeavePage() {
 
   return (
     <>
-      <PageHeader title="Congés" description={rights.approve ? "Demandes de l'équipe, absences à venir et soldes." : "Vos demandes et votre solde de congés."} action={<RequestLeaveButton members={members} me={ctx.member.id} canApprove={rights.approve} today={today} />} />
+      <PageHeader title={t("Congés")} description={rights.approve ? t("Demandes de l'équipe, absences à venir et soldes.") : t("Vos demandes et votre solde de congés.")} action={<RequestLeaveButton members={members} me={ctx.member.id} canApprove={rights.approve} today={today} />} />
       <div className="space-y-6">
         {rights.approve ? (
           <Card>
-            <CardHeader title="À valider" description={pending.length ? `${pending.length} demande${pending.length > 1 ? "s" : ""} en attente` : "Aucune demande en attente."} />
+            <CardHeader title={t("À valider")} description={pending.length ? `${pending.length} demande${pending.length > 1 ? "s" : ""} en attente` : t("Aucune demande en attente.")} />
             <PendingList items={pending} />
           </Card>
         ) : null}
@@ -39,28 +41,28 @@ export default async function LeavePage() {
         {mine ? (
           <Card className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
             {[
-              { label: `Solde ${year}`, value: left === null ? "Non suivi" : fmtDays(Math.max(0, left)), hint: left === null ? "Votre responsable n'a pas encore indiqué vos jours." : left < 0 ? `Dépassé de ${fmtDays(-left)}` : `sur ${fmtDays(mine.allowance!)}` },
-              { label: "Pris", value: fmtDays(mine.taken), hint: "Congés passés cette année" },
-              { label: "Prévus", value: fmtDays(mine.planned), hint: "Validés, à venir" },
-              { label: "En attente", value: fmtDays(mine.pending), hint: "Pas encore validés" },
+              { label: `Solde ${year}`, value: left === null ? t("Non suivi") : fmtDays(Math.max(0, left)), hint: left === null ? t("Votre responsable n'a pas encore indiqué vos jours.") : left < 0 ? `Dépassé de ${fmtDays(-left)}` : `sur ${fmtDays(mine.allowance!)}` },
+              { label: "Pris", value: fmtDays(mine.taken), hint: t("Congés passés cette année") },
+              { label: "Prévus", value: fmtDays(mine.planned), hint: t("Validés, à venir") },
+              { label: t("En attente"), value: fmtDays(mine.pending), hint: t("Pas encore validés") },
             ].map((k) => (
-              <div key={k.label}>
-                <p className="text-sm text-muted">{k.label}</p>
+              <div key={t(k.label)}>
+                <p className="text-sm text-muted">{t(k.label)}</p>
                 <p className="mt-1 text-xl font-semibold tabular-nums">{k.value}</p>
-                <p className="text-xs text-muted">{k.hint}</p>
+                <p className="text-xs text-muted">{t(k.hint)}</p>
               </div>
             ))}
           </Card>
         ) : null}
 
         <Card>
-          <CardHeader title="À venir" description={upcoming.length ? undefined : "Aucune absence prévue."} />
+          <CardHeader title={t("À venir")} description={upcoming.length ? undefined : t("Aucune absence prévue.")} />
           {upcoming.length ? <LeaveList items={upcoming} me={ctx.member.id} canApprove={rights.approve} today={today} showName={showName} /> : null}
         </Card>
 
         {past.length ? (
           <details className="group rounded-xl border border-border bg-surface">
-            <summary className="cursor-pointer px-5 py-4 font-semibold">Historique <span className="font-normal text-muted">({past.length})</span></summary>
+            <summary className="cursor-pointer px-5 py-4 font-semibold">{t("Historique")} <span className="font-normal text-muted">({past.length})</span></summary>
             <div className="border-t border-border"><LeaveList items={past} me={ctx.member.id} canApprove={rights.approve} today={today} showName={showName} /></div>
           </details>
         ) : null}

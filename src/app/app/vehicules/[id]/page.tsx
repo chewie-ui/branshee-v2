@@ -12,6 +12,7 @@ import { VEHICLE_STATUS, vehicleFullTitle, type VehicleStatus } from "@/lib/vehi
 import { requireContext } from "@/server/context";
 import { vehicleOf, vehicleRights } from "@/server/vehicles";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Véhicule");
 
@@ -19,6 +20,7 @@ const s = (n: number | null) => (n == null ? "" : String(n));
 const euros = (c: number | null) => (c == null ? "" : String(c % 100 ? (c / 100).toFixed(2).replace(".", ",") : c / 100));
 
 export default async function VehiclePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ photos?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext(undefined, { app: "vehicules" });
   const v = await vehicleOf(ctx.business.id, (await params).id);
   if (!v) notFound();
@@ -34,15 +36,15 @@ export default async function VehiclePage({ params, searchParams }: { params: Pr
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <Link href="/app/vehicules" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />Véhicules</Link>
+        <Link href="/app/vehicules" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{t("Véhicules")}</Link>
         <PageHeader
           title={vehicleFullTitle(v)}
-          description={st.public ? "Visible dans votre vitrine en ligne." : v.status === "sold" ? "Vendu : retiré de la vitrine." : "Brouillon : pas encore visible en ligne."}
-          action={<div className="flex items-center gap-2"><Badge tone={st.tone}>{st.label}</Badge>{st.public || v.status === "sold" ? <ButtonLink href={publicUrl} target="_blank" rel="noopener noreferrer" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>Fiche publique</ButtonLink> : null}</div>}
+          description={st.public ? t("Visible dans votre vitrine en ligne.") : v.status === "sold" ? t("Vendu : retiré de la vitrine.") : t("Brouillon : pas encore visible en ligne.")}
+          action={<div className="flex items-center gap-2"><Badge tone={st.tone}>{t(st.label)}</Badge>{st.public || v.status === "sold" ? <ButtonLink href={publicUrl} target="_blank" rel="noopener noreferrer" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>{t("Fiche publique")}</ButtonLink> : null}</div>}
         />
       </div>
       <VehiclePhotos id={v.id} photos={v.photos} canManage={rights.manage} highlight={(await searchParams).photos === "1" && !v.photos.length} />
-      {rights.manage ? <VehicleForm id={v.id} initial={initial} /> : <p className="text-sm text-muted">Seul le responsable peut modifier cette fiche.</p>}
+      {rights.manage ? <VehicleForm id={v.id} initial={initial} /> : <p className="text-sm text-muted">{t("Seul le responsable peut modifier cette fiche.")}</p>}
       {rights.manage ? <DeleteVehicle id={v.id} title={vehicleFullTitle(v)} /> : null}
     </div>
   );

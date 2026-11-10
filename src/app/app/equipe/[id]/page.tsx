@@ -10,10 +10,12 @@ import { EditMemberForm } from "@/components/team/member-forms";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Membre de l'équipe");
 
 export default async function MemberPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("team.manage");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
@@ -25,7 +27,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
     <div className="mx-auto max-w-2xl">
       <Link href="/app/equipe" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text">
         <ArrowLeft className="size-4" aria-hidden="true" />
-        Équipe
+        {t("Équipe")}
       </Link>
       <PageHeader title={m.displayName} description={m.status === "invited" ? `Invitation en attente : ${m.inviteEmail}` : undefined} />
       <EditMemberForm
@@ -35,7 +37,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
           displayName: m.displayName,
           roleLabel: m.roleLabel ?? "",
           bio: m.bio ?? "",
-          customInfo: m.customInfo.map((c) => `${c.label} : ${c.value}`).join("\n"),
+          customInfo: m.customInfo.map((c) => `${t(c.label)} : ${c.value}`).join("\n"),
           showRole: m.showRole,
           gradeId: m.gradeId ?? "",
           isBookable: m.isBookable,

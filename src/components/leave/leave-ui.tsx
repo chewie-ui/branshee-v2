@@ -11,10 +11,12 @@ import { cn } from "@/lib/cn";
 import { LEAVE_KINDS, LEAVE_STATUS, PERIOD_LABEL, fmtDays, fmtRange, leaveHalfDays, type LeaveKind, type LeavePeriod } from "@/lib/leave";
 import { cancelLeave, decideLeave, requestLeave, setAllowance, setAllowanceForAll } from "@/server/actions/leave";
 import type { LeaveBalance, LeaveMember, LeaveView } from "@/server/leave";
+import { useT } from "@/components/app-locale";
 
 type R = { ok: true; message?: string } | { ok: false; error: string };
 
 function useAction() {
+  const t = useT();
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -22,9 +24,9 @@ function useAction() {
   const run = (key: string, fn: () => Promise<R>, after?: (r: R) => void) => {
     setBusy(key);
     start(async () => {
-      const r = await fn().catch(() => ({ ok: false as const, error: "Une erreur est survenue. Réessayez." }));
+      const r = await fn().catch(() => ({ ok: false as const, error: t("Une erreur est survenue. Réessayez.") }));
       setBusy(null);
-      setMsg(r.ok ? { ok: true, text: r.message ?? "C'est fait." } : { ok: false, text: r.error });
+      setMsg(r.ok ? { ok: true, text: r.message ?? t("C'est fait.") } : { ok: false, text: r.error });
       after?.(r);
       if (r.ok) router.refresh();
     });
@@ -38,6 +40,7 @@ export function Notice({ msg }: { msg: { ok: boolean; text: string } | null }) {
 
 /** Bouton « Demander un congé » (ou « Encoder une absence » pour le responsable) et sa fenêtre. */
 export function RequestLeaveButton({ members, me, canApprove, today }: { members: LeaveMember[]; me: string; canApprove: boolean; today: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const { msg, run, busy, setMsg } = useAction();
   const [f, setF] = useState({ memberId: me, kind: "conge" as LeaveKind, start: today, end: today, period: "full" as LeavePeriod, note: "" });
@@ -55,14 +58,14 @@ export function RequestLeaveButton({ members, me, canApprove, today }: { members
   const forOther = canApprove && f.memberId !== me;
   return (
     <>
-      <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => { setError(null); setMsg(null); setOpen(true); }}>{canApprove ? "Encoder une absence" : "Demander un congé"}</Button>
+      <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => { setError(null); setMsg(null); setOpen(true); }}>{canApprove ? t("Encoder une absence") : t("Demander un congé")}</Button>
       {msg && !open ? <div className="mt-3"><Notice msg={msg} /></div> : null}
       {open ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="leave-title">
-          <button type="button" className="absolute inset-0 bg-black/30" aria-label="Fermer" tabIndex={-1} onClick={() => setOpen(false)} />
+          <button type="button" className="absolute inset-0 bg-black/30" aria-label={t("Fermer")} tabIndex={-1} onClick={() => setOpen(false)} />
           <div ref={ref} className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 shadow-xl sm:rounded-2xl">
-            <h2 id="leave-title" className="text-lg font-semibold">{canApprove ? "Encoder une absence" : "Demander un congé"}</h2>
-            <p className="mt-1 text-sm text-muted">{canApprove ? "Vous validez les congés : l'absence est enregistrée tout de suite." : "Votre responsable reçoit la demande et vous prévient de sa réponse."}</p>
+            <h2 id="leave-title" className="text-lg font-semibold">{canApprove ? t("Encoder une absence") : t("Demander un congé")}</h2>
+            <p className="mt-1 text-sm text-muted">{canApprove ? t("Vous validez les congés : l'absence est enregistrée tout de suite.") : t("Votre responsable reçoit la demande et vous prévient de sa réponse.")}</p>
             <div className="mt-5 space-y-4">
               {canApprove && members.length > 1 ? (
                 <Field label="Personne" htmlFor="lv-member">
@@ -71,14 +74,14 @@ export function RequestLeaveButton({ members, me, canApprove, today }: { members
                   </Select>
                 </Field>
               ) : null}
-              <Field label="Type d'absence" htmlFor="lv-kind">
+              <Field label={t("Type d'absence")} htmlFor="lv-kind">
                 <Select id="lv-kind" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as LeaveKind })}>
                   {(Object.keys(LEAVE_KINDS) as LeaveKind[]).map((k) => <option key={k} value={k}>{LEAVE_KINDS[k].label}</option>)}
                 </Select>
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Du" htmlFor="lv-start"><Input id="lv-start" type="date" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value, end: f.end < e.target.value ? e.target.value : f.end })} required /></Field>
-                <Field label="Au (inclus)" htmlFor="lv-end"><Input id="lv-end" type="date" value={f.end} min={f.start} onChange={(e) => setF({ ...f, end: e.target.value })} required /></Field>
+                <Field label={t("Au (inclus)")} htmlFor="lv-end"><Input id="lv-end" type="date" value={f.end} min={f.start} onChange={(e) => setF({ ...f, end: e.target.value })} required /></Field>
               </div>
               {single ? (
                 <div className="inline-flex rounded-lg bg-surface-muted p-1" role="radiogroup" aria-label="Durée">
@@ -87,14 +90,14 @@ export function RequestLeaveButton({ members, me, canApprove, today }: { members
                   ))}
                 </div>
               ) : null}
-              <p className="text-sm text-muted">{half ? `${fmtDays(half)} ouvrable${half > 2 ? "s" : ""} (week-ends et jours fériés belges non comptés).` : "Aucun jour ouvrable sur cette période."}</p>
-              <Field label={forOther ? "Note (facultatif)" : "Message au responsable (facultatif)"} htmlFor="lv-note"><Textarea id="lv-note" rows={2} maxLength={500} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
+              <p className="text-sm text-muted">{half ? `${fmtDays(half)} ouvrable${half > 2 ? "s" : ""} (week-ends et jours fériés belges non comptés).` : t("Aucun jour ouvrable sur cette période.")}</p>
+              <Field label={forOther ? t("Note (facultatif)") : t("Message au responsable (facultatif)")} htmlFor="lv-note"><Textarea id="lv-note" rows={2} maxLength={500} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
             </div>
             {error ? <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy === "req"}>Annuler</Button>
+              <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy === "req"}>{t("Annuler")}</Button>
               <Button loading={busy === "req"} onClick={() => run("req", () => requestLeave({ memberId: f.memberId, kind: f.kind, start: f.start, end: f.end, period: f.period, note: f.note }), (r) => (r.ok ? setOpen(false) : setError(r.error)))}>
-                {canApprove ? "Enregistrer" : "Envoyer la demande"}
+                {canApprove ? t("Enregistrer") : t("Envoyer la demande")}
               </Button>
             </div>
           </div>
@@ -106,6 +109,7 @@ export function RequestLeaveButton({ members, me, canApprove, today }: { members
 
 /** Demandes à valider (responsable) : valider, ou refuser avec un mot d'explication. */
 export function PendingList({ items }: { items: LeaveView[] }) {
+  const t = useT();
   const { msg, busy, run } = useAction();
   const [refusing, setRefusing] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -122,9 +126,9 @@ export function PendingList({ items }: { items: LeaveView[] }) {
               {l.note ? <p className="mt-1 text-sm">« {l.note} »</p> : null}
               {refusing === l.id ? (
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Raison du refus (facultatif)" maxLength={500} aria-label="Raison du refus" />
+                  <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Raison du refus (facultatif)")} maxLength={500} aria-label={t("Raison du refus")} />
                   <Button variant="danger" size="sm" loading={busy === `r-${l.id}`} onClick={() => run(`r-${l.id}`, () => decideLeave(l.id, false, note), () => setRefusing(null))}>Refuser</Button>
-                  <Button variant="ghost" size="sm" onClick={() => setRefusing(null)}>Annuler</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setRefusing(null)}>{t("Annuler")}</Button>
                 </div>
               ) : null}
             </div>
@@ -143,6 +147,7 @@ export function PendingList({ items }: { items: LeaveView[] }) {
 
 /** Liste d'absences (à venir ou passées) avec annulation possible. */
 export function LeaveList({ items, me, canApprove, today, showName }: { items: LeaveView[]; me: string; canApprove: boolean; today: string; showName: boolean }) {
+  const t = useT();
   const { msg, busy, run } = useAction();
   const [confirm, setConfirm] = useState<LeaveView | null>(null);
   return (
@@ -159,13 +164,13 @@ export function LeaveList({ items, me, canApprove, today, showName }: { items: L
                 <p className="text-sm text-muted">{fmtRange(l.start, l.end, l.period)} · {fmtDays(l.halfDays)}</p>
                 {l.decisionNote ? <p className="mt-0.5 text-sm text-muted">Réponse : « {l.decisionNote} »</p> : null}
               </div>
-              <Badge tone={st.tone}>{st.label}</Badge>
-              {cancellable ? <Button variant="ghost" size="sm" onClick={() => setConfirm(l)}>Annuler</Button> : null}
+              <Badge tone={st.tone}>{t(st.label)}</Badge>
+              {cancellable ? <Button variant="ghost" size="sm" onClick={() => setConfirm(l)}>{t("Annuler")}</Button> : null}
             </li>
           );
         })}
       </ul>
-      <ConfirmDialog open={!!confirm} title="Annuler cette absence ?" confirmLabel="Annuler l'absence" danger loading={busy === "cancel"} onCancel={() => setConfirm(null)} onConfirm={() => confirm && run("cancel", () => cancelLeave(confirm.id), () => setConfirm(null))}>
+      <ConfirmDialog open={!!confirm} title={t("Annuler cette absence ?")} confirmLabel={t("Annuler l'absence")} danger loading={busy === "cancel"} onCancel={() => setConfirm(null)} onConfirm={() => confirm && run("cancel", () => cancelLeave(confirm.id), () => setConfirm(null))}>
         {confirm ? `${LEAVE_KINDS[confirm.kind].label} ${fmtRange(confirm.start, confirm.end, confirm.period)}. Les jours fermés dans l'agenda sont rouverts.` : null}
       </ConfirmDialog>
     </>
@@ -174,6 +179,7 @@ export function LeaveList({ items, me, canApprove, today, showName }: { items: L
 
 /** Soldes de l'équipe (responsable) : jours par an modifiables, pris, prévus, en attente, restants. */
 export function AllowanceTable({ year, members, balances }: { year: number; members: LeaveMember[]; balances: LeaveBalance[] }) {
+  const t = useT();
   const { msg, busy, run } = useAction();
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(balances.map((b) => [b.memberId, b.allowance === null ? "" : String(b.allowance / 2)])));
   const [all, setAll] = useState("20");
@@ -184,17 +190,17 @@ export function AllowanceTable({ year, members, balances }: { year: number; memb
         <Field label={`Jours par an pour ceux qui n'ont pas encore de solde en ${year}`} htmlFor="lv-all" className="w-full max-w-xs">
           <Input id="lv-all" type="number" min={0} max={366} step={0.5} value={all} onChange={(e) => setAll(e.target.value)} />
         </Field>
-        <Button variant="secondary" loading={busy === "all"} onClick={() => run("all", () => setAllowanceForAll(year, Number(all)))}>Appliquer à tous</Button>
+        <Button variant="secondary" loading={busy === "all"} onClick={() => run("all", () => setAllowanceForAll(year, Number(all)))}>{t("Appliquer à tous")}</Button>
       </div>
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="border-y border-border text-left text-muted">
             <tr>
               <th className="px-5 py-2.5 font-medium">Personne</th>
-              <th className="px-3 py-2.5 font-medium">Jours par an</th>
+              <th className="px-3 py-2.5 font-medium">{t("Jours par an")}</th>
               <th className="px-3 py-2.5 text-right font-medium">Pris</th>
               <th className="px-3 py-2.5 text-right font-medium">Prévus</th>
-              <th className="px-3 py-2.5 text-right font-medium">En attente</th>
+              <th className="px-3 py-2.5 text-right font-medium">{t("En attente")}</th>
               <th className="px-5 py-2.5 text-right font-medium">Restant</th>
             </tr>
           </thead>

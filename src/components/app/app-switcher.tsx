@@ -86,7 +86,7 @@ export function AppSwitcher({ apps }: { apps: SwitchApp[] }) {
             <li key={e.key} id={`sw-${i}`} role="option" aria-selected={i === sel}>
               <button type="button" onMouseEnter={() => setSel(i)} onClick={() => go(e)} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm", i === sel ? "bg-accent-soft text-accent-soft-foreground" : "hover:bg-surface-muted")}>
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={e.icon} className="size-4" /></span>
-                <span className="min-w-0 flex-1 truncate">{e.sub ? <><span className="text-muted">{e.sub} › </span>{e.label}</> : <span className="font-medium">{e.label}</span>}</span>
+                <span className="min-w-0 flex-1 truncate">{e.sub ? <><span className="text-muted">{e.sub} › </span>{t(e.label)}</> : <span className="font-medium">{t(e.label)}</span>}</span>
                 {e.fav ? <Pin className="size-3.5 shrink-0 fill-current text-accent" aria-label={t("Épinglée")} /> : null}
                 {i === sel ? <ArrowRight className="size-4 shrink-0" aria-hidden="true" /> : null}
               </button>

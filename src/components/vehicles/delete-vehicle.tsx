@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { deleteVehicle } from "@/server/actions/vehicles";
+import { useT } from "@/components/app-locale";
 
 /** Suppression définitive (fiche et photos), après confirmation. Un véhicule vendu peut plutôt passer en « Vendu ». */
 export function DeleteVehicle({ id, title }: { id: string; title: string }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function DeleteVehicle({ id, title }: { id: string; title: string }) {
         }}
         className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
       >
-        <Trash2 className="size-4" aria-hidden="true" />Supprimer le véhicule
+        <Trash2 className="size-4" aria-hidden="true" />{t("Supprimer le véhicule")}
       </button>
       {err ? <p className="text-sm text-danger" role="alert">{err}</p> : null}
     </div>

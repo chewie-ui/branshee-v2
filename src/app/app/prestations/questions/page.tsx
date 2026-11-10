@@ -8,10 +8,12 @@ import { ServiceTabs } from "@/components/services/service-tabs";
 import { requireContext } from "@/server/context";
 import { listIntake } from "@/server/intake";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Questions avant réservation");
 
 export default async function IntakePage() {
+  const t = await appT();
   const ctx = await requireContext("services.manage");
   const [questions, svc] = await Promise.all([
     listIntake(ctx.business.id),
@@ -20,19 +22,19 @@ export default async function IntakePage() {
 
   return (
     <>
-      <PageHeader title="Prestations" />
+      <PageHeader title={t("Prestations")} />
       <ServiceTabs />
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">Orienter le client vers les bonnes prestations</h2>
+          <h2 className="text-lg font-semibold">{t("Orienter le client vers les bonnes prestations")}</h2>
           <p className="mt-1 text-sm text-muted">
-            Ces questions sont posées sur votre page de réservation, avant le choix de la prestation. Selon la réponse, le client ne voit que les prestations qui le concernent. Exemple : « Êtes-vous enceinte ? » → Oui : kiné prénatale uniquement.
+            {t("Ces questions sont posées sur votre page de réservation, avant le choix de la prestation. Selon la réponse, le client ne voit que les prestations qui le concernent. Exemple : « Êtes-vous enceinte ? » → Oui : kiné prénatale uniquement.")}
           </p>
         </div>
         {questions.map((q, i) => (
           <IntakeQuestionCard key={q.id} question={q} services={svc} index={i} total={questions.length} />
         ))}
-        {svc.length === 0 ? <p className="text-sm text-muted">Créez d&apos;abord vos prestations.</p> : <NewIntakeQuestion services={svc} first={questions.length === 0} />}
+        {svc.length === 0 ? <p className="text-sm text-muted">{t("Créez d'abord vos prestations.")}</p> : <NewIntakeQuestion services={svc} first={questions.length === 0} />}
       </div>
     </>
   );

@@ -14,12 +14,14 @@ import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Clients");
 
 type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string }>;
 
 export default async function CustomersPage({ searchParams }: { searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("customers.view");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().slice(0, 100);
@@ -76,20 +78,20 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
       <form className="mb-4 flex flex-wrap gap-2" role="search">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <Input name="q" defaultValue={q} placeholder="Nom, email ou téléphone" className="pl-9" aria-label={`Rechercher un ${term}`} />
+          <Input name="q" defaultValue={q} placeholder={t("Nom, email ou téléphone")} className="pl-9" aria-label={`Rechercher un ${term}`} />
         </div>
-        <Select name="periode" defaultValue={periode} className="w-auto" aria-label="Période">
-          <option value="">Toutes les dates</option>
-          <option value="avenir">RDV à venir</option>
-          <option value="7">Venus ces 7 jours</option>
-          <option value="30">Venus ces 30 jours</option>
-          <option value="90">Venus ces 90 jours</option>
+        <Select name="periode" defaultValue={periode} className="w-auto" aria-label={t("Période")}>
+          <option value="">{t("Toutes les dates")}</option>
+          <option value="avenir">{t("RDV à venir")}</option>
+          <option value="7">{t("Venus ces 7 jours")}</option>
+          <option value="30">{t("Venus ces 30 jours")}</option>
+          <option value="90">{t("Venus ces 90 jours")}</option>
         </Select>
         <Select name="statut" defaultValue={statut} className="w-auto" aria-label="Statut">
-          <option value="">Tous les statuts</option>
-          <option value="confirmed">Dernier RDV confirmé</option>
-          <option value="cancelled">Dernier RDV annulé</option>
-          <option value="noshow">Au moins une absence</option>
+          <option value="">{t("Tous les statuts")}</option>
+          <option value="confirmed">{t("Dernier RDV confirmé")}</option>
+          <option value="cancelled">{t("Dernier RDV annulé")}</option>
+          <option value="noshow">{t("Au moins une absence")}</option>
           <option value="blocked">Bloqués</option>
         </Select>
         <button type="submit" className="h-10 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Filtrer</button>
@@ -100,7 +102,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
           term={term}
           filtered={filtered}
           canDelete={ctx.can("customers.manage")}
-          rows={rows.map((r) => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, blocked: !!r.blockedAt, count: r.count, last: r.lastAt ? formatDay(r.lastAt, tz, "d MMM yyyy") : null, lastStatus: r.lastStatus, member: r.lastMember }))}
+          rows={rows.map((r) => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, blocked: !!r.blockedAt, count: r.count, last: r.lastAt ? formatDay(r.lastAt, tz, "d MMM yyyy", t.locale) : null, lastStatus: r.lastStatus, member: r.lastMember }))}
         />
       </Card>
     </>

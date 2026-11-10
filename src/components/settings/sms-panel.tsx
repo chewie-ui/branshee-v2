@@ -40,7 +40,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
 
   return (
     <div className="space-y-6">
-      {msg ? <p className={cn("rounded-lg p-3 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role="status">{msg.text}</p> : null}
+      {msg ? <p className={cn("rounded-lg p-3 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role="status">{t(msg.text)}</p> : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-5">
           <p className="text-sm text-muted">{t("Ce mois-ci")}</p>

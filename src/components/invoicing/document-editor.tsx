@@ -16,6 +16,7 @@ import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-d
 import { A4Frame } from "@/components/invoicing/a4-frame";
 import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 import { DecimalInput } from "@/components/ui/decimal-input";
+import { useT } from "@/components/app-locale";
 
 type CatalogItem = { id: string; name: string; unit: string; price: number; vat: number; source: "catalogue" | "prestation" };
 export type EditorDoc = {
@@ -40,6 +41,7 @@ const clientParty = (c: CustomerOption | undefined): DocParty | null =>
 
 /** Éditeur de facture, note de crédit ou devis, avec l'aperçu A4 en direct (repris de Comptoir). */
 export function DocumentEditor({ initial, customers: initialCustomers, catalog, seller, missing, clientWord }: { initial: EditorDoc; customers: CustomerOption[]; catalog: CatalogItem[]; seller: DocParty & { vatRegime: string; paymentDays: number }; missing: string[]; clientWord: string }) {
+  const t = useT();
   const router = useRouter();
   const [doc, setDoc] = useState<EditorDoc>(initial);
   const [customers, setCustomers] = useState(initialCustomers);
@@ -50,7 +52,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const fr = seller.vatRegime === "franchise";
   const isQuote = doc.docType === "quote";
   const isCredit = doc.docType === "credit";
-  const t = useMemo(() => totals(doc.lines, fr ? "franchise" : "assujetti"), [doc.lines, fr]);
+  const tv = useMemo(() => totals(doc.lines, fr ? "franchise" : "assujetti"), [doc.lines, fr]);
   const client = customers.find((c) => c.id === doc.customerId);
   // Facture légale : mentions du vendeur et du client complètes, sinon impossible d'enregistrer ou d'émettre.
   const clientGaps = client && !isQuote ? clientMissing(client) : [];
@@ -58,7 +60,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const set = (patch: Partial<EditorDoc>) => setDoc((d) => ({ ...d, ...patch }));
   const setLine = (i: number, patch: Partial<SalesLine>) => setDoc((d) => ({ ...d, lines: d.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) }));
 
-  const title = isQuote ? (doc.number ? `Devis ${doc.number}` : "Nouveau devis") : isCredit ? "Note de crédit" : doc.id ? "Brouillon de facture" : "Nouvelle facture";
+  const title = isQuote ? (doc.number ? `Devis ${doc.number}` : t("Nouveau devis")) : isCredit ? t("Note de crédit") : doc.id ? t("Brouillon de facture") : t("Nouvelle facture");
   const back = doc.id ? `/app/factures/${doc.id}` : isQuote ? "/app/factures/devis" : "/app/factures/liste";
 
   const payload = () => ({ id: doc.id, docType: doc.docType, customerId: doc.customerId, issueDate: doc.issueDate, serviceDate: doc.serviceDate, dueDate: doc.dueDate, validUntil: doc.validUntil, notes: doc.notes, lines: doc.lines, relatedId: doc.relatedId ?? null, appointmentId: doc.appointmentId ?? null });
@@ -83,25 +85,25 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
 
   return (
     <>
-      <Link href={back} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />Retour</Link>
+      <Link href={back} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{t("Retour")}</Link>
       <PageHeader
         title={title}
-        description={isQuote ? "Le devis reste modifiable tant qu'il n'est pas facturé." : isCredit ? `Annule ou corrige la facture ${doc.related?.number ?? ""}. Ajustez les lignes si l'annulation est partielle.` : "Le numéro définitif est attribué au moment de l'émission."}
+        description={isQuote ? t("Le devis reste modifiable tant qu'il n'est pas facturé.") : isCredit ? `Annule ou corrige la facture ${doc.related?.number ?? ""}. Ajustez les lignes si l'annulation est partielle.` : t("Le numéro définitif est attribué au moment de l'émission.")}
         action={
           isQuote ? (
-            <Button loading={pending} onClick={() => save()}>Enregistrer le devis</Button>
+            <Button loading={pending} onClick={() => save()}>{t("Enregistrer le devis")}</Button>
           ) : (
             <>
               {doc.id ? <a href={`/app/factures/${doc.id}/pdf`} download className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-accent"><Download className="size-4" aria-hidden="true" />PDF</a> : null}
-              <Button variant="secondary" disabled={pending || blocked} onClick={() => save()}>Enregistrer le brouillon</Button>
-              <Button icon={<Send className="size-4" aria-hidden="true" />} disabled={pending || blocked} onClick={() => { setError(null); setConfirming(true); }}>Émettre {isCredit ? "la note de crédit" : "la facture"}</Button>
+              <Button variant="secondary" disabled={pending || blocked} onClick={() => save()}>{t("Enregistrer le brouillon")}</Button>
+              <Button icon={<Send className="size-4" aria-hidden="true" />} disabled={pending || blocked} onClick={() => { setError(null); setConfirming(true); }}>Émettre {isCredit ? t("la note de crédit") : "la facture"}</Button>
             </>
           )
         }
       />
       {missing.length && !isQuote ? (
         <p className="mb-4 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
-          Pour créer une facture, ajoutez d&apos;abord {missing.join(", ")} dans les <Link href="/app/factures/reglages" className="font-medium underline">réglages de facturation</Link>. Ces mentions sont obligatoires sur une facture.
+          Pour créer une facture, ajoutez d&apos;abord {missing.join(", ")} dans les <Link href="/app/factures/reglages" className="font-medium underline">{t("réglages de facturation")}</Link>{t(". Ces mentions sont obligatoires sur une facture.")}
         </p>
       ) : null}
       {error ? <p className="mb-4 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">{error}</p> : null}
@@ -111,9 +113,9 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
           <Card>
             <CardHeader title={isQuote ? "Destinataire" : "Client"} action={!isCredit ? <Button size="sm" variant="ghost" icon={<UserPlus className="size-4" aria-hidden="true" />} onClick={() => setNewClient((v) => !v)}>Nouveau {clientWord}</Button> : undefined} />
             <div className="space-y-4 p-5">
-              <Field label={isQuote ? "Devis pour" : "Facturer à"} htmlFor="e-client" hint={!customers.length ? `Aucun ${clientWord} pour l'instant : créez-le avec « Nouveau ${clientWord} ».` : undefined}>
+              <Field label={isQuote ? t("Devis pour") : t("Facturer à")} htmlFor="e-client" hint={!customers.length ? `Aucun ${clientWord} pour l'instant : créez-le avec « Nouveau ${clientWord} ».` : undefined}>
                 <Select id="e-client" value={doc.customerId ?? ""} disabled={isCredit} onChange={(e) => set({ customerId: e.target.value || null })}>
-                  <option value="">Choisir…</option>
+                  <option value="">{t("Choisir…")}</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>{c.company ? `${c.company} (${c.name})` : c.name}</option>
                   ))}
@@ -143,16 +145,16 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
             <CardHeader title="Dates" />
             <div className="space-y-3 p-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Field label={isQuote ? "Date du devis" : "Date d'émission"} htmlFor="e-issue">
+                <Field label={isQuote ? t("Date du devis") : t("Date d'émission")} htmlFor="e-issue">
                   <Input id="e-issue" type="date" value={doc.issueDate} onChange={(e) => set({ issueDate: e.target.value })} />
                 </Field>
                 {isQuote ? (
-                  <Field label="Valable jusqu'au" htmlFor="e-valid" className="sm:col-span-2">
+                  <Field label={t("Valable jusqu'au")} htmlFor="e-valid" className="sm:col-span-2">
                     <Input id="e-valid" type="date" value={doc.validUntil ?? ""} onChange={(e) => set({ validUntil: e.target.value || null })} />
                   </Field>
                 ) : isCredit ? null : (
                   <>
-                    <Field label="Date de prestation" htmlFor="e-service">
+                    <Field label={t("Date de prestation")} htmlFor="e-service">
                       <Input id="e-service" type="date" value={doc.serviceDate ?? ""} onChange={(e) => set({ serviceDate: e.target.value || null })} />
                     </Field>
                     <Field label="Échéance" htmlFor="e-due">
@@ -162,8 +164,8 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                 )}
               </div>
               {!isCredit ? (
-                <div className="flex flex-wrap gap-2" aria-label="Délais rapides">
-                  {(isQuote ? [[15, "15 jours"], [30, "30 jours"], [60, "60 jours"]] : [[0, "À réception"], [15, "15 jours"], [30, "30 jours"]]).map(([n, l]) => (
+                <div className="flex flex-wrap gap-2" aria-label={t("Délais rapides")}>
+                  {(isQuote ? [[15, "15 jours"], [30, t("30 jours")], [60, "60 jours"]] : [[0, t("À réception")], [15, "15 jours"], [30, t("30 jours")]]).map(([n, l]) => (
                     <button key={l} type="button" onClick={() => (isQuote ? set({ validUntil: addDays(doc.issueDate, Number(n)) }) : set({ dueDate: addDays(doc.issueDate, Number(n)) }))} className="h-8 rounded-full border border-border-strong px-3 text-sm text-muted transition-colors hover:border-muted hover:text-text">
                       {l}
                     </button>
@@ -175,11 +177,11 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
 
           <Card>
             <CardHeader
-              title="Prestations"
+              title={t("Prestations")}
               action={
                 catalog.length ? (
                   <Select
-                    aria-label="Ajouter depuis le catalogue"
+                    aria-label={t("Ajouter depuis le catalogue")}
                     value=""
                     className="h-9 w-56"
                     onChange={(e) => {
@@ -189,14 +191,14 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                       setDoc((d) => ({ ...d, lines: [...d.lines.filter((l) => l.desc.trim() || num(l.price)), line] }));
                     }}
                   >
-                    <option value="">Ajouter depuis le catalogue…</option>
+                    <option value="">{t("Ajouter depuis le catalogue…")}</option>
                     {catalog.some((c) => c.source === "prestation") ? (
-                      <optgroup label="Vos prestations RDV">
+                      <optgroup label={t("Vos prestations RDV")}>
                         {catalog.filter((c) => c.source === "prestation").map((c) => <option key={c.id} value={`prestation:${c.id}`}>{c.name} · {money(c.price)}</option>)}
                       </optgroup>
                     ) : null}
                     {catalog.some((c) => c.source === "catalogue") ? (
-                      <optgroup label="Catalogue">
+                      <optgroup label={t("Catalogue")}>
                         {catalog.filter((c) => c.source === "catalogue").map((c) => <option key={c.id} value={`catalogue:${c.id}`}>{c.name} · {money(c.price)}</option>)}
                       </optgroup>
                     ) : null}
@@ -209,7 +211,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                 <div key={l.id} className={cn("grid grid-cols-2 gap-3 rounded-lg border border-border p-3 sm:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_auto]", !fr && "sm:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)_84px_auto]")}>
                   <div className="col-span-full">
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-desc-${l.id}`}>Description</label>
-                    <Textarea id={`l-desc-${l.id}`} rows={2} className="min-h-10" value={l.desc} placeholder="Ex. : Prestation, produit ou main-d'œuvre" onChange={(e) => setLine(i, { desc: e.target.value })} />
+                    <Textarea id={`l-desc-${l.id}`} rows={2} className="min-h-10" value={l.desc} placeholder={t("Ex. : Prestation, produit ou main-d'œuvre")} onChange={(e) => setLine(i, { desc: e.target.value })} />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted" htmlFor={`l-qty-${l.id}`}>Qté</label>
@@ -235,32 +237,32 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                   )}
                   <div className="flex items-end justify-between gap-2 sm:flex-col sm:items-end sm:justify-end">
                     <span className="text-sm font-medium tabular-nums sm:pb-2">{money(num(l.qty) * num(l.price))}</span>
-                    <Button variant="ghost" size="sm" aria-label="Supprimer la ligne" disabled={doc.lines.length < 2} onClick={() => setDoc((d) => ({ ...d, lines: d.lines.filter((_, j) => j !== i) }))}><Trash2 className="size-4" aria-hidden="true" /></Button>
+                    <Button variant="ghost" size="sm" aria-label={t("Supprimer la ligne")} disabled={doc.lines.length < 2} onClick={() => setDoc((d) => ({ ...d, lines: d.lines.filter((_, j) => j !== i) }))}><Trash2 className="size-4" aria-hidden="true" /></Button>
                   </div>
                 </div>
               ))}
-              <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setDoc((d) => ({ ...d, lines: [...d.lines, newLine()] }))}>Ajouter une ligne</Button>
+              <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setDoc((d) => ({ ...d, lines: [...d.lines, newLine()] }))}>{t("Ajouter une ligne")}</Button>
               <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
                 {fr ? null : (
                   <>
-                    <div className="flex justify-between"><span>Total HTVA</span><span className="tabular-nums">{money(t.ht)}</span></div>
-                    {t.vatRows.map((v) => <div key={v.rate} className="flex justify-between text-muted"><span>TVA {v.rate} %</span><span className="tabular-nums">{money(v.amt)}</span></div>)}
+                    <div className="flex justify-between"><span>{t("Total HTVA")}</span><span className="tabular-nums">{money(tv.ht)}</span></div>
+                    {tv.vatRows.map((v) => <div key={v.rate} className="flex justify-between text-muted"><span>TVA {v.rate} %</span><span className="tabular-nums">{money(v.amt)}</span></div>)}
                   </>
                 )}
-                <div className="flex justify-between border-t border-border pt-2 text-base font-semibold"><span>Total{fr ? "" : " TVAC"}</span><span className="tabular-nums">{money(fr ? t.ht : t.ttc)}</span></div>
+                <div className="flex justify-between border-tv border-border pt-2 text-base font-semibold"><span>Total{fr ? "" : " TVAC"}</span><span className="tabular-nums">{money(fr ? tv.ht : tv.ttc)}</span></div>
                 <p className="text-right text-xs text-muted">
-                  {fr ? "Franchise : pas de TVA facturée" : "Assujetti à la TVA"} ·{" "}
-                  <Link href="/app/factures/reglages?voir=tva#tva" className="font-medium text-accent hover:text-accent-hover">Modifier</Link>
+                  {fr ? t("Franchise : pas de TVA facturée") : t("Assujetti à la TVA")} ·{" "}
+                  <Link href="/app/factures/reglages?voir=tva#tva" className="font-medium text-accent hover:text-accent-hover">{t("Modifier")}</Link>
                 </p>
               </div>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Note sur le document" />
+            <CardHeader title={t("Note sur le document")} />
             <div className="p-5">
-              <Field label="Note" htmlFor="e-notes" hint="Affichée sous les prestations. Les mentions légales sont ajoutées automatiquement.">
-                <Textarea id="e-notes" rows={3} value={doc.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Ex. : Merci pour votre confiance." />
+              <Field label={t("Note")} htmlFor="e-notes" hint={t("Affichée sous les prestations. Les mentions légales sont ajoutées automatiquement.")}>
+                <Textarea id="e-notes" rows={3} value={doc.notes} onChange={(e) => set({ notes: e.target.value })} placeholder={t("Ex. : Merci pour votre confiance.")} />
               </Field>
             </div>
           </Card>
@@ -268,7 +270,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
 
         <div className="min-w-0">
           <div className="xl:sticky xl:top-6">
-            <p className="mb-2 text-sm font-medium text-muted">Aperçu</p>
+            <p className="mb-2 text-sm font-medium text-muted">{t("Aperçu")}</p>
             <A4Frame>
               <InvoiceDocument doc={{ ...doc, number: doc.number }} seller={seller} client={clientParty(client)} />
             </A4Frame>
@@ -278,22 +280,23 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
 
       <ConfirmDialog
         open={confirming}
-        title={`Émettre ${isCredit ? "la note de crédit" : "la facture"} ?`}
+        title={`Émettre ${isCredit ? t("la note de crédit") : "la facture"} ?`}
         confirmLabel="Émettre"
         loading={pending}
         onCancel={() => setConfirming(false)}
         onConfirm={() => save("issue")}
       >
-        Montant : <b>{money(fr ? t.ht : t.ttc)}</b>{client ? <> pour <b>{client.company || client.name}</b></> : null}.
+        {t("Montant :")} <b>{money(fr ? tv.ht : tv.ttc)}</b>{client ? <> pour <b>{client.company || client.name}</b></> : null}.
         <br />
         <br />
-        Une fois émise, elle reçoit son numéro définitif et ne peut plus être modifiée ni supprimée. Pour corriger une erreur, vous ferez une note de crédit.
+        {t("Une fois émise, elle reçoit son numéro définitif et ne peut plus être modifiée ni supprimée. Pour corriger une erreur, vous ferez une note de crédit.")}
       </ConfirmDialog>
     </>
   );
 }
 
 function NewClientForm({ onCreated }: { onCreated: (c: CustomerOption) => void }) {
+  const t = useT();
   const [v, setV] = useState({ name: "", company: "", email: "", phone: "", vatNumber: "", street: "", postalCode: "", city: "", country: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<string | null>(null);
@@ -306,14 +309,14 @@ function NewClientForm({ onCreated }: { onCreated: (c: CustomerOption) => void }
   return (
     <div className="space-y-4 rounded-lg border border-border bg-surface-muted p-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {f("name", "Nom et prénom", { autoComplete: "name" })}
-        {f("company", "Société (facultatif)")}
-        {f("email", "Email", { type: "email" })}
-        {f("phone", "Téléphone", { type: "tel" })}
-        {f("vatNumber", "TVA / N° d'entreprise")}
-        {f("street", "Rue et numéro")}
-        {f("postalCode", "Code postal")}
-        {f("city", "Ville")}
+        {f("name", t("Nom et prénom"), { autoComplete: "name" })}
+        {f("company", t("Société (facultatif)"))}
+        {f("email", t("Email"), { type: "email" })}
+        {f("phone", t("Téléphone"), { type: "tel" })}
+        {f("vatNumber", t("TVA / N° d'entreprise"))}
+        {f("street", t("Rue et numéro"))}
+        {f("postalCode", t("Code postal"))}
+        {f("city", t("Ville"))}
       </div>
       {msg ? <p className="text-sm text-danger" role="alert">{msg}</p> : null}
       <Button
@@ -331,7 +334,7 @@ function NewClientForm({ onCreated }: { onCreated: (c: CustomerOption) => void }
           })
         }
       >
-        Ajouter
+        {t("Ajouter")}
       </Button>
     </div>
   );
@@ -339,6 +342,7 @@ function NewClientForm({ onCreated }: { onCreated: (c: CustomerOption) => void }
 
 /** Fiche client incomplète : les mentions obligatoires se complètent ici même, sans quitter la facture. */
 function ClientBillingFix({ client, gaps, onSaved }: { client: CustomerOption; gaps: string[]; onSaved: (patch: Partial<CustomerOption>) => void }) {
+  const t = useT();
   const [v, setV] = useState({ company: client.company ?? "", vatNumber: client.vatNumber ?? "", street: client.street ?? "", postalCode: client.postalCode ?? "", city: client.city ?? "", country: client.country ?? "Belgique" });
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -348,16 +352,16 @@ function ClientBillingFix({ client, gaps, onSaved }: { client: CustomerOption; g
   );
   return (
     <div className="rounded-xl border border-warning/40 bg-warning-soft/50 p-4">
-      <p className="text-sm font-medium text-warning">Informations obligatoires manquantes</p>
+      <p className="text-sm font-medium text-warning">{t("Informations obligatoires manquantes")}</p>
       <p className="mt-0.5 text-sm text-muted">Une facture doit indiquer {gaps.join(", ")}. Complétez-les ici : elles sont enregistrées sur la fiche.</p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {f("street", "Rue et numéro", { autoComplete: "street-address", required: true })}
+        {f("street", t("Rue et numéro"), { autoComplete: "street-address", required: true })}
         <div className="grid min-w-0 grid-cols-[110px_minmax(0,1fr)] gap-3">
-          {f("postalCode", "Code postal", { autoComplete: "postal-code", inputMode: "numeric", required: true })}
-          {f("city", "Ville", { autoComplete: "address-level2", required: true })}
+          {f("postalCode", t("Code postal"), { autoComplete: "postal-code", inputMode: "numeric", required: true })}
+          {f("city", t("Ville"), { autoComplete: "address-level2", required: true })}
         </div>
-        {f("company", "Société (si c'est une entreprise)", { autoComplete: "organization" })}
-        {f("vatNumber", v.company.trim() ? "N° de TVA ou d'entreprise" : "N° de TVA (si entreprise)", { placeholder: "BE0123456789" })}
+        {f("company", t("Société (si c'est une entreprise)"), { autoComplete: "organization" })}
+        {f("vatNumber", v.company.trim() ? t("N° de TVA ou d'entreprise") : t("N° de TVA (si entreprise)"), { placeholder: "BE0123456789" })}
       </div>
       {err ? <p className="mt-2 text-sm text-danger" role="alert">{err}</p> : null}
       <Button
@@ -372,7 +376,7 @@ function ClientBillingFix({ client, gaps, onSaved }: { client: CustomerOption; g
           onSaved({ company: v.company || null, vatNumber: v.vatNumber || null, street: v.street, postalCode: v.postalCode, city: v.city, country: v.country || null });
         })}
       >
-        Enregistrer sur la fiche
+        {t("Enregistrer sur la fiche")}
       </Button>
       {live.length ? <p className="mt-2 text-xs text-muted">Encore à remplir : {live.join(", ")}.</p> : null}
     </div>

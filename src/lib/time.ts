@@ -1,6 +1,6 @@
 import { TZDate } from "@date-fns/tz";
 import { addDays, endOfMonth, endOfWeek, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
-import { fr } from "date-fns/locale";
+import { enGB, fr } from "date-fns/locale";
 
 /** Toutes les dates affichées sont dans le fuseau de l'établissement. */
 export function zoned(date: Date, timezone: string) {
@@ -29,8 +29,8 @@ export function formatTime(date: Date, timezone: string) {
   return format(new TZDate(date, timezone), "HH:mm");
 }
 
-export function formatDay(date: Date, timezone: string, pattern = "EEEE d MMMM") {
-  return format(new TZDate(date, timezone), pattern, { locale: fr });
+export function formatDay(date: Date, timezone: string, pattern = "EEEE d MMMM", locale: "fr" | "en" = "fr") {
+  return format(new TZDate(date, timezone), pattern, { locale: locale === "en" ? enGB : fr });
 }
 
 /** Minutes écoulées depuis minuit, dans le fuseau donné. */

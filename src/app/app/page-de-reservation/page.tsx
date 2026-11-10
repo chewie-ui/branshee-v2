@@ -12,10 +12,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { sanitizeRichText } from "@/server/rich-text";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Page de réservation");
 
 export default async function BookingPageContent() {
+  const t = await appT();
   const ctx = await requireContext("customization.manage");
   const [[page], [b], questions] = await Promise.all([
     db.select().from(bookingPageSettings).where(eq(bookingPageSettings.businessId, ctx.business.id)),
@@ -29,9 +31,9 @@ export default async function BookingPageContent() {
   return (
     <>
       <PageHeader
-        title="Page de réservation"
-        description="Ce que vos clients voient quand ils réservent en ligne."
-        action={<ButtonLink href={appPagePath(ctx.business.slug)} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>Voir ma page</ButtonLink>}
+        title={t("Page de réservation")}
+        description={t("Ce que vos clients voient quand ils réservent en ligne.")}
+        action={<ButtonLink href={appPagePath(ctx.business.slug)} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>{t("Voir ma page")}</ButtonLink>}
       />
       <PageTabs />
       <div className="mx-auto max-w-3xl space-y-6">

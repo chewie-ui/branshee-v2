@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
 import { rescheduleAppointment, restoreAppointment, savePayment, sendClientMessage, sendReminderNow } from "@/server/actions/appointments";
+import { useT } from "@/components/app-locale";
 
 /** Modifier date, heure, durée et membre d'un RDV, avec un mot facultatif pour le client. */
 export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: { id: string; initial: { date: string; start: string; durationMin: number; memberId: string }; members: { id: string; name: string }[]; hasEmail: boolean; clientTerm: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ ...initial, message: "", notify: true });
   const [error, setError] = useState<string | null>(null);
@@ -21,9 +23,9 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
     return (
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="secondary" icon={<Pencil className="size-4" aria-hidden="true" />} onClick={() => { setOpen(true); setDone(false); }}>
-          Modifier le rendez-vous
+          {t("Modifier le rendez-vous")}
         </Button>
-        {done ? <span className="text-sm text-success" role="status">Rendez-vous modifié.</span> : null}
+        {done ? <span className="text-sm text-success" role="status">{t("Rendez-vous modifié.")}</span> : null}
       </div>
     );
 
@@ -34,10 +36,10 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
           <Input id="r-date" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Heure" htmlFor="r-start" hint={startParsed ? `Fin à ${hhmmOf(Math.min(minutesOf(startParsed) + v.durationMin, 1439))}` : "Ex. 9 ou 14h30"}>
+          <Field label="Heure" htmlFor="r-start" hint={startParsed ? `Fin à ${hhmmOf(Math.min(minutesOf(startParsed) + v.durationMin, 1439))}` : t("Ex. 9 ou 14h30")}>
             <Input id="r-start" value={v.start} onChange={(e) => setV({ ...v, start: e.target.value })} onBlur={() => startParsed && setV({ ...v, start: startParsed })} inputMode="numeric" />
           </Field>
-          <Field label="Durée (min)" htmlFor="r-dur">
+          <Field label={t("Durée (min)")} htmlFor="r-dur">
             <Input id="r-dur" type="number" min={5} max={720} step={5} value={v.durationMin} onChange={(e) => setV({ ...v, durationMin: Number(e.target.value) || 0 })} />
           </Field>
         </div>
@@ -45,7 +47,7 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
       {members.length > 1 ? (
         <Field label="Avec" htmlFor="r-member">
           <Select id="r-member" value={v.memberId} onChange={(e) => setV({ ...v, memberId: e.target.value })}>
-            <option value="">Non assigné</option>
+            <option value="">{t("Non assigné")}</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
@@ -59,15 +61,15 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
             Prévenir le {clientTerm} par email du nouveau créneau
           </label>
           {v.notify ? (
-            <Field label={`Mot au ${clientTerm} (facultatif)`} htmlFor="r-msg" hint="Inclus dans l'email qui annonce le nouveau créneau.">
-              <Textarea id="r-msg" rows={2} value={v.message} onChange={(e) => setV({ ...v, message: e.target.value })} maxLength={500} placeholder="Ex. désolée, j'ai un imprévu, je vous propose ce créneau à la place." />
+            <Field label={`Mot au ${clientTerm} (facultatif)`} htmlFor="r-msg" hint={t("Inclus dans l'email qui annonce le nouveau créneau.")}>
+              <Textarea id="r-msg" rows={2} value={v.message} onChange={(e) => setV({ ...v, message: e.target.value })} maxLength={500} placeholder={t("Ex. désolée, j'ai un imprévu, je vous propose ce créneau à la place.")} />
             </Field>
           ) : null}
         </>
       ) : null}
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Annuler</Button>
+        <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>{t("Annuler")}</Button>
         <Button
           loading={pending}
           onClick={() =>
@@ -78,7 +80,7 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
             })
           }
         >
-          Enregistrer
+          {t("Enregistrer")}
         </Button>
       </div>
     </div>
@@ -86,20 +88,22 @@ export function RescheduleForm({ id, initial, members, hasEmail, clientTerm }: {
 }
 
 export function ReminderButton({ id, sentAt }: { id: string; sentAt: string | null }) {
+  const t = useT();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(sentAt ? { ok: true, text: `Dernier rappel manuel : ${sentAt}` } : null);
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="secondary" icon={<BellRing className="size-4" aria-hidden="true" />} loading={pending} onClick={() => start(async () => { const r = await sendReminderNow(id); setMsg(r.ok ? { ok: true, text: "Rappel envoyé." } : { ok: false, text: r.error ?? "Erreur." }); })}>
-        Envoyer un rappel
+      <Button variant="secondary" icon={<BellRing className="size-4" aria-hidden="true" />} loading={pending} onClick={() => start(async () => { const r = await sendReminderNow(id); setMsg(r.ok ? { ok: true, text: t("Rappel envoyé.") } : { ok: false, text: r.error ?? t("Erreur.") }); })}>
+        {t("Envoyer un rappel")}
       </Button>
-      {msg ? <span className={msg.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{msg.text}</span> : null}
+      {msg ? <span className={msg.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{t(msg.text)}</span> : null}
     </div>
   );
 }
 
 /** Rappel et message libre au client, côte à côte ; le message s'écrit dans un petit formulaire qui s'ouvre en dessous. */
 export function ClientContactActions({ id, sentAt, canRemind, clientTerm }: { id: string; sentAt: string | null; canRemind: boolean; clientTerm: string }) {
+  const t = useT();
   const [remindPending, startRemind] = useTransition();
   const [sendPending, startSend] = useTransition();
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(sentAt ? { ok: true, text: `Dernier rappel manuel : ${sentAt}` } : null);
@@ -110,24 +114,24 @@ export function ClientContactActions({ id, sentAt, canRemind, clientTerm }: { id
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         {canRemind ? (
-          <Button variant="secondary" icon={<BellRing className="size-4" aria-hidden="true" />} loading={remindPending} onClick={() => startRemind(async () => { const r = await sendReminderNow(id); setStatus(r.ok ? { ok: true, text: "Rappel envoyé." } : { ok: false, text: r.error ?? "Erreur." }); })}>
-            Envoyer un rappel
+          <Button variant="secondary" icon={<BellRing className="size-4" aria-hidden="true" />} loading={remindPending} onClick={() => startRemind(async () => { const r = await sendReminderNow(id); setStatus(r.ok ? { ok: true, text: t("Rappel envoyé.") } : { ok: false, text: r.error ?? t("Erreur.") }); })}>
+            {t("Envoyer un rappel")}
           </Button>
         ) : null}
         <Button variant="secondary" icon={<MessageSquareText className="size-4" aria-hidden="true" />} aria-expanded={open} aria-controls={`msg-${id}`} onClick={() => { setOpen((o) => !o); setError(null); }}>
-          Envoyer un message
+          {t("Envoyer un message")}
         </Button>
-        {status && !open ? <span className={status.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{status.text}</span> : null}
+        {status && !open ? <span className={status.ok ? "text-sm text-muted" : "text-sm text-danger"} role="status">{t(status.text)}</span> : null}
       </div>
       {open ? (
         <div id={`msg-${id}`} className="space-y-3 rounded-lg border border-border p-4">
-          <Field label={`Message au ${clientTerm}`} htmlFor={`msg-text-${id}`} hint="Envoyé par email, avec le rappel de la date et de l'heure du rendez-vous." error={error ?? undefined}>
-            <Textarea id={`msg-text-${id}`} rows={4} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex. j'aurai environ 15 minutes de retard, merci de votre patience." autoFocus />
+          <Field label={`Message au ${clientTerm}`} htmlFor={`msg-text-${id}`} hint={t("Envoyé par email, avec le rappel de la date et de l'heure du rendez-vous.")} error={error ?? undefined}>
+            <Textarea id={`msg-text-${id}`} rows={4} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Ex. j'aurai environ 15 minutes de retard, merci de votre patience.")} autoFocus />
           </Field>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-muted tabular-nums">{text.length}/1000</span>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setOpen(false)} disabled={sendPending}>Annuler</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)} disabled={sendPending}>{t("Annuler")}</Button>
               <Button
                 icon={<Send className="size-4" aria-hidden="true" />}
                 loading={sendPending}
@@ -139,8 +143,8 @@ export function ClientContactActions({ id, sentAt, canRemind, clientTerm }: { id
                     if (r.ok) {
                       setOpen(false);
                       setText("");
-                      setStatus({ ok: true, text: "Message envoyé." });
-                    } else setError(r.error ?? "Erreur.");
+                      setStatus({ ok: true, text: t("Message envoyé.") });
+                    } else setError(r.error ?? t("Erreur."));
                   })
                 }
               >
@@ -155,12 +159,13 @@ export function ClientContactActions({ id, sentAt, canRemind, clientTerm }: { id
 }
 
 export function RestoreButton({ id }: { id: string }) {
+  const t = useT();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
     <div className="space-y-1">
-      <Button variant="secondary" icon={<RotateCcw className="size-4" aria-hidden="true" />} loading={pending} onClick={() => start(async () => { const r = await restoreAppointment(id); if (!r.ok) setError(r.error ?? "Erreur."); })}>
-        Restaurer le rendez-vous
+      <Button variant="secondary" icon={<RotateCcw className="size-4" aria-hidden="true" />} loading={pending} onClick={() => start(async () => { const r = await restoreAppointment(id); if (!r.ok) setError(r.error ?? t("Erreur.")); })}>
+        {t("Restaurer le rendez-vous")}
       </Button>
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
     </div>
@@ -171,6 +176,7 @@ const METHODS = [["none", "Non défini"], ["on_site", "Sur place (carte)"], ["ca
 const STATUSES = [["none", "Non payé"], ["paid", "Payé"], ["partial", "Payé en partie"], ["refunded", "Remboursé"]] as const;
 
 export function PaymentForm({ id, initial }: { id: string; initial: { method: string; status: string; amount: string } }) {
+  const t = useT();
   const [v, setV] = useState(initial);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -188,14 +194,14 @@ export function PaymentForm({ id, initial }: { id: string; initial: { method: st
             {!STATUSES.some(([k]) => k === v.status) ? <option value={v.status}>{v.status}</option> : null}
           </Select>
         </Field>
-        <Field label="Montant (€)" htmlFor="p-amount">
+        <Field label={t("Montant (€)")} htmlFor="p-amount">
           <Input id="p-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} placeholder="0,00" />
         </Field>
       </div>
       <div className="flex items-center justify-end gap-3">
-        {msg ? <span className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role="status">{msg.text}</span> : null}
-        <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { const r = await savePayment(id, v as never); setMsg(r.ok ? { ok: true, text: "Paiement enregistré." } : { ok: false, text: r.error ?? "Erreur." }); })}>
-          Enregistrer le paiement
+        {msg ? <span className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role="status">{t(msg.text)}</span> : null}
+        <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { const r = await savePayment(id, v as never); setMsg(r.ok ? { ok: true, text: t("Paiement enregistré.") } : { ok: false, text: r.error ?? t("Erreur.") }); })}>
+          {t("Enregistrer le paiement")}
         </Button>
       </div>
     </div>

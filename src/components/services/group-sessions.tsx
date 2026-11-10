@@ -8,11 +8,13 @@ import { cn } from "@/lib/cn";
 import { submitKeepingValues } from "@/lib/form";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
 import { cancelSession, createSessions, restoreSession, saveRecurrence, type SessionFormState } from "@/server/actions/group-sessions";
+import { useT } from "@/components/app-locale";
 
 const DAYS = [[1, "Lun"], [2, "Mar"], [3, "Mer"], [4, "Jeu"], [5, "Ven"], [6, "Sam"], [0, "Dim"]] as const;
 
 /** Cours récurrent : jours de la semaine + heure, sans date de fin. */
 export function RecurrenceForm({ serviceId, initial }: { serviceId: string; initial: { weekdays: number[]; startTime: string } | null }) {
+  const t = useT();
   const [days, setDays] = useState<number[]>(initial?.weekdays ?? []);
   const [time, setTime] = useState(initial?.startTime ?? "18:00");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -22,28 +24,29 @@ export function RecurrenceForm({ serviceId, initial }: { serviceId: string; init
     <div className="space-y-4">
       <div>
         <p className="mb-2 text-sm font-medium">Jours</p>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Jours du cours">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("Jours du cours")}>
           {DAYS.map(([d, l]) => (
             <button key={d} type="button" aria-pressed={days.includes(d)} onClick={() => toggle(d)} className={cn("h-10 w-12 rounded-lg border text-sm font-medium", days.includes(d) ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface text-muted hover:text-text")}>
-              {l}
+              {t(l)}
             </button>
           ))}
         </div>
       </div>
-      <Field label="Heure" htmlFor="rec-time" hint="Ex. 18 ou 18h30">
+      <Field label="Heure" htmlFor="rec-time" hint={t("Ex. 18 ou 18h30")}>
         <Input id="rec-time" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(parseQuickTime(time) ?? time)} className="w-28" inputMode="numeric" />
       </Field>
       <div className="flex flex-wrap items-center gap-3">
-        <Button loading={pending} icon={<Repeat className="size-4" aria-hidden="true" />} onClick={() => start(async () => { const r = await saveRecurrence(serviceId, { weekdays: days, startTime: time }); setMsg(r.ok ? { ok: true, text: days.length ? "Récurrence enregistrée." : "Récurrence arrêtée." } : { ok: false, text: r.error ?? "Erreur." }); })}>
-          {days.length ? "Enregistrer la récurrence" : initial ? "Arrêter la récurrence" : "Enregistrer"}
+        <Button loading={pending} icon={<Repeat className="size-4" aria-hidden="true" />} onClick={() => start(async () => { const r = await saveRecurrence(serviceId, { weekdays: days, startTime: time }); setMsg(r.ok ? { ok: true, text: days.length ? t("Récurrence enregistrée.") : t("Récurrence arrêtée.") } : { ok: false, text: r.error ?? t("Erreur.") }); })}>
+          {days.length ? t("Enregistrer la récurrence") : initial ? t("Arrêter la récurrence") : t("Enregistrer")}
         </Button>
-        {msg ? <span className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role="status">{msg.text}</span> : null}
+        {msg ? <span className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role="status">{t(msg.text)}</span> : null}
       </div>
     </div>
   );
 }
 
 export function NewSessionForm({ serviceId, team, capacity, durationMin, defaultDate }: { serviceId: string; team: { id: string; name: string }[]; capacity: number | null; durationMin: number; defaultDate: string }) {
+  const t = useT();
   const [state, action, pending] = useActionState<SessionFormState, FormData>(createSessions.bind(null, serviceId), undefined);
   const [repeat, setRepeat] = useState(false);
   const [start, setStart] = useState("18:00");
@@ -78,9 +81,9 @@ export function NewSessionForm({ serviceId, team, capacity, durationMin, default
           <Input id="capacity" name="capacity" type="number" min={1} max={500} defaultValue={capacity ?? ""} aria-invalid={!!err.capacity || undefined} />
         </Field>
         {team.length > 0 ? (
-          <Field label="Animé par" htmlFor="memberId" hint="Ses rendez-vous individuels sont bloqués pendant la séance (si l'option est active).">
+          <Field label={t("Animé par")} htmlFor="memberId" hint={t("Ses rendez-vous individuels sont bloqués pendant la séance (si l'option est active).")}>
             <Select id="memberId" name="memberId" defaultValue={team.length === 1 ? team[0]!.id : ""}>
-              <option value="">Membres assignés au cours</option>
+              <option value="">{t("Membres assignés au cours")}</option>
               {team.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -91,12 +94,12 @@ export function NewSessionForm({ serviceId, team, capacity, durationMin, default
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" name="repeat" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} className="size-4 accent-[var(--accent)]" />
-          Répéter chaque semaine
+          {t("Répéter chaque semaine")}
         </label>
         {repeat ? (
           <label className="flex items-center gap-2 text-sm">
             pendant
-            <Input name="repeatWeeks" type="number" min={2} max={52} defaultValue={10} className="h-9 w-20" aria-label="Nombre de semaines" />
+            <Input name="repeatWeeks" type="number" min={2} max={52} defaultValue={10} className="h-9 w-20" aria-label={t("Nombre de semaines")} />
             semaines
           </label>
         ) : null}
@@ -104,29 +107,30 @@ export function NewSessionForm({ serviceId, team, capacity, durationMin, default
       {state?.error ? <p className="text-sm text-danger" role="alert">{state.error}</p> : null}
       {state?.ok ? <p className="text-sm text-success" role="status">{state.message}</p> : null}
       <Button type="submit" loading={pending} icon={<CalendarPlus className="size-4" aria-hidden="true" />}>
-        Ajouter la date
+        {t("Ajouter la date")}
       </Button>
     </form>
   );
 }
 
 export function CancelSessionButton({ id, booked }: { id: string; booked: number }) {
+  const t = useT();
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   if (!confirm) {
     return (
       <Button variant="secondary" className="text-danger hover:text-danger" icon={<XCircle className="size-4" aria-hidden="true" />} onClick={() => setConfirm(true)}>
-        Annuler cette séance
+        {t("Annuler cette séance")}
       </Button>
     );
   }
   return (
     <div className="space-y-2 rounded-lg border border-danger/30 bg-danger-soft p-3">
-      <p className="text-sm text-danger">{booked > 0 ? `Annuler la séance ? ${booked > 1 ? `Les ${booked} participants sont prévenus` : "Le participant est prévenu"} par email.` : "Annuler cette séance ? Personne ne pourra s'y inscrire."}</p>
+      <p className="text-sm text-danger">{booked > 0 ? `Annuler la séance ? ${booked > 1 ? `Les ${booked} participants sont prévenus` : t("Le participant est prévenu")} par email.` : t("Annuler cette séance ? Personne ne pourra s'y inscrire.")}</p>
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" onClick={() => setConfirm(false)} disabled={pending}>Non</Button>
-        <Button variant="danger" size="sm" loading={pending} onClick={() => start(async () => { const r = await cancelSession(id); if (!r.ok) setError(r.error ?? "Erreur."); })}>Oui, annuler</Button>
+        <Button variant="danger" size="sm" loading={pending} onClick={() => start(async () => { const r = await cancelSession(id); if (!r.ok) setError(r.error ?? t("Erreur.")); })}>{t("Oui, annuler")}</Button>
       </div>
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
     </div>
@@ -134,10 +138,11 @@ export function CancelSessionButton({ id, booked }: { id: string; booked: number
 }
 
 export function RestoreSessionButton({ id }: { id: string }) {
+  const t = useT();
   const [pending, start] = useTransition();
   return (
     <Button variant="secondary" loading={pending} icon={<RotateCcw className="size-4" aria-hidden="true" />} onClick={() => start(async () => void (await restoreSession(id)))}>
-      Rétablir la séance
+      {t("Rétablir la séance")}
     </Button>
   );
 }

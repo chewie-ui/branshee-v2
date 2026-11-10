@@ -8,21 +8,23 @@ import { appById } from "@/lib/apps";
 import { eur } from "@/lib/plans";
 import { SKYDEV_ADDONS } from "@/lib/skydev-plans";
 import { requireContext } from "@/server/context";
+import { appT } from "@/server/app-locale";
 
 const app = appById("tel-ia");
 
 export const metadata: Metadata = { title: app.name };
 
 export default async function Page() {
+  const t = await appT();
   const ctx = await requireContext();
   const [active] = await db.select({ at: businessModules.activatedAt }).from(businessModules).where(and(eq(businessModules.businessId, ctx.business.id), eq(businessModules.moduleKey, "tel_ia")));
   if (active)
     return (
       <AppPlaceholder
         app={app}
-        title="Tél IA est actif sur votre abonnement"
-        text="On vous contacte pour le configurer ensemble : ce que l'IA doit dire (services, horaires, questions fréquentes) et le renvoi de vos appels manqués. Une question en attendant ? Appelez-nous."
-        action={<ButtonLink href="tel:+32477443988" variant="secondary">Nous appeler : 0477 44 39 88</ButtonLink>}
+        title={t("Tél IA est actif sur votre abonnement")}
+        text={t("On vous contacte pour le configurer ensemble : ce que l'IA doit dire (services, horaires, questions fréquentes) et le renvoi de vos appels manqués. Une question en attendant ? Appelez-nous.")}
+        action={<ButtonLink href="tel:+32477443988" variant="secondary">{t("Nous appeler : 0477 44 39 88")}</ButtonLink>}
       />
     );
   return (
@@ -32,8 +34,8 @@ export default async function Page() {
       text={`${SKYDEV_ADDONS.tel_ia.description} Ajoutez-la à votre abonnement, puis on configure ensemble ce que l'IA doit dire.`}
       action={
         <>
-          {ctx.can("billing.manage") ? <ButtonLink href="/app/reglages/abonnement">Ajouter à mon abonnement</ButtonLink> : null}
-          <ButtonLink href="tel:+32477443988" variant="secondary">Nous appeler : 0477 44 39 88</ButtonLink>
+          {ctx.can("billing.manage") ? <ButtonLink href="/app/reglages/abonnement">{t("Ajouter à mon abonnement")}</ButtonLink> : null}
+          <ButtonLink href="tel:+32477443988" variant="secondary">{t("Nous appeler : 0477 44 39 88")}</ButtonLink>
         </>
       }
     />

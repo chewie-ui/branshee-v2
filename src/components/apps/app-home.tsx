@@ -60,7 +60,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
               <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
                 <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{a.label}</span><span className="line-clamp-2 block text-xs text-muted">{a.hint}</span></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{t(a.label)}</span><span className="line-clamp-2 block text-xs text-muted">{t(a.hint)}</span></span>
                 </Link>
               </li>
             ))}
@@ -80,7 +80,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
                   <AppIcon icon={app.icon} className="size-7 sm:size-8" />
                 </span>
                 <span className="text-sm font-medium text-text">{app.name}</span>
-                {tag ? <span className={`-mt-1.5 rounded px-1.5 text-[11px] font-semibold ${tag.cls}`}>{tag.text}</span> : null}
+                {tag ? <span className={`-mt-1.5 rounded px-1.5 text-[11px] font-semibold ${tag.cls}`}>{t(tag.text)}</span> : null}
               </Link>
               {!removable && app.id !== "reglages" ? (
                 <button

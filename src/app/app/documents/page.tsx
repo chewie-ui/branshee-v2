@@ -8,10 +8,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { QUOTA_BYTES, allFolders, docRights, folderContent, folderPath, searchDocuments, usedBytes } from "@/server/documents";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Documents");
 
 export default async function DocumentsPage({ searchParams }: { searchParams: Promise<{ dossier?: string; q?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const sp = await searchParams;
   const folderId = sp.dossier && /^[0-9a-f-]{36}$/i.test(sp.dossier) ? sp.dossier : null;
@@ -28,7 +30,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   const ser = <T extends { createdAt: Date; shareExpiresAt: Date | null }>(f: T) => ({ ...f, createdAt: f.createdAt.toISOString(), shareExpiresAt: f.shareExpiresAt?.toISOString() ?? null });
   return (
     <>
-      <PageHeader title="Documents" description="Les fichiers de l'équipe, rangés par dossier et chiffrés sur nos serveurs." />
+      <PageHeader title={t("Documents")} description={t("Les fichiers de l'équipe, rangés par dossier et chiffrés sur nos serveurs.")} />
       <DocExplorer
         folderId={folderId}
         path={path}

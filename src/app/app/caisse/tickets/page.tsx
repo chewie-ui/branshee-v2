@@ -4,15 +4,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { salesToday, stockRights } from "@/server/stock";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Tickets");
 
 export default async function TicketsPage() {
+  const t = await appT();
   const ctx = await requireContext();
   const rows = await salesToday(ctx.business.id, 30);
   return (
     <>
-      <PageHeader title="Tickets" description="Les tickets des 30 derniers jours." />
+      <PageHeader title={t("Tickets")} description={t("Les tickets des 30 derniers jours.")} />
       <SalesList canRefund={stockRights(ctx).manage} tz={ctx.business.timezone || "Europe/Brussels"} rows={rows.map((s) => ({ id: s.id, number: s.number, total: s.totalCents, method: s.method, status: s.status, createdAt: s.createdAt.toISOString(), items: s.lines.reduce((a, l) => a + l.qty, 0) }))} />
     </>
   );

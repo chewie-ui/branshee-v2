@@ -10,6 +10,7 @@ import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
 import { moveService, setServicesActive } from "@/server/actions/services";
+import { useT } from "@/components/app-locale";
 
 export type ServiceRow = {
   id: string;
@@ -56,6 +57,7 @@ function readColumns() {
 const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow[]; categories: { id: string; name: string; icon: string | null }[]; canManage: boolean }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("default");
   const [type, setType] = useState("");
@@ -109,32 +111,32 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
   // L'ordre manuel (flèches) n'a de sens que sur la liste complète, triée par défaut.
   const manualOrder = canManage && sort === "default" && !query && !type && !status;
   const groups = sort === "default"
-    ? [...categories.map((c) => ({ key: c.id, name: `${c.icon ? `${c.icon} ` : ""}${c.name}`, items: filtered.filter((r) => r.categoryId === c.id) })), { key: "none", name: categories.length ? "Sans catégorie" : "Toutes les prestations", items: filtered.filter((r) => !r.categoryId || !categories.some((c) => c.id === r.categoryId)) }].filter((g) => g.items.length)
-    : [{ key: "all", name: "Résultats", items: filtered }];
+    ? [...categories.map((c) => ({ key: c.id, name: `${c.icon ? `${c.icon} ` : ""}${c.name}`, items: filtered.filter((r) => r.categoryId === c.id) })), { key: "none", name: categories.length ? t("Sans catégorie") : t("Toutes les prestations"), items: filtered.filter((r) => !r.categoryId || !categories.some((c) => c.id === r.categoryId)) }].filter((g) => g.items.length)
+    : [{ key: "all", name: t("Résultats"), items: filtered }];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une prestation…" className="pl-9" aria-label="Rechercher une prestation" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Rechercher une prestation…")} className="pl-9" aria-label={t("Rechercher une prestation")} />
         </div>
         <Select value={sort} onChange={(e) => setSort(e.target.value)} className="w-auto" aria-label="Trier">
-          <option value="default">Ordre de la page</option>
-          <option value="name-asc">Nom (A → Z)</option>
-          <option value="name-desc">Nom (Z → A)</option>
-          <option value="price-asc">Prix croissant</option>
-          <option value="price-desc">Prix décroissant</option>
-          <option value="duration-asc">Durée courte → longue</option>
-          <option value="duration-desc">Durée longue → courte</option>
+          <option value="default">{t("Ordre de la page")}</option>
+          <option value="name-asc">{t("Nom (A → Z)")}</option>
+          <option value="name-desc">{t("Nom (Z → A)")}</option>
+          <option value="price-asc">{t("Prix croissant")}</option>
+          <option value="price-desc">{t("Prix décroissant")}</option>
+          <option value="duration-asc">{t("Durée courte → longue")}</option>
+          <option value="duration-desc">{t("Durée longue → courte")}</option>
         </Select>
         <Select value={type} onChange={(e) => setType(e.target.value)} className="w-auto" aria-label="Type">
-          <option value="">Tous les types</option>
-          <option value="individual">Rendez-vous</option>
-          <option value="group">Cours collectifs</option>
+          <option value="">{t("Tous les types")}</option>
+          <option value="individual">{t("Rendez-vous")}</option>
+          <option value="group">{t("Cours collectifs")}</option>
         </Select>
         <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-auto" aria-label="Statut">
-          <option value="">Actives et masquées</option>
+          <option value="">{t("Actives et masquées")}</option>
           <option value="active">Actives</option>
           <option value="hidden">Masquées</option>
         </Select>
@@ -145,7 +147,7 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
               {COLUMNS.map((c) => (
                 <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-muted">
                   <input type="checkbox" checked={show(c.key)} onChange={() => toggleCol(c.key)} className="size-4 accent-[var(--accent)]" />
-                  {c.label}
+                  {t(c.label)}
                 </label>
               ))}
             </div>
@@ -158,16 +160,16 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent bg-accent-soft px-4 py-2.5 text-sm">
           <SlidersHorizontal className="size-4 text-accent" aria-hidden="true" />
           <span className="font-medium">{selected.length} sélectionnée{selected.length > 1 ? "s" : ""}</span>
-          <button type="button" onClick={() => setSelected([])} className="text-muted hover:text-text">Tout désélectionner</button>
+          <button type="button" onClick={() => setSelected([])} className="text-muted hover:text-text">{t("Tout désélectionner")}</button>
           <span className="ml-auto flex gap-2">
-            <Button size="sm" variant="secondary" loading={pending} onClick={() => activate(selected, true, () => setSelected([]))}>Activer</Button>
+            <Button size="sm" variant="secondary" loading={pending} onClick={() => activate(selected, true, () => setSelected([]))}>{t("Activer")}</Button>
             <Button size="sm" variant="secondary" loading={pending} onClick={() => activate(selected, false, () => setSelected([]))}>Masquer</Button>
           </span>
         </div>
       ) : null}
 
       {groups.length === 0 ? (
-        <Card><p className="p-6 text-center text-sm text-muted">Aucune prestation ne correspond.</p></Card>
+        <Card><p className="p-6 text-center text-sm text-muted">{t("Aucune prestation ne correspond.")}</p></Card>
       ) : (
         groups.map((g) => (
           <Card key={g.key} className="overflow-hidden">
@@ -186,8 +188,8 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
                     <p className="flex flex-wrap items-center gap-2 font-medium">
                       {s.name}
                       {show("type") && s.kind === "group" ? <Badge tone="accent">Cours collectif{s.capacity ? ` · ${s.capacity} places` : ""}</Badge> : null}
-                      {s.limitedHours ? <Badge>Jours et heures limités</Badge> : null}
-                      {s.byAnswers ? <Badge>Selon les réponses</Badge> : null}
+                      {s.limitedHours ? <Badge>{t("Jours et heures limités")}</Badge> : null}
+                      {s.byAnswers ? <Badge>{t("Selon les réponses")}</Badge> : null}
                     </p>
                     <p className="mt-0.5 flex flex-wrap gap-x-4 text-sm text-muted">
                       {show("who") ? <span>{s.who}</span> : null}
@@ -200,8 +202,8 @@ export function ServicesList({ rows, categories, canManage }: { rows: ServiceRow
                       type="button"
                       role="switch"
                       aria-checked={s.isActive}
-                      aria-label={`${s.name} : ${s.isActive ? "réservable en ligne" : "masquée"}`}
-                      title={s.isActive ? "Réservable en ligne" : "Masquée de votre page"}
+                      aria-label={`${s.name} : ${s.isActive ? t("réservable en ligne") : "masquée"}`}
+                      title={s.isActive ? t("Réservable en ligne") : t("Masquée de votre page")}
                       disabled={pending}
                       onClick={() => activate([s.id], !s.isActive)}
                       className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", s.isActive ? "bg-accent" : "bg-border-strong")}

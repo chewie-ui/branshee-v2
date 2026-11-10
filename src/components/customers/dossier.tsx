@@ -7,6 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { deleteNote, saveNote } from "@/server/actions/customers";
+import { useT } from "@/components/app-locale";
 
 export type NoteView = { id: string; date: string; dateLabel: string; title: string; note: string; todo: string; author: string | null; file: { name: string; size: number | null } | null };
 
@@ -14,6 +15,7 @@ const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 const kb = (n: number | null) => (n ? (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`) : "");
 
 function NoteEditor({ customerId, note, today, onDone }: { customerId: string; note: NoteView | null; today: string; onDone: () => void }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [file, setFile] = useState<File | null>(null);
@@ -33,7 +35,7 @@ function NoteEditor({ customerId, note, today, onDone }: { customerId: string; n
         start(async () => {
           const res = await saveNote(customerId, note?.id ?? null, fd);
           if (res?.ok) onDone();
-          else setError(res?.error ?? "Erreur.");
+          else setError(res?.error ?? t("Erreur."));
         });
       }}
     >
@@ -41,46 +43,47 @@ function NoteEditor({ customerId, note, today, onDone }: { customerId: string; n
         <Field label="Date" htmlFor={`d-${k}`}>
           <Input id={`d-${k}`} name="date" type="date" defaultValue={note?.date ?? today} />
         </Field>
-        <Field label="Titre (facultatif)" htmlFor={`t-${k}`}>
-          <Input id={`t-${k}`} name="title" defaultValue={note?.title} placeholder="Ex. bilan initial, ordonnance…" maxLength={120} />
+        <Field label={t("Titre (facultatif)")} htmlFor={`t-${k}`}>
+          <Input id={`t-${k}`} name="title" defaultValue={note?.title} placeholder={t("Ex. bilan initial, ordonnance…")} maxLength={120} />
         </Field>
       </div>
-      <Field label="Constat / ce qui a été fait" htmlFor={`n-${k}`}>
-        <Textarea id={`n-${k}`} name="note" defaultValue={note?.note} rows={4} maxLength={10000} placeholder="Ce qui a été fait, observé, à prévoir la prochaine fois…" />
+      <Field label={t("Constat / ce qui a été fait")} htmlFor={`n-${k}`}>
+        <Textarea id={`n-${k}`} name="note" defaultValue={note?.note} rows={4} maxLength={10000} placeholder={t("Ce qui a été fait, observé, à prévoir la prochaine fois…")} />
       </Field>
-      <Field label="À faire au prochain rendez-vous (facultatif)" htmlFor={`o-${k}`}>
-        <Input id={`o-${k}`} name="todo" defaultValue={note?.todo} placeholder="Ex. continuer le renforcement, revoir la posture assise." maxLength={2000} />
+      <Field label={t("À faire au prochain rendez-vous (facultatif)")} htmlFor={`o-${k}`}>
+        <Input id={`o-${k}`} name="todo" defaultValue={note?.todo} placeholder={t("Ex. continuer le renforcement, revoir la posture assise.")} maxLength={2000} />
       </Field>
       <div>
-        <p className="mb-1.5 text-sm font-medium">Document PDF (facultatif)</p>
+        <p className="mb-1.5 text-sm font-medium">{t("Document PDF (facultatif)")}</p>
         {file || existing ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
             <FileText className="size-4 shrink-0 text-muted" aria-hidden="true" />
             <span className="min-w-0 flex-1 truncate">{file ? file.name : existing!.name}</span>
             <span className="text-muted">{kb(file ? file.size : existing!.size)}</span>
-            <button type="button" onClick={() => (file ? setFile(null) : setRemoveFile(true))} className="flex size-7 items-center justify-center rounded text-muted hover:text-danger" aria-label="Retirer le document">
+            <button type="button" onClick={() => (file ? setFile(null) : setRemoveFile(true))} className="flex size-7 items-center justify-center rounded text-muted hover:text-danger" aria-label={t("Retirer le document")}>
               <X className="size-4" aria-hidden="true" />
             </button>
           </div>
         ) : (
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border-strong bg-surface px-3 py-2 text-sm font-medium text-muted hover:text-text">
             <Paperclip className="size-4" aria-hidden="true" />
-            Joindre un PDF (10 Mo max.)
+            {t("Joindre un PDF (10 Mo max.)")}
             <input type="file" name="file" accept="application/pdf,.pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
         )}
-        <p className="mt-1 text-xs text-muted">Chiffré sur nos serveurs, visible uniquement par votre équipe.</p>
+        <p className="mt-1 text-xs text-muted">{t("Chiffré sur nos serveurs, visible uniquement par votre équipe.")}</p>
       </div>
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onDone} disabled={pending}>Annuler</Button>
-        <Button type="submit" size="sm" loading={pending}>Enregistrer la note</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDone} disabled={pending}>{t("Annuler")}</Button>
+        <Button type="submit" size="sm" loading={pending}>{t("Enregistrer la note")}</Button>
       </div>
     </form>
   );
 }
 
 export function DossierNotes({ customerId, notes, canManage, today, term }: { customerId: string; notes: NoteView[]; canManage: boolean; today: string; term: string }) {
+  const t = useT();
   const [editing, setEditing] = useState<string | null>(null); // id de note, "new" ou null
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -93,22 +96,22 @@ export function DossierNotes({ customerId, notes, canManage, today, term }: { cu
   return (
     <Card>
       <CardHeader
-        title="Dossier de suivi"
-        description="Notes chiffrées, visibles uniquement par votre équipe."
-        action={canManage && editing !== "new" ? <Button size="sm" variant="secondary" data-tour="new-note" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setEditing("new")}>Nouvelle note</Button> : null}
+        title={t("Dossier de suivi")}
+        description={t("Notes chiffrées, visibles uniquement par votre équipe.")}
+        action={canManage && editing !== "new" ? <Button size="sm" variant="secondary" data-tour="new-note" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setEditing("new")}>{t("Nouvelle note")}</Button> : null}
       />
       <div className="space-y-4 p-5">
         {notes.length > 3 ? (
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une note (titre, texte, date…)" className="pl-9" aria-label="Rechercher une note" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Rechercher une note (titre, texte, date…)")} className="pl-9" aria-label={t("Rechercher une note")} />
           </div>
         ) : null}
         {editing === "new" ? <NoteEditor customerId={customerId} note={null} today={today} onDone={() => setEditing(null)} /> : null}
         {notes.length === 0 && editing !== "new" ? (
-          <EmptyState icon={<NotebookPen />} title={`Aucune note pour ce ${term}`} description="Ajoutez la première : constat, soin réalisé, document PDF…" />
+          <EmptyState icon={<NotebookPen />} title={`Aucune note pour ce ${term}`} description={t("Ajoutez la première : constat, soin réalisé, document PDF…")} />
         ) : shown.length === 0 ? (
-          <p className="text-sm text-muted">Aucune note ne correspond.</p>
+          <p className="text-sm text-muted">{t("Aucune note ne correspond.")}</p>
         ) : (
           <ol className="space-y-4">
             {shown.map((n) =>
@@ -123,8 +126,8 @@ export function DossierNotes({ customerId, notes, canManage, today, term }: { cu
                     </div>
                     {canManage ? (
                       <div className="flex shrink-0 gap-1">
-                        <button type="button" onClick={() => setEditing(n.id)} className="flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label="Modifier la note"><Pencil className="size-4" aria-hidden="true" /></button>
-                        <button type="button" onClick={() => setConfirmDelete(n.id)} className="flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label="Supprimer la note"><Trash2 className="size-4" aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setEditing(n.id)} className="flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label={t("Modifier la note")}><Pencil className="size-4" aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setConfirmDelete(n.id)} className="flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label={t("Supprimer la note")}><Trash2 className="size-4" aria-hidden="true" /></button>
                       </div>
                     ) : null}
                   </div>
@@ -132,13 +135,13 @@ export function DossierNotes({ customerId, notes, canManage, today, term }: { cu
                   {n.todo ? (
                     <p className="mt-2 flex items-start gap-2 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-soft-foreground">
                       <CheckSquare className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                      <span><span className="font-medium">À faire : </span>{n.todo}</span>
+                      <span><span className="font-medium">{t("À faire :")} </span>{n.todo}</span>
                     </p>
                   ) : null}
                   {n.file ? (
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-border px-3 py-2 text-sm">
                       <span className="flex min-w-0 flex-1 items-center gap-2"><FileText className="size-4 shrink-0 text-muted" aria-hidden="true" /><span className="truncate">{n.file.name}</span></span>
-                      <a href={`/app/clients/${customerId}/notes/${n.id}/fichier`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><ExternalLink className="size-3.5" aria-hidden="true" />Ouvrir</a>
+                      <a href={`/app/clients/${customerId}/notes/${n.id}/fichier`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><ExternalLink className="size-3.5" aria-hidden="true" />{t("Ouvrir")}</a>
                       <a href={`/app/clients/${customerId}/notes/${n.id}/fichier?telecharger`} className="inline-flex items-center gap-1 font-medium text-muted hover:text-text"><Download className="size-3.5" aria-hidden="true" />Télécharger</a>
                     </div>
                   ) : null}
@@ -146,7 +149,7 @@ export function DossierNotes({ customerId, notes, canManage, today, term }: { cu
                     <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-danger/30 bg-danger-soft p-3">
                       <p className="mr-auto text-sm text-danger">Supprimer définitivement cette note{n.file ? " et son document" : ""} ?</p>
                       <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>Non</Button>
-                      <Button size="sm" variant="danger" onClick={() => startDelete(async () => { await deleteNote(customerId, n.id); setConfirmDelete(null); })}>Oui, supprimer</Button>
+                      <Button size="sm" variant="danger" onClick={() => startDelete(async () => { await deleteNote(customerId, n.id); setConfirmDelete(null); })}>{t("Oui, supprimer")}</Button>
                     </div>
                   ) : null}
                 </li>

@@ -7,10 +7,12 @@ import { ServiceTabs } from "@/components/services/service-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Catégories");
 
 export default async function CategoriesPage() {
+  const t = await appT();
   const ctx = await requireContext("services.manage");
   const [cats, [page]] = await Promise.all([
     db
@@ -22,7 +24,7 @@ export default async function CategoriesPage() {
   ]);
   return (
     <>
-      <PageHeader title="Prestations" />
+      <PageHeader title={t("Prestations")} />
       <ServiceTabs />
       <div className="mx-auto max-w-3xl">
         <CategoriesEditor categories={cats} style={page?.style ?? "pills"} />

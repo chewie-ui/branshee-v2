@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Ban, CalendarPlus } from "lucide-react";
+import { useT } from "@/components/app-locale";
 
 const STEP = 15;
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
@@ -16,6 +17,7 @@ type Range = { from: number; to: number; lane: number };
  * Le membre est celui de la colonne où la sélection commence.
  */
 export function DayClickLayer({ day, startHour, hourPx, lanes, canManage }: { day: string; startHour: number; hourPx: number; lanes: (string | null)[]; canManage: boolean }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ anchor: number; lane: number; y: number; moved: boolean } | null>(null);
   const [sel, setSel] = useState<Range | null>(null);
@@ -118,11 +120,11 @@ export function DayClickLayer({ day, startHour, hourPx, lanes, canManage }: { da
           </p>
           <Link href={`/app/agenda/nouveau?${qs(menu, menu.to > menu.from)}`} className="flex items-center gap-2 px-3 py-2.5 hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none" role="menuitem">
             <CalendarPlus className="size-4 text-accent" aria-hidden="true" />
-            Rendez-vous
+            {t("Rendez-vous")}
           </Link>
           <Link href={`/app/agenda/bloquer?${qs(menu, menu.to > menu.from)}`} className="flex items-center gap-2 px-3 py-2.5 hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none" role="menuitem">
             <Ban className="size-4 text-muted" aria-hidden="true" />
-            Bloquer ce créneau
+            {t("Bloquer ce créneau")}
           </Link>
         </div>
       ) : null}

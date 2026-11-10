@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { ORDER_STATUS, eur, isOrderStatus } from "@/lib/orders";
 import { setOrderPaid, setOrderStatus } from "@/server/actions/orders";
+import { useT } from "@/components/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 export type OrderView = { id: string; number: number; status: string; table: string; lines: { name: string; qty: number; note?: string; priceCents: number }[]; totalCents: number; customerName: string | null; note: string | null; paid: boolean; createdAt: string };
 
@@ -37,6 +39,7 @@ function beep() {
 
 /** Tableau de la cuisine : colonnes par statut, actualisation automatique, encaissement. */
 export function OrdersBoard({ orders, hasTables, canEdit, tz }: { orders: OrderView[]; hasTables: boolean; canEdit: boolean; tz: string }) {
+  const t = useT();
   const router = useRouter();
   const [sound, setSound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,11 +59,11 @@ export function OrdersBoard({ orders, hasTables, canEdit, tz }: { orders: OrderV
   const act = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     start(async () => {
       setError(null);
-      const r = await fn().catch(() => ({ ok: false, error: "Action impossible. Vérifiez votre connexion." }));
-      if (!r.ok) setError(r.error ?? "Action impossible.");
+      const r = await fn().catch(() => ({ ok: false, error: t("Action impossible. Vérifiez votre connexion.") }));
+      if (!r.ok) setError(r.error ?? t("Action impossible."));
       router.refresh();
     });
-  const time = (iso: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const time = (iso: string) => new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
   const unpaid = orders.filter((o) => o.status !== "cancelled" && !o.paid).reduce((a, o) => a + o.totalCents, 0);
   const cancelled = orders.filter((o) => o.status === "cancelled");
 
@@ -68,23 +71,23 @@ export function OrdersBoard({ orders, hasTables, canEdit, tz }: { orders: OrderV
     return (
       <Card className="p-8 text-center">
         <QrCode className="mx-auto size-10 text-muted" aria-hidden="true" />
-        <p className="mt-3 font-medium">Commencez par votre carte et vos tables</p>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted">Ajoutez vos plats, créez vos tables puis imprimez les QR codes. Vos clients les scannent et commandent depuis leur téléphone : les commandes arrivent ici.</p>
+        <p className="mt-3 font-medium">{t("Commencez par votre carte et vos tables")}</p>
+        <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("Ajoutez vos plats, créez vos tables puis imprimez les QR codes. Vos clients les scannent et commandent depuis leur téléphone : les commandes arrivent ici.")}</p>
         {canEdit ? (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <Link href="/app/commandes/carte" className="inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">1. La carte</Link>
-            <Link href="/app/commandes/tables" className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">2. Les tables et QR codes</Link>
+            <Link href="/app/commandes/carte" className="inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">{t("1. La carte")}</Link>
+            <Link href="/app/commandes/tables" className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">{t("2. Les tables et QR codes")}</Link>
           </div>
-        ) : <p className="mt-3 text-sm text-muted">Demandez au responsable de préparer la carte et les tables.</p>}
+        ) : <p className="mt-3 text-sm text-muted">{t("Demandez au responsable de préparer la carte et les tables.")}</p>}
       </Card>
     );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm text-muted">Dernières 24 h · à encaisser : <span className="font-semibold text-text tabular-nums">{eur(unpaid)}</span></p>
+        <p className="text-sm text-muted">{t("Dernières 24 h · à encaisser :")} <span className="font-semibold text-text tabular-nums">{eur(unpaid)}</span></p>
         <Button variant="secondary" size="sm" className="ml-auto" aria-pressed={sound} icon={sound ? <Bell className="size-4" aria-hidden="true" /> : <BellOff className="size-4" aria-hidden="true" />} onClick={() => { setSound((s) => !s); if (!sound) beep(); }}>
-          {sound ? "Son activé" : "Activer le son"}
+          {sound ? t("Son activé") : t("Activer le son")}
         </Button>
       </div>
       {error ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
@@ -94,9 +97,9 @@ export function OrdersBoard({ orders, hasTables, canEdit, tz }: { orders: OrderV
           if (col.id !== "served") list.reverse(); // les plus anciennes d'abord : elles attendent depuis le plus longtemps
           return (
             <section key={col.id} aria-labelledby={`col-${col.id}`} className="min-w-0 rounded-xl bg-surface-muted/60 p-3">
-              <h2 id={`col-${col.id}`} className="mb-3 flex items-center justify-between px-1 text-sm font-semibold">{col.title}<span className="rounded-full bg-surface px-2 text-xs tabular-nums">{list.length}</span></h2>
+              <h2 id={`col-${col.id}`} className="mb-3 flex items-center justify-between px-1 text-sm font-semibold">{t(col.title)}<span className="rounded-full bg-surface px-2 text-xs tabular-nums">{list.length}</span></h2>
               <ul className="space-y-3">
-                {list.length === 0 ? <li className="px-1 py-6 text-center text-sm text-muted">Rien pour l&apos;instant</li> : null}
+                {list.length === 0 ? <li className="px-1 py-6 text-center text-sm text-muted">{t("Rien pour l'instant")}</li> : null}
                 {list.map((o) => {
                   const next = isOrderStatus(o.status) ? ORDER_STATUS[o.status].next : null;
                   return (
@@ -119,8 +122,8 @@ export function OrdersBoard({ orders, hasTables, canEdit, tz }: { orders: OrderV
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {next ? <Button size="sm" disabled={pending} icon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={() => act(() => setOrderStatus(o.id, next))}>{ORDER_STATUS[next].label}</Button> : null}
-                          <Button size="sm" variant="secondary" disabled={pending} icon={<Banknote className="size-4" aria-hidden="true" />} onClick={() => act(() => setOrderPaid(o.id, !o.paid))}>{o.paid ? "Pas payée" : "Encaissée"}</Button>
-                          {o.status === "new" ? <Button size="sm" variant="ghost" className="text-danger" disabled={pending} icon={<X className="size-4" aria-hidden="true" />} onClick={() => act(() => setOrderStatus(o.id, "cancelled"))}>Annuler</Button> : null}
+                          <Button size="sm" variant="secondary" disabled={pending} icon={<Banknote className="size-4" aria-hidden="true" />} onClick={() => act(() => setOrderPaid(o.id, !o.paid))}>{o.paid ? t("Pas payée") : "Encaissée"}</Button>
+                          {o.status === "new" ? <Button size="sm" variant="ghost" className="text-danger" disabled={pending} icon={<X className="size-4" aria-hidden="true" />} onClick={() => act(() => setOrderStatus(o.id, "cancelled"))}>{t("Annuler")}</Button> : null}
                         </div>
                       </Card>
                     </li>

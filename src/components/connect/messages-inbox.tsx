@@ -9,10 +9,12 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 import { cn } from "@/lib/cn";
 import { deleteContactMessage, setMessageRead } from "@/server/actions/connect";
+import { useT } from "@/components/app-locale";
 
 type Row = { id: string; name: string; email: string | null; phone: string | null; subject: string | null; message: string; source: string; pageUrl: string | null; customerId: string | null; read: boolean; createdAt: string };
 
 export function MessagesInbox({ rows, canManage, timezone }: { rows: Row[]; canManage: boolean; timezone: string }) {
+  const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   const [del, setDel] = useState<Row | null>(null);
@@ -26,9 +28,9 @@ export function MessagesInbox({ rows, canManage, timezone }: { rows: Row[]; canM
     return (
       <Card className="p-10 text-center">
         <Inbox className="mx-auto size-8 text-muted" aria-hidden="true" />
-        <p className="mt-3 font-medium">Aucun message pour l&apos;instant</p>
+        <p className="mt-3 font-medium">{t("Aucun message pour l'instant")}</p>
         <p className="mx-auto mt-1 max-w-md text-sm text-muted">Ajoutez le formulaire de contact sur votre site (Réglages › Connecter un site) : chaque message arrivera ici, avec la fiche client créée.</p>
-        <Link href="/app/reglages/site-connecte" className="mt-4 inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">Connecter mon site</Link>
+        <Link href="/app/reglages/site-connecte" className="mt-4 inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">{t("Connecter mon site")}</Link>
       </Card>
     );
   return (
@@ -42,7 +44,7 @@ export function MessagesInbox({ rows, canManage, timezone }: { rows: Row[]; canM
               <span className="flex flex-wrap items-center gap-2">
                 <span className={cn("truncate", r.read ? "font-medium" : "font-semibold")}>{r.name}</span>
                 {!r.read ? <Badge tone="accent">Nouveau</Badge> : null}
-                {r.source === "api" ? <Badge>Site sur mesure</Badge> : null}
+                {r.source === "api" ? <Badge>{t("Site sur mesure")}</Badge> : null}
               </span>
               <span className="block truncate text-sm text-muted">{r.subject ? `${r.subject} · ` : ""}{r.message}</span>
             </span>
@@ -53,10 +55,10 @@ export function MessagesInbox({ rows, canManage, timezone }: { rows: Row[]; canM
               {r.subject ? <p className="font-medium">{r.subject}</p> : null}
               <p className="max-w-prose whitespace-pre-line">{r.message}</p>
               <div className="flex flex-wrap gap-2">
-                {r.email ? <a href={`mailto:${r.email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : "Votre message")}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 font-medium text-accent-foreground hover:bg-accent-hover"><Mail className="size-4" aria-hidden="true" />Répondre</a> : null}
+                {r.email ? <a href={`mailto:${r.email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : t("Votre message"))}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 font-medium text-accent-foreground hover:bg-accent-hover"><Mail className="size-4" aria-hidden="true" />Répondre</a> : null}
                 {r.phone ? <a href={`tel:${r.phone.replace(/[^+0-9]/g, "")}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted"><Phone className="size-4" aria-hidden="true" />{r.phone}</a> : null}
-                {r.customerId ? <Link href={`/app/clients/${r.customerId}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted"><UserRound className="size-4" aria-hidden="true" />Fiche client</Link> : null}
-                <button type="button" disabled={pending} onClick={() => start(async () => { await setMessageRead(r.id, false).catch(() => null); setOpen(null); router.refresh(); })} className="inline-flex h-9 items-center rounded-lg px-3 text-muted hover:bg-surface-muted hover:text-text">Marquer non lu</button>
+                {r.customerId ? <Link href={`/app/clients/${r.customerId}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted"><UserRound className="size-4" aria-hidden="true" />{t("Fiche client")}</Link> : null}
+                <button type="button" disabled={pending} onClick={() => start(async () => { await setMessageRead(r.id, false).catch(() => null); setOpen(null); router.refresh(); })} className="inline-flex h-9 items-center rounded-lg px-3 text-muted hover:bg-surface-muted hover:text-text">{t("Marquer non lu")}</button>
                 {canManage ? <button type="button" onClick={() => setDel(r)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-danger hover:bg-danger-soft"><Trash2 className="size-4" aria-hidden="true" />Supprimer</button> : null}
               </div>
               {r.pageUrl ? <p className="text-xs text-muted">Envoyé depuis : {r.pageUrl}</p> : null}
@@ -65,8 +67,8 @@ export function MessagesInbox({ rows, canManage, timezone }: { rows: Row[]; canM
         </li>
       ))}
     </ul>
-      <ConfirmDialog open={!!del} title="Supprimer ce message ?" confirmLabel="Supprimer" danger loading={pending} onCancel={() => setDel(null)} onConfirm={() => del && start(async () => { await deleteContactMessage(del.id).catch(() => null); setDel(null); setOpen(null); router.refresh(); })}>
-        Le message est supprimé. La fiche client, elle, reste.
+      <ConfirmDialog open={!!del} title={t("Supprimer ce message ?")} confirmLabel="Supprimer" danger loading={pending} onCancel={() => setDel(null)} onConfirm={() => del && start(async () => { await deleteContactMessage(del.id).catch(() => null); setDel(null); setOpen(null); router.refresh(); })}>
+        {t("Le message est supprimé. La fiche client, elle, reste.")}
       </ConfirmDialog>
     </>
   );

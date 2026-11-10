@@ -5,9 +5,11 @@ import { AppIcon } from "@/components/apps/app-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { appT } from "@/server/app-locale";
 
 /** Page d'une app pas encore construite (ou activée sur demande) : ce qu'elle fera, et quoi faire en attendant. */
-export function AppPlaceholder({ app, title, text, action }: { app: SkyApp; title: string; text: string; action?: ReactNode }) {
+export async function AppPlaceholder({ app, title, text, action }: { app: SkyApp; title: string; text: string; action?: ReactNode }) {
+  const t = await appT();
   return (
     <>
       <PageHeader title={app.name} description={app.tagline} />
@@ -19,7 +21,7 @@ export function AppPlaceholder({ app, title, text, action }: { app: SkyApp; titl
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold">{title}</p>
-              {app.status === "soon" ? <Badge tone="warning">Bientôt</Badge> : null}
+              {app.status === "soon" ? <Badge tone="warning">{t("Bientôt")}</Badge> : null}
             </div>
             <p className="mt-1 max-w-prose text-sm text-muted">{text}</p>
             <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">

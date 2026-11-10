@@ -15,6 +15,7 @@ import { effectivePlan } from "@/server/plan";
 import { limitOf } from "@/lib/plans";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Historique");
 
@@ -22,6 +23,7 @@ const PER_PAGE = 30;
 type SearchParams = Promise<{ q?: string; statut?: string; periode?: string; membre?: string; page?: string }>;
 
 export default async function HistoryPage({ searchParams }: { searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("appointments.view");
   const bid = ctx.business.id;
   const tz = ctx.business.timezone;
@@ -77,31 +79,31 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
-      <PageHeader title="Historique" description={`${total} rendez-vous`} />
-      {Number.isFinite(historyDays) ? <div className="mb-4"><UpgradeNotice feature="Historique complet" required="pro">Avec votre forfait, l&apos;historique affiche les {historyDays} derniers jours. Rien n&apos;est supprimé : tout réapparaît en passant au forfait Pro.</UpgradeNotice></div> : null}
+      <PageHeader title={t("Historique")} description={`${total} rendez-vous`} />
+      {Number.isFinite(historyDays) ? <div className="mb-4"><UpgradeNotice feature={t("Historique complet")} required="pro">Avec votre forfait, l&apos;historique affiche les {historyDays} derniers jours. Rien n&apos;est supprimé : tout réapparaît en passant au forfait Pro.</UpgradeNotice></div> : null}
       <form className="mb-4 flex flex-wrap gap-2" role="search">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
           <Input name="q" defaultValue={q} placeholder={`Nom du ${clientWord(ctx.business.businessType)}, email, téléphone, prestation…`} className="pl-9" aria-label="Rechercher" />
         </div>
         <Select name="statut" defaultValue={statut} aria-label="Statut" className="w-auto">
-          <option value="">Tous les statuts</option>
-          <option value="confirme">Confirmés (à venir)</option>
+          <option value="">{t("Tous les statuts")}</option>
+          <option value="confirme">{t("Confirmés (à venir)")}</option>
           <option value="termine">Terminés</option>
-          <option value="attente">En attente</option>
+          <option value="attente">{t("En attente")}</option>
           <option value="annule">Annulés</option>
           <option value="absent">Absences</option>
         </Select>
-        <Select name="periode" defaultValue={periode} aria-label="Période" className="w-auto">
-          <option value="">Toutes les dates</option>
-          <option value="avenir">À venir</option>
-          <option value="7">7 derniers jours</option>
-          <option value="30">30 derniers jours</option>
-          <option value="90">90 derniers jours</option>
+        <Select name="periode" defaultValue={periode} aria-label={t("Période")} className="w-auto">
+          <option value="">{t("Toutes les dates")}</option>
+          <option value="avenir">{t("À venir")}</option>
+          <option value="7">{t("7 derniers jours")}</option>
+          <option value="30">{t("30 derniers jours")}</option>
+          <option value="90">{t("90 derniers jours")}</option>
         </Select>
         {team.length > 1 ? (
           <Select name="membre" defaultValue={membre} aria-label="Membre" className="w-auto">
-            <option value="">Toute l&apos;équipe</option>
+            <option value="">{t("Toute l'équipe")}</option>
             {team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </Select>
         ) : null}
@@ -115,9 +117,9 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
             id: a.id,
             name: a.contactName ?? "—",
             customerId: a.customerId,
-            service: a.serviceName ?? "Sans prestation",
+            service: a.serviceName ?? t("Sans prestation"),
             member: memberName ?? "—",
-            when: `${formatDay(a.startsAt, tz, "d MMM yyyy")} · ${formatTime(a.startsAt, tz)}`,
+            when: `${formatDay(a.startsAt, tz, "d MMM yyyy", t.locale)} · ${formatTime(a.startsAt, tz)}`,
             state: state(a),
           }))}
         />
@@ -125,9 +127,9 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
 
       {pages > 1 ? (
         <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Pagination">
-          {page > 1 ? <Link href={link({ page: page - 1 })} className="font-medium text-accent hover:text-accent-hover">← Précédent</Link> : <span />}
+          {page > 1 ? <Link href={link({ page: page - 1 })} className="font-medium text-accent hover:text-accent-hover">{t("← Précédent")}</Link> : <span />}
           <span className="text-muted">Page {page} sur {pages}</span>
-          {page < pages ? <Link href={link({ page: page + 1 })} className="font-medium text-accent hover:text-accent-hover">Suivant →</Link> : <span />}
+          {page < pages ? <Link href={link({ page: page + 1 })} className="font-medium text-accent hover:text-accent-hover">{t("Suivant →")}</Link> : <span />}
         </nav>
       ) : null}
     </>

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { setScheduleMode } from "@/server/actions/schedule";
+import { useT } from "@/components/app-locale";
 
 const OPTIONS = [
   { value: "shared", title: "Les mêmes pour tout le monde", description: "Une seule grille d'horaires pour l'établissement." },
@@ -11,11 +12,12 @@ const OPTIONS = [
 ] as const;
 
 export function ScheduleMode({ value, canEdit }: { value: "shared" | "per_member"; canEdit: boolean }) {
+  const t = useT();
   const [pending, start] = useTransition();
   return (
     <fieldset disabled={!canEdit || pending}>
       <legend className="mb-2 flex items-center gap-2 text-sm font-medium">
-        Horaires de l&apos;équipe
+        {t("Horaires de l'équipe")}
         {pending ? <Loader2 className="size-4 animate-spin text-muted" aria-label="Enregistrement" /> : null}
       </legend>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -29,8 +31,8 @@ export function ScheduleMode({ value, canEdit }: { value: "shared" | "per_member
           >
             <input type="radio" name="scheduleMode" value={o.value} checked={value === o.value} onChange={() => start(async () => void (await setScheduleMode(o.value)))} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
-              <span className="block text-sm font-semibold">{o.title}</span>
-              <span className="mt-0.5 block text-sm text-muted">{o.description}</span>
+              <span className="block text-sm font-semibold">{t(o.title)}</span>
+              <span className="mt-0.5 block text-sm text-muted">{t(o.description)}</span>
             </span>
           </label>
         ))}

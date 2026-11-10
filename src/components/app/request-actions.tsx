@@ -5,9 +5,11 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { confirmRequest, refuseRequest } from "@/server/actions/appointments";
+import { useT } from "@/components/app-locale";
 
 /** Confirmer / refuser une demande. Le refus peut s'accompagner d'un motif envoyé au client. */
 export function RequestActions({ id, expired = false }: { id: string; expired?: boolean }) {
+  const t = useT();
   const [pending, start] = useTransition();
   const [which, setWhich] = useState<"confirm" | "refuse" | null>(null);
   const [refusing, setRefusing] = useState(false);
@@ -26,18 +28,18 @@ export function RequestActions({ id, expired = false }: { id: string; expired?: 
   if (expired)
     return (
       <Button size="sm" variant="secondary" loading={pending} onClick={() => run("refuse")}>
-        Libérer le créneau
+        {t("Libérer le créneau")}
       </Button>
     );
 
   if (refusing)
     return (
       <div className="w-full space-y-2 sm:w-80">
-        <label htmlFor={`reason-${id}`} className="text-sm font-medium">Motif (facultatif, envoyé au client)</label>
-        <Textarea id={`reason-${id}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} placeholder="Ex. je suis absent ce jour-là, je vous propose le lendemain à la même heure." />
+        <label htmlFor={`reason-${id}`} className="text-sm font-medium">{t("Motif (facultatif, envoyé au client)")}</label>
+        <Textarea id={`reason-${id}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} placeholder={t("Ex. je suis absent ce jour-là, je vous propose le lendemain à la même heure.")} />
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setRefusing(false)} disabled={pending}>Annuler</Button>
-          <Button size="sm" variant="danger" loading={pending} onClick={() => run("refuse")}>Refuser et libérer le créneau</Button>
+          <Button size="sm" variant="ghost" onClick={() => setRefusing(false)} disabled={pending}>{t("Annuler")}</Button>
+          <Button size="sm" variant="danger" loading={pending} onClick={() => run("refuse")}>{t("Refuser et libérer le créneau")}</Button>
         </div>
         {error ? <p className="text-xs text-danger" role="alert">{error}</p> : null}
       </div>
@@ -50,7 +52,7 @@ export function RequestActions({ id, expired = false }: { id: string; expired?: 
           Refuser
         </Button>
         <Button size="sm" icon={<Check className="size-4" aria-hidden="true" />} loading={pending && which === "confirm"} disabled={pending} onClick={() => run("confirm")}>
-          Confirmer
+          {t("Confirmer")}
         </Button>
       </div>
       {error ? <p className="text-xs text-danger" role="alert">{error}</p> : null}

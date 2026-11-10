@@ -9,6 +9,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { BODY_TYPES, EQUIPMENT_SUGGESTIONS, EURO_NORMS, FUELS, GEARBOXES, VEHICLE_STATUS, kwToHp } from "@/lib/vehicles";
 import { saveVehicle } from "@/server/actions/vehicles";
+import { useT } from "@/components/app-locale";
 
 export type VehicleFormValues = {
   status: string; make: string; model: string; version: string; bodyType: string; fuel: string; gearbox: string; firstRegistration: string;
@@ -25,6 +26,7 @@ export const EMPTY_VEHICLE: VehicleFormValues = {
 
 /** Fiche véhicule : identité, caractéristiques, prix, équipements, description, infos internes. */
 export function VehicleForm({ id, initial }: { id: string | null; initial: VehicleFormValues }) {
+  const t = useT();
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [extra, setExtra] = useState("");
@@ -59,7 +61,7 @@ export function VehicleForm({ id, initial }: { id: string | null; initial: Vehic
       }
       const r = await saveVehicle(id, fd);
       if (!r.ok) return setMsg({ ok: false, text: r.error });
-      setMsg({ ok: true, text: r.message ?? "Enregistré." });
+      setMsg({ ok: true, text: r.message ?? t("Enregistré.") });
       if (!id && r.id) router.push(`/app/vehicules/${r.id}?photos=1`);
       else router.refresh();
     });
@@ -67,61 +69,61 @@ export function VehicleForm({ id, initial }: { id: string | null; initial: Vehic
   return (
     <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="space-y-6">
       <Card>
-        <CardHeader title="Le véhicule" description="Ce qui s'affiche en titre de l'annonce." />
+        <CardHeader title={t("Le véhicule")} description={t("Ce qui s'affiche en titre de l'annonce.")} />
         <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
           {txt("make", "Marque", { required: true, placeholder: "Volkswagen", autoComplete: "off" })}
           {txt("model", "Modèle", { required: true, placeholder: "Golf", autoComplete: "off" })}
-          {txt("version", "Version / finition", { placeholder: "1.5 TSI Life" })}
+          {txt("version", t("Version / finition"), { placeholder: "1.5 TSI Life" })}
           {txt("firstRegistration", "1re immatriculation", { type: "month", max: `${new Date().getFullYear() + 1}-12` })}
-          {txt("mileageKm", "Kilométrage", { inputMode: "numeric", placeholder: "45 000" }, "En km.")}
+          {txt("mileageKm", "Kilométrage", { inputMode: "numeric", placeholder: "45 000" }, t("En km."))}
           {sel("fuel", "Carburant", FUELS)}
-          {sel("gearbox", "Boîte de vitesses", GEARBOXES)}
+          {sel("gearbox", t("Boîte de vitesses"), GEARBOXES)}
           {sel("bodyType", "Carrosserie", BODY_TYPES)}
-          {txt("powerKw", "Puissance (kW)", { inputMode: "numeric", placeholder: "110" }, hp ? `≈ ${hp} ch` : "Le nombre de chevaux est calculé.")}
+          {txt("powerKw", t("Puissance (kW)"), { inputMode: "numeric", placeholder: "110" }, hp ? `≈ ${hp} ch` : t("Le nombre de chevaux est calculé."))}
         </div>
       </Card>
 
       <Card>
         <CardHeader title="Caractéristiques" />
         <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-          {txt("engineCc", "Cylindrée (cm³)", { inputMode: "numeric", placeholder: "1498" })}
-          {txt("co2", "CO₂ (g/km)", { inputMode: "numeric", placeholder: "128" })}
-          {sel("euroNorm", "Norme Euro", EURO_NORMS)}
-          {txt("color", "Couleur", { placeholder: "Gris métallisé" })}
-          {txt("interior", "Intérieur", { placeholder: "Tissu noir" })}
+          {txt("engineCc", t("Cylindrée (cm³)"), { inputMode: "numeric", placeholder: "1498" })}
+          {txt("co2", t("CO₂ (g/km)"), { inputMode: "numeric", placeholder: "128" })}
+          {sel("euroNorm", t("Norme Euro"), EURO_NORMS)}
+          {txt("color", "Couleur", { placeholder: t("Gris métallisé") })}
+          {txt("interior", "Intérieur", { placeholder: t("Tissu noir") })}
           {txt("doors", "Portes", { inputMode: "numeric", placeholder: "5" })}
           {txt("seats", "Places", { inputMode: "numeric", placeholder: "5" })}
-          {txt("owners", "Propriétaires précédents", { inputMode: "numeric", placeholder: "1" })}
+          {txt("owners", t("Propriétaires précédents"), { inputMode: "numeric", placeholder: "1" })}
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Prix et garanties" />
+        <CardHeader title={t("Prix et garanties")} />
         <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
-          {txt("price", "Prix TVAC (€)", { inputMode: "decimal", placeholder: "18 990" }, "Vide = « Prix sur demande ».")}
+          {txt("price", t("Prix TVAC (€)"), { inputMode: "decimal", placeholder: "18 990" }, "Vide = « Prix sur demande ».")}
           <Field label="TVA" htmlFor="v-vatMode">
             <Select id="v-vatMode" value={v.vatMode} onChange={(e) => set("vatMode", e.target.value)}>
-              <option value="margin">Régime de la marge (TVA non récupérable)</option>
-              <option value="vat">TVA déductible (pour un professionnel)</option>
+              <option value="margin">{t("Régime de la marge (TVA non récupérable)")}</option>
+              <option value="vat">{t("TVA déductible (pour un professionnel)")}</option>
             </Select>
           </Field>
-          {txt("warrantyMonths", "Garantie (mois)", { inputMode: "numeric", placeholder: "12" }, "Vide = sans garantie mentionnée.")}
+          {txt("warrantyMonths", t("Garantie (mois)"), { inputMode: "numeric", placeholder: "12" }, "Vide = sans garantie mentionnée.")}
           <label className="flex items-center gap-2.5 text-sm sm:col-span-2 lg:col-span-1">
             <input type="checkbox" checked={v.carPass} onChange={(e) => set("carPass", e.target.checked)} className="size-4 accent-[var(--accent)]" />
-            Car-Pass disponible
+            {t("Car-Pass disponible")}
           </label>
           <label className="flex items-center gap-2.5 text-sm sm:col-span-2">
             <input type="checkbox" checked={v.serviceHistory} onChange={(e) => set("serviceHistory", e.target.checked)} className="size-4 accent-[var(--accent)]" />
-            Carnet d&apos;entretien complet
+            {t("Carnet d'entretien complet")}
           </label>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Équipements et options" description="Cliquez pour ajouter ou retirer ; vous pouvez aussi en écrire d'autres." />
+        <CardHeader title={t("Équipements et options")} description="Cliquez pour ajouter ou retirer ; vous pouvez aussi en écrire d'autres." />
         <div className="space-y-4 p-5">
           {v.equipment.length ? (
-            <ul className="flex flex-wrap gap-2" aria-label="Équipements choisis">
+            <ul className="flex flex-wrap gap-2" aria-label={t("Équipements choisis")}>
               {v.equipment.map((e) => (
                 <li key={e}>
                   <button type="button" onClick={() => toggleEq(e)} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground" aria-label={`Retirer ${e}`}>
@@ -146,33 +148,33 @@ export function VehicleForm({ id, initial }: { id: string | null; initial: Vehic
             </div>
           ))}
           <div className="flex gap-2">
-            <label htmlFor="v-extra" className="sr-only">Autre équipement</label>
-            <Input id="v-extra" value={extra} onChange={(e) => setExtra(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExtra(); } }} placeholder="Autre équipement (ex. pack hiver)" />
-            <Button type="button" variant="secondary" onClick={addExtra}>Ajouter</Button>
+            <label htmlFor="v-extra" className="sr-only">{t("Autre équipement")}</label>
+            <Input id="v-extra" value={extra} onChange={(e) => setExtra(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExtra(); } }} placeholder={t("Autre équipement (ex. pack hiver)")} />
+            <Button type="button" variant="secondary" onClick={addExtra}>{t("Ajouter")}</Button>
           </div>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Description" description="Affichée sur la fiche publique : état, entretien, points forts." />
+        <CardHeader title="Description" description={t("Affichée sur la fiche publique : état, entretien, points forts.")} />
         <div className="p-5">
           <label htmlFor="v-description" className="sr-only">Description</label>
-          <Textarea id="v-description" rows={6} value={v.description} onChange={(e) => set("description", e.target.value)} placeholder="Véhicule en très bon état, entretien chez le concessionnaire, pneus neufs…" />
+          <Textarea id="v-description" rows={6} value={v.description} onChange={(e) => set("description", e.target.value)} placeholder={t("Véhicule en très bon état, entretien chez le concessionnaire, pneus neufs…")} />
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Infos internes" description="Jamais affichées au public." />
+        <CardHeader title={t("Infos internes")} description={t("Jamais affichées au public.")} />
         <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
-          {txt("vin", "N° de châssis (VIN)", { maxLength: 17, autoComplete: "off", className: "uppercase" })}
+          {txt("vin", t("N° de châssis (VIN)"), { maxLength: 17, autoComplete: "off", className: "uppercase" })}
           {txt("plate", "Plaque", { autoComplete: "off" })}
-          {txt("purchase", "Prix d'achat (€)", { inputMode: "decimal" })}
+          {txt("purchase", t("Prix d'achat (€)"), { inputMode: "decimal" })}
           <div className="sm:col-span-3">
-            <Field label="Note interne" htmlFor="v-internalNote">
+            <Field label={t("Note interne")} htmlFor="v-internalNote">
               <Textarea id="v-internalNote" rows={3} value={v.internalNote} onChange={(e) => set("internalNote", e.target.value)} />
             </Field>
           </div>
-          <p className="flex items-center gap-1.5 text-xs text-muted sm:col-span-3"><Lock className="size-3.5" aria-hidden="true" />Visibles seulement par votre équipe dans Skydev.</p>
+          <p className="flex items-center gap-1.5 text-xs text-muted sm:col-span-3"><Lock className="size-3.5" aria-hidden="true" />{t("Visibles seulement par votre équipe dans Skydev.")}</p>
         </div>
       </Card>
 
@@ -180,11 +182,11 @@ export function VehicleForm({ id, initial }: { id: string | null; initial: Vehic
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted">Statut</span>
           <select value={v.status} onChange={(e) => set("status", e.target.value)} className="h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm">
-            {Object.entries(VEHICLE_STATUS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
+            {Object.entries(VEHICLE_STATUS).map(([k, s]) => <option key={k} value={k}>{t(s.label)}</option>)}
           </select>
         </label>
         {msg ? <p className={cn("text-sm", msg.ok ? "text-success" : "text-danger")} role={msg.ok ? "status" : "alert"}>{msg.ok ? <Check className="mr-1 inline size-4" aria-hidden="true" /> : null}{msg.text}</p> : null}
-        <Button type="submit" loading={pending} className="ml-auto">{id ? "Enregistrer" : "Créer et ajouter les photos"}</Button>
+        <Button type="submit" loading={pending} className="ml-auto">{id ? t("Enregistrer") : t("Créer et ajouter les photos")}</Button>
       </div>
     </form>
   );

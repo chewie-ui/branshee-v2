@@ -8,12 +8,15 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 export const generateMetadata = appMetadata("Signatures");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 
 /** Toutes les demandes de signature : en attente, ouvertes, signées, refusées. */
 export default async function SignaturesPage() {
+  const t = await appT();
   const ctx = await requireContext("invoices.view");
   const rows = await db
     .select({ s: quoteSignatures, number: salesDocuments.number, total: salesDocuments.ttcCents, client: salesDocuments.client })
@@ -22,14 +25,14 @@ export default async function SignaturesPage() {
     .where(and(eq(quoteSignatures.businessId, ctx.business.id), isNull(quoteSignatures.cancelledAt)))
     .orderBy(desc(quoteSignatures.sentAt))
     .limit(300);
-  const fmt = new Intl.DateTimeFormat("fr-BE", { timeZone: ctx.business.timezone || "Europe/Brussels", day: "numeric", month: "short" });
+  const fmt = new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: ctx.business.timezone || "Europe/Brussels", day: "numeric", month: "short" });
   const now = new Date();
-  const state = (s: typeof quoteSignatures.$inferSelect) => (s.signedAt ? ["Signé", "bg-success-soft text-success"] : s.declinedAt ? ["Refusé", "bg-danger-soft text-danger"] : s.expiresAt < now ? ["Expiré", "bg-surface-muted text-muted"] : s.viewedAt ? ["Ouvert", "bg-accent-soft text-accent"] : ["Envoyé", "bg-surface-muted text-muted"]);
+  const state = (s: typeof quoteSignatures.$inferSelect) => (s.signedAt ? ["Signé", "bg-success-soft text-success"] : s.declinedAt ? [t("Refusé"), "bg-danger-soft text-danger"] : s.expiresAt < now ? ["Expiré", "bg-surface-muted text-muted"] : s.viewedAt ? ["Ouvert", "bg-accent-soft text-accent"] : ["Envoyé", "bg-surface-muted text-muted"]);
   return (
     <>
-      <PageHeader title="Signatures" description="Vos devis envoyés pour signature en ligne. Pour en envoyer un, ouvrez le devis dans Factures." />
+      <PageHeader title={t("Signatures")} description={t("Vos devis envoyés pour signature en ligne. Pour en envoyer un, ouvrez le devis dans Factures.")} />
       {rows.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted">Aucune demande pour l&apos;instant. Ouvrez un devis dans <Link href="/app/factures/devis" className="font-medium text-accent hover:text-accent-hover">Factures → Devis</Link> puis « Envoyer pour signature ».</Card>
+        <Card className="p-8 text-center text-sm text-muted">{t("Aucune demande pour l'instant. Ouvrez un devis dans")} <Link href="/app/factures/devis" className="font-medium text-accent hover:text-accent-hover">{t("Factures → Devis")}</Link> {t("puis « Envoyer pour signature ».")}</Card>
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-border">

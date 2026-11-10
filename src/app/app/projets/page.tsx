@@ -8,10 +8,12 @@ import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { listProjects, projectRights } from "@/server/projects";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Projets");
 
 export default async function ProjectsPage() {
+  const t = await appT();
   const ctx = await requireContext();
   const rights = projectRights(ctx);
   const [list, clients] = await Promise.all([
@@ -20,7 +22,7 @@ export default async function ProjectsPage() {
   ]);
   return (
     <>
-      <PageHeader title="Projets" description="Vos projets et chantiers : tâches, temps passé et facturation." />
+      <PageHeader title={t("Projets")} description={t("Vos projets et chantiers : tâches, temps passé et facturation.")} />
       <ProjectsList projects={list.map((p) => (rights.manage ? p : { ...p, hourlyRateCents: 0 }))} customers={clients.map((c) => ({ id: c.id, name: c.company ? `${c.company} (${c.name})` : c.name }))} canManage={rights.manage} today={todayIn(ctx.business.timezone)} />
     </>
   );

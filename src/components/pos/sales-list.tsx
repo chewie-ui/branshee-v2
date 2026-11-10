@@ -8,20 +8,23 @@ import { ConfirmDialog } from "@/components/invoicing/confirm-dialog";
 import { cn } from "@/lib/cn";
 import { PAY_METHODS } from "@/lib/stock";
 import { refundSale } from "@/server/actions/pos";
+import { useT } from "@/components/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 type Row = { id: string; number: string; total: number; method: string; status: string; createdAt: string; items: number };
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 
 export function SalesList({ rows, canRefund, tz }: { rows: Row[]; canRefund: boolean; tz: string }) {
+  const t = useT();
   const router = useRouter();
   const [refund, setRefund] = useState<Row | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
-  const fmt = new Intl.DateTimeFormat("fr-BE", { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  if (!rows.length) return <Card className="p-8 text-center text-sm text-muted">Aucun ticket sur les 30 derniers jours.</Card>;
+  const fmt = new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  if (!rows.length) return <Card className="p-8 text-center text-sm text-muted">{t("Aucun ticket sur les 30 derniers jours.")}</Card>;
   return (
     <div className="space-y-3">
-      {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+      {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{t(msg.text)}</p> : null}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border">
           {rows.map((r) => (
@@ -36,7 +39,7 @@ export function SalesList({ rows, canRefund, tz }: { rows: Row[]; canRefund: boo
           ))}
         </ul>
       </Card>
-      <ConfirmDialog open={!!refund} title={`Rembourser le ticket ${refund?.number ?? ""} ?`} confirmLabel="Rembourser" danger loading={pending} onCancel={() => setRefund(null)} onConfirm={() => refund && start(async () => { const r: { ok: boolean; message?: string; error?: string } = await refundSale(refund.id).catch(() => ({ ok: false, error: "Remboursement impossible." })); setRefund(null); setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Remboursé.") : (r.error ?? "Impossible.") }); router.refresh(); })}>
+      <ConfirmDialog open={!!refund} title={`Rembourser le ticket ${refund?.number ?? ""} ?`} confirmLabel="Rembourser" danger loading={pending} onCancel={() => setRefund(null)} onConfirm={() => refund && start(async () => { const r: { ok: boolean; message?: string; error?: string } = await refundSale(refund.id).catch(() => ({ ok: false, error: t("Remboursement impossible.") })); setRefund(null); setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Remboursé.") : (r.error ?? "Impossible.") }); router.refresh(); })}>
         {refund ? `${eur(refund.total)} à rendre au client. Les produits reviennent en stock.` : null}
       </ConfirmDialog>
     </div>

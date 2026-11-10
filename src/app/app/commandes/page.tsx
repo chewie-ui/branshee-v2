@@ -4,16 +4,18 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { recentOrders, tablesOf } from "@/server/orders";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Commandes");
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
+  const t = await appT();
   const ctx = await requireContext();
   const [orders, tables] = await Promise.all([recentOrders(ctx.business.id), tablesOf(ctx.business.id)]);
   return (
     <>
-      <PageHeader title="Commandes" description="Les commandes passées par QR code, en direct. La page se met à jour toute seule." />
+      <PageHeader title={t("Commandes")} description={t("Les commandes passées par QR code, en direct. La page se met à jour toute seule.")} />
       <OrdersBoard
         hasTables={tables.length > 0}
         canEdit={ctx.member.isOwner || ctx.can("settings.manage")}

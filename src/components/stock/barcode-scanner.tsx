@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { useT } from "@/components/app-locale";
 
 type Detector = { detect: (src: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
 type DetectorCtor = new (o: { formats: string[] }) => Detector;
@@ -11,6 +12,7 @@ export const canScan = () => typeof window !== "undefined" && "BarcodeDetector" 
 
 /** Lecture d'un code-barres avec la caméra du téléphone. Un lecteur USB marche aussi : il « tape » le code dans le champ de recherche. */
 export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
+  const t = useT();
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -34,18 +36,18 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
         };
         tick();
       } catch {
-        setError("Caméra indisponible. Autorisez la caméra, ou tapez le code à la main.");
+        setError(t("Caméra indisponible. Autorisez la caméra, ou tapez le code à la main."));
       }
     })();
-    return () => { stop = true; stream?.getTracks().forEach((t) => t.stop()); };
+    return () => { stop = true; stream?.getTracks().forEach((tp) => tp.stop()); };
   }, [onCode]);
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="Scanner un code-barres">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={t("Scanner un code-barres")}>
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-black">
         <video ref={video} className="aspect-[3/4] w-full object-cover" muted playsInline />
         <div className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-lg border-2 border-white/80" aria-hidden="true" />
-        <button type="button" onClick={onClose} className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full bg-black/60 text-white" aria-label="Fermer"><X className="size-5" aria-hidden="true" /></button>
-        <p className="absolute inset-x-0 bottom-0 bg-black/60 p-3 text-center text-sm text-white" role="status">{error ?? "Visez le code-barres"}</p>
+        <button type="button" onClick={onClose} className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full bg-black/60 text-white" aria-label={t("Fermer")}><X className="size-5" aria-hidden="true" /></button>
+        <p className="absolute inset-x-0 bottom-0 bg-black/60 p-3 text-center text-sm text-white" role="status">{error ?? t("Visez le code-barres")}</p>
       </div>
     </div>
   );

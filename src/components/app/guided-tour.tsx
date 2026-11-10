@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { tourByKey } from "@/lib/tours";
+import { useT } from "@/components/app-locale";
 
 /**
  * Moteur des visites guidées : met en évidence un élément réel de la page et affiche une bulle.
@@ -78,6 +79,7 @@ function findTarget(selectors: string): HTMLElement | null {
 type Box = { top: number; left: number; width: number; height: number };
 
 export function GuidedTour() {
+  const t = useT();
   const raw = useSyncExternalStore(subscribe, snapshot, () => null);
   const state = parse(raw);
   const tour = state ? tourByKey(state.key) : undefined;
@@ -165,20 +167,20 @@ export function GuidedTour() {
       <div role="dialog" aria-label={`Visite guidée : ${tour.title}`} className="pointer-events-auto absolute w-[min(340px,calc(100vw-24px))] rounded-xl border border-border bg-surface p-4 shadow-xl" style={bubbleStyle}>
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-medium text-accent">
-            {tour.title} · {index + 1}/{tour.steps.length}
+            {t(tour.title)} · {index + 1}/{tour.steps.length}
           </p>
-          <button type="button" onClick={() => write(null)} className="-mt-1 -mr-1 flex size-7 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-text" aria-label="Quitter la visite">
+          <button type="button" onClick={() => write(null)} className="-mt-1 -mr-1 flex size-7 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-text" aria-label={t("Quitter la visite")}>
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
-        <h2 className="mt-1 font-semibold">{step.title}</h2>
+        <h2 className="mt-1 font-semibold">{t(step.title)}</h2>
         <p className="mt-1 text-sm text-muted">
-          {!onPage && !step.go ? "Ouvrez l'élément indiqué à l'étape précédente pour continuer." : step.body}
+          {!onPage && !step.go ? t("Ouvrez l'élément indiqué à l'étape précédente pour continuer.") : t(step.body)}
         </p>
-        {onPage && step.target && !shown ? <p className="mt-2 text-xs text-muted">L&apos;élément n&apos;est pas visible ici pour le moment (droits, forfait ou contenu vide) : passez à la suite.</p> : null}
+        {onPage && step.target && !shown ? <p className="mt-2 text-xs text-muted">{t("L'élément n'est pas visible ici pour le moment (droits, forfait ou contenu vide) : passez à la suite.")}</p> : null}
         <div className="mt-4 flex items-center justify-between gap-2">
           <button type="button" onClick={() => write(null)} className="text-sm text-muted hover:text-text">
-            Passer
+            {t("Passer")}
           </button>
           <div className="flex gap-2">
             {index > 0 ? (

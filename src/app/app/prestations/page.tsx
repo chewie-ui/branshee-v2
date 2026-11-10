@@ -11,10 +11,12 @@ import { ServiceTabs } from "@/components/services/service-tabs";
 import { ServicesList } from "@/components/services/services-list";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Prestations");
 
 export default async function ServicesPage() {
+  const t = await appT();
   const ctx = await requireContext("services.view");
   const bid = ctx.business.id;
   const canManage = ctx.can("services.manage");
@@ -32,15 +34,15 @@ export default async function ServicesPage() {
 
   const whoDoes = (serviceId: string) => {
     const names = links.filter((l) => l.serviceId === serviceId).map((l) => l.name);
-    return names.length === 0 || names.length === team.length ? "Toute l'équipe" : names.join(", ");
+    return names.length === 0 || names.length === team.length ? t("Toute l'équipe") : names.join(", ");
   };
 
   return (
     <>
       <PageHeader
-        title="Prestations"
+        title={t("Prestations")}
         description={`${rows.filter((s) => s.isActive).length} prestation${rows.length > 1 ? "s" : ""} proposée${rows.length > 1 ? "s" : ""} en ligne`}
-        action={canManage ? <ButtonLink href="/app/prestations/nouvelle" data-tour="new-service" icon={<Plus className="size-4" aria-hidden="true" />}>Nouvelle prestation</ButtonLink> : null}
+        action={canManage ? <ButtonLink href="/app/prestations/nouvelle" data-tour="new-service" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Nouvelle prestation")}</ButtonLink> : null}
       />
       {canManage ? <ServiceTabs /> : null}
 
@@ -48,9 +50,9 @@ export default async function ServicesPage() {
         <Card>
           <EmptyState
             icon={<Scissors />}
-            title="Aucune prestation"
-            description="Ajoutez vos prestations pour que vos clients puissent réserver."
-            action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>Créer ma première prestation</ButtonLink> : null}
+            title={t("Aucune prestation")}
+            description={t("Ajoutez vos prestations pour que vos clients puissent réserver.")}
+            action={canManage ? <ButtonLink href="/app/prestations/nouvelle" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Créer ma première prestation")}</ButtonLink> : null}
           />
         </Card>
       ) : (

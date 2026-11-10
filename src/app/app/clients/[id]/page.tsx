@@ -26,12 +26,14 @@ import { CustomerBillingForm } from "@/components/invoicing/customer-billing-for
 import { CustomerActivity, activityLabel } from "@/components/customers/customer-activity";
 import { customerActivity } from "@/server/customer-activity";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Fiche");
 
 type SearchParams = Promise<{ onglet?: string; q?: string; prestation?: string; membre?: string; annee?: string }>;
 
 export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("customers.view");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
@@ -69,15 +71,15 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const paid = history.reduce((s, h) => s + (h.pay && ["paid", "partial"].includes(h.pay.status) ? h.pay.amountCents : 0) + (h.pay?.keptCents ?? 0), 0);
   const next = [...history].reverse().find((h) => h.a.startsAt > now && h.a.status !== "cancelled");
 
-  const state = (a: (typeof history)[number]["a"]) => (a.noShow ? <Badge tone="warning">Absent{a.noShowReason === "justified" ? " (excusé)" : ""}</Badge> : a.status === "confirmed" && a.endsAt <= now ? <Badge>Terminé</Badge> : <StatusBadge status={a.status} />);
+  const state = (a: (typeof history)[number]["a"]) => (a.noShow ? <Badge tone="warning">Absent{a.noShowReason === "justified" ? " (excusé)" : ""}</Badge> : a.status === "confirmed" && a.endsAt <= now ? <Badge>{t("Terminé")}</Badge> : <StatusBadge status={a.status} />);
   const Row = ({ h, reassign = false }: { h: (typeof history)[number]; reassign?: boolean }) => (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
       <div className="w-28 shrink-0 text-sm">
-        <p className="font-medium">{formatDay(h.a.startsAt, tz, "d MMM yyyy")}</p>
+        <p className="font-medium">{formatDay(h.a.startsAt, tz, "d MMM yyyy", t.locale)}</p>
         <p className="text-muted tabular-nums">{formatTime(h.a.startsAt, tz)}</p>
       </div>
       <div className="min-w-0 flex-1 text-sm">
-        <Link href={`/app/agenda/rdv/${h.a.id}`} className="block truncate font-medium hover:underline">{h.a.serviceName ?? "Rendez-vous"}</Link>
+        <Link href={`/app/agenda/rdv/${h.a.id}`} className="block truncate font-medium hover:underline">{h.a.serviceName ?? t("Rendez-vous")}</Link>
         <p className="truncate text-muted">
           {h.memberName ? `avec ${h.memberName}` : "—"}
           {h.pay && h.pay.method !== "none" ? ` · ${formatPrice(h.pay.amountCents)}` : ""}
@@ -93,7 +95,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const activity = skydev ? await customerActivity(ctx, { id: customer.id, email: customer.email }) : null;
   const activityTab = activity ? activityLabel(activity) : null;
   const tabs = [
-    { key: "apercu", label: "Aperçu", href: `/app/clients/${customer.id}` },
+    { key: "apercu", label: t("Aperçu"), href: `/app/clients/${customer.id}` },
     { key: "rdv", label: `Rendez-vous (${history.length})`, href: `/app/clients/${customer.id}?onglet=rendez-vous` },
     { key: "dossier", label: "Dossier", href: `/app/clients/${customer.id}?onglet=dossier` },
     ...(skydev && activityTab ? [{ key: "tout", label: activityTab, href: `/app/clients/${customer.id}?onglet=tout` }] : []),
@@ -115,29 +117,29 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             {customer.blockedAt ? <Badge tone="danger">Bloqué</Badge> : null}
           </h1>
           <p className="text-sm text-muted">
-            {history.length} rendez-vous · fiche créée le {formatDay(customer.createdAt, tz, "d MMMM yyyy")}
+            {history.length} rendez-vous · fiche créée le {formatDay(customer.createdAt, tz, "d MMMM yyyy", t.locale)}
             {row.account ? ` · a un compte ${(await currentBrand()).name}` : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {customer.phone ? <ButtonLink href={`tel:${customer.phone.replace(/[^+0-9]/g, "")}`} variant="secondary" icon={<Phone className="size-4" aria-hidden="true" />}>Appeler</ButtonLink> : null}
-          {customer.phone ? <ButtonLink href={`sms:${customer.phone.replace(/[^+0-9]/g, "")}`} variant="secondary" icon={<MessageCircle className="size-4" aria-hidden="true" />} aria-label="Envoyer un SMS">SMS</ButtonLink> : null}
+          {customer.phone ? <ButtonLink href={`sms:${customer.phone.replace(/[^+0-9]/g, "")}`} variant="secondary" icon={<MessageCircle className="size-4" aria-hidden="true" />} aria-label={t("Envoyer un SMS")}>SMS</ButtonLink> : null}
           {customer.email ? <ButtonLink href={`mailto:${customer.email}`} variant="secondary" icon={<Mail className="size-4" aria-hidden="true" />}>Email</ButtonLink> : null}
-          {ctx.can("appointments.manage") ? <ButtonLink href={`/app/agenda/nouveau?client=${customer.id}`} icon={<CalendarPlus className="size-4" aria-hidden="true" />}>Nouveau RDV</ButtonLink> : null}
+          {ctx.can("appointments.manage") ? <ButtonLink href={`/app/agenda/nouveau?client=${customer.id}`} icon={<CalendarPlus className="size-4" aria-hidden="true" />}>{t("Nouveau RDV")}</ButtonLink> : null}
         </div>
       </div>
 
-      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1" aria-label="Onglets de la fiche" data-tour="customer-tabs">
-        {tabs.map((t) => (
-          <Link key={t.key} href={t.href} aria-current={tab === t.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === t.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
-            {t.label}
+      <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1" aria-label={t("Onglets de la fiche")} data-tour="customer-tabs">
+        {tabs.map((tb) => (
+          <Link key={tb.key} href={tb.href} aria-current={tab === tb.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === tb.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
+            {t(tb.label)}
           </Link>
         ))}
       </nav>
 
       {!general.ok ? (
         <p className="mb-4 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
-          Une partie du dossier est illisible : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l&apos;enregistrement.
+          {t("Une partie du dossier est illisible : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l'enregistrement.")}
         </p>
       ) : null}
 
@@ -158,16 +160,16 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               <Card className="flex flex-wrap items-center gap-3 p-5">
                 <CalendarDays className="size-5 text-accent" aria-hidden="true" />
                 <p className="min-w-0 flex-1 text-sm">
-                  <span className="font-medium">Prochain rendez-vous : </span>
-                  <span className="first-letter:uppercase">{formatDay(next.a.startsAt, tz, "EEEE d MMMM")}</span> à {formatTime(next.a.startsAt, tz)} · {next.a.serviceName ?? "Rendez-vous"}
+                  <span className="font-medium">{t("Prochain rendez-vous :")} </span>
+                  <span className="first-letter:uppercase">{formatDay(next.a.startsAt, tz, "EEEE d MMMM", t.locale)}</span> à {formatTime(next.a.startsAt, tz)} · {next.a.serviceName ?? t("Rendez-vous")}
                 </p>
-                <Link href={`/app/agenda/rdv/${next.a.id}`} className="text-sm font-medium text-accent hover:text-accent-hover">Ouvrir</Link>
+                <Link href={`/app/agenda/rdv/${next.a.id}`} className="text-sm font-medium text-accent hover:text-accent-hover">{t("Ouvrir")}</Link>
               </Card>
             ) : null}
-            <GeneralNotes customerId={customer.id} initial={general.text} canManage={canManage} />
+            <GeneralNotes customerId={customer.id} initial={t(general.text)} canManage={canManage} />
             <Card>
-              <CardHeader title="Derniers rendez-vous" action={history.length > 5 ? <Link href={`/app/clients/${customer.id}?onglet=rendez-vous`} className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link> : null} />
-              {history.length ? <ul className="divide-y divide-border">{history.slice(0, 5).map((h) => <Row key={h.a.id} h={h} />)}</ul> : <EmptyState icon={<CalendarDays />} title="Aucun rendez-vous" description={`Les rendez-vous de ce ${term} s'afficheront ici.`} />}
+              <CardHeader title={t("Derniers rendez-vous")} action={history.length > 5 ? <Link href={`/app/clients/${customer.id}?onglet=rendez-vous`} className="text-sm font-medium text-accent hover:text-accent-hover">{t("Tout voir")}</Link> : null} />
+              {history.length ? <ul className="divide-y divide-border">{history.slice(0, 5).map((h) => <Row key={h.a.id} h={h} />)}</ul> : <EmptyState icon={<CalendarDays />} title={t("Aucun rendez-vous")} description={`Les rendez-vous de ce ${term} s'afficheront ici.`} />}
             </Card>
           </div>
           <div className="min-w-0 space-y-6">
@@ -180,10 +182,10 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               </>
             ) : (
               <Card>
-                <CardHeader title="Coordonnées" />
+                <CardHeader title={t("Coordonnées")} />
                 <ul className="space-y-2 p-5 text-sm">
-                  <li>{customer.email ?? "Pas d'email"}</li>
-                  <li>{customer.phone ?? "Pas de téléphone"}</li>
+                  <li>{customer.email ?? t("Pas d'email")}</li>
+                  <li>{customer.phone ?? t("Pas de téléphone")}</li>
                   {customer.altName || customer.altEmail || customer.altPhone ? <li className="text-muted">Autres : {[customer.altName, customer.altEmail, customer.altPhone].filter(Boolean).join(" · ")}</li> : null}
                 </ul>
               </Card>
@@ -209,6 +211,7 @@ function safeDecrypt(v: string | null): { text: string; ok: boolean } {
 }
 
 async function DossierTab({ customerId, canManage, tz, term }: { customerId: string; canManage: boolean; tz: string; term: string }) {
+  const t = await appT();
   const rows = await db
     .select({ n: customerNotes, author: members.displayName })
     .from(customerNotes)
@@ -220,7 +223,7 @@ async function DossierTab({ customerId, canManage, tz, term }: { customerId: str
   const notes: NoteView[] = rows.map(({ n, author }, i) => ({
     id: n.id,
     date: n.date,
-    dateLabel: formatDay(new Date(n.date + "T12:00:00Z"), tz, "d MMMM yyyy"),
+    dateLabel: formatDay(new Date(n.date + "T12:00:00Z"), tz, "d MMMM yyyy", t.locale),
     title: n.title ?? "",
     note: decoded[i]!.note.text,
     todo: decoded[i]!.todo.text,
@@ -229,7 +232,7 @@ async function DossierTab({ customerId, canManage, tz, term }: { customerId: str
   }));
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      {unreadable ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">Certaines notes sont illisibles : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l&apos;enregistrement.</p> : null}
+      {unreadable ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">{t("Certaines notes sont illisibles : la clé de chiffrement (DATA_ENCRYPTION_KEY) est absente ou différente de celle utilisée à l'enregistrement.")}</p> : null}
       <DossierNotes customerId={customerId} notes={notes} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} term={term} />
     </div>
   );
@@ -238,16 +241,17 @@ async function DossierTab({ customerId, canManage, tz, term }: { customerId: str
 type HistoryRow = { a: typeof appointments.$inferSelect; memberName: string | null; pay: typeof appointmentPayments.$inferSelect | null };
 
 async function AppointmentsTab({ history, sp, customerId, tz, Row }: { history: HistoryRow[]; sp: { q?: string; prestation?: string; membre?: string; annee?: string }; customerId: string; tz: string; Row: (p: { h: HistoryRow; reassign?: boolean }) => React.ReactNode }) {
+  const t = await appT();
   const q = (sp.q ?? "").trim().toLowerCase();
   const services = [...new Set(history.map((h) => h.a.serviceName).filter((s): s is string => !!s))].sort();
   const team = await db.selectDistinct({ id: members.id, name: members.displayName }).from(members).innerJoin(appointments, eq(appointments.memberId, members.id)).where(eq(appointments.customerId, customerId)).orderBy(asc(members.displayName));
-  const years = [...new Set(history.map((h) => formatDay(h.a.startsAt, tz, "yyyy")))];
+  const years = [...new Set(history.map((h) => formatDay(h.a.startsAt, tz, "yyyy", t.locale)))];
   const shown = history.filter(
     (h) =>
-      (!q || `${h.a.serviceName ?? ""} ${h.memberName ?? ""} ${h.a.customerMessage ?? ""} ${h.a.internalNote ?? ""} ${formatDay(h.a.startsAt, tz, "d MMMM yyyy")}`.toLowerCase().includes(q)) &&
+      (!q || `${h.a.serviceName ?? ""} ${h.memberName ?? ""} ${h.a.customerMessage ?? ""} ${h.a.internalNote ?? ""} ${formatDay(h.a.startsAt, tz, "d MMMM yyyy", t.locale)}`.toLowerCase().includes(q)) &&
       (!sp.prestation || h.a.serviceName === sp.prestation) &&
       (!sp.membre || h.a.memberId === sp.membre) &&
-      (!sp.annee || formatDay(h.a.startsAt, tz, "yyyy") === sp.annee),
+      (!sp.annee || formatDay(h.a.startsAt, tz, "yyyy", t.locale) === sp.annee),
   );
   return (
     <div className="space-y-4">
@@ -255,30 +259,30 @@ async function AppointmentsTab({ history, sp, customerId, tz, Row }: { history: 
         <input type="hidden" name="onglet" value="rendez-vous" />
         <div className="relative min-w-52 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <Input name="q" defaultValue={sp.q} placeholder="Rechercher un rendez-vous…" className="pl-9" aria-label="Rechercher un rendez-vous" />
+          <Input name="q" defaultValue={sp.q} placeholder={t("Rechercher un rendez-vous…")} className="pl-9" aria-label={t("Rechercher un rendez-vous")} />
         </div>
         {years.length > 1 ? (
           <Select name="annee" defaultValue={sp.annee ?? ""} className="w-auto" aria-label="Année">
-            <option value="">Toutes les années</option>
+            <option value="">{t("Toutes les années")}</option>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </Select>
         ) : null}
         {services.length > 1 ? (
           <Select name="prestation" defaultValue={sp.prestation ?? ""} className="w-auto" aria-label="Prestation">
-            <option value="">Toutes les prestations</option>
+            <option value="">{t("Toutes les prestations")}</option>
             {services.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         ) : null}
         {team.length > 1 ? (
           <Select name="membre" defaultValue={sp.membre ?? ""} className="w-auto" aria-label="Praticien">
-            <option value="">Tous les praticiens</option>
+            <option value="">{t("Tous les praticiens")}</option>
             {team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </Select>
         ) : null}
         <button type="submit" className="h-10 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Filtrer</button>
       </form>
       <Card>
-        {shown.length ? <ul className="divide-y divide-border">{shown.map((h) => <Row key={h.a.id} h={h} reassign />)}</ul> : <p className="p-6 text-center text-sm text-muted">Aucun rendez-vous ne correspond.</p>}
+        {shown.length ? <ul className="divide-y divide-border">{shown.map((h) => <Row key={h.a.id} h={h} reassign />)}</ul> : <p className="p-6 text-center text-sm text-muted">{t("Aucun rendez-vous ne correspond.")}</p>}
       </Card>
     </div>
   );

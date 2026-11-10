@@ -142,13 +142,13 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
             </div>
 
             <ol className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-              {tierLabels().map((t, i) => {
+              {tierLabels().map((tp, i) => {
                 const used = i < USER_TIERS.length - 1 ? users > i : users >= USER_TIERS.length;
                 const count = i < USER_TIERS.length - 1 ? (users > i ? 1 : 0) : Math.max(0, users - (USER_TIERS.length - 1));
                 return (
-                  <li key={t.label} className={cn("rounded-lg border px-3 py-2", used ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border text-muted")}>
-                    <span className="block text-xs">{t.label}</span>
-                    <span className="font-semibold tabular-nums">{eur(t.price)}</span>
+                  <li key={tp.label} className={cn("rounded-lg border px-3 py-2", used ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border text-muted")}>
+                    <span className="block text-xs">{t(tp.label)}</span>
+                    <span className="font-semibold tabular-nums">{eur(tp.price)}</span>
                     {i === USER_TIERS.length - 1 && count > 1 ? <span className="text-xs"> × {count}</span> : null}
                   </li>
                 );

@@ -8,11 +8,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { openingBounds } from "@/server/opening";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Jours et heures des prestations");
 
 /** Choisir en une fois quand plusieurs prestations sont proposées, dans le cadre des horaires d'ouverture. */
 export default async function ServicesHoursPage() {
+  const t = await appT();
   const ctx = await requireContext("services.manage", { app: "rdv" });
   const bid = ctx.business.id;
   const [list, hours, bounds] = await Promise.all([
@@ -28,7 +30,7 @@ export default async function ServicesHoursPage() {
   }
   return (
     <>
-      <PageHeader title="Prestations" description="Choisissez quels jours et à quelles heures chaque prestation est proposée. Sélectionnez-en plusieurs pour les régler en une fois." />
+      <PageHeader title={t("Prestations")} description={t("Choisissez quels jours et à quelles heures chaque prestation est proposée. Sélectionnez-en plusieurs pour les régler en une fois.")} />
       <ServiceTabs />
       <ServicesHoursBoard services={list.map((s) => ({ ...s, hours: byService.get(s.id) ?? {} }))} bounds={bounds} />
     </>

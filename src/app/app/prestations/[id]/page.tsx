@@ -17,12 +17,14 @@ import { requireContext } from "@/server/context";
 import { listServiceSessions } from "@/server/group-sessions";
 import { serviceFormData } from "@/server/services-page";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Modifier la prestation");
 
 const DAY_NAMES = ["dimanches", "lundis", "mardis", "mercredis", "jeudis", "vendredis", "samedis"];
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("services.manage");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
@@ -46,7 +48,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
     <div className="mx-auto max-w-2xl">
       <Link href="/app/prestations" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text">
         <ArrowLeft className="size-4" aria-hidden="true" />
-        Prestations
+        {t("Prestations")}
       </Link>
       <PageHeader title={service.name} />
       <ServiceForm
@@ -77,23 +79,23 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         <div className="mt-8 scroll-mt-6 space-y-6" id="seances">
           <Card>
             <CardHeader
-              title="Cours récurrent"
-              description={rec ? `Tous les ${rec.weekdays.map((d) => DAY_NAMES[d]).join(", ")} à ${rec.startTime}, sans date de fin.` : "Le cours a lieu chaque semaine aux mêmes jours et heure (ex. tous les lundis à 18:00)."}
+              title={t("Cours récurrent")}
+              description={rec ? `Tous les ${rec.weekdays.map((d) => DAY_NAMES[d]).join(", ")} à ${rec.startTime}, sans date de fin.` : t("Le cours a lieu chaque semaine aux mêmes jours et heure (ex. tous les lundis à 18:00).")}
             />
             <div className="p-5">
               <RecurrenceForm serviceId={service.id} initial={rec} />
             </div>
           </Card>
           <Card>
-            <CardHeader title="Ajouter une date ponctuelle" description="Un atelier, une séance en plus… avec sa propre heure de début et de fin." />
+            <CardHeader title={t("Ajouter une date ponctuelle")} description={t("Un atelier, une séance en plus… avec sa propre heure de début et de fin.")} />
             <div className="p-5">
               <NewSessionForm serviceId={service.id} team={data.team} capacity={service.capacity} durationMin={service.durationMin} defaultDate={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
             </div>
           </Card>
           <Card>
-            <CardHeader title="Prochaines séances" description="Les 8 prochaines semaines. Les clients s'inscrivent depuis votre page de réservation." />
+            <CardHeader title={t("Prochaines séances")} description={t("Les 8 prochaines semaines. Les clients s'inscrivent depuis votre page de réservation.")} />
             {sessions.length === 0 ? (
-              <p className="p-5 text-sm text-muted">Aucune séance prévue. Réglez une récurrence ou ajoutez une date.</p>
+              <p className="p-5 text-sm text-muted">{t("Aucune séance prévue. Réglez une récurrence ou ajoutez une date.")}</p>
             ) : (
               <ul className="divide-y divide-border">
                 {sessions.map((s) => {
@@ -102,7 +104,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
                     <li key={s.id}>
                       <Link href={`/app/prestations/${service.id}/seances/${s.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-surface-muted">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium">{formatDay(s.startsAt, tz, "EEEE d MMMM").replace(/^./, (c) => c.toUpperCase())} · {formatTime(s.startsAt, tz)}–{formatTime(s.endsAt, tz)}</p>
+                          <p className="font-medium">{formatDay(s.startsAt, tz, "EEEE d MMMM", t.locale).replace(/^./, (c) => c.toUpperCase())} · {formatTime(s.startsAt, tz)}–{formatTime(s.endsAt, tz)}</p>
                           <p className="flex items-center gap-2 text-sm text-muted">
                             {s.virtual ? <span className="inline-flex items-center gap-1"><Repeat className="size-3.5" aria-hidden="true" />Récurrent</span> : null}
                             {s.memberName ? <span>Avec {s.memberName}</span> : null}

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Bold, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Quote, Underline } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/app-locale";
 
 type Tool = { key: string; icon: typeof Bold; label: string; cmd: string; value?: string; heading?: boolean };
 const TOOLS: Tool[] = [
@@ -37,6 +38,7 @@ export function RichTextEditor({
   /** Si fourni : bouton « image » (téléversement puis insertion). */
   uploadImage?: (file: File) => Promise<string | null>;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -50,18 +52,18 @@ export function RichTextEditor({
     const url = window.prompt("Adresse du lien (https://… ou /page)");
     if (url && /^(https?:\/\/|\/|mailto:)/i.test(url.trim())) exec("createLink", url.trim());
   }
-  const tools = headings ? TOOLS : TOOLS.filter((t) => !t.heading);
+  const tools = headings ? TOOLS : TOOLS.filter((tp) => !tp.heading);
   return (
     <div className="overflow-hidden rounded-lg border border-border-strong focus-within:border-accent">
       <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface-muted px-2 py-1.5" role="toolbar" aria-label={`Mise en forme : ${label}`}>
-        {tools.map((t) => (
-          <button key={t.key} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => run(t)} className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-text" aria-label={t.label} title={t.label}>
-            <t.icon className="size-4" aria-hidden="true" />
+        {tools.map((tp) => (
+          <button key={tp.key} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => run(tp)} className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-text" aria-label={t(tp.label)} title={t(tp.label)}>
+            <tp.icon className="size-4" aria-hidden="true" />
           </button>
         ))}
         {uploadImage ? (
           <>
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} disabled={uploading} className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-text" aria-label="Insérer une image" title="Insérer une image">
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} disabled={uploading} className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-text" aria-label={t("Insérer une image")} title={t("Insérer une image")}>
               {uploading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <ImagePlus className="size-4" aria-hidden="true" />}
             </button>
             <input

@@ -13,10 +13,12 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { formatDay, formatTime } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Séance");
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("groupSessions.view");
   const p = await params;
   const serviceId = z.uuid().safeParse(p.id);
@@ -29,7 +31,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     if (!svc?.recurrence || virtual.serviceId !== svc.id || !isOccurrence(svc.recurrence, virtual.startsAt, ctx.business.timezone)) notFound();
     const [stored] = await db.select({ id: groupSessions.id }).from(groupSessions).where(and(eq(groupSessions.serviceId, svc.id), eq(groupSessions.startsAt, virtual.startsAt)));
     if (stored) redirect(`/app/prestations/${svc.id}/seances/${stored.id}`);
-    return <SessionView tz={ctx.business.timezone} service={svc} g={{ id: p.sessionId, startsAt: virtual.startsAt, endsAt: new Date(virtual.startsAt.getTime() + svc.durationMin * 60000), capacity: null, cancelledAt: null }} memberName={null} participants={[]} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${svc.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? svc.name : "Agenda"} recurring />;
+    return <SessionView tz={ctx.business.timezone} service={svc} g={{ id: p.sessionId, startsAt: virtual.startsAt, endsAt: new Date(virtual.startsAt.getTime() + svc.durationMin * 60000), capacity: null, cancelledAt: null }} memberName={null} participants={[]} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${svc.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? svc.name : t("Agenda")} recurring />;
   }
   const ids = z.object({ id: z.uuid(), sessionId: z.uuid() }).safeParse(p);
   if (!ids.success) notFound();
@@ -49,12 +51,13 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     .where(and(eq(appointments.groupSessionId, g.id), ne(appointments.status, "cancelled")))
     .orderBy(asc(appointments.createdAt));
 
-  return <SessionView tz={ctx.business.timezone} service={service} g={g} memberName={memberName} participants={participants} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${service.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? service.name : "Agenda"} recurring={false} />;
+  return <SessionView tz={ctx.business.timezone} service={service} g={g} memberName={memberName} participants={participants} canManage={ctx.can("groupSessions.manage")} back={ctx.can("services.manage") ? `/app/prestations/${service.id}#seances` : "/app/agenda"} backLabel={ctx.can("services.manage") ? service.name : t("Agenda")} recurring={false} />;
 }
 
 type Participant = { id: string; name: string | null; email: string | null; phone: string | null; customerId: string | null; noShow: boolean };
 
-function SessionView({ tz, service, g, memberName, participants, canManage, back, backLabel, recurring }: { tz: string; service: { name: string; capacity: number | null }; g: { id: string; startsAt: Date; endsAt: Date; capacity: number | null; cancelledAt: Date | null }; memberName: string | null; participants: Participant[]; canManage: boolean; back: string; backLabel: string; recurring: boolean }) {
+async function SessionView({ tz, service, g, memberName, participants, canManage, back, backLabel, recurring }: { tz: string; service: { name: string; capacity: number | null }; g: { id: string; startsAt: Date; endsAt: Date; capacity: number | null; cancelledAt: Date | null }; memberName: string | null; participants: Participant[]; canManage: boolean; back: string; backLabel: string; recurring: boolean }) {
+  const t = await appT();
   const cap = g.capacity ?? service.capacity;
   const cancelled = g.cancelledAt != null;
   const upcoming = g.startsAt > new Date();
@@ -69,13 +72,13 @@ function SessionView({ tz, service, g, memberName, participants, canManage, back
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{service.name}</h1>
-          <Badge tone="accent">Cours collectif</Badge>
+          <Badge tone="accent">{t("Cours collectif")}</Badge>
           {cancelled ? <Badge tone="danger">Annulée</Badge> : null}
           {recurring ? <Badge>Récurrent</Badge> : null}
         </div>
         <p className="mt-1 flex items-center gap-2 text-sm text-muted">
           <Clock className="size-4" aria-hidden="true" />
-          {formatDay(g.startsAt, tz, "EEEE d MMMM yyyy").replace(/^./, (c) => c.toUpperCase())}, {formatTime(g.startsAt, tz)}–{formatTime(g.endsAt, tz)}
+          {formatDay(g.startsAt, tz, "EEEE d MMMM yyyy", t.locale).replace(/^./, (c) => c.toUpperCase())}, {formatTime(g.startsAt, tz)}–{formatTime(g.endsAt, tz)}
           {memberName ? ` · avec ${memberName}` : ""}
         </p>
       </div>
@@ -89,7 +92,7 @@ function SessionView({ tz, service, g, memberName, participants, canManage, back
           {participants.length === 0 ? (
             <p className="flex items-center gap-2 p-5 text-sm text-muted">
               <Users className="size-4" aria-hidden="true" />
-              Personne n&apos;est encore inscrit.
+              {t("Personne n'est encore inscrit.")}
             </p>
           ) : (
             <ul className="divide-y divide-border">

@@ -5,6 +5,7 @@ import { isDay, isoWeek, mondayOf, weekRangeLabel } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { planningRights, weekPlanning } from "@/server/planning";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Planning");
 
@@ -12,6 +13,7 @@ export const generateMetadata = appMetadata("Planning");
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export default async function PlanningPage({ searchParams }: { searchParams: Promise<{ semaine?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
   const q = (await searchParams).semaine;
@@ -20,7 +22,7 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
   const origin = (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
   return (
     <>
-      <PageHeader title="Planning" description={`Semaine ${isoWeek(monday)} · ${weekRangeLabel(monday)}${rights.seeAll ? "" : " · vos horaires"}`} />
+      <PageHeader title={t("Planning")} description={`Semaine ${isoWeek(monday)} · ${weekRangeLabel(monday)}${rights.seeAll ? "" : " · vos horaires"}`} />
       <PlanningBoard monday={monday} today={today} members={members} shifts={shifts} absences={absences} canManage={rights.manage} origin={origin} />
     </>
   );

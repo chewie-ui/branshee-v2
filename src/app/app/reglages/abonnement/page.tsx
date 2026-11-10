@@ -75,7 +75,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.text}</p> : null}
+      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{t(notice.text)}</p> : null}
       <BillingPanel
         lockedCents={row?.lockedCents ?? null}
         canManage={canManage}

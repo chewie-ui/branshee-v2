@@ -11,12 +11,14 @@ import { formatTime, parseIsoDay, zoned } from "@/lib/time";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Bloquer un créneau");
 
 type SearchParams = Promise<{ id?: string; date?: string; heure?: string; fin?: string; membre?: string }>;
 
 export default async function BlockPage({ searchParams }: { searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("appointments.manage");
   const p = await searchParams;
   const tz = ctx.business.timezone;
@@ -46,7 +48,7 @@ export default async function BlockPage({ searchParams }: { searchParams: Search
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title={initial.id ? "Modifier le blocage" : "Bloquer un créneau"} description="Pendant ce créneau, personne ne peut réserver en ligne." />
+      <PageHeader title={initial.id ? t("Modifier le blocage") : t("Bloquer un créneau")} description={t("Pendant ce créneau, personne ne peut réserver en ligne.")} />
       <BlockForm initial={initial} members={team} />
     </div>
   );

@@ -23,7 +23,7 @@ export function CountryForm({ country, options }: { country: string; options: { 
             {options.map((o) => <option key={o.code} value={o.code}>{o.name}</option>)}
           </Select>
         </Field>
-        {msg ? <p className={msg.ok ? "rounded-lg bg-success-soft px-3 py-2 text-sm text-success" : "rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+        {msg ? <p className={msg.ok ? "rounded-lg bg-success-soft px-3 py-2 text-sm text-success" : "rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{t(msg.text)}</p> : null}
         <Button type="submit" loading={pending} disabled={c === country && !msg} icon={<Globe2 className="size-4" aria-hidden="true" />}>{t("Enregistrer")}</Button>
       </form>
     </Card>

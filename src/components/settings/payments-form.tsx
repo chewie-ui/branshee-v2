@@ -65,7 +65,7 @@ export function StripeCard({ p }: { p: P }) {
               <Button variant="secondary" size="sm" loading={pending} onClick={() => start(async () => { const r = await linkStripeAccount(manual); setMsg(r.ok ? { ok: true, text: t("Compte relié.") } : { ok: false, text: r.error ?? t("Erreur.") }); })}>{t("Relier")}</Button>
             </div>
           </details>
-          {msg ? <p className={cn("text-sm", msg.ok ? "text-success" : "text-danger")}>{msg.text}</p> : null}
+          {msg ? <p className={cn("text-sm", msg.ok ? "text-success" : "text-danger")}>{t(msg.text)}</p> : null}
         </div>
       )}
     </Section>

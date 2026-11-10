@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { Clock, MessageSquareText, Phone, Tag, UserRound } from "lucide-react";
+import { useT } from "@/components/app-locale";
 
 export type EventSummary = {
   title: string;
@@ -23,6 +24,7 @@ const CARD_W = 264;
  * Le panneau est en position fixe : il n'est jamais coupé par le défilement de la grille.
  */
 export function EventLink({ href, className, style, summary, children }: { href: string; className: string; style: CSSProperties; summary: EventSummary; children: ReactNode }) {
+  const t = useT();
   const ref = useRef<HTMLAnchorElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -65,7 +67,7 @@ export function EventLink({ href, className, style, summary, children }: { href:
           <div className="flex items-start gap-2">
             <span className="mt-1 size-2.5 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden="true" />
             <div className="min-w-0">
-              <p className="font-semibold leading-snug break-words">{s.title}</p>
+              <p className="font-semibold leading-snug break-words">{t(s.title)}</p>
               {s.kindLabel || s.status ? <p className="text-xs text-muted">{[s.kindLabel, s.status].filter(Boolean).join(" · ")}</p> : null}
             </div>
           </div>
@@ -73,10 +75,10 @@ export function EventLink({ href, className, style, summary, children }: { href:
             <Row icon={<Clock className="size-3.5" aria-hidden="true" />} label="Horaire" value={s.time} />
             {s.service ? <Row icon={<Tag className="size-3.5" aria-hidden="true" />} label="Prestation" value={s.service} /> : null}
             {s.member ? <Row icon={<UserRound className="size-3.5" aria-hidden="true" />} label="Praticien" value={s.member} /> : null}
-            {s.phone ? <Row icon={<Phone className="size-3.5" aria-hidden="true" />} label="Téléphone" value={s.phone} /> : null}
-            {s.note ? <Row icon={<MessageSquareText className="size-3.5" aria-hidden="true" />} label="Note" value={s.note.length > 140 ? `${s.note.slice(0, 140)}…` : s.note} /> : null}
+            {s.phone ? <Row icon={<Phone className="size-3.5" aria-hidden="true" />} label={t("Téléphone")} value={s.phone} /> : null}
+            {s.note ? <Row icon={<MessageSquareText className="size-3.5" aria-hidden="true" />} label={t("Note")} value={s.note.length > 140 ? `${s.note.slice(0, 140)}…` : s.note} /> : null}
           </dl>
-          <p className="mt-2 border-t border-border pt-2 text-xs text-muted">Cliquez pour ouvrir</p>
+          <p className="mt-2 border-t border-border pt-2 text-xs text-muted">{t("Cliquez pour ouvrir")}</p>
         </div>
       ) : null}
     </>

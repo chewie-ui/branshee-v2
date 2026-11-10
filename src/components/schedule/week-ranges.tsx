@@ -2,6 +2,7 @@
 
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/app-locale";
 
 export type Range = { start: string; end: string };
 export type Week = Record<number, Range[]>;
@@ -36,6 +37,7 @@ export function WeekRanges({
   /** Horaires d'ouverture : jours fermés bloqués, heures limitées à l'ouverture. */
   bounds?: Partial<Week> | null;
 }) {
+  const t = useT();
   const set = (wd: number, ranges: Range[]) => onChange({ ...value, [wd]: ranges });
   const copyToWeekdays = (wd: number) => {
     const src = value[wd] ?? [];
@@ -64,21 +66,21 @@ export function WeekRanges({
                 aria-checked={open}
                 aria-label={`${label} : ${closed ? "fermé" : open ? "activé" : offLabel.toLowerCase()}`}
                 disabled={disabled || (closed && !open)}
-                title={closed ? "Vous êtes fermé ce jour-là (horaires d'ouverture)" : undefined}
+                title={closed ? t("Vous êtes fermé ce jour-là (horaires d'ouverture)") : undefined}
                 onClick={() => set(wd, open ? [] : dayBounds?.length ? dayBounds.map((r) => ({ ...r })) : [defaultRange])}
                 className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50", open ? "bg-accent" : "bg-border-strong")}
               >
                 <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform", open && "translate-x-4")} />
               </button>
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{label}</span>
+                <span className="block text-sm font-medium">{t(label)}</span>
                 {dayBounds ? <span className="block text-xs text-muted">{closed ? "Fermé" : dayBounds.map((r) => `${r.start}–${r.end}`).join(", ")}</span> : null}
               </span>
             </div>
 
             <div className="flex-1">
               {!open ? (
-                <p className="pt-1.5 text-sm text-muted">{closed ? "Vous êtes fermé ce jour-là" : offLabel}</p>
+                <p className="pt-1.5 text-sm text-muted">{closed ? t("Vous êtes fermé ce jour-là") : offLabel}</p>
               ) : (
                 <div className="space-y-2">
                   {ranges.map((r, i) => (
@@ -129,12 +131,12 @@ export function WeekRanges({
                         className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Plus className="size-4" aria-hidden="true" />
-                        Ajouter une plage
+                        {t("Ajouter une plage")}
                       </button>
                       {wd >= 1 && wd <= 5 ? (
                         <button type="button" onClick={() => copyToWeekdays(wd)} className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-text">
                           <Copy className="size-4" aria-hidden="true" />
-                          Copier du lundi au vendredi
+                          {t("Copier du lundi au vendredi")}
                         </button>
                       ) : null}
                     </div>

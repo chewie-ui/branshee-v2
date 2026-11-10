@@ -9,10 +9,12 @@ import { richTextToPlain, sanitizeArticleHtml } from "@/server/rich-text";
 import { DEFAULT_HELP, DEFAULT_HELP_SKYDEV, getSupportThread, listHelpSections } from "@/server/support";
 import { currentBrand } from "@/server/brand";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Aide et support");
 
 export default async function HelpPage() {
+  const t = await appT();
   const ctx = await requireContext();
   const [rows, thread] = await Promise.all([listHelpSections(), getSupportThread(ctx.user.id)]);
   const sky = (await currentBrand()).id === "skydev";
@@ -29,19 +31,19 @@ export default async function HelpPage() {
 
   return (
     <>
-      <PageHeader title="Aide et support" description="Visites guidées, vidéos, questions fréquentes, et une équipe humaine pour vous répondre." />
+      <PageHeader title={t("Aide et support")} description={t("Visites guidées, vidéos, questions fréquentes, et une équipe humaine pour vous répondre.")} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <HelpCenter sections={sections} toursTitle={sky ? "Visites guidées de l'app RDV" : undefined} showTours={!sky || ctx.canApp("rdv")} />
+        <HelpCenter sections={sections} toursTitle={sky ? t("Visites guidées de l'app RDV") : undefined} showTours={!sky || ctx.canApp("rdv")} />
         <div id="contact" className="scroll-mt-6 space-y-6 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <CardHeader title="Écrire à l'équipe" description="Réponse humaine, souvent dans la journée." />
+            <CardHeader title={t("Écrire à l'équipe")} description={t("Réponse humaine, souvent dans la journée.")} />
             <SupportChat initial={thread} firstName={ctx.user.name.split(" ")[0] ?? ""} />
           </Card>
           <Card className="divide-y divide-border">
             <a href={`mailto:${supportEmail}`} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-surface-muted">
               <Mail className="size-4 text-muted" aria-hidden="true" />
               <span className="min-w-0">
-                <span className="block font-medium">Email</span>
+                <span className="block font-medium">{t("Email")}</span>
                 <span className="block truncate text-muted">{supportEmail}</span>
               </span>
             </a>
@@ -50,7 +52,7 @@ export default async function HelpPage() {
                 <MessageCircle className="size-4 text-muted" aria-hidden="true" />
                 <span>
                   <span className="block font-medium">WhatsApp</span>
-                  <span className="block text-muted">Pour une question rapide</span>
+                  <span className="block text-muted">{t("Pour une question rapide")}</span>
                 </span>
               </a>
             ) : null}

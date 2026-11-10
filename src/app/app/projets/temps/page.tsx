@@ -9,11 +9,13 @@ import { fmtMinutes } from "@/lib/projects";
 import { requireContext } from "@/server/context";
 import { activeProjectsWithTasks, entriesOf } from "@/server/projects";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Mon temps");
 
 /** Feuille de temps de la semaine : ce que j'ai noté, jour par jour, et saisie rapide. */
 export default async function TimesheetPage({ searchParams }: { searchParams: Promise<{ semaine?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const today = todayIn(ctx.business.timezone);
   const q = (await searchParams).semaine;
@@ -23,11 +25,11 @@ export default async function TimesheetPage({ searchParams }: { searchParams: Pr
   const total = entries.reduce((a, e) => a + e.minutes, 0);
   return (
     <>
-      <PageHeader title="Mon temps" description={`Semaine ${isoWeek(monday)} · ${weekRangeLabel(monday)} · ${fmtMinutes(total)}`} />
+      <PageHeader title={t("Mon temps")} description={`Semaine ${isoWeek(monday)} · ${weekRangeLabel(monday)} · ${fmtMinutes(total)}`} />
       <div className="mb-4 flex items-center gap-2">
-        <Link href={`/app/projets/temps?semaine=${addDays(monday, -7)}`} className="flex size-10 items-center justify-center rounded-lg border border-border-strong hover:bg-surface-muted" aria-label="Semaine précédente"><ChevronLeft className="size-4" aria-hidden="true" /></Link>
-        <Link href="/app/projets/temps" className="inline-flex h-10 items-center rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted">Cette semaine</Link>
-        <Link href={`/app/projets/temps?semaine=${addDays(monday, 7)}`} className="flex size-10 items-center justify-center rounded-lg border border-border-strong hover:bg-surface-muted" aria-label="Semaine suivante"><ChevronRight className="size-4" aria-hidden="true" /></Link>
+        <Link href={`/app/projets/temps?semaine=${addDays(monday, -7)}`} className="flex size-10 items-center justify-center rounded-lg border border-border-strong hover:bg-surface-muted" aria-label={t("Semaine précédente")}><ChevronLeft className="size-4" aria-hidden="true" /></Link>
+        <Link href="/app/projets/temps" className="inline-flex h-10 items-center rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted">{t("Cette semaine")}</Link>
+        <Link href={`/app/projets/temps?semaine=${addDays(monday, 7)}`} className="flex size-10 items-center justify-center rounded-lg border border-border-strong hover:bg-surface-muted" aria-label={t("Semaine suivante")}><ChevronRight className="size-4" aria-hidden="true" /></Link>
       </div>
       <div className="mb-4 grid grid-cols-7 gap-1 sm:gap-2">
         {days.map((d, i) => {

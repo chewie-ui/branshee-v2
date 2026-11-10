@@ -6,16 +6,18 @@ import { AddMemberForm } from "@/components/team/member-forms";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Ajouter un membre");
 
 export default async function AddMemberPage() {
+  const t = await appT();
   const ctx = await requireContext("team.manage");
   const list = await db.select({ id: grades.id, name: grades.name }).from(grades).where(eq(grades.businessId, ctx.business.id)).orderBy(asc(grades.createdAt));
   const fallback = list.find((g) => g.name === "Collaborateur") ?? list[0];
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Ajouter un membre" description="Un praticien, un associé, un employé…" />
+      <PageHeader title={t("Ajouter un membre")} description={t("Un praticien, un associé, un employé…")} />
       <AddMemberForm grades={list} defaultGradeId={fallback?.id ?? ""} />
     </div>
   );

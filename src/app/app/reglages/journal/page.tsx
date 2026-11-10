@@ -45,7 +45,7 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
                   <p>{formatTime(r.createdAt, tz)}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium">{r.description}</p>
+                  <p className="font-medium">{t(r.description)}</p>
                   <p className="text-muted">{r.actorName}</p>
                 </div>
               </li>

@@ -52,7 +52,7 @@ function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathnam
       )}
     >
       <Icon className={cn("size-[18px] shrink-0", active ? "text-accent" : "text-muted group-hover:text-text")} strokeWidth={1.75} aria-hidden="true" />
-      <span className="truncate">{item.label}</span>
+      <span className="truncate">{t(item.label)}</span>
       {badge ? (
         <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-accent-foreground" aria-label={t("{n} en attente", { n: badge })}>
           {badge}
@@ -135,7 +135,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
       <nav className={cn("flex-1 px-3 pb-3", !drawer && "overflow-y-auto")} aria-label={t("Navigation principale")}>
         {groups.map((group) => (
           <div key={group.label ?? "main"} className="mt-4 first:mt-1">
-            {group.label ? <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-muted uppercase">{group.label}</p> : null}
+            {group.label ? <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-muted uppercase">{t(group.label)}</p> : null}
             <ul className="space-y-0.5">
               {group.items.map((item) => (
                 <li key={item.href}>
@@ -152,7 +152,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
           <Link href={custom.href} className="mb-2 flex items-start gap-3 rounded-lg border border-dashed border-border-strong px-2.5 py-2 text-sm transition-colors duration-150 hover:border-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <Wand2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
             <span className="min-w-0">
-              <span className="block font-medium text-text">{custom.label}</span>
+              <span className="block font-medium text-text">{t(custom.label)}</span>
               <span className="block text-xs text-muted">{t("Décrivez-la, on la construit pour vous.")}</span>
             </span>
           </Link>
@@ -163,7 +163,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
               {item.href === "/app/parrainage" ? (
                 <Link href={item.href} aria-current={pathname === item.href ? "page" : undefined} className="mt-1 flex items-center gap-3 rounded-lg bg-accent-soft px-2.5 py-2 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                   <Gift className="size-4 shrink-0" aria-hidden="true" />
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               ) : (
                 <NavLink item={item} pathname={pathname} badge={item.href === "/app/aide" ? supportUnread : undefined} />

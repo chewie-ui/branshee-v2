@@ -13,10 +13,12 @@ import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Avis · Page de réservation");
 
 export default async function ReviewsPage() {
+  const t = await appT();
   const ctx = await requireContext("customization.manage");
   const brandName = (await currentBrand()).name;
   const bid = ctx.business.id;
@@ -31,7 +33,7 @@ export default async function ReviewsPage() {
 
   return (
     <>
-      <PageHeader title="Page de réservation" description="Les avis laissés par vos clients sur votre page." />
+      <PageHeader title={t("Page de réservation")} description={t("Les avis laissés par vos clients sur votre page.")} />
       <PageTabs />
       <div className="mx-auto max-w-3xl space-y-6">
         <Card className="flex flex-wrap items-center gap-6 p-5">
@@ -40,12 +42,12 @@ export default async function ReviewsPage() {
             <p className="text-sm text-muted">{stats?.n ?? 0} avis</p>
           </div>
           <p className="flex-1 text-sm text-muted">
-            {visible ? "La section « Avis clients » est visible sur votre page." : "La section « Avis clients » est masquée : activez-la dans l'onglet Contenu pour que vos clients puissent laisser un avis."} Seuls les clients avec un compte vérifié peuvent publier un avis. Vous ne pouvez pas supprimer un avis vous-même : demandez sa suppression, l&apos;équipe {brandName} tranche.
+            {visible ? t("La section « Avis clients » est visible sur votre page.") : t("La section « Avis clients » est masquée : activez-la dans l'onglet Contenu pour que vos clients puissent laisser un avis.")} Seuls les clients avec un compte vérifié peuvent publier un avis. Vous ne pouvez pas supprimer un avis vous-même : demandez sa suppression, l&apos;équipe {brandName} tranche.
           </p>
         </Card>
         <Card>
           {list.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted">Pas encore d&apos;avis.</p>
+            <p className="p-6 text-center text-sm text-muted">{t("Pas encore d'avis.")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {list.map((r) => (
@@ -55,8 +57,8 @@ export default async function ReviewsPage() {
                     <span className="flex text-warning" aria-label={`${r.rating} sur 5`}>
                       {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-current" : "opacity-30")} aria-hidden="true" />)}
                     </span>
-                    <span className="text-muted">{formatDay(r.createdAt, ctx.business.timezone, "d MMM yyyy")}</span>
-                    {req.get(r.id) === "pending" ? <Badge tone="warning">Suppression demandée</Badge> : req.get(r.id) === "rejected" ? <Badge>Demande refusée</Badge> : null}
+                    <span className="text-muted">{formatDay(r.createdAt, ctx.business.timezone, "d MMM yyyy", t.locale)}</span>
+                    {req.get(r.id) === "pending" ? <Badge tone="warning">{t("Suppression demandée")}</Badge> : req.get(r.id) === "rejected" ? <Badge>{t("Demande refusée")}</Badge> : null}
                   </div>
                   {r.comment ? <p className="text-muted">{r.comment}</p> : null}
                   {!req.has(r.id) ? <ReportReviewButton reviewId={r.id} action="owner" /> : null}

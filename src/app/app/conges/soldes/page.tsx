@@ -6,12 +6,14 @@ import { AllowanceTable } from "@/components/leave/leave-ui";
 import { requireContext } from "@/server/context";
 import { leaveBalances, leaveMembers, leaveRights } from "@/server/leave";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Soldes de congés");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export default async function BalancesPage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   if (!leaveRights(ctx).approve) redirect("/app/conges");
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
@@ -20,7 +22,7 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
   const [members, balances] = await Promise.all([leaveMembers(ctx), leaveBalances(ctx, year, today)]);
   return (
     <>
-      <PageHeader title={`Soldes ${year}`} description="Jours de congé par an de chacun. Seuls les « Congés » sont décomptés, en jours ouvrables (sans week-ends ni jours fériés belges)." />
+      <PageHeader title={`Soldes ${year}`} description={t("Jours de congé par an de chacun. Seuls les « Congés » sont décomptés, en jours ouvrables (sans week-ends ni jours fériés belges).")} />
       <Card key={year}>
         <AllowanceTable year={year} members={members} balances={balances} />
       </Card>

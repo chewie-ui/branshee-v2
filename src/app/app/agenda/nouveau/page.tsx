@@ -10,12 +10,14 @@ import { parseIsoDay, zoned } from "@/lib/time";
 import { parseQuickTime } from "@/lib/time-input";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Nouveau rendez-vous");
 
 type SearchParams = Promise<{ date?: string; heure?: string; fin?: string; membre?: string; client?: string }>;
 
 export default async function NewAppointmentPage({ searchParams }: { searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("appointments.manage");
   const bid = ctx.business.id;
   const params = await searchParams;
@@ -49,7 +51,7 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Nouveau rendez-vous" description="Pour un rendez-vous pris par téléphone ou au cabinet." />
+      <PageHeader title={t("Nouveau rendez-vous")} description={t("Pour un rendez-vous pris par téléphone ou au cabinet.")} />
       <NewAppointmentForm
         services={svc}
         members={team}

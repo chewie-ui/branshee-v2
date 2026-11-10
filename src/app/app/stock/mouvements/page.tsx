@@ -6,18 +6,21 @@ import { MOVE_REASONS } from "@/lib/stock";
 import { requireContext } from "@/server/context";
 import { movesOf } from "@/server/stock";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 export const generateMetadata = appMetadata("Mouvements de stock");
 
 /** Historique des entrées et sorties : qui, quoi, quand. */
 export default async function MovesPage() {
+  const t = await appT();
   const ctx = await requireContext();
   const moves = await movesOf(ctx.business.id);
-  const fmt = new Intl.DateTimeFormat("fr-BE", { timeZone: ctx.business.timezone || "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmt = new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: ctx.business.timezone || "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   return (
     <>
-      <PageHeader title="Mouvements" description="Les 500 derniers mouvements de stock." />
-      {moves.length === 0 ? <Card className="p-8 text-center text-sm text-muted">Aucun mouvement pour l&apos;instant.</Card> : (
+      <PageHeader title={t("Mouvements")} description={t("Les 500 derniers mouvements de stock.")} />
+      {moves.length === 0 ? <Card className="p-8 text-center text-sm text-muted">{t("Aucun mouvement pour l'instant.")}</Card> : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-border">
             {moves.map((m) => (

@@ -9,6 +9,8 @@ import { addDays } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { leaveMembers, listLeave } from "@/server/leave";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 export const generateMetadata = appMetadata("Calendrier des congés");
 
@@ -17,6 +19,7 @@ const INITIAL = ["L", "M", "M", "J", "V", "S", "D"];
 
 /** Qui est absent ce mois-ci : une ligne par personne, une colonne par jour. */
 export default async function LeaveCalendar({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
   const q = (await searchParams).mois;
@@ -28,24 +31,24 @@ export default async function LeaveCalendar({ searchParams }: { searchParams: Pr
   const days = datesBetween(first, last);
   const holidays = belgianHolidays(Number(month.slice(0, 4)));
   const [members, leave] = await Promise.all([leaveMembers(ctx), listLeave(ctx, { from: first, to: last, statuses: ["approved", "pending"] })]);
-  const title = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "long", year: "numeric" }).format(new Date(`${first}T12:00:00Z`));
+  const title = new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: "UTC", month: "long", year: "numeric" }).format(new Date(`${first}T12:00:00Z`));
   const wd = (d: string) => (new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7;
   const absentDays = (memberId: string) => new Map(leave.filter((l) => l.memberId === memberId).flatMap((l) => datesBetween(l.start, l.end).map((d) => [d, l] as const)));
 
   return (
     <>
-      <PageHeader title="Calendrier" description="Qui est absent, jour par jour." />
+      <PageHeader title={t("Calendrier")} description={t("Qui est absent, jour par jour.")} />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex items-center rounded-lg border border-border-strong bg-surface">
-          <Link href={`/app/conges/calendrier?mois=${prev}`} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label="Mois précédent"><ChevronLeft className="size-4" aria-hidden="true" /></Link>
-          <Link href="/app/conges/calendrier" className="flex h-10 items-center border-x border-border px-3 text-sm font-medium hover:bg-surface-muted">Ce mois-ci</Link>
-          <Link href={`/app/conges/calendrier?mois=${next}`} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label="Mois suivant"><ChevronRight className="size-4" aria-hidden="true" /></Link>
+          <Link href={`/app/conges/calendrier?mois=${prev}`} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={t("Mois précédent")}><ChevronLeft className="size-4" aria-hidden="true" /></Link>
+          <Link href="/app/conges/calendrier" className="flex h-10 items-center border-x border-border px-3 text-sm font-medium hover:bg-surface-muted">{t("Ce mois-ci")}</Link>
+          <Link href={`/app/conges/calendrier?mois=${next}`} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={t("Mois suivant")}><ChevronRight className="size-4" aria-hidden="true" /></Link>
         </div>
         <p className="font-semibold capitalize">{title}</p>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-muted">
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-accent" aria-hidden="true" />Validé</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-accent bg-accent-soft" aria-hidden="true" />En attente</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-border-strong bg-surface-muted" aria-hidden="true" />Week-end ou férié</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-accent bg-accent-soft" aria-hidden="true" />{t("En attente")}</span>
+          <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-border-strong bg-surface-muted" aria-hidden="true" />{t("Week-end ou férié")}</span>
         </div>
       </div>
       <Card className="relative overflow-x-auto">

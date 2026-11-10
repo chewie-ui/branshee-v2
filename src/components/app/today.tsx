@@ -20,6 +20,7 @@ import { clientWord } from "@/lib/terminology";
 import { dayBounds, formatDay, formatTime, weekBounds } from "@/lib/time";
 import { countAppointments, listAppointments, listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
+import { appT } from "@/server/app-locale";
 
 const greeting = (hour: number) => (hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir");
 
@@ -35,6 +36,7 @@ function ago(date: Date, now: Date) {
 
 /** Accueil de l'app RDV (« Aujourd'hui ») : sur Branshee c'est /app, sur Skydev /app/rdv. */
 export async function TodayPage({ searchParams }: { searchParams: Promise<{ bienvenue?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const welcome = !!(await searchParams).bienvenue && ctx.member.isOwner;
   const bid = ctx.business.id;
@@ -82,18 +84,18 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
 
   const delta = (cur: number, prev: number) => (cur === prev ? null : { up: cur > prev, text: `${cur > prev ? "+" : "−"}${Math.abs(cur - prev)}` });
   const stats = [
-    { label: "Aujourd'hui", value: todayAppointments.length, icon: CalendarCheck, hint: next ? `prochain à ${formatTime(next.startsAt, tz)}` : "rendez-vous" },
-    { label: "Cette semaine", value: weekCount, icon: CalendarDays, delta: delta(weekCount, lastWeekCount), hint: "vs semaine dernière" },
-    { label: "Demandes à valider", value: pending.length - expiredCount, icon: Inbox, hint: expiredCount ? `${expiredCount} expirée${expiredCount > 1 ? "s" : ""}` : "en attente" },
+    { label: t("Aujourd'hui"), value: todayAppointments.length, icon: CalendarCheck, hint: next ? `prochain à ${formatTime(next.startsAt, tz)}` : "rendez-vous" },
+    { label: t("Cette semaine"), value: weekCount, icon: CalendarDays, delta: delta(weekCount, lastWeekCount), hint: t("vs semaine dernière") },
+    { label: t("Demandes à valider"), value: pending.length - expiredCount, icon: Inbox, hint: expiredCount ? `${expiredCount} expirée${expiredCount > 1 ? "s" : ""}` : "en attente" },
     { label: `Nouveaux ${terms} (30 j)`, value: newCustomers, icon: UserPlus, delta: delta(newCustomers, prevCustomers), hint: "vs 30 jours avant" },
   ];
 
   const ob = biz?.onboarding ?? {};
   const steps = [
-    { done: serviceCount > 0, title: "Créez votre première prestation", desc: "Ce que vos clients pourront réserver.", href: "/app/prestations/nouvelle", cta: "Ajouter" },
-    { done: !!biz?.photoUrl, title: "Ajoutez votre logo ou une photo", desc: "Il s'affiche sur votre page de réservation.", href: "/app/page-de-reservation", cta: "Ajouter" },
-    { done: !!ob.linkSharedAt, title: "Partagez votre lien de réservation", desc: "Sur Google, Instagram, WhatsApp, votre site…", href: "#lien", cta: "Copier le lien" },
-    { done: bookingCount > 0, title: "Recevez votre premier rendez-vous", desc: "Testez vous-même votre page pour voir ce que voit un client.", href: appPagePath(ctx.business.slug), cta: "Voir ma page" },
+    { done: serviceCount > 0, title: t("Créez votre première prestation"), desc: t("Ce que vos clients pourront réserver."), href: "/app/prestations/nouvelle", cta: t("Ajouter") },
+    { done: !!biz?.photoUrl, title: t("Ajoutez votre logo ou une photo"), desc: t("Il s'affiche sur votre page de réservation."), href: "/app/page-de-reservation", cta: t("Ajouter") },
+    { done: !!ob.linkSharedAt, title: t("Partagez votre lien de réservation"), desc: t("Sur Google, Instagram, WhatsApp, votre site…"), href: "#lien", cta: t("Copier le lien") },
+    { done: bookingCount > 0, title: t("Recevez votre premier rendez-vous"), desc: t("Testez vous-même votre page pour voir ce que voit un client."), href: appPagePath(ctx.business.slug), cta: t("Voir ma page") },
   ];
   const doneCount = steps.filter((s) => s.done).length;
   const showOnboarding = ctx.member.isOwner && !ob.dismissedAt && doneCount < steps.length;
@@ -102,8 +104,8 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
     <>
       <PageHeader
         title={`${greeting(hour)} ${firstName}`}
-        description={formatDay(now, tz, "EEEE d MMMM yyyy").replace(/^./, (c) => c.toUpperCase())}
-        action={canManage ? <ButtonLink href="/app/agenda/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>Nouveau rendez-vous</ButtonLink> : null}
+        description={formatDay(now, tz, "EEEE d MMMM yyyy", t.locale).replace(/^./, (c) => c.toUpperCase())}
+        action={canManage ? <ButtonLink href="/app/agenda/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Nouveau rendez-vous")}</ButtonLink> : null}
       />
 
       {welcome ? <WelcomeCard firstName={firstName} /> : null}
@@ -122,15 +124,15 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
           </div>
           <ol className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {steps.map((s) => (
-              <li key={s.title} className={cn("flex gap-3 rounded-xl border p-3", s.done ? "border-border bg-surface-muted/60" : "border-border")}>
+              <li key={t(s.title)} className={cn("flex gap-3 rounded-xl border p-3", s.done ? "border-border bg-surface-muted/60" : "border-border")}>
                 <span className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border", s.done ? "border-success bg-success text-white" : "border-border-strong")} aria-hidden="true">
                   {s.done ? <Check className="size-3.5" /> : null}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className={cn("text-sm font-medium", s.done && "text-muted line-through")}>{s.title}</p>
+                  <p className={cn("text-sm font-medium", s.done && "text-muted line-through")}>{t(s.title)}</p>
                   {!s.done ? (
                     <>
-                      <p className="text-sm text-muted">{s.desc}</p>
+                      <p className="text-sm text-muted">{t(s.desc)}</p>
                       <Link href={s.href} className="mt-1 inline-flex text-sm font-medium text-accent hover:text-accent-hover" {...(s.href.startsWith("/app") || s.href.startsWith("#") ? {} : { target: "_blank" })}>
                         {s.cta}
                       </Link>
@@ -145,15 +147,15 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label} className="p-4">
+          <Card key={t(s.label)} className="p-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm text-muted">{s.label}</p>
+              <p className="truncate text-sm text-muted">{t(s.label)}</p>
               <s.icon className="size-4 shrink-0 text-muted" aria-hidden="true" />
             </div>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{s.value}</p>
             <p className="mt-0.5 truncate text-xs text-muted">
               {s.delta ? <span className={cn("mr-1 font-medium", s.delta.up ? "text-success" : "text-danger")}>{s.delta.text}</span> : null}
-              {s.hint}
+              {t(s.hint)}
             </p>
           </Card>
         ))}
@@ -164,17 +166,17 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
           {pending.length > 0 ? (
             <Card>
               <CardHeader
-                title="Demandes à valider"
+                title={t("Demandes à valider")}
                 description={`Ces ${terms} attendent votre confirmation.`}
-                action={<Link href="/app/demandes" className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link>}
+                action={<Link href="/app/demandes" className="text-sm font-medium text-accent hover:text-accent-hover">{t("Tout voir")}</Link>}
               />
               <ul className="divide-y divide-border">
                 {pending.slice(0, 3).map((a) => (
                   <li key={a.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <Link href={`/app/agenda/rdv/${a.id}`} className="font-medium hover:underline">{a.title}</Link>
+                      <Link href={`/app/agenda/rdv/${a.id}`} className="font-medium hover:underline">{t(a.title)}</Link>
                       <p className="text-sm text-muted">
-                        {formatDay(a.startsAt, tz, "EEE d MMM")} à {formatTime(a.startsAt, tz)} · {a.serviceName ?? "Rendez-vous"}
+                        {formatDay(a.startsAt, tz, "EEE d MMM", t.locale)} à {formatTime(a.startsAt, tz)} · {a.serviceName ?? t("Rendez-vous")}
                         {a.memberName ? ` · ${a.memberName}` : ""}
                       </p>
                     </div>
@@ -187,12 +189,12 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
 
           <Card>
             <CardHeader
-              title="Votre journée"
+              title={t("Votre journée")}
               description={todayAppointments.length ? `${todayAppointments.length} rendez-vous prévus` : undefined}
-              action={canView ? <Link href="/app/agenda" className="text-sm font-medium text-accent hover:text-accent-hover">Voir l&apos;agenda</Link> : null}
+              action={canView ? <Link href="/app/agenda" className="text-sm font-medium text-accent hover:text-accent-hover">{t("Voir l'agenda")}</Link> : null}
             />
             {todayItems.length === 0 ? (
-              <EmptyState icon={<CalendarDays />} title="Aucun rendez-vous aujourd'hui" description={`Partagez votre lien de réservation pour que vos ${terms} réservent en ligne.`} />
+              <EmptyState icon={<CalendarDays />} title={t("Aucun rendez-vous aujourd'hui")} description={`Partagez votre lien de réservation pour que vos ${terms} réservent en ligne.`} />
             ) : (
               <ul className="divide-y divide-border">
                 {todayItems.map((a) => {
@@ -205,15 +207,15 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
                       </div>
                       <span className="h-10 w-1 shrink-0 rounded-full" style={{ background: a.kind === "block" ? "var(--border-strong)" : (a.color ?? "var(--accent)") }} aria-hidden="true" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium"><Link href={a.href} className="hover:underline">{a.title}</Link></p>
+                        <p className="truncate font-medium"><Link href={a.href} className="hover:underline">{t(a.title)}</Link></p>
                         <p className="truncate text-sm text-muted">
-                          {a.kind === "block" ? "Indisponible" : a.kind === "group" ? "Cours collectif" : (a.serviceName ?? "Rendez-vous")}
+                          {a.kind === "block" ? "Indisponible" : a.kind === "group" ? t("Cours collectif") : (a.serviceName ?? t("Rendez-vous"))}
                           {a.memberName ? ` · ${a.memberName}` : ""}
                         </p>
                       </div>
                       <div className="hidden shrink-0 items-center gap-2 sm:flex">
                         {next?.id === a.id ? <span className="text-xs font-medium text-accent">Prochain</span> : null}
-                        {a.kind === "appointment" ? past && a.status === "confirmed" ? <Badge>Terminé</Badge> : <StatusBadge status={a.status} /> : null}
+                        {a.kind === "appointment" ? past && a.status === "confirmed" ? <Badge>{t("Terminé")}</Badge> : <StatusBadge status={a.status} /> : null}
                       </div>
                     </li>
                   );
@@ -224,18 +226,18 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
 
           {upcoming.length ? (
             <Card>
-              <CardHeader title="Prochains rendez-vous" action={<Link href="/app/agenda" className="text-sm font-medium text-accent hover:text-accent-hover">Voir tout</Link>} />
+              <CardHeader title={t("Prochains rendez-vous")} action={<Link href="/app/agenda" className="text-sm font-medium text-accent hover:text-accent-hover">{t("Voir tout")}</Link>} />
               <ul className="divide-y divide-border">
                 {upcoming.map((a) => (
                   <li key={a.id}>
                     <Link href={a.href} className="flex items-center gap-4 px-5 py-3 hover:bg-surface-muted">
                       <div className="w-20 shrink-0 text-sm">
-                        <p className="font-medium first-letter:uppercase">{formatDay(a.startsAt, tz, "EEE d MMM")}</p>
+                        <p className="font-medium first-letter:uppercase">{formatDay(a.startsAt, tz, "EEE d MMM", t.locale)}</p>
                         <p className="text-muted tabular-nums">{formatTime(a.startsAt, tz)}</p>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{a.title}</p>
-                        <p className="truncate text-sm text-muted">{a.serviceName ?? "Rendez-vous"}{a.memberName ? ` · ${a.memberName}` : ""}</p>
+                        <p className="truncate font-medium">{t(a.title)}</p>
+                        <p className="truncate text-sm text-muted">{a.serviceName ?? t("Rendez-vous")}{a.memberName ? ` · ${a.memberName}` : ""}</p>
                       </div>
                       {a.status === "pending" ? <StatusBadge status="pending" /> : null}
                     </Link>
@@ -249,11 +251,11 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
         <div className="min-w-0 space-y-6">
           <Card>
             <div id="lien" className="scroll-mt-6" />
-            <CardHeader title="Votre lien de réservation" description="À partager sur Google, Instagram, WhatsApp…" />
+            <CardHeader title={t("Votre lien de réservation")} description={t("À partager sur Google, Instagram, WhatsApp…")} />
             <div className="space-y-3 p-5">
               <CopyLink url={bookingUrl} trackShare />
               <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <Link href={appPagePath(ctx.business.slug)} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">Voir ma page</Link>
+                <Link href={appPagePath(ctx.business.slug)} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">{t("Voir ma page")}</Link>
                 <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-muted hover:text-text">Personnaliser</Link>
               </div>
             </div>
@@ -263,24 +265,24 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
             <Card className="p-5">
               <div className="flex items-center gap-2 text-sm text-muted">
                 <Clock className="size-4" aria-hidden="true" />
-                Prochain rendez-vous
+                {t("Prochain rendez-vous")}
               </div>
-              <p className="mt-2 text-lg font-semibold">{next.title}</p>
-              <p className="text-sm text-muted">{formatTime(next.startsAt, tz)} · {next.serviceName ?? "Rendez-vous"}</p>
+              <p className="mt-2 text-lg font-semibold">{t(next.title)}</p>
+              <p className="text-sm text-muted">{formatTime(next.startsAt, tz)} · {next.serviceName ?? t("Rendez-vous")}</p>
               {next.phone ? <a href={`tel:${next.phone}`} className="mt-3 inline-flex text-sm font-medium text-accent hover:text-accent-hover">Appeler {next.phone}</a> : null}
             </Card>
           ) : null}
 
           {recentBookings.length ? (
             <Card>
-              <CardHeader title="Dernières réservations" action={ctx.can("customers.view") ? <Link href="/app/clients" className="text-sm font-medium text-accent hover:text-accent-hover">{clientWord(ctx.business.businessType, { plural: true, capitalize: true })}</Link> : null} />
+              <CardHeader title={t("Dernières réservations")} action={ctx.can("customers.view") ? <Link href="/app/clients" className="text-sm font-medium text-accent hover:text-accent-hover">{clientWord(ctx.business.businessType, { plural: true, capitalize: true })}</Link> : null} />
               <ul className="divide-y divide-border">
                 {recentBookings.map((b) => (
                   <li key={b.id}>
                     <Link href={`/app/agenda/rdv/${b.id}`} className="block px-5 py-3 hover:bg-surface-muted">
                       <p className="truncate text-sm font-medium">{b.name ?? term}</p>
                       <p className="truncate text-xs text-muted">
-                        {b.online ? "En ligne" : "Ajouté par l'équipe"} {ago(b.createdAt, now)} · pour le {formatDay(b.startsAt, tz, "d MMM")}
+                        {b.online ? t("En ligne") : t("Ajouté par l'équipe")} {ago(b.createdAt, now)} · pour le {formatDay(b.startsAt, tz, "d MMM", t.locale)}
                         {b.service ? ` · ${b.service}` : ""}
                       </p>
                     </Link>
@@ -292,11 +294,11 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
 
           {activity.length ? (
             <Card>
-              <CardHeader title="Activité récente" action={<Link href="/app/reglages/journal" className="text-sm font-medium text-accent hover:text-accent-hover">Journal</Link>} />
+              <CardHeader title={t("Activité récente")} action={<Link href="/app/reglages/journal" className="text-sm font-medium text-accent hover:text-accent-hover">{t("Journal")}</Link>} />
               <ul className="divide-y divide-border">
                 {activity.map((l) => (
                   <li key={l.id} className="px-5 py-3">
-                    <p className="text-sm">{l.description}</p>
+                    <p className="text-sm">{t(l.description)}</p>
                     <p className="text-xs text-muted">{l.actor} · {ago(l.at, now)}</p>
                   </li>
                 ))}

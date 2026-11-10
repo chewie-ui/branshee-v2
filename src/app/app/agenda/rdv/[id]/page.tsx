@@ -21,6 +21,7 @@ import { currentBrand } from "@/server/brand";
 import { salesDocuments } from "@/db/schema";
 import { ButtonLink } from "@/components/ui/button";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Rendez-vous");
 
@@ -28,6 +29,7 @@ const PAY_METHOD: Record<string, string> = { online: "En ligne", on_site: "Sur p
 const PAY_STATUS: Record<string, string> = { none: "Non payé", authorized: "Autorisé", paid: "Payé", refunded: "Remboursé", partial: "Payé en partie", penalty: "Pénalité", failed: "Échec" };
 
 export default async function AppointmentPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("appointments.view");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
@@ -57,7 +59,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
     ? await db.select({ id: customerNotes.id, date: customerNotes.date, title: customerNotes.title, noteEnc: customerNotes.noteEnc }).from(customerNotes).innerJoin(customers, eq(customers.id, customerNotes.customerId)).where(and(eq(customerNotes.customerId, a.customerId!), eq(customers.businessId, ctx.business.id))).orderBy(desc(customerNotes.date), desc(customerNotes.createdAt)).limit(3)
     : [];
   const snippet = (enc: string | null) => {
-    try { const t = (enc ? decrypt(enc) : "") ?? ""; return t.length > 160 ? `${t.slice(0, 160)}…` : t; } catch { return ""; }
+    try { const tx = (enc ? decrypt(enc) : "") ?? ""; return tx.length > 160 ? `${tx.slice(0, 160)}…` : tx; } catch { return ""; }
   };
   const team = canManage ? await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "active"))).orderBy(asc(members.createdAt)) : [];
   const durationMin = Math.round((a.endsAt.getTime() - a.startsAt.getTime()) / 60000);
@@ -66,26 +68,26 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
     <div className="mx-auto max-w-2xl">
       <Link href={`/app/agenda?semaine=${week}`} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text">
         <ArrowLeft className="size-4" aria-hidden="true" />
-        Agenda
+        {t("Agenda")}
       </Link>
 
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{a.contactName ?? "Rendez-vous"}</h1>
-          {past && a.status === "confirmed" ? <Badge>Terminé</Badge> : <StatusBadge status={a.status} />}
+          <h1 className="text-2xl font-semibold tracking-tight">{a.contactName ?? t("Rendez-vous")}</h1>
+          {past && a.status === "confirmed" ? <Badge>{t("Terminé")}</Badge> : <StatusBadge status={a.status} />}
           {a.noShow ? <Badge tone="warning">Absent{a.noShowReason === "justified" ? " (excusé)" : ""}</Badge> : null}
           {a.overbooked ? <Badge tone="warning">Surréservation</Badge> : null}
         </div>
         <p className="mt-1 flex items-center gap-2 text-sm text-muted">
           <Clock className="size-4" aria-hidden="true" />
-          {formatDay(a.startsAt, tz, "EEEE d MMMM yyyy").replace(/^./, (c) => c.toUpperCase())}, {formatTime(a.startsAt, tz)}–{formatTime(a.endsAt, tz)}
+          {formatDay(a.startsAt, tz, "EEEE d MMMM yyyy", t.locale).replace(/^./, (c) => c.toUpperCase())}, {formatTime(a.startsAt, tz)}–{formatTime(a.endsAt, tz)}
         </p>
       </div>
 
       <div className="space-y-6">
         {a.status === "pending" && canManage ? (
           <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium">{a.startsAt < now ? "Cette demande a expiré : sa date est passée." : "Cette demande attend votre réponse."}</p>
+            <p className="text-sm font-medium">{a.startsAt < now ? t("Cette demande a expiré : sa date est passée.") : t("Cette demande attend votre réponse.")}</p>
             <RequestActions id={a.id} expired={a.startsAt < now} />
           </Card>
         ) : null}
@@ -98,7 +100,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
                 {lastNotes.map((n) => (
                   <li key={n.id}>
                     <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="block px-5 py-3 text-sm hover:bg-surface-muted/60">
-                      <span className="flex flex-wrap items-baseline gap-x-2"><span className="font-medium">{n.title || "Note"}</span><span className="text-xs text-muted">{formatDay(new Date(`${n.date}T12:00:00Z`), tz, "d MMMM yyyy")}</span></span>
+                      <span className="flex flex-wrap items-baseline gap-x-2"><span className="font-medium">{n.title || t("Note")}</span><span className="text-xs text-muted">{formatDay(new Date(`${n.date}T12:00:00Z`), tz, "d MMMM yyyy", t.locale)}</span></span>
                       {snippet(n.noteEnc) ? <span className="mt-0.5 block whitespace-pre-line text-muted">{snippet(n.noteEnc)}</span> : null}
                     </Link>
                   </li>
@@ -106,12 +108,12 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
               </ul>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm text-muted">
-                <span>Aucune note dans le dossier pour l&apos;instant.</span>
-                <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Plus className="size-4" aria-hidden="true" />Ajouter une note</Link>
+                <span>{t("Aucune note dans le dossier pour l'instant.")}</span>
+                <Link href={`/app/clients/${a.customerId}?onglet=dossier`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Plus className="size-4" aria-hidden="true" />{t("Ajouter une note")}</Link>
               </div>
             )}
             <div className="flex flex-wrap gap-2 border-t border-border px-5 py-4">
-              <ButtonLink href={`/app/clients/${a.customerId}?onglet=dossier`} size="sm" icon={<FolderOpen className="size-4" aria-hidden="true" />}>Ouvrir le dossier</ButtonLink>
+              <ButtonLink href={`/app/clients/${a.customerId}?onglet=dossier`} size="sm" icon={<FolderOpen className="size-4" aria-hidden="true" />}>{t("Ouvrir le dossier")}</ButtonLink>
               <ButtonLink href={`/app/clients/${a.customerId}`} size="sm" variant="secondary" icon={<UserRound className="size-4" aria-hidden="true" />}>Fiche du {term}</ButtonLink>
             </div>
           </Card>
@@ -120,12 +122,12 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
         <Card>
           <CardHeader title="Détails" />
           <dl className="space-y-3 p-5 text-sm">
-            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Prestation</dt><dd className="font-medium">{a.serviceName ?? "Aucune prestation"}</dd></div>
-            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Avec</dt><dd>{memberName ?? "Non assigné"}</dd></div>
+            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Prestation</dt><dd className="font-medium">{a.serviceName ?? t("Aucune prestation")}</dd></div>
+            <div className="flex gap-3"><dt className="w-28 shrink-0 text-muted">Avec</dt><dd>{memberName ?? t("Non assigné")}</dd></div>
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-muted first-letter:uppercase">{term}</dt>
               <dd className="min-w-0 space-y-1">
-                {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName || "Voir la fiche"}</Link> : <p>{a.contactName}</p>}
+                {a.customerId && ctx.can("customers.view") ? <Link href={`/app/clients/${a.customerId}`} className="inline-flex items-center gap-1.5 font-medium text-accent hover:text-accent-hover"><UserRound className="size-4" aria-hidden="true" />{a.contactName || t("Voir la fiche")}</Link> : <p>{a.contactName}</p>}
                 {a.contactPhone ? <a href={`tel:${a.contactPhone}`} className="flex items-center gap-1.5 text-accent hover:text-accent-hover"><Phone className="size-4" aria-hidden="true" />{a.contactPhone}</a> : null}
                 {a.contactEmail ? <a href={`mailto:${a.contactEmail}`} className="flex items-center gap-1.5 break-all text-accent hover:text-accent-hover"><Mail className="size-4 shrink-0" aria-hidden="true" />{a.contactEmail}</a> : null}
                 {account ? <p className="flex items-center gap-1.5 text-muted"><BadgeCheck className="size-4 text-success" aria-hidden="true" />Compte {(await currentBrand()).name} : {account.email}</p> : null}
@@ -136,7 +138,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
                 <dt className="w-28 shrink-0 text-muted">Conditions</dt>
                 <dd>
                   <details>
-                    <summary className="cursor-pointer">Acceptées le {formatDay(new Date(a.policyConsent.acceptedAt), tz, "d MMMM yyyy")} à {formatTime(new Date(a.policyConsent.acceptedAt), tz)}</summary>
+                    <summary className="cursor-pointer">Acceptées le {formatDay(new Date(a.policyConsent.acceptedAt), tz, "d MMMM yyyy", t.locale)} à {formatTime(new Date(a.policyConsent.acceptedAt), tz)}</summary>
                     <p className="mt-1 whitespace-pre-line text-muted">{a.policyConsent.text}</p>
                   </details>
                 </dd>
@@ -171,7 +173,7 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
               <ClientContactActions
                 id={a.id}
                 canRemind={!past && a.status === "confirmed"}
-                sentAt={a.manualReminderSentAt ? `${formatDay(a.manualReminderSentAt, tz, "d MMM")} à ${formatTime(a.manualReminderSentAt, tz)}` : null}
+                sentAt={a.manualReminderSentAt ? `${formatDay(a.manualReminderSentAt, tz, "d MMM", t.locale)} à ${formatTime(a.manualReminderSentAt, tz)}` : null}
                 clientTerm={term}
               />
             ) : null}
@@ -187,11 +189,11 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
 
         {canManage ? (
           <Card>
-            <CardHeader title="Paiement" description="À noter à la main pour un paiement sur place, un virement reçu…" />
+            <CardHeader title="Paiement" description={t("À noter à la main pour un paiement sur place, un virement reçu…")} />
             <div className="space-y-4 p-5">
               {pay?.stripePaymentIntentId || pay?.stripeSetupIntentId ? (
                 <p className="text-sm">
-                  {pay.status === "paid" ? "Payé en ligne" : pay.status === "authorized" ? "Carte enregistrée en garantie" : pay.status === "penalty" ? "Frais prélevés" : pay.status === "refunded" ? "Remboursé" : pay.status === "partial" ? "Remboursé en partie" : pay.status === "failed" ? "Prélèvement échoué" : "Paiement Stripe"}
+                  {pay.status === "paid" ? t("Payé en ligne") : pay.status === "authorized" ? t("Carte enregistrée en garantie") : pay.status === "penalty" ? t("Frais prélevés") : pay.status === "refunded" ? "Remboursé" : pay.status === "partial" ? t("Remboursé en partie") : pay.status === "failed" ? t("Prélèvement échoué") : t("Paiement Stripe")}
                   {pay.cardBrand ? ` · ${pay.cardBrand.toUpperCase()} •••• ${pay.cardLast4}` : ""}
                   {pay.amountCents ? ` · ${(pay.amountCents / 100).toFixed(2).replace(".", ",")} €` : ""}
                   {pay.keptCents ? ` · ${(pay.keptCents / 100).toFixed(2).replace(".", ",")} € retenus` : ""}
@@ -211,9 +213,9 @@ export default async function AppointmentPage({ params }: { params: Promise<{ id
               <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium">Facture</p>
-                  <p className="text-sm text-muted">{inv ? `Facture ${inv.number ?? "en brouillon"} liée à ce rendez-vous.` : "Créez la facture de ce rendez-vous en un clic."}</p>
+                  <p className="text-sm text-muted">{inv ? `Facture ${inv.number ?? "en brouillon"} liée à ce rendez-vous.` : t("Créez la facture de ce rendez-vous en un clic.")}</p>
                 </div>
-                <ButtonLink href={inv ? `/app/factures/${inv.id}` : `/app/factures/nouvelle?rdv=${a.id}`} variant="secondary">{inv ? "Voir la facture" : "Facturer ce rendez-vous"}</ButtonLink>
+                <ButtonLink href={inv ? `/app/factures/${inv.id}` : `/app/factures/nouvelle?rdv=${a.id}`} variant="secondary">{inv ? t("Voir la facture") : t("Facturer ce rendez-vous")}</ButtonLink>
               </Card>
             );
           })()

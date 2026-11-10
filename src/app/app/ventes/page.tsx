@@ -6,10 +6,12 @@ import { requireContext } from "@/server/context";
 import { listDeals, salesMembers, salesRights } from "@/server/sales";
 import { redirect } from "next/navigation";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Ventes");
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<{ piste?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const rights = salesRights(ctx);
   if (!rights.view) redirect("/app/acces-refuse");
@@ -17,7 +19,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const open = (await searchParams).piste;
   return (
     <>
-      <PageHeader title="Ventes" description="Vos pistes commerciales, du premier contact à la signature." />
+      <PageHeader title={t("Ventes")} description={t("Vos pistes commerciales, du premier contact à la signature.")} />
       <SalesBoard deals={deals} team={team} me={ctx.member.id} canManage={rights.manage} canQuote={ctx.can("invoices.manage")} today={todayIn(ctx.business.timezone || "Europe/Brussels")} openId={open && deals.some((d) => d.id === open) ? open : null} />
     </>
   );

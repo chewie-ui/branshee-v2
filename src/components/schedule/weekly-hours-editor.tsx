@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { WEEK_DAYS, WeekRanges, type Week } from "@/components/schedule/week-ranges";
 import { saveWeeklyHours } from "@/server/actions/schedule";
+import { useT } from "@/components/app-locale";
 
 export function WeeklyHoursEditor({ memberId, initial, canEdit }: { memberId: string | null; initial: Week; canEdit: boolean }) {
+  const t = useT();
   const [week, setWeek] = useState<Week>(initial);
   const [saved, setSaved] = useState<Week>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -37,20 +39,20 @@ export function WeeklyHoursEditor({ memberId, initial, canEdit }: { memberId: st
             </p>
           ) : done && !dirty ? (
             <p className="text-sm text-success sm:mr-auto" role="status">
-              Horaires enregistrés.
+              {t("Horaires enregistrés.")}
             </p>
           ) : null}
           {dirty ? (
             <Button variant="ghost" onClick={() => { setWeek(saved); setError(null); }} disabled={pending}>
-              Annuler les changements
+              {t("Annuler les changements")}
             </Button>
           ) : null}
           <Button onClick={save} loading={pending} disabled={!dirty}>
-            Enregistrer
+            {t("Enregistrer")}
           </Button>
         </div>
       ) : (
-        <p className="border-t border-border px-5 py-3 text-sm text-muted">Vous pouvez consulter ces horaires, mais pas les modifier.</p>
+        <p className="border-t border-border px-5 py-3 text-sm text-muted">{t("Vous pouvez consulter ces horaires, mais pas les modifier.")}</p>
       )}
     </div>
   );

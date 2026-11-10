@@ -6,10 +6,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { vehicleRights, vehiclesOf } from "@/server/vehicles";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Véhicules");
 
 export default async function VehiclesPage() {
+  const t = await appT();
   const ctx = await requireContext(undefined, { app: "vehicules" });
   const rights = vehicleRights(ctx);
   const list = await vehiclesOf(ctx.business.id);
@@ -17,12 +19,12 @@ export default async function VehiclesPage() {
   return (
     <>
       <PageHeader
-        title="Véhicules"
-        description="Vos voitures en vente : fiche complète, photos et vitrine en ligne."
+        title={t("Véhicules")}
+        description={t("Vos voitures en vente : fiche complète, photos et vitrine en ligne.")}
         action={
           <div className="flex flex-wrap gap-2">
-            <ButtonLink href={publicBase} target="_blank" rel="noopener noreferrer" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>Voir ma vitrine</ButtonLink>
-            {rights.manage ? <ButtonLink href="/app/vehicules/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>Ajouter un véhicule</ButtonLink> : null}
+            <ButtonLink href={publicBase} target="_blank" rel="noopener noreferrer" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>{t("Voir ma vitrine")}</ButtonLink>
+            {rights.manage ? <ButtonLink href="/app/vehicules/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Ajouter un véhicule")}</ButtonLink> : null}
           </div>
         }
       />

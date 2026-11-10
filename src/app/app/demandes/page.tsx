@@ -11,10 +11,12 @@ import { formatDay, formatTime } from "@/lib/time";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Demandes");
 
 export default async function RequestsPage() {
+  const t = await appT();
   const ctx = await requireContext("appointments.manage");
   const tz = ctx.business.timezone;
   const now = new Date();
@@ -26,9 +28,9 @@ export default async function RequestsPage() {
   const row = (r: (typeof all)[number], isExpired: boolean) => (
     <li key={r.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 space-y-1">
-        <Link href={`/app/agenda/rdv/${r.id}`} className="font-medium hover:underline">{r.title}</Link>
+        <Link href={`/app/agenda/rdv/${r.id}`} className="font-medium hover:underline">{t(r.title)}</Link>
         <p className="text-sm">
-          <span className="first-letter:uppercase">{formatDay(r.startsAt, tz, "EEEE d MMMM")}</span> à {formatTime(r.startsAt, tz)} · {r.serviceName ?? "Rendez-vous"}
+          <span className="first-letter:uppercase">{formatDay(r.startsAt, tz, "EEEE d MMMM", t.locale)}</span> à {formatTime(r.startsAt, tz)} · {r.serviceName ?? t("Rendez-vous")}
           {r.memberName ? ` · avec ${r.memberName}` : ""}
         </p>
         <p className="flex flex-wrap gap-x-4 text-sm text-muted">
@@ -43,18 +45,18 @@ export default async function RequestsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Demandes de rendez-vous" description="Ces créneaux sont déjà réservés en votre nom le temps que vous décidiez : personne d'autre ne peut les prendre." />
+      <PageHeader title={t("Demandes de rendez-vous")} description={t("Ces créneaux sont déjà réservés en votre nom le temps que vous décidiez : personne d'autre ne peut les prendre.")} />
       <div className="space-y-6">
         <Card>
           {current.length === 0 ? (
-            <EmptyState icon={<Inbox />} title="Aucune demande en attente" description="Tout est traité. Les nouvelles demandes apparaîtront ici." />
+            <EmptyState icon={<Inbox />} title={t("Aucune demande en attente")} description={t("Tout est traité. Les nouvelles demandes apparaîtront ici.")} />
           ) : (
             <ul className="divide-y divide-border">{current.map((r) => row(r, false))}</ul>
           )}
         </Card>
         {expired.length ? (
           <Card>
-            <CardHeader title="Demandes expirées" description={`Leur date est passée : il n'y a plus rien à confirmer. Libérez-les pour les retirer de la liste (les ${terms} ne sont pas prévenus).`} action={<ReleaseAllExpired count={expired.length} />} />
+            <CardHeader title={t("Demandes expirées")} description={`Leur date est passée : il n'y a plus rien à confirmer. Libérez-les pour les retirer de la liste (les ${terms} ne sont pas prévenus).`} action={<ReleaseAllExpired count={expired.length} />} />
             <ul className="divide-y divide-border">{expired.map((r) => row(r, true))}</ul>
           </Card>
         ) : null}

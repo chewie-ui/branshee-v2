@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { DAY_LABELS, DAY_SHORT, addDays, dayLabel, dayNum, fmtHours, overnight, shiftMinutes } from "@/lib/planning";
 import { clearWeek, copyPreviousWeek, deleteShift, planningFeedToken, regenerateFeedToken, saveShift } from "@/server/actions/planning";
 import type { PlanningAbsence, PlanningMember, ShiftView } from "@/server/planning";
+import { useT } from "@/components/app-locale";
 
 type R = { ok: true; message?: string; token?: string } | { ok: false; error: string };
 type Draft = { id?: string; memberIds: string[]; days: string[]; start: string; end: string; breakMinutes: string; label: string; note: string };
@@ -29,6 +30,7 @@ const PRESETS = [
  * Le responsable ajoute, modifie et recopie ; chacun voit ses horaires et peut les mettre dans son agenda.
  */
 export function PlanningBoard({ monday, today, members, shifts, absences = [], canManage, origin }: { monday: string; today: string; members: PlanningMember[]; shifts: ShiftView[]; absences?: PlanningAbsence[]; canManage: boolean; origin: string }) {
+  const t = useT();
   const router = useRouter();
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday]);
   const [view, setView] = useState<"team" | "days">("team");
@@ -47,7 +49,7 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
 
   const run = (fn: () => Promise<R>, after?: (r: R) => void) =>
     start(async () => {
-      const r = await fn().catch(() => ({ ok: false as const, error: "Une erreur est survenue. Réessayez." }));
+      const r = await fn().catch(() => ({ ok: false as const, error: t("Une erreur est survenue. Réessayez.") }));
       setMsg(r.ok ? (r.message ? { ok: true, text: r.message } : null) : { ok: false, text: r.error });
       after?.(r);
       if (r.ok) router.refresh();
@@ -64,10 +66,10 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
   const submit = () => {
     if (!draft) return;
     start(async () => {
-      const r = await saveShift({ id: draft.id, memberIds: draft.memberIds, days: draft.days, start: draft.start, end: draft.end, breakMinutes: Number(draft.breakMinutes) || 0, label: draft.label, note: draft.note }).catch(() => ({ ok: false as const, error: "Une erreur est survenue. Réessayez." }));
+      const r = await saveShift({ id: draft.id, memberIds: draft.memberIds, days: draft.days, start: draft.start, end: draft.end, breakMinutes: Number(draft.breakMinutes) || 0, label: draft.label, note: draft.note }).catch(() => ({ ok: false as const, error: t("Une erreur est survenue. Réessayez.") }));
       if (!r.ok) return setFormError(r.error);
       setDraft(null);
-      setMsg({ ok: true, text: r.message ?? "Enregistré." });
+      setMsg({ ok: true, text: r.message ?? t("Enregistré.") });
       router.refresh();
     });
   };
@@ -88,7 +90,7 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
     >
       {withName ? <span className="block truncate font-semibold">{name.get(s.memberId)}</span> : null}
       <span className="block font-semibold tabular-nums">{s.start}–{s.end}{overnight(s.start, s.end) ? " (+1)" : ""}</span>
-      {s.label ? <span className="block truncate">{s.label}</span> : null}
+      {s.label ? <span className="block truncate">{t(s.label)}</span> : null}
     </button>
   );
 
@@ -97,36 +99,36 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
       {/* Semaine et actions */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center rounded-lg border border-border-strong bg-surface">
-          <Link href={week(-1)} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label="Semaine précédente"><ChevronLeft className="size-4" aria-hidden="true" /></Link>
-          <Link href={`/app/planning?semaine=${today}`} className="flex h-10 items-center border-x border-border px-3 text-sm font-medium hover:bg-surface-muted">Cette semaine</Link>
-          <Link href={week(1)} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label="Semaine suivante"><ChevronRight className="size-4" aria-hidden="true" /></Link>
+          <Link href={week(-1)} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={t("Semaine précédente")}><ChevronLeft className="size-4" aria-hidden="true" /></Link>
+          <Link href={`/app/planning?semaine=${today}`} className="flex h-10 items-center border-x border-border px-3 text-sm font-medium hover:bg-surface-muted">{t("Cette semaine")}</Link>
+          <Link href={week(1)} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={t("Semaine suivante")}><ChevronRight className="size-4" aria-hidden="true" /></Link>
         </div>
         <div className="inline-flex rounded-lg bg-surface-muted p-1" role="radiogroup" aria-label="Affichage">
-          {([["team", "Équipe"], ["days", "Jour par jour"]] as const).map(([v, l]) => (
+          {([["team", t("Équipe")], ["days", t("Jour par jour")]] as const).map(([v, l]) => (
             <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)} className={cn("h-8 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent", view === v ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text")}>
               {l}
             </button>
           ))}
         </div>
-        <span className="text-sm text-muted">Total : <span className="font-medium text-text tabular-nums">{fmtHours(weekTotal)}</span></span>
+        <span className="text-sm text-muted">{t("Total :")} <span className="font-medium text-text tabular-nums">{fmtHours(weekTotal)}</span></span>
         <div className="ml-auto flex items-center gap-2">
-          {canManage ? <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => openNew()}>Ajouter des horaires</Button> : null}
+          {canManage ? <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => openNew()}>{t("Ajouter des horaires")}</Button> : null}
           <div className="relative">
-            <Button variant="secondary" onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-haspopup="menu" aria-label="Plus d'actions" icon={<MoreHorizontal className="size-4" aria-hidden="true" />}>Plus</Button>
+            <Button variant="secondary" onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-haspopup="menu" aria-label={t("Plus d'actions")} icon={<MoreHorizontal className="size-4" aria-hidden="true" />}>Plus</Button>
             {menu ? (
               <>
-                <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setMenu(false)} aria-label="Fermer" tabIndex={-1} />
+                <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setMenu(false)} aria-label={t("Fermer")} tabIndex={-1} />
                 <div role="menu" className="absolute top-full right-0 z-20 mt-1 w-64 rounded-xl border border-border bg-surface p-1.5 shadow-lg">
                   {canManage ? (
-                    <MenuItem icon={<Copy />} onClick={() => { setMenu(false); run(() => copyPreviousWeek(monday)); }}>Recopier la semaine précédente</MenuItem>
+                    <MenuItem icon={<Copy />} onClick={() => { setMenu(false); run(() => copyPreviousWeek(monday)); }}>{t("Recopier la semaine précédente")}</MenuItem>
                   ) : null}
-                  <a role="menuitem" href={`/app/planning/export?semaine=${monday}`} className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted [&_svg]:size-4 [&_svg]:text-muted"><Download aria-hidden="true" />Exporter en Excel</a>
-                  <a role="menuitem" href={`/imprimer/planning?semaine=${monday}`} target="_blank" rel="noopener" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted [&_svg]:size-4 [&_svg]:text-muted"><Printer aria-hidden="true" />Imprimer ou PDF</a>
-                  <MenuItem icon={<CalendarPlus />} onClick={() => { setMenu(false); showFeed(); }}>Ajouter à mon agenda</MenuItem>
+                  <a role="menuitem" href={`/app/planning/export?semaine=${monday}`} className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted [&_svg]:size-4 [&_svg]:text-muted"><Download aria-hidden="true" />{t("Exporter en Excel")}</a>
+                  <a role="menuitem" href={`/imprimer/planning?semaine=${monday}`} target="_blank" rel="noopener" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted [&_svg]:size-4 [&_svg]:text-muted"><Printer aria-hidden="true" />{t("Imprimer ou PDF")}</a>
+                  <MenuItem icon={<CalendarPlus />} onClick={() => { setMenu(false); showFeed(); }}>{t("Ajouter à mon agenda")}</MenuItem>
                   {canManage && shifts.length ? (
                     <>
                       <div className="my-1 border-t border-border" />
-                      <MenuItem icon={<Eraser />} danger onClick={() => { setMenu(false); setConfirm("clear"); }}>Vider cette semaine</MenuItem>
+                      <MenuItem icon={<Eraser />} danger onClick={() => { setMenu(false); setConfirm("clear"); }}>{t("Vider cette semaine")}</MenuItem>
                     </>
                   ) : null}
                 </div>
@@ -136,25 +138,25 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
         </div>
       </div>
 
-      {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+      {msg ? <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{t(msg.text)}</p> : null}
 
       {feed ? (
         <Card className="p-4">
-          <p className="font-medium">Votre planning dans Google Agenda, Apple ou Outlook</p>
+          <p className="font-medium">{t("Votre planning dans Google Agenda, Apple ou Outlook")}</p>
           <p className="mt-1 text-sm text-muted">Copiez ce lien, puis dans Google Agenda : « Autres agendas » › « + » › « À partir de l&apos;URL ». Vos horaires s&apos;y mettent à jour tout seuls{members.length > 1 && canManage ? " (ceux de toute l'équipe, avec le nom de chacun)" : ""}. Ce lien est personnel : ne le partagez pas. « Changer le lien » coupe l&apos;ancien.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Input readOnly value={feed} onFocus={(e) => e.currentTarget.select()} aria-label="Lien de l'agenda" />
-            <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(feed).then(() => setMsg({ ok: true, text: "Lien copié." }))}>Copier</Button>
-            <Button variant="ghost" onClick={() => run(regenerateFeedToken, (r) => { if (r.ok && r.token) setFeed(`${origin}/ical/horaires/${r.token}`); })}>Changer le lien</Button>
+            <Input readOnly value={feed} onFocus={(e) => e.currentTarget.select()} aria-label={t("Lien de l'agenda")} />
+            <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(feed).then(() => setMsg({ ok: true, text: t("Lien copié.") }))}>Copier</Button>
+            <Button variant="ghost" onClick={() => run(regenerateFeedToken, (r) => { if (r.ok && r.token) setFeed(`${origin}/ical/horaires/${r.token}`); })}>{t("Changer le lien")}</Button>
           </div>
         </Card>
       ) : null}
 
       {members.length === 0 ? (
         <Card className="p-8 text-center">
-          <p className="font-medium">Personne dans l&apos;équipe pour l&apos;instant</p>
-          <p className="mt-1 text-sm text-muted">Ajoutez vos collaborateurs dans Équipe, puis revenez faire leur planning.</p>
-          <ButtonLink href="/app/equipe" variant="secondary" className="mt-4">Ouvrir Équipe</ButtonLink>
+          <p className="font-medium">{t("Personne dans l'équipe pour l'instant")}</p>
+          <p className="mt-1 text-sm text-muted">{t("Ajoutez vos collaborateurs dans Équipe, puis revenez faire leur planning.")}</p>
+          <ButtonLink href="/app/equipe" variant="secondary" className="mt-4">{t("Ouvrir Équipe")}</ButtonLink>
         </Card>
       ) : view === "team" ? (
         <Card className="relative overflow-x-auto">
@@ -193,7 +195,7 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
                           <div className="flex min-h-14 flex-col gap-1">
                             {off ? (
                               <span className={cn("rounded-md px-2 py-1 text-xs font-medium", off.pending ? "border border-dashed border-warning bg-warning-soft text-warning" : "bg-surface-muted text-muted")}>
-                                {off.label}{off.period === "am" ? " (matin)" : off.period === "pm" ? " (après-midi)" : ""}{off.pending ? " · en attente" : ""}
+                                {t(off.label)}{off.period === "am" ? " (matin)" : off.period === "pm" ? " (après-midi)" : ""}{off.pending ? " · en attente" : ""}
                               </span>
                             ) : null}
                             {list.map((s) => chip(s))}
@@ -225,12 +227,12 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
                 </div>
                 <div className="mt-3 space-y-1.5">
                   {absences.filter((a) => a.day === d).map((a) => (
-                    <p key={a.memberId} className="rounded-md bg-surface-muted px-2 py-1 text-xs text-muted">{name.get(a.memberId)} · {a.label}{a.pending ? " (en attente)" : ""}</p>
+                    <p key={a.memberId} className="rounded-md bg-surface-muted px-2 py-1 text-xs text-muted">{name.get(a.memberId)} · {t(a.label)}{a.pending ? " (en attente)" : ""}</p>
                   ))}
                   {list.map((s) => chip(s, true))}
                   {canManage ? (
                     <button type="button" onClick={() => openNew(undefined, d)} className="flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-border text-xs text-muted hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">
-                      <Plus className="size-3.5" aria-hidden="true" />Ajouter
+                      <Plus className="size-3.5" aria-hidden="true" />{t("Ajouter")}
                     </button>
                   ) : null}
                 </div>
@@ -244,8 +246,8 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
 
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm === "clear" ? "Vider cette semaine ?" : "Supprimer cet horaire ?"}
-        confirmLabel={confirm === "clear" ? "Vider la semaine" : "Supprimer"}
+        title={confirm === "clear" ? t("Vider cette semaine ?") : t("Supprimer cet horaire ?")}
+        confirmLabel={confirm === "clear" ? t("Vider la semaine") : "Supprimer"}
         danger
         loading={pending}
         onCancel={() => setConfirm(null)}
@@ -255,7 +257,7 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
           else if (c) run(() => deleteShift(c.id), (r) => { setConfirm(null); if (r.ok) setDraft(null); });
         }}
       >
-        {confirm === "clear" ? `Les ${shifts.length} horaires de la semaine seront supprimés.` : "Cet horaire sera retiré du planning."}
+        {confirm === "clear" ? `Les ${shifts.length} horaires de la semaine seront supprimés.` : t("Cet horaire sera retiré du planning.")}
       </ConfirmDialog>
     </div>
   );
@@ -271,6 +273,7 @@ function MenuItem({ icon, children, onClick, danger = false }: { icon: React.Rea
 }
 
 function ShiftDialog({ draft, setDraft, members, days, error, pending, onSubmit, onDelete }: { draft: Draft; setDraft: (d: Draft | null) => void; members: PlanningMember[]; days: string[]; error: string | null; pending: boolean; onSubmit: () => void; onDelete?: () => void }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const editing = !!draft.id;
   const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
@@ -286,10 +289,10 @@ function ShiftDialog({ draft, setDraft, members, days, error, pending, onSubmit,
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="shift-title">
-      <button type="button" className="absolute inset-0 bg-black/30" aria-label="Fermer" tabIndex={-1} onClick={() => setDraft(null)} />
+      <button type="button" className="absolute inset-0 bg-black/30" aria-label={t("Fermer")} tabIndex={-1} onClick={() => setDraft(null)} />
       <div ref={ref} className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 shadow-xl sm:rounded-2xl">
-        <h2 id="shift-title" className="text-lg font-semibold">{editing ? "Modifier l'horaire" : "Ajouter des horaires"}</h2>
-        {!editing ? <p className="mt-1 text-sm text-muted">Choisissez une ou plusieurs personnes et un ou plusieurs jours : l&apos;horaire est ajouté pour chacun.</p> : null}
+        <h2 id="shift-title" className="text-lg font-semibold">{editing ? t("Modifier l'horaire") : t("Ajouter des horaires")}</h2>
+        {!editing ? <p className="mt-1 text-sm text-muted">{t("Choisissez une ou plusieurs personnes et un ou plusieurs jours : l'horaire est ajouté pour chacun.")}</p> : null}
 
         <fieldset className="mt-5">
           <legend className="text-sm font-medium">{editing ? "Personne" : "Personnes"}</legend>
@@ -320,17 +323,17 @@ function ShiftDialog({ draft, setDraft, members, days, error, pending, onSubmit,
           </div>
           {!editing ? (
             <div className="mt-2 flex flex-wrap gap-3 text-sm">
-              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: days.slice(0, 5) })}>Lundi à vendredi</button>
-              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: days.slice(0, 6) })}>Lundi à samedi</button>
-              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: [] })}>Aucun</button>
+              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: days.slice(0, 5) })}>{t("Lundi à vendredi")}</button>
+              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: days.slice(0, 6) })}>{t("Lundi à samedi")}</button>
+              <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => set({ days: [] })}>{t("Aucun")}</button>
             </div>
           ) : null}
         </fieldset>
 
-        <div className="mt-4 flex flex-wrap gap-2" aria-label="Horaires types">
+        <div className="mt-4 flex flex-wrap gap-2" aria-label={t("Horaires types")}>
           {PRESETS.map((p) => (
             <button key={p.label} type="button" onClick={() => set({ start: p.start, end: p.end, breakMinutes: p.pause })} className="rounded-full border border-border px-3 py-1 text-xs hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">
-              {p.label} <span className="text-muted tabular-nums">{p.start}–{p.end}</span>
+              {t(p.label)} <span className="text-muted tabular-nums">{p.start}–{p.end}</span>
             </button>
           ))}
         </div>
@@ -338,23 +341,23 @@ function ShiftDialog({ draft, setDraft, members, days, error, pending, onSubmit,
         <div className="mt-3 grid grid-cols-3 gap-3">
           <Field label="Début" htmlFor="sh-start"><Input id="sh-start" type="time" value={draft.start} onChange={(e) => set({ start: e.target.value })} required /></Field>
           <Field label="Fin" htmlFor="sh-end"><Input id="sh-end" type="time" value={draft.end} onChange={(e) => set({ end: e.target.value })} required /></Field>
-          <Field label="Pause (min)" htmlFor="sh-break"><Input id="sh-break" type="number" min={0} max={600} step={5} inputMode="numeric" value={draft.breakMinutes} onChange={(e) => set({ breakMinutes: e.target.value })} /></Field>
+          <Field label={t("Pause (min)")} htmlFor="sh-break"><Input id="sh-break" type="number" min={0} max={600} step={5} inputMode="numeric" value={draft.breakMinutes} onChange={(e) => set({ breakMinutes: e.target.value })} /></Field>
         </div>
         <p className="mt-1 text-xs text-muted">
-          {minutes ? `${fmtHours(minutes)} de travail${overnight(draft.start, draft.end) ? ", jusqu'au lendemain" : ""}.` : "Indiquez l'heure de début et de fin."}
+          {minutes ? `${fmtHours(minutes)} de travail${overnight(draft.start, draft.end) ? ", jusqu'au lendemain" : ""}.` : t("Indiquez l'heure de début et de fin.")}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <Field label="Poste ou lieu (facultatif)" htmlFor="sh-label"><Input id="sh-label" value={draft.label} maxLength={60} placeholder="Caisse, cuisine, chantier…" onChange={(e) => set({ label: e.target.value })} /></Field>
-          <Field label="Note (facultatif)" htmlFor="sh-note"><Input id="sh-note" value={draft.note} maxLength={300} onChange={(e) => set({ note: e.target.value })} /></Field>
+          <Field label={t("Poste ou lieu (facultatif)")} htmlFor="sh-label"><Input id="sh-label" value={draft.label} maxLength={60} placeholder={t("Caisse, cuisine, chantier…")} onChange={(e) => set({ label: e.target.value })} /></Field>
+          <Field label={t("Note (facultatif)")} htmlFor="sh-note"><Input id="sh-note" value={draft.note} maxLength={300} onChange={(e) => set({ note: e.target.value })} /></Field>
         </div>
 
         {error ? <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
           {onDelete ? <Button variant="ghost" className="text-danger sm:mr-auto" icon={<Trash2 className="size-4" aria-hidden="true" />} onClick={onDelete} disabled={pending}>Supprimer</Button> : <span className="sm:mr-auto" />}
-          <Button variant="secondary" onClick={() => setDraft(null)} disabled={pending}>Annuler</Button>
+          <Button variant="secondary" onClick={() => setDraft(null)} disabled={pending}>{t("Annuler")}</Button>
           <Button onClick={onSubmit} loading={pending} disabled={!draft.memberIds.length || !draft.days.length}>
-            {editing ? "Enregistrer" : count > 1 ? `Ajouter ${count} horaires` : "Ajouter"}
+            {editing ? t("Enregistrer") : count > 1 ? `Ajouter ${count} horaires` : t("Ajouter")}
           </Button>
         </div>
       </div>

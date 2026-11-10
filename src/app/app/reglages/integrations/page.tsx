@@ -29,7 +29,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const notice = NOTICES[(await searchParams).google ?? ""];
   return (
     <div className="space-y-6">
-      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status"><Tx>{notice.text}</Tx></p> : null}
+      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status"><Tx>{t(notice.text)}</Tx></p> : null}
       {!allowed ? <UpgradeNotice feature={t("Synchronisation Google Agenda")} required="pro">{t("Le flux iCal ci-dessous reste disponible avec tous les forfaits.")}</UpgradeNotice> : null}
       <GoogleCalendarCard configured={googleConfigured()} allowed={allowed} connectedEmail={conn?.email ?? null} />
       <CalendarFeedCard origin={(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")} token={me?.token ?? null} />

@@ -18,7 +18,10 @@ export function tr(fr: string, locale: AppLocale, vars?: Vars): string {
   return fill(locale === "en" ? (EN[fr] ?? fr) : fr, vars);
 }
 
-export const makeT = (locale: AppLocale) => (fr: string, vars?: Vars) => tr(fr, locale, vars);
+export const makeT = (locale: AppLocale) => Object.assign((fr: string | null | undefined, vars?: Vars) => tr(fr ?? "", locale, vars), { locale });
+
+/** Langue des dates et nombres (Intl) pour une langue de l'espace pro. */
+export const intlLocale = (locale: AppLocale) => (locale === "en" ? "en-GB" : "fr-BE");
 export type T = ReturnType<typeof makeT>;
 
 export const asLocale = (v: string | null | undefined): AppLocale => (v === "en" ? "en" : "fr");

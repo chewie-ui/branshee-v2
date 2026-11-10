@@ -14,12 +14,14 @@ import { cn } from "@/lib/cn";
 import { formatDay, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Horaires");
 
 const hhmm = (t: string) => t.slice(0, 5);
 
 export default async function HoursPage({ searchParams }: { searchParams: Promise<{ membre?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const bid = ctx.business.id;
   const tz = ctx.business.timezone;
@@ -72,32 +74,32 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
   const rows: ExceptionRow[] = exRows.map((e) => ({
     id: e.id,
     date: e.date,
-    label: formatDay(new Date(e.date + "T12:00:00Z"), tz, "EEE d MMM"),
-    who: e.memberId ? (nameOf.get(e.memberId) ?? "Ancien membre") : "Tout l'établissement",
+    label: formatDay(new Date(e.date + "T12:00:00Z"), tz, "EEE d MMM", t.locale),
+    who: e.memberId ? (nameOf.get(e.memberId) ?? t("Ancien membre")) : t("Tout l'établissement"),
     isClosed: e.isClosed,
     hours: e.isClosed ? null : e.hours.map((h) => `${h.start}–${h.end}`).join(", "),
     reason: e.reason,
     canDelete: canTimeOffFor(e.memberId),
   }));
   const targets = [
-    ...(canTimeOffFor(null) ? [{ value: "", label: "Tout l'établissement" }] : []),
+    ...(canTimeOffFor(null) ? [{ value: "", label: t("Tout l'établissement") }] : []),
     ...team.filter((m) => canTimeOffFor(m.id)).map((m) => ({ value: m.id, label: m.id === ctx.member.id ? `${m.name} (moi)` : m.name })),
   ];
 
   return (
     <>
-      <PageHeader title="Horaires" description="Les créneaux proposés à vos clients suivent ces horaires, moins les congés et les rendez-vous déjà pris." />
+      <PageHeader title={t("Horaires")} description={t("Les créneaux proposés à vos clients suivent ces horaires, moins les congés et les rendez-vous déjà pris.")} />
 
       <div className="space-y-6">
         {team.length > 1 ? <ScheduleMode value={mode} canEdit={ctx.can("availability.manageShared")} /> : null}
 
         <Card className="overflow-hidden">
           <CardHeader
-            title={mode === "shared" ? "Horaires de la semaine" : `Horaires de ${selected?.name ?? ""}`}
-            description={mode === "shared" ? "Valables pour toute l'équipe." : "Chaque membre a sa propre grille."}
+            title={mode === "shared" ? t("Horaires de la semaine") : `Horaires de ${selected?.name ?? ""}`}
+            description={mode === "shared" ? t("Valables pour toute l'équipe.") : t("Chaque membre a sa propre grille.")}
           />
           {mode === "per_member" && team.length > 1 ? (
-            <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3" role="group" aria-label="Choisir le membre">
+            <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3" role="group" aria-label={t("Choisir le membre")}>
               {team.map((m) => (
                 <Link
                   key={m.id}
@@ -118,18 +120,18 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
             <span><strong className="tabular-nums">{openDays}</strong> jour{openDays > 1 ? "s" : ""} ouvert{openDays > 1 ? "s" : ""}</span>
             <span><strong className="tabular-nums">{fmtH(weekMin)}</strong> par semaine</span>
             <span title={`Départs possibles toutes les ${interval} min`}>≈ <strong className="tabular-nums">{slotsPerWeek}</strong> créneaux de {interval} min</span>
-            <Link href={appPagePath(ctx.business.slug)} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">Voir comme un client ↗</Link>
+            <Link href={appPagePath(ctx.business.slug)} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">{t("Voir comme un client ↗")}</Link>
           </div>
           <WeeklyHoursEditor key={`${mode}-${editingMemberId}`} memberId={editingMemberId} initial={week} canEdit={canEditWeek} />
         </Card>
 
         <Card className="overflow-hidden" data-tour="exceptions">
-          <CardHeader title="Congés et fermetures" description="Jours fériés, vacances, formation ou horaires exceptionnels." />
+          <CardHeader title={t("Congés et fermetures")} description={t("Jours fériés, vacances, formation ou horaires exceptionnels.")} />
           {targets.length > 0 ? (
             <details className="group border-b border-border">
               <summary className="flex cursor-pointer list-none items-center px-5 py-3 text-sm font-medium text-accent hover:text-accent-hover [&::-webkit-details-marker]:hidden">
-                <span className="group-open:hidden">+ Ajouter un congé ou une fermeture</span>
-                <span className="hidden group-open:inline">Fermer le formulaire</span>
+                <span className="group-open:hidden">{t("+ Ajouter un congé ou une fermeture")}</span>
+                <span className="hidden group-open:inline">{t("Fermer le formulaire")}</span>
               </summary>
               <ExceptionForm targets={targets} today={today} />
             </details>

@@ -10,6 +10,7 @@ import { WeekRanges, type Week } from "@/components/schedule/week-ranges";
 import { cn } from "@/lib/cn";
 import { outsideBounds, summarize, type Week as OpeningWeek } from "@/lib/opening";
 import { setServicesHours } from "@/server/actions/services";
+import { useT } from "@/components/app-locale";
 
 type Svc = { id: string; name: string; color: string | null; isActive: boolean; hours: Week };
 
@@ -19,6 +20,7 @@ type Svc = { id: string; name: string; color: string | null; isActive: boolean; 
  * les heures restent dans les horaires d'ouverture.
  */
 export function ServicesHoursBoard({ services, bounds }: { services: Svc[]; bounds: OpeningWeek | null }) {
+  const t = useT();
   const router = useRouter();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [limited, setLimited] = useState(true);
@@ -45,15 +47,15 @@ export function ServicesHoursBoard({ services, bounds }: { services: Svc[]; boun
       if (r.ok) router.refresh();
     });
 
-  if (!services.length) return <Card className="p-8 text-center text-sm text-muted">Aucune prestation individuelle pour l&apos;instant.</Card>;
+  if (!services.length) return <Card className="p-8 text-center text-sm text-muted">{t("Aucune prestation individuelle pour l'instant.")}</Card>;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <Card className="h-fit">
-        <CardHeader title="1. Choisissez les prestations" description="Cochez-en une ou plusieurs." />
+        <CardHeader title={t("1. Choisissez les prestations")} description={t("Cochez-en une ou plusieurs.")} />
         <label className="flex cursor-pointer items-center gap-3 border-b border-border px-5 py-3 text-sm font-medium hover:bg-surface-muted/60">
           <input type="checkbox" checked={all} onChange={() => setPicked(all ? new Set() : new Set(services.map((s) => s.id)))} className="size-4 accent-[var(--accent)]" />
-          Tout sélectionner
+          {t("Tout sélectionner")}
         </label>
         <ul className="divide-y divide-border">
           {services.map((s) => {
@@ -63,9 +65,9 @@ export function ServicesHoursBoard({ services, bounds }: { services: Svc[]; boun
                 <input id={`sh-${s.id}`} type="checkbox" checked={picked.has(s.id)} onChange={() => toggle(s.id)} className="mt-1 size-4 shrink-0 accent-[var(--accent)]" />
                 <label htmlFor={`sh-${s.id}`} className="min-w-0 flex-1 cursor-pointer">
                   <span className="flex items-center gap-2 text-sm font-medium"><span className="size-2.5 shrink-0 rounded-full" style={{ background: s.color ?? "#4f46e5" }} aria-hidden="true" />{s.name}{s.isActive ? null : <span className="text-xs font-normal text-muted">(masquée)</span>}</span>
-                  <span className="mt-0.5 block text-xs text-muted">{sum || "Toutes les heures d'ouverture"}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{sum || t("Toutes les heures d'ouverture")}</span>
                 </label>
-                <button type="button" onClick={() => pickOne(s)} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-soft">Modifier</button>
+                <button type="button" onClick={() => pickOne(s)} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent-soft">{t("Modifier")}</button>
               </li>
             );
           })}
@@ -73,16 +75,16 @@ export function ServicesHoursBoard({ services, bounds }: { services: Svc[]; boun
       </Card>
 
       <Card className="h-fit lg:sticky lg:top-6">
-        <CardHeader title="2. Quand sont-elles proposées ?" description={picked.size ? `${picked.size} prestation${picked.size > 1 ? "s" : ""} sélectionnée${picked.size > 1 ? "s" : ""}` : "Sélectionnez d'abord au moins une prestation."} />
+        <CardHeader title={t("2. Quand sont-elles proposées ?")} description={picked.size ? `${picked.size} prestation${picked.size > 1 ? "s" : ""} sélectionnée${picked.size > 1 ? "s" : ""}` : t("Sélectionnez d'abord au moins une prestation.")} />
         <div className="space-y-3 p-5">
           {!bounds ? (
-            <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">Vos horaires d&apos;ouverture ne sont pas encore définis. <Link href="/app/horaires" className="font-medium underline">Définissez-les</Link> pour que les jours fermés soient bloqués.</p>
+            <p className="rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">{t("Vos horaires d'ouverture ne sont pas encore définis.")} <Link href="/app/horaires" className="font-medium underline">Définissez-les</Link> {t("pour que les jours fermés soient bloqués.")}</p>
           ) : (
-            <p className="flex items-start gap-2 text-sm text-muted"><Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Les jours où vous êtes fermé sont bloqués et les heures restent dans vos horaires d&apos;ouverture. <Link href="/app/horaires" className="font-medium text-accent hover:text-accent-hover">Modifier mes horaires</Link></p>
+            <p className="flex items-start gap-2 text-sm text-muted"><Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{t("Les jours où vous êtes fermé sont bloqués et les heures restent dans vos horaires d'ouverture.")} <Link href="/app/horaires" className="font-medium text-accent hover:text-accent-hover">{t("Modifier mes horaires")}</Link></p>
           )}
           <fieldset className="space-y-2" disabled={!picked.size}>
             <legend className="sr-only">Mode</legend>
-            {([[false, "Pendant toutes les heures d'ouverture"], [true, "Seulement certains jours ou à certaines heures"]] as const).map(([v, label]) => (
+            {([[false, t("Pendant toutes les heures d'ouverture")], [true, t("Seulement certains jours ou à certaines heures")]] as const).map(([v, label]) => (
               <label key={String(v)} className="flex items-center gap-3 text-sm">
                 <input type="radio" name="mode" checked={limited === v} onChange={() => setLimited(v)} className="size-4 accent-[var(--accent)]" />
                 {label}
@@ -90,14 +92,14 @@ export function ServicesHoursBoard({ services, bounds }: { services: Svc[]; boun
             ))}
           </fieldset>
         </div>
-        {limited ? <WeekRanges value={week} onChange={setWeek} disabled={!picked.size} offLabel="Non proposée" defaultRange={{ start: "09:00", end: "12:00" }} bounds={bounds} className="border-t border-border" /> : null}
+        {limited ? <WeekRanges value={week} onChange={setWeek} disabled={!picked.size} offLabel={t("Non proposée")} defaultRange={{ start: "09:00", end: "12:00" }} bounds={bounds} className="border-t border-border" /> : null}
         <div className="space-y-2 border-t border-border p-5">
           {problem ? <p className="text-sm text-danger" role="alert">{problem}</p> : null}
-          {msg ? <p className={cn("text-sm", msg.ok ? "text-success" : "text-danger")} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+          {msg ? <p className={cn("text-sm", msg.ok ? "text-success" : "text-danger")} role={msg.ok ? "status" : "alert"}>{t(msg.text)}</p> : null}
           <Button loading={pending} disabled={!picked.size || !!problem || (limited && empty)} onClick={apply} icon={<CalendarClock className="size-4" aria-hidden="true" />}>
             {picked.size ? `Appliquer à ${picked.size} prestation${picked.size > 1 ? "s" : ""}` : "Appliquer"}
           </Button>
-          {limited && empty && picked.size ? <p className="text-xs text-muted">Activez au moins un jour.</p> : null}
+          {limited && empty && picked.size ? <p className="text-xs text-muted">{t("Activez au moins un jour.")}</p> : null}
         </div>
       </Card>
     </div>

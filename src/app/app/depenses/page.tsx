@@ -7,12 +7,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { getSellerSettings } from "@/server/invoicing";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Dépenses");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("invoices.view");
   const today = todayIn(ctx.business.timezone || "Europe/Brussels");
   const current = Number(today.slice(0, 4));
@@ -27,7 +29,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const years = Array.from({ length: Math.max(year, current) - from + 1 }, (_, i) => from + i).slice(-5);
   return (
     <>
-      <PageHeader title="Dépenses" description="Vos achats et frais professionnels, avec leurs justificatifs." />
+      <PageHeader title={t("Dépenses")} description={t("Vos achats et frais professionnels, avec leurs justificatifs.")} />
       <ExpensesBoard
         year={year}
         years={years}

@@ -8,6 +8,7 @@ import { Field, Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import type { IntakeQuestion } from "@/lib/intake";
 import { deleteIntakeQuestion, moveIntakeQuestion, saveIntakeQuestion } from "@/server/actions/intake";
+import { useT } from "@/components/app-locale";
 
 type Service = { id: string; name: string; isActive: boolean };
 type Draft = { question: string; options: { id: string | null; label: string; serviceIds: string[] }[] };
@@ -16,6 +17,7 @@ const blank = (): Draft => ({ question: "", options: [{ id: null, label: "Oui", 
 
 /** Fiche d'une question : lecture, ou formulaire d'édition. */
 export function IntakeQuestionCard({ question, services, index, total }: { question: IntakeQuestion; services: Service[]; index: number; total: number }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, start] = useTransition();
@@ -32,32 +34,32 @@ export function IntakeQuestionCard({ question, services, index, total }: { quest
           <ul className="mt-3 space-y-2">
             {question.options.map((o) => (
               <li key={o.id} className="text-sm">
-                <span className="font-medium">{o.label}</span>
+                <span className="font-medium">{t(o.label)}</span>
                 <span className="text-muted"> → {o.serviceIds.length ? o.serviceIds.map(name).filter(Boolean).join(", ") : "aucune prestation en particulier"}</span>
               </li>
             ))}
           </ul>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button type="button" disabled={index === 0 || pending} onClick={() => start(async () => void (await moveIntakeQuestion(question.id, "up")))} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Poser plus tôt">
+          <button type="button" disabled={index === 0 || pending} onClick={() => start(async () => void (await moveIntakeQuestion(question.id, "up")))} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label={t("Poser plus tôt")}>
             <ArrowUp className="size-4" aria-hidden="true" />
           </button>
-          <button type="button" disabled={index === total - 1 || pending} onClick={() => start(async () => void (await moveIntakeQuestion(question.id, "down")))} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Poser plus tard">
+          <button type="button" disabled={index === total - 1 || pending} onClick={() => start(async () => void (await moveIntakeQuestion(question.id, "down")))} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label={t("Poser plus tard")}>
             <ArrowDown className="size-4" aria-hidden="true" />
           </button>
-          <button type="button" onClick={() => setEditing(true)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label="Modifier la question">
+          <button type="button" onClick={() => setEditing(true)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label={t("Modifier la question")}>
             <Pencil className="size-4" aria-hidden="true" />
           </button>
-          <button type="button" onClick={() => setConfirmDelete(true)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label="Supprimer la question">
+          <button type="button" onClick={() => setConfirmDelete(true)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-danger" aria-label={t("Supprimer la question")}>
             <Trash2 className="size-4" aria-hidden="true" />
           </button>
         </div>
       </div>
       {confirmDelete ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-danger/30 bg-danger-soft p-3">
-          <p className="mr-auto text-sm text-danger">Supprimer cette question ? Les prestations liées seront à nouveau proposées à tout le monde.</p>
+          <p className="mr-auto text-sm text-danger">{t("Supprimer cette question ? Les prestations liées seront à nouveau proposées à tout le monde.")}</p>
           <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} disabled={pending}>Non</Button>
-          <Button variant="danger" size="sm" loading={pending} onClick={() => start(async () => void (await deleteIntakeQuestion(question.id)))}>Oui, supprimer</Button>
+          <Button variant="danger" size="sm" loading={pending} onClick={() => start(async () => void (await deleteIntakeQuestion(question.id)))}>{t("Oui, supprimer")}</Button>
         </div>
       ) : null}
     </Card>
@@ -65,17 +67,19 @@ export function IntakeQuestionCard({ question, services, index, total }: { quest
 }
 
 export function NewIntakeQuestion({ services, first }: { services: Service[]; first: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   if (!open)
     return (
       <Button variant={first ? "primary" : "secondary"} data-tour="new-intake" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
-        {first ? "Ajouter une question" : "Ajouter une autre question"}
+        {first ? t("Ajouter une question") : t("Ajouter une autre question")}
       </Button>
     );
   return <IntakeForm id={null} initial={blank()} services={services} onDone={() => setOpen(false)} />;
 }
 
 function IntakeForm({ id, initial, services, onDone }: { id: string | null; initial: Draft; services: Service[]; onDone: () => void }) {
+  const t = useT();
   const [draft, setDraft] = useState<Draft>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -87,12 +91,12 @@ function IntakeForm({ id, initial, services, onDone }: { id: string | null; init
 
   return (
     <Card className="space-y-5 p-5">
-      <Field label="Question posée au client" htmlFor={`q-${id ?? "new"}`}>
-        <Input id={`q-${id ?? "new"}`} value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} placeholder="Êtes-vous enceinte ?" maxLength={160} autoFocus />
+      <Field label={t("Question posée au client")} htmlFor={`q-${id ?? "new"}`}>
+        <Input id={`q-${id ?? "new"}`} value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} placeholder={t("Êtes-vous enceinte ?")} maxLength={160} autoFocus />
       </Field>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium">Réponses possibles, et les prestations que chacune affiche</legend>
+        <legend className="text-sm font-medium">{t("Réponses possibles, et les prestations que chacune affiche")}</legend>
         {draft.options.map((o, i) => (
           <div key={o.id ?? `new-${i}`} className="rounded-xl border border-border p-4">
             <div className="flex items-center gap-2">
@@ -117,14 +121,14 @@ function IntakeForm({ id, initial, services, onDone }: { id: string | null; init
         ))}
         <button type="button" disabled={draft.options.length >= 12} onClick={() => setDraft((d) => ({ ...d, options: [...d.options, { id: null, label: "", serviceIds: [] }] }))} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover disabled:opacity-40">
           <Plus className="size-4" aria-hidden="true" />
-          Ajouter une réponse
+          {t("Ajouter une réponse")}
         </button>
       </fieldset>
 
-      <p className="rounded-lg bg-surface-muted p-3 text-sm text-muted">Une prestation cochée sous aucune réponse reste proposée à tout le monde, quelle que soit la réponse.</p>
+      <p className="rounded-lg bg-surface-muted p-3 text-sm text-muted">{t("Une prestation cochée sous aucune réponse reste proposée à tout le monde, quelle que soit la réponse.")}</p>
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone} disabled={pending}>Annuler</Button>
+        <Button variant="ghost" onClick={onDone} disabled={pending}>{t("Annuler")}</Button>
         <Button
           loading={pending}
           onClick={() =>
@@ -135,7 +139,7 @@ function IntakeForm({ id, initial, services, onDone }: { id: string | null; init
             })
           }
         >
-          Enregistrer
+          {t("Enregistrer")}
         </Button>
       </div>
     </Card>

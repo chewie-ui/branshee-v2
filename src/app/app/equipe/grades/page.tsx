@@ -14,12 +14,14 @@ import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Grades et permissions");
 
 const TOTAL = Object.values(PERMISSIONS).reduce((n, d) => n + Object.keys(d.actions).length, 0);
 
 export default async function GradesPage() {
+  const t = await appT();
   const ctx = await requireContext("grades.view");
   const allowed = await businessHas(ctx.business.id, "grades");
   const canManage = ctx.can("grades.manage") && allowed;
@@ -34,12 +36,12 @@ export default async function GradesPage() {
   return (
     <>
       <PageHeader
-        title="Équipe"
-        description="Un grade regroupe des permissions. Chaque membre a un grade."
-        action={canManage ? <ButtonLink href="/app/equipe/grades/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>Nouveau grade</ButtonLink> : null}
+        title={t("Équipe")}
+        description={t("Un grade regroupe des permissions. Chaque membre a un grade.")}
+        action={canManage ? <ButtonLink href="/app/equipe/grades/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Nouveau grade")}</ButtonLink> : null}
       />
-      <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: "Grades et permissions" }]} />
-      {!allowed ? <div className="mb-4"><UpgradeNotice feature="Grades sur mesure" required="pro_plus">Les grades intégrés restent appliqués. Créer et modifier des grades est inclus dans le forfait Pro+.</UpgradeNotice></div> : null}
+      <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: t("Grades et permissions") }]} />
+      {!allowed ? <div className="mb-4"><UpgradeNotice feature={t("Grades sur mesure")} required="pro_plus">{t("Les grades intégrés restent appliqués. Créer et modifier des grades est inclus dans le forfait Pro+.")}</UpgradeNotice></div> : null}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border">
           {rows.map(({ g, n }) => {
@@ -64,7 +66,7 @@ export default async function GradesPage() {
           })}
         </ul>
       </Card>
-      <p className="mt-3 text-sm text-muted">Le propriétaire de l&apos;établissement a toujours accès à tout, quel que soit le grade.</p>
+      <p className="mt-3 text-sm text-muted">{t("Le propriétaire de l'établissement a toujours accès à tout, quel que soit le grade.")}</p>
     </>
   );
 }

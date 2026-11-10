@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ImagePlus, Star, Trash2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { addVehiclePhoto, removeVehiclePhoto, reorderVehiclePhotos } from "@/server/actions/vehicles";
+import { useT } from "@/components/app-locale";
 
 const MAX_SIDE = 2000;
 
@@ -27,6 +28,7 @@ async function shrink(file: File): Promise<Blob> {
 
 /** Galerie du véhicule : ajout (plusieurs à la fois), ordre, photo principale, suppression. */
 export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id: string; photos: string[]; canManage: boolean; highlight?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [list, setList] = useState(photos);
@@ -64,7 +66,7 @@ export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id
     start(async () => { const r = await reorderVehiclePhotos(id, next); if (!r.ok) setErr(r.error); });
   };
   const remove = (url: string) => {
-    if (!window.confirm("Supprimer cette photo ?")) return;
+    if (!window.confirm(t("Supprimer cette photo ?"))) return;
     setList((l) => l.filter((p) => p !== url));
     start(async () => { const r = await removeVehiclePhoto(id, url); if (!r.ok) setErr(r.error); });
   };
@@ -73,10 +75,10 @@ export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id
     <Card className={highlight ? "ring-2 ring-accent" : undefined}>
       <CardHeader
         title={`Photos (${list.length}/30)`}
-        description="La première est la photo principale. Prenez-les de face, 3/4, profil, arrière, intérieur, tableau de bord et compteur."
+        description={t("La première est la photo principale. Prenez-les de face, 3/4, profil, arrière, intérieur, tableau de bord et compteur.")}
         action={canManage ? (
           <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
-            <ImagePlus className="size-4" aria-hidden="true" />Ajouter
+            <ImagePlus className="size-4" aria-hidden="true" />{t("Ajouter")}
             <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(e) => upload(e.target.files)} disabled={!!busy} />
           </label>
         ) : undefined}
@@ -93,10 +95,10 @@ export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id
                 {i === 0 ? <span className="absolute top-2 left-2 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">Principale</span> : null}
                 {canManage ? (
                   <div className="flex items-center justify-between gap-1 border-t border-border bg-surface px-2 py-1.5">
-                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Déplacer vers la gauche"><ArrowLeft className="size-4" aria-hidden="true" /></button>
-                    {i > 0 ? <button type="button" onClick={() => main(i)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label="Choisir comme photo principale" title="Photo principale"><Star className="size-4" aria-hidden="true" /></button> : null}
-                    <button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label="Déplacer vers la droite"><ArrowRight className="size-4" aria-hidden="true" /></button>
-                    <button type="button" onClick={() => remove(p)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-danger-soft hover:text-danger" aria-label="Supprimer la photo"><Trash2 className="size-4" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label={t("Déplacer vers la gauche")}><ArrowLeft className="size-4" aria-hidden="true" /></button>
+                    {i > 0 ? <button type="button" onClick={() => main(i)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text" aria-label={t("Choisir comme photo principale")} title={t("Photo principale")}><Star className="size-4" aria-hidden="true" /></button> : null}
+                    <button type="button" onClick={() => move(i, 1)} disabled={i === list.length - 1} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text disabled:opacity-30" aria-label={t("Déplacer vers la droite")}><ArrowRight className="size-4" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => remove(p)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-danger-soft hover:text-danger" aria-label={t("Supprimer la photo")}><Trash2 className="size-4" aria-hidden="true" /></button>
                   </div>
                 ) : null}
               </li>
@@ -105,7 +107,7 @@ export function VehiclePhotos({ id, photos, canManage, highlight = false }: { id
         ) : (
           <button type="button" onClick={() => input.current?.click()} disabled={!canManage || !!busy} className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border-strong px-6 py-10 text-sm text-muted hover:border-accent hover:text-text">
             <ImagePlus className="size-8" aria-hidden="true" />
-            Ajoutez les photos du véhicule (plusieurs à la fois)
+            {t("Ajoutez les photos du véhicule (plusieurs à la fois)")}
           </button>
         )}
       </div>

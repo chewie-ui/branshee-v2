@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { formatDuration, formatPrice } from "@/lib/time";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
 import { submitKeepingValues } from "@/lib/form";
+import { useT } from "@/components/app-locale";
 
 type Customer = { id: string; name: string; email: string | null; phone: string | null };
 type Props = {
@@ -29,6 +30,7 @@ type Props = {
 const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export function NewAppointmentForm({ services, members, customers, defaultDate, defaultTime, defaultDuration, defaultMemberId, defaultCustomerId, clientTerm }: Props) {
+  const t = useT();
   const [state, action, pending] = useActionState<CreateAppointmentState, FormData>(createAppointment, undefined);
   const err = state?.fieldErrors ?? {};
 
@@ -87,11 +89,11 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
           <div className="flex items-center gap-3 rounded-lg border border-accent bg-accent-soft px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="font-medium">{customer.name}</p>
-              <p className="truncate text-sm text-muted">{[customer.email, customer.phone].filter(Boolean).join(" · ") || "Sans coordonnées"}</p>
+              <p className="truncate text-sm text-muted">{[customer.email, customer.phone].filter(Boolean).join(" · ") || t("Sans coordonnées")}</p>
             </div>
             <button type="button" onClick={() => setCustomer(null)} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover">
               <X className="size-4" aria-hidden="true" />
-              Changer
+              {t("Changer")}
             </button>
           </div>
         ) : (
@@ -122,10 +124,10 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
               <Field label="Nom" htmlFor="newLastName">
                 <Input id="newLastName" name="newLastName" autoComplete="off" />
               </Field>
-              <Field label="Email (facultatif)" htmlFor="newEmail" error={err.newEmail}>
+              <Field label={t("Email (facultatif)")} htmlFor="newEmail" error={err.newEmail}>
                 <Input id="newEmail" name="newEmail" type="email" autoComplete="off" aria-invalid={!!err.newEmail || undefined} />
               </Field>
-              <Field label="Téléphone (facultatif)" htmlFor="newPhone">
+              <Field label={t("Téléphone (facultatif)")} htmlFor="newPhone">
                 <Input id="newPhone" name="newPhone" type="tel" autoComplete="off" />
               </Field>
             </div>
@@ -134,11 +136,11 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
       </Card>
 
       <Card className="space-y-5 p-5">
-        <h2 className="text-base font-semibold">Rendez-vous</h2>
+        <h2 className="text-base font-semibold">{t("Rendez-vous")}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Prestation" htmlFor="serviceId">
             <Select id="serviceId" name="serviceId" value={serviceId} onChange={(e) => pickService(e.target.value)}>
-              <option value="">Aucune prestation</option>
+              <option value="">{t("Aucune prestation")}</option>
               {services.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} · {formatDuration(s.durationMin, s.durationMaxMin)}
@@ -149,7 +151,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
           </Field>
           <Field label="Avec" htmlFor="memberId">
             <Select id="memberId" name="memberId" value={memberId} onChange={(e) => { setMemberId(e.target.value); refreshSlots({ memberId: e.target.value }); }}>
-              {members.length > 1 ? <option value="">Le premier disponible</option> : null}
+              {members.length > 1 ? <option value="">{t("Le premier disponible")}</option> : null}
               {members.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -159,10 +161,10 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
             <Input id="date" type="date" value={date} onChange={(e) => { setDate(e.target.value); refreshSlots({ date: e.target.value }); }} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Heure" htmlFor="time" error={err.slots} hint={end ? `Fin à ${end}` : "Ex. 9, 0930 ou 14h30"}>
+            <Field label="Heure" htmlFor="time" error={err.slots} hint={end ? `Fin à ${end}` : t("Ex. 9, 0930 ou 14h30")}>
               <Input id="time" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => parsedTime && setTime(parsedTime)} inputMode="numeric" aria-invalid={!parsedTime || undefined} />
             </Field>
-            <Field label="Durée (min)" htmlFor="durationMin" error={err.durationMin}>
+            <Field label={t("Durée (min)")} htmlFor="durationMin" error={err.durationMin}>
               <Input id="durationMin" name="durationMin" type="number" min={5} max={720} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value) || 0)} />
             </Field>
           </div>
@@ -170,9 +172,9 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
 
         {serviceId && date ? (
           <div aria-live="polite">
-            <p className="mb-2 text-sm font-medium">Créneaux libres ce jour-là</p>
+            <p className="mb-2 text-sm font-medium">{t("Créneaux libres ce jour-là")}</p>
             {loadingSlots ? (
-              <div className="flex gap-2" aria-label="Chargement des créneaux">
+              <div className="flex gap-2" aria-label={t("Chargement des créneaux")}>
                 {[0, 1, 2, 3, 4].map((i) => <span key={i} className="h-8 w-16 animate-pulse rounded-lg bg-surface-muted" />)}
               </div>
             ) : slots && slots.length ? (
@@ -184,7 +186,7 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">Aucun créneau libre selon les horaires. Vous pouvez quand même saisir une heure.</p>
+              <p className="text-sm text-muted">{t("Aucun créneau libre selon les horaires. Vous pouvez quand même saisir une heure.")}</p>
             )}
           </div>
         ) : null}
@@ -212,18 +214,18 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
             className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent-hover disabled:opacity-40"
           >
             <CalendarPlus className="size-4" aria-hidden="true" />
-            Ajouter une autre date
+            {t("Ajouter une autre date")}
           </button>
-          <p className="text-xs text-muted">Pour créer plusieurs rendez-vous d&apos;un coup (une semaine plus tard par défaut).</p>
+          <p className="text-xs text-muted">{t("Pour créer plusieurs rendez-vous d'un coup (une semaine plus tard par défaut).")}</p>
         </div>
 
-        <Field label="Note interne" htmlFor="note" hint="Visible uniquement par votre équipe.">
+        <Field label={t("Note interne")} htmlFor="note" hint={t("Visible uniquement par votre équipe.")}>
           <Textarea id="note" name="note" rows={3} />
         </Field>
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" name="notify" defaultChecked className="mt-0.5 size-4 accent-[var(--accent)]" />
           <span>
-            <span className="font-medium">Envoyer la confirmation par email</span>
+            <span className="font-medium">{t("Envoyer la confirmation par email")}</span>
             <span className="block text-muted">Uniquement si le {clientTerm} a une adresse email.</span>
           </span>
         </label>
@@ -231,10 +233,10 @@ export function NewAppointmentForm({ services, members, customers, defaultDate, 
 
       <div className="flex justify-end gap-2">
         <Link href="/app/agenda" className="inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium text-muted hover:bg-surface-muted hover:text-text">
-          Annuler
+          {t("Annuler")}
         </Link>
         <Button type="submit" loading={pending}>
-          {extra.length ? `Créer les ${extra.length + 1} rendez-vous` : "Créer le rendez-vous"}
+          {extra.length ? `Créer les ${extra.length + 1} rendez-vous` : t("Créer le rendez-vous")}
         </Button>
       </div>
     </form>

@@ -15,6 +15,7 @@ import { formatDay, formatTime, minutesOfDay, monthGridBounds, parseIsoDay, week
 import { listAppointments, type AgendaItem } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Agenda");
 
@@ -26,6 +27,7 @@ type SearchParams = Promise<{ semaine?: string; membre?: string; vue?: string; d
 const itemColor = (a: AgendaItem) => (a.kind === "block" ? "#a1a1aa" : (a.color ?? "#4f46e5"));
 
 export default async function AgendaPage({ searchParams }: { searchParams: SearchParams }) {
+  const t = await appT();
   const ctx = await requireContext("appointments.view");
   const tz = ctx.business.timezone;
   const params = await searchParams;
@@ -67,8 +69,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   const step = (n: number) => (view === "month" ? addMonths(ref, n) : addDays(ref, 7 * n));
   const label =
     view === "month"
-      ? formatDay(monthStart, tz, "MMMM yyyy").replace(/^./, (c) => c.toUpperCase())
-      : `${formatDay(range.start, tz, "d MMM")} – ${formatDay(addDays(range.start, 6), tz, "d MMM yyyy")}`;
+      ? formatDay(monthStart, tz, "MMMM yyyy", t.locale).replace(/^./, (c) => c.toUpperCase())
+      : `${formatDay(range.start, tz, "d MMM", t.locale)} – ${formatDay(addDays(range.start, 6), tz, "d MMM yyyy", t.locale)}`;
 
   const pill = (active: boolean) => cn("rounded-full border px-3 py-1.5 text-sm font-medium", active ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border bg-surface text-muted hover:text-text");
   const seg = (active: boolean) => cn("px-3 text-sm leading-9 font-medium", active ? "bg-surface-muted text-text" : "text-muted hover:text-text");
@@ -76,18 +78,18 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   return (
     <>
       <PageHeader
-        title="Agenda"
+        title={t("Agenda")}
         description={label}
         action={
           <>
             <div className="flex items-center rounded-lg border border-border-strong bg-surface">
-              <Link href={qs({ semaine: step(-1) })} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={view === "month" ? "Mois précédent" : "Semaine précédente"}>
+              <Link href={qs({ semaine: step(-1) })} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={view === "month" ? t("Mois précédent") : t("Semaine précédente")}>
                 <ChevronLeft className="size-4" aria-hidden="true" />
               </Link>
               <Link href={qs({ semaine: new Date() })} className="border-x border-border px-3 text-sm leading-10 font-medium hover:bg-surface-muted">
-                Aujourd&apos;hui
+                {t("Aujourd'hui")}
               </Link>
-              <Link href={qs({ semaine: step(1) })} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={view === "month" ? "Mois suivant" : "Semaine suivante"}>
+              <Link href={qs({ semaine: step(1) })} className="flex size-10 items-center justify-center text-muted hover:text-text" aria-label={view === "month" ? t("Mois suivant") : t("Semaine suivante")}>
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
@@ -97,7 +99,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
                   Bloquer
                 </ButtonLink>
                 <ButtonLink href="/app/agenda/nouveau" icon={<Plus className="size-4" aria-hidden="true" />}>
-                  Nouveau rendez-vous
+                  {t("Nouveau rendez-vous")}
                 </ButtonLink>
               </>
             ) : null}
@@ -107,7 +109,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex overflow-hidden rounded-lg border border-border-strong bg-surface" role="group" aria-label="Vue">
-          <Link href={qs({ vue: "semaine" })} className={seg(view === "week")} aria-current={view === "week" ? "page" : undefined}>Semaine</Link>
+          <Link href={qs({ vue: "semaine" })} className={seg(view === "week")} aria-current={view === "week" ? "page" : undefined}>{t("Semaine")}</Link>
           <Link href={qs({ vue: "mois" })} className={cn(seg(view === "month"), "border-l border-border")} aria-current={view === "month" ? "page" : undefined}>Mois</Link>
         </div>
         {view === "week" ? (
@@ -117,8 +119,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
           </div>
         ) : null}
         {team.length > 1 ? (
-          <div className="flex flex-wrap gap-2 sm:ml-auto" role="group" aria-label="Filtrer par membre">
-            <Link href={qs({ membre: null })} className={pill(!memberFilter)}>Toute l&apos;équipe</Link>
+          <div className="flex flex-wrap gap-2 sm:ml-auto" role="group" aria-label={t("Filtrer par membre")}>
+            <Link href={qs({ membre: null })} className={pill(!memberFilter)}>{t("Toute l'équipe")}</Link>
             {team.map((m) => (
               <Link key={m.id} href={qs({ membre: m.id })} className={pill(memberFilter === m.id)}>{m.name}</Link>
             ))}
@@ -130,7 +132,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
 
       <p className="mt-3 text-xs text-muted">
         {view === "week" && canManage ? "Cliquez sur un espace libre pour créer un rendez-vous ou bloquer le créneau. " : ""}
-        Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué.
+        {t("Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué.")}
       </p>
     </>
   );
@@ -157,7 +159,8 @@ function overlapLayout(list: { id: string; startsAt: Date; endsAt: Date }[]) {
   return out;
 }
 
-function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
+async function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
+  const t = await appT();
   // Vue « toute l'équipe » : une colonne par membre dans chaque journée, pour que les RDV simultanés ne se superposent pas.
   const lanes: (string | null)[] = memberFilter ? [memberFilter] : team.length < 2 ? [team[0]?.id ?? null] : team.map((m) => m.id);
   const laneOf = (memberId: string | null) => Math.max(0, lanes.indexOf(memberId));
@@ -187,8 +190,8 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
               const key = dayKey(d);
               return (
                 <div key={key} className="border-l border-border px-2 py-2 text-center">
-                  <p className="text-xs text-muted uppercase">{formatDay(d, tz, "EEE")}</p>
-                  <p className={cn("mx-auto mt-0.5 flex size-8 items-center justify-center rounded-full text-sm font-semibold", key === todayKey && "bg-accent text-accent-foreground")}>{formatDay(d, tz, "d")}</p>
+                  <p className="text-xs text-muted uppercase">{formatDay(d, tz, "EEE", t.locale)}</p>
+                  <p className={cn("mx-auto mt-0.5 flex size-8 items-center justify-center rounded-full text-sm font-semibold", key === todayKey && "bg-accent text-accent-foreground")}>{formatDay(d, tz, "d", t.locale)}</p>
                 </div>
               );
             })}
@@ -231,12 +234,12 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                         summary={{
                           title: a.title,
                           time: `${formatTime(a.startsAt, tz)} – ${formatTime(a.endsAt, tz)}`,
-                          kindLabel: a.kind === "block" ? (a.memberId ? "Indisponible" : "Établissement fermé") : a.kind === "group" ? "Cours collectif" : null,
+                          kindLabel: a.kind === "block" ? (a.memberId ? "Indisponible" : t("Établissement fermé")) : a.kind === "group" ? t("Cours collectif") : null,
                           service: a.kind === "appointment" ? a.serviceName : a.kind === "group" ? a.serviceName : null,
                           member: a.memberName,
                           phone: a.kind === "appointment" ? a.phone : null,
                           note: a.internalNote && a.kind !== "block" ? a.internalNote : null,
-                          status: a.status === "pending" ? "À confirmer" : null,
+                          status: a.status === "pending" ? t("À confirmer") : null,
                           color,
                         }}
                         className={cn(
@@ -248,11 +251,11 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                       >
                         <p className="truncate font-semibold">
                           {a.kind === "group" ? <Users className="mr-1 inline size-3" aria-hidden="true" /> : null}
-                          {a.title}
+                          {t(a.title)}
                         </p>
                         {height > 30 ? (
                           <p className="truncate opacity-80">
-                            {formatTime(a.startsAt, tz)} · {a.kind === "block" ? (a.memberId ? "Indisponible" : "Établissement fermé") : a.kind === "group" ? "Cours collectif" : a.serviceName}
+                            {formatTime(a.startsAt, tz)} · {a.kind === "block" ? (a.memberId ? "Indisponible" : t("Établissement fermé")) : a.kind === "group" ? t("Cours collectif") : a.serviceName}
                           </p>
                         ) : null}
                       </EventLink>
@@ -268,11 +271,12 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
   );
 }
 
-function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: AgendaItem[]; range: { start: Date; end: Date }; tz: string; todayKey: string; refMonth: string; qs: (p: { semaine?: Date; vue?: string }) => string }) {
+async function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: AgendaItem[]; range: { start: Date; end: Date }; tz: string; todayKey: string; refMonth: string; qs: (p: { semaine?: Date; vue?: string }) => string }) {
+  const t = await appT();
   const days: Date[] = [];
   for (let d = range.start; d < range.end; d = addDays(d, 1)) days.push(d);
   const dayKey = (d: Date) => format(zoned(d, tz), "yyyy-MM-dd");
-  const weekdays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const weekdays = [t("Lun"), t("Mar"), t("Mer"), t("Jeu"), t("Ven"), t("Sam"), t("Dim")];
 
   return (
     <Card className="overflow-hidden">
@@ -289,10 +293,10 @@ function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: Agenda
           const outside = !key.startsWith(refMonth);
           return (
             <div key={key} className={cn("min-h-24 min-w-0 border-border p-1.5 sm:min-h-28", i % 7 !== 0 && "border-l", i >= 7 && "border-t", outside && "bg-surface-muted/60")}>
-              <Link href={qs({ semaine: d, vue: "semaine" })} className={cn("mb-1 inline-flex size-7 items-center justify-center rounded-full text-sm font-medium hover:bg-surface-muted", key === todayKey && "bg-accent text-accent-foreground hover:bg-accent", outside && "text-muted")} aria-label={`Voir la semaine du ${formatDay(d, tz)}`}>
-                {formatDay(d, tz, "d")}
+              <Link href={qs({ semaine: d, vue: "semaine" })} className={cn("mb-1 inline-flex size-7 items-center justify-center rounded-full text-sm font-medium hover:bg-surface-muted", key === todayKey && "bg-accent text-accent-foreground hover:bg-accent", outside && "text-muted")} aria-label={`Voir la semaine du ${formatDay(d, tz, undefined, t.locale)}`}>
+                {formatDay(d, tz, "d", t.locale)}
               </Link>
-              {blocked ? <span className="ml-1 inline-block size-2 rounded-full bg-border-strong align-middle" title="Créneau bloqué ce jour-là" /> : null}
+              {blocked ? <span className="ml-1 inline-block size-2 rounded-full bg-border-strong align-middle" title={t("Créneau bloqué ce jour-là")} /> : null}
               {dayItems.length ? (
                 <Link href={qs({ semaine: d, vue: "semaine" })} className="block rounded bg-accent-soft px-1 py-0.5 text-center text-[11px] font-semibold text-accent-soft-foreground sm:hidden">
                   {dayItems.length}
@@ -302,7 +306,7 @@ function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: Agenda
                 {dayItems.slice(0, 3).map((a) => (
                   <li key={a.id}>
                     <Link href={a.href} className={cn("block truncate rounded px-1 py-0.5 text-[11px] leading-tight hover:brightness-95 sm:text-xs", a.status === "pending" && "outline-1 outline-dashed")} style={{ background: `${itemColor(a)}1f`, outlineColor: itemColor(a) }}>
-                      <span className="font-medium tabular-nums">{formatTime(a.startsAt, tz)}</span> {a.title}
+                      <span className="font-medium tabular-nums">{formatTime(a.startsAt, tz)}</span> {t(a.title)}
                     </Link>
                   </li>
                 ))}

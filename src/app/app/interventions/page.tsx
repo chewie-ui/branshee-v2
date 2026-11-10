@@ -8,10 +8,12 @@ import { requireContext } from "@/server/context";
 import { interventionRights, listInterventions } from "@/server/interventions";
 import { teamOf } from "@/server/projects";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Interventions");
 
 export default async function InterventionsPage({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const rights = interventionRights(ctx);
   const view = (await searchParams).vue === "terminees" ? "done" : (await searchParams).vue === "moi" ? "mine" : "todo";
@@ -23,7 +25,7 @@ export default async function InterventionsPage({ searchParams }: { searchParams
   const list = (view === "done" ? rows.filter((r) => r.i.status === "done" || r.i.status === "cancelled") : rows.filter((r) => r.i.status !== "cancelled")).map(({ i, tech }) => ({ id: i.id, number: i.number, title: i.title, client: i.clientName, address: i.address, status: i.status, scheduledAt: i.scheduledAt?.toISOString() ?? null, tech, techId: i.technicianId, signed: !!i.signedAt, invoiced: !!i.invoiceId }));
   return (
     <>
-      <PageHeader title="Interventions" description="Vos techniciens sur le terrain : planning, bons d'intervention signés, facturation." />
+      <PageHeader title={t("Interventions")} description={t("Vos techniciens sur le terrain : planning, bons d'intervention signés, facturation.")} />
       <InterventionsList rows={list} view={view} team={team} clients={clients.map((c) => ({ id: c.id, name: c.company ? `${c.company} (${c.name})` : c.name }))} canManage={rights.manage} tz={ctx.business.timezone || "Europe/Brussels"} />
     </>
   );

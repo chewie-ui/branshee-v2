@@ -17,10 +17,12 @@ import { currentBrand } from "@/server/brand";
 import { countBilledUsers } from "@/server/billing";
 import { userPrice } from "@/lib/skydev-plans";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Équipe");
 
 export default async function TeamPage() {
+  const t = await appT();
   const ctx = await requireContext("team.view");
   const canManage = ctx.can("team.manage");
   const rows = await db
@@ -36,20 +38,20 @@ export default async function TeamPage() {
   return (
     <>
       <PageHeader
-        title="Équipe"
+        title={t("Équipe")}
         description={`${rows.length} membre${rows.length > 1 ? "s" : ""}`}
-        action={canManage ? <ButtonLink href="/app/equipe/ajouter" data-tour="add-member" icon={<Plus className="size-4" aria-hidden="true" />}>Ajouter un membre</ButtonLink> : null}
+        action={canManage ? <ButtonLink href="/app/equipe/ajouter" data-tour="add-member" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Ajouter un membre")}</ButtonLink> : null}
       />
-      {ctx.can("grades.view") ? <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: "Grades et permissions" }]} /> : null}
+      {ctx.can("grades.view") ? <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: t("Grades et permissions") }]} /> : null}
       {nextPrice ? (
         <p className="mb-4 rounded-lg bg-surface-muted px-4 py-3 text-sm text-muted">
-          Votre abonnement compte chaque personne de l&apos;équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera <span className="font-medium text-text">{nextPrice} € TVAC par mois</span>, au prorata.{" "}
-          <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">Voir le détail</Link>
+          {t("Votre abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera")} <span className="font-medium text-text">{nextPrice} € TVAC par mois</span>, au prorata.{" "}
+          <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{t("Voir le détail")}</Link>
         </p>
       ) : null}
       {requests.length ? (
         <Card className="mb-6">
-          <CardHeader title="Demandes pour rejoindre l'équipe" description={`Ces personnes ont un compte ${(await currentBrand()).name} et souhaitent rejoindre votre établissement.`} />
+          <CardHeader title={t("Demandes pour rejoindre l'équipe")} description={`Ces personnes ont un compte ${(await currentBrand()).name} et souhaitent rejoindre votre établissement.`} />
           <ul className="divide-y divide-border">
             {requests.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -76,9 +78,9 @@ export default async function TeamPage() {
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   {m.isOwner ? <Badge tone="accent">Propriétaire</Badge> : gradeName ? <Badge>{gradeName}</Badge> : null}
-                  {m.status === "invited" ? <Badge tone="warning">Invitation en attente</Badge> : null}
+                  {m.status === "invited" ? <Badge tone="warning">{t("Invitation en attente")}</Badge> : null}
                   {!m.isActive ? <Badge tone="danger">Désactivé</Badge> : null}
-                  {!m.isBookable ? <Badge>Non réservable</Badge> : null}
+                  {!m.isBookable ? <Badge>{t("Non réservable")}</Badge> : null}
                 </div>
                 {canManage ? <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" /> : null}
               </>

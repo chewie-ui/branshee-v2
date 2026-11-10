@@ -12,6 +12,8 @@ import { OUTCOMES, REFUSE_REASONS, isOutcome, type Outcome } from "@/lib/prospec
 import { logCall, saveScript } from "@/server/actions/prospects";
 import type { ProspectView } from "@/server/prospects";
 import { statusBadge, telHref } from "./prospect-board";
+import { useT } from "@/components/app-locale";
+import { intlLocale } from "@/lib/i18n/app";
 
 type Res = { ok: boolean; message?: string; error?: string; dealId?: string };
 type Hist = { id: string; outcome: string; note: string | null; at: string; who: string | null };
@@ -26,6 +28,7 @@ function tomorrowAt10() {
 }
 
 export function CallSession({ current, remaining, skipped, script, today, history, timezone }: { current: ProspectView | null; remaining: number; skipped: string[]; script: string; today: { calls: number; answered: number; interested: number }; history: Hist[]; timezone: string }) {
+  const t = useT();
   const router = useRouter();
   const [note, setNote] = useState("");
   const [mode, setMode] = useState<null | "callback" | "refused">(null);
@@ -36,14 +39,14 @@ export function CallSession({ current, remaining, skipped, script, today, histor
   const [scriptText, setScriptText] = useState(script);
   const [scriptEdit, setScriptEdit] = useState(!script);
   const [scriptSaved, setScriptSaved] = useState<string | null>(null);
-  const fmt = new Intl.DateTimeFormat("fr-BE", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmt = new Intl.DateTimeFormat(intlLocale(t.locale), { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   const reset = () => { setNote(""); setMode(null); setReason(""); setWhen(tomorrowAt10()); };
   const send = (outcome: Outcome) => {
     if (!current) return;
     start(async () => {
-      const r: Res = await logCall({ id: current.id, outcome, note, callbackAt: outcome === "callback" ? new Date(when).toISOString() : "", reason: outcome === "refused" ? reason : "" }).catch(() => ({ ok: false, error: "Envoi impossible. Vérifiez votre connexion." }));
-      setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Noté.") : (r.error ?? "Action impossible."), dealId: r.dealId });
+      const r: Res = await logCall({ id: current.id, outcome, note, callbackAt: outcome === "callback" ? new Date(when).toISOString() : "", reason: outcome === "refused" ? reason : "" }).catch(() => ({ ok: false, error: t("Envoi impossible. Vérifiez votre connexion.") }));
+      setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Noté.") : (r.error ?? t("Action impossible.")), dealId: r.dealId });
       if (r.ok) { reset(); router.refresh(); }
     });
   };
@@ -57,16 +60,16 @@ export function CallSession({ current, remaining, skipped, script, today, histor
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/app/ventes/prospection" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />Prospection</Link>
+        <Link href="/app/ventes/prospection" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{t("Prospection")}</Link>
         <p className="text-sm text-muted" role="status">
-          Aujourd&apos;hui : <span className="font-medium text-text tabular-nums">{today.calls}</span> appel{today.calls > 1 ? "s" : ""} · <span className="font-medium text-text tabular-nums">{today.answered}</span> joint{today.answered > 1 ? "s" : ""} · <span className="font-medium text-success tabular-nums">{today.interested}</span> intéressé{today.interested > 1 ? "s" : ""}
+          {t("Aujourd'hui :")} <span className="font-medium text-text tabular-nums">{today.calls}</span> appel{today.calls > 1 ? "s" : ""} · <span className="font-medium text-text tabular-nums">{today.answered}</span> joint{today.answered > 1 ? "s" : ""} · <span className="font-medium text-success tabular-nums">{today.interested}</span> intéressé{today.interested > 1 ? "s" : ""}
         </p>
       </div>
 
       {msg ? (
         <p className={cn("rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>
-          {msg.text}
-          {msg.dealId ? <> <Link href={`/app/ventes?piste=${msg.dealId}`} className="font-medium underline">Ouvrir la piste</Link></> : null}
+          {t(msg.text)}
+          {msg.dealId ? <> <Link href={`/app/ventes?piste=${msg.dealId}`} className="font-medium underline">{t("Ouvrir la piste")}</Link></> : null}
         </p>
       ) : null}
 
@@ -98,45 +101,45 @@ export function CallSession({ current, remaining, skipped, script, today, histor
             {current.status === "callback" && current.callbackAt ? <p className="mt-4 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-soft-foreground">Rappel promis pour le {fmt.format(new Date(current.callbackAt))}.</p> : null}
             {current.note ? <p className="mt-4 whitespace-pre-line rounded-lg bg-surface-muted px-3 py-2 text-sm">{current.note}</p> : null}
 
-            <Field label="Note de l'appel (facultatif)" htmlFor="call-note" className="mt-5">
-              <Textarea id="call-note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} placeholder="Ce qu'il a dit, le nom du décideur, ce qu'il utilise aujourd'hui…" />
+            <Field label={t("Note de l'appel (facultatif)")} htmlFor="call-note" className="mt-5">
+              <Textarea id="call-note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} placeholder={t("Ce qu'il a dit, le nom du décideur, ce qu'il utilise aujourd'hui…")} />
             </Field>
 
-            <p className="mt-5 mb-2 text-sm font-medium">Résultat de l&apos;appel</p>
+            <p className="mt-5 mb-2 text-sm font-medium">{t("Résultat de l'appel")}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Button variant="secondary" disabled={pending} icon={<PhoneMissed className="size-4" aria-hidden="true" />} onClick={() => send("no_answer")}>Pas de réponse</Button>
-              <Button variant="secondary" disabled={pending} aria-pressed={mode === "callback"} icon={<CalendarClock className="size-4" aria-hidden="true" />} onClick={() => setMode(mode === "callback" ? null : "callback")}>À rappeler</Button>
+              <Button variant="secondary" disabled={pending} icon={<PhoneMissed className="size-4" aria-hidden="true" />} onClick={() => send("no_answer")}>{t("Pas de réponse")}</Button>
+              <Button variant="secondary" disabled={pending} aria-pressed={mode === "callback"} icon={<CalendarClock className="size-4" aria-hidden="true" />} onClick={() => setMode(mode === "callback" ? null : "callback")}>{t("À rappeler")}</Button>
               <Button disabled={pending} icon={<ThumbsUp className="size-4" aria-hidden="true" />} onClick={() => send("interested")}>Intéressé</Button>
-              <Button variant="secondary" disabled={pending} aria-pressed={mode === "refused"} icon={<ThumbsDown className="size-4" aria-hidden="true" />} onClick={() => setMode(mode === "refused" ? null : "refused")}>Pas intéressé</Button>
-              <Button variant="ghost" disabled={pending} icon={<PhoneOff className="size-4" aria-hidden="true" />} onClick={() => send("invalid")}>Mauvais numéro</Button>
+              <Button variant="secondary" disabled={pending} aria-pressed={mode === "refused"} icon={<ThumbsDown className="size-4" aria-hidden="true" />} onClick={() => setMode(mode === "refused" ? null : "refused")}>{t("Pas intéressé")}</Button>
+              <Button variant="ghost" disabled={pending} icon={<PhoneOff className="size-4" aria-hidden="true" />} onClick={() => send("invalid")}>{t("Mauvais numéro")}</Button>
               <Button variant="ghost" disabled={pending} icon={<SkipForward className="size-4" aria-hidden="true" />} onClick={skip}>Passer</Button>
             </div>
 
             {mode === "callback" ? (
               <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
-                <Field label="Rappeler le" htmlFor="call-when"><Input id="call-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
-                <Button loading={pending} icon={<Check className="size-4" aria-hidden="true" />} onClick={() => send("callback")}>Noter le rappel</Button>
+                <Field label={t("Rappeler le")} htmlFor="call-when"><Input id="call-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
+                <Button loading={pending} icon={<Check className="size-4" aria-hidden="true" />} onClick={() => send("callback")}>{t("Noter le rappel")}</Button>
               </div>
             ) : null}
             {mode === "refused" ? (
               <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
-                <p className="text-sm font-medium">Pourquoi ? (facultatif)</p>
+                <p className="text-sm font-medium">{t("Pourquoi ? (facultatif)")}</p>
                 <div className="flex flex-wrap gap-2">
                   {REFUSE_REASONS.map((r) => (
                     <button key={r} type="button" aria-pressed={reason === r} onClick={() => setReason(reason === r ? "" : r)} className={cn("h-9 rounded-full border px-3 text-sm transition-colors", reason === r ? "border-danger bg-danger-soft font-medium text-danger" : "border-border text-muted hover:border-border-strong hover:text-text")}>{r}</button>
                   ))}
                 </div>
-                <Input aria-label="Autre raison" value={REFUSE_REASONS.includes(reason as never) ? "" : reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder="Autre raison…" />
+                <Input aria-label={t("Autre raison")} value={REFUSE_REASONS.includes(reason as never) ? "" : reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder={t("Autre raison…")} />
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="danger" loading={pending} onClick={() => send("refused")}>Noter le refus</Button>
-                  <Button variant="ghost" disabled={pending} onClick={() => send("do_not_call")}>Ne plus jamais appeler</Button>
+                  <Button variant="danger" loading={pending} onClick={() => send("refused")}>{t("Noter le refus")}</Button>
+                  <Button variant="ghost" disabled={pending} onClick={() => send("do_not_call")}>{t("Ne plus jamais appeler")}</Button>
                 </div>
               </div>
             ) : null}
 
             {history.length ? (
               <div className="mt-6 border-t border-border pt-4">
-                <p className="text-sm font-medium">Appels précédents</p>
+                <p className="text-sm font-medium">{t("Appels précédents")}</p>
                 <ul className="mt-2 space-y-1.5 text-sm">
                   {history.map((h) => (
                     <li key={h.id} className="flex flex-wrap gap-x-2 text-muted">
@@ -153,20 +156,20 @@ export function CallSession({ current, remaining, skipped, script, today, histor
         ) : (
           <Card className="p-10 text-center">
             <Check className="mx-auto size-10 text-success" aria-hidden="true" />
-            <h1 className="mt-3 text-xl font-semibold">Personne à appeler pour l&apos;instant</h1>
-            <p className="mt-1 text-sm text-muted">Les rappels promis et ceux qui n&apos;ont pas répondu reviendront ici au bon moment. Ajoutez des prospects pour continuer.</p>
-            <Link href="/app/ventes/prospection" className="mt-5 inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">Retour à la liste</Link>
+            <h1 className="mt-3 text-xl font-semibold">{t("Personne à appeler pour l'instant")}</h1>
+            <p className="mt-1 text-sm text-muted">{t("Les rappels promis et ceux qui n'ont pas répondu reviendront ici au bon moment. Ajoutez des prospects pour continuer.")}</p>
+            <Link href="/app/ventes/prospection" className="mt-5 inline-flex h-10 items-center rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted">{t("Retour à la liste")}</Link>
           </Card>
         )}
 
         <Card className="h-fit lg:sticky lg:top-6">
-          <CardHeader title="Votre script" description="Ce que vous dites au téléphone, toujours sous les yeux." action={!scriptEdit ? <Button size="sm" variant="ghost" icon={<FileText className="size-4" aria-hidden="true" />} onClick={() => setScriptEdit(true)}>Modifier</Button> : undefined} />
+          <CardHeader title={t("Votre script")} description={t("Ce que vous dites au téléphone, toujours sous les yeux.")} action={!scriptEdit ? <Button size="sm" variant="ghost" icon={<FileText className="size-4" aria-hidden="true" />} onClick={() => setScriptEdit(true)}>{t("Modifier")}</Button> : undefined} />
           <div className="p-5">
             {scriptEdit ? (
               <div className="space-y-2">
-                <Textarea aria-label="Script d'appel" rows={12} value={scriptText} onChange={(e) => { setScriptText(e.target.value); setScriptSaved(null); }} maxLength={8000} placeholder={"Bonjour, je suis … de …\nJe vous appelle parce que …\nEst-ce que vous avez 2 minutes ?\n\nSi « déjà équipé » : …\nSi « trop cher » : …"} />
+                <Textarea aria-label={t("Script d'appel")} rows={12} value={scriptText} onChange={(e) => { setScriptText(e.target.value); setScriptSaved(null); }} maxLength={8000} placeholder={"Bonjour, je suis … de …\nJe vous appelle parce que …\nEst-ce que vous avez 2 minutes ?\n\nSi « déjà équipé » : …\nSi « trop cher » : …"} />
                 <div className="flex items-center gap-2">
-                  <Button size="sm" loading={pending} onClick={() => start(async () => { const r: Res = await saveScript(scriptText).catch(() => ({ ok: false, error: "Enregistrement impossible." })); setScriptSaved(r.ok ? "Enregistré." : (r.error ?? "Enregistrement impossible.")); if (r.ok && scriptText.trim()) setScriptEdit(false); })}>Enregistrer</Button>
+                  <Button size="sm" loading={pending} onClick={() => start(async () => { const r: Res = await saveScript(scriptText).catch(() => ({ ok: false, error: t("Enregistrement impossible.") })); setScriptSaved(r.ok ? t("Enregistré.") : (r.error ?? t("Enregistrement impossible."))); if (r.ok && scriptText.trim()) setScriptEdit(false); })}>{t("Enregistrer")}</Button>
                   {scriptSaved ? <span className="text-sm text-muted" role="status">{scriptSaved}</span> : null}
                 </div>
               </div>

@@ -17,10 +17,12 @@ import { InvoiceMailPanel } from "@/components/invoicing/invoice-mail-panel";
 import { currentBrand } from "@/server/brand";
 import { invoiceUrl, mailingOf, reminderRuleOf } from "@/server/invoice-mailing";
 import { appMetadata } from "@/server/app-locale";
+import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Document");
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("invoices.view");
   const d = await getDocument(ctx.business.id, (await params).id);
   if (!d) notFound();
@@ -45,18 +47,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const sig: SigView | null = last
     ? { status: last.signedAt ? "signed" : last.declinedAt ? "declined" : last.expiresAt < new Date() ? "expired" : last.viewedAt ? "viewed" : "pending", email: last.email, sentAt: last.sentAt.toISOString(), url: `${signOrigin()}/signer/${last.token}`, signerName: last.signerName, signedAt: last.signedAt?.toISOString() ?? null, path: last.signaturePath, ip: last.signerIp, hash: last.docHash, reason: last.declineReason }
     : null;
-  const back = isQuote ? { href: "/app/factures/devis", label: "Devis" } : { href: "/app/factures/liste", label: "Factures" };
+  const back = isQuote ? { href: "/app/factures/devis", label: t("Devis") } : { href: "/app/factures/liste", label: t("Factures") };
 
   return (
     <>
-      <Link href={back.href} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{back.label}</Link>
+      <Link href={back.href} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{t(back.label)}</Link>
       <div className="mb-6 space-y-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{docTitle(d.docType)} <span className="font-medium tabular-nums text-muted">{d.number ?? "brouillon"}</span></h1>
             <StateBadge state={state} />
           </div>
-          <p className="mt-1 text-sm text-muted">{String(client?.name ?? "Sans client")} · {isQuote ? "du" : d.number ? "émise le" : "daté du"} {fdate(d.issueDate)}</p>
+          <p className="mt-1 text-sm text-muted">{String(client?.name ?? t("Sans client"))} · {isQuote ? "du" : d.number ? t("émise le") : t("daté du")} {fdate(d.issueDate)}</p>
         </div>
         <DocActions id={d.id} docType={d.docType} state={state} signed={sigs.some((x) => !!x.signedAt)} today={today} canManage={ctx.can("invoices.manage")} mail={mailText(view, sellerName, String(seller.iban ?? ""))} reminder={state === "overdue" ? mailText(view, sellerName, String(seller.iban ?? ""), true) : null} />
       </div>
@@ -67,11 +69,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </A4Frame>
         <div className="space-y-4">
           {state === "overdue" ? (
-            <p className="flex gap-2 rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="status"><CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><b>En retard de {-days} jour{-days > 1 ? "s" : ""}.</b> Envoyez une relance polie : le texte est prêt (« Copier une relance »).</span></p>
+            <p className="flex gap-2 rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="status"><CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><b>En retard de {-days} jour{-days > 1 ? "s" : ""}.</b> {t("Envoyez une relance polie : le texte est prêt (« Copier une relance »).")}</span></p>
           ) : state === "open" ? (
             <p className="flex gap-2 rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm text-accent-soft-foreground" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Échéance {days === 0 ? "aujourd'hui" : `dans ${days} jour${days > 1 ? "s" : ""}`}. Quand le virement arrive, marquez la facture comme payée.</span></p>
           ) : state === "expired" ? (
-            <p className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Ce devis a dépassé sa date de validité. Relancez le client ou dupliquez-le avec une nouvelle date.</span></p>
+            <p className="flex gap-2 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning" role="status"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{t("Ce devis a dépassé sa date de validité. Relancez le client ou dupliquez-le avec une nouvelle date.")}</span></p>
           ) : null}
           {mailable ? (
             <InvoiceMailPanel
@@ -88,10 +90,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             const missing = ublMissing({ docType: d.docType as "invoice" | "credit", number: d.number, issueDate: d.issueDate, dueDate: d.dueDate, serviceDate: d.serviceDate, comm: d.comm, notes: d.notes, lines: d.lines, seller: d.seller, client: d.client });
             return (
               <Card>
-                <CardHeader title="Facture électronique (Peppol)" description="Obligatoire entre entreprises assujetties en Belgique depuis 2026." />
+                <CardHeader title={t("Facture électronique (Peppol)")} description={t("Obligatoire entre entreprises assujetties en Belgique depuis 2026.")} />
                 <div className="space-y-2 p-5 text-sm">
-                  {missing.includes("n° de TVA ou d'entreprise du client") ? <p className="text-muted">Client sans n° de TVA ni n° d&apos;entreprise : s&apos;il s&apos;agit d&apos;un particulier, pas de Peppol, le PDF suffit.</p> : missing.length ? <p className="text-warning">Il manque : {missing.join(", ")}. Complétez la fiche du client et les réglages de Factures, puis refaites une facture.</p> : <a href={`/app/factures/${d.id}/ubl`} download className="inline-flex h-9 items-center rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted">Télécharger le fichier UBL</a>}
-                  <p className="text-xs text-muted">Fichier au format Peppol BIS 3.0, à déposer chez votre point d&apos;accès Peppol. Pour un client particulier, le PDF suffit.</p>
+                  {missing.includes(t("n° de TVA ou d'entreprise du client")) ? <p className="text-muted">{t("Client sans n° de TVA ni n° d'entreprise : s'il s'agit d'un particulier, pas de Peppol, le PDF suffit.")}</p> : missing.length ? <p className="text-warning">Il manque : {missing.join(", ")}. Complétez la fiche du client et les réglages de Factures, puis refaites une facture.</p> : <a href={`/app/factures/${d.id}/ubl`} download className="inline-flex h-9 items-center rounded-lg border border-border-strong px-3 font-medium hover:bg-surface-muted">{t("Télécharger le fichier UBL")}</a>}
+                  <p className="text-xs text-muted">{t("Fichier au format Peppol BIS 3.0, à déposer chez votre point d'accès Peppol. Pour un client particulier, le PDF suffit.")}</p>
                 </div>
               </Card>
             );
@@ -101,11 +103,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <CardHeader title="Détails" />
             <dl className="divide-y divide-border text-sm">
               {[
-                [d.docType === "credit" ? "Montant crédité" : "Montant", moneyCents(d.ttcCents)],
-                d.vatCents ? ["dont TVA", moneyCents(d.vatCents)] : null,
+                [d.docType === "credit" ? t("Montant crédité") : t("Montant"), moneyCents(d.ttcCents)],
+                d.vatCents ? [t("dont TVA"), moneyCents(d.vatCents)] : null,
                 d.docType === "invoice" ? ["Échéance", fdate(d.dueDate)] : null,
-                isQuote ? ["Valable jusqu'au", fdate(d.validUntil)] : null,
-                d.paidDate ? ["Payée le", `${fdate(d.paidDate)}${d.paidMethod ? ` (${d.paidMethod.toLowerCase()})` : ""}`] : null,
+                isQuote ? [t("Valable jusqu'au"), fdate(d.validUntil)] : null,
+                d.paidDate ? [t("Payée le"), `${fdate(d.paidDate)}${d.paidMethod ? ` (${d.paidMethod.toLowerCase()})` : ""}`] : null,
                 d.comm ? ["Communication", d.comm] : null,
               ]
                 .filter((x): x is [string, string] => !!x)
@@ -121,26 +123,26 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </div>
               {rel.linked ? (
                 <div className="flex justify-between gap-3 px-5 py-2.5">
-                  <dt className="text-muted">{d.docType === "credit" ? "Facture d'origine" : "Facture"}</dt>
+                  <dt className="text-muted">{d.docType === "credit" ? t("Facture d'origine") : "Facture"}</dt>
                   <dd><Link href={`/app/factures/${d.relatedId}`} className="font-medium tabular-nums text-accent hover:text-accent-hover">{rel.linked.number ?? "brouillon"}</Link></dd>
                 </div>
               ) : null}
               {rel.children.filter((x) => x.docType === "credit").map((x) => (
                 <div key={x.id} className="flex justify-between gap-3 px-5 py-2.5">
-                  <dt className="text-muted">Note de crédit</dt>
+                  <dt className="text-muted">{t("Note de crédit")}</dt>
                   <dd><Link href={`/app/factures/${x.id}`} className="font-medium tabular-nums text-accent hover:text-accent-hover">{x.number ?? "brouillon"}</Link></dd>
                 </div>
               ))}
             </dl>
           </Card>
           <Card>
-            <CardHeader title="Historique" />
+            <CardHeader title={t("Historique")} />
             <ol className="space-y-2 p-5 text-sm">
               {[
                 [d.createdAt, "Créé"],
                 [d.issuedAt, "Émis"],
                 [d.paidDate ? new Date(d.paidDate + "T12:00:00") : null, "Payé"],
-                [d.cancelledAt, "Annulé par note de crédit"],
+                [d.cancelledAt, t("Annulé par note de crédit")],
               ]
                 .filter((x): x is [Date, string] => !!x[0])
                 .map(([at, label]) => (

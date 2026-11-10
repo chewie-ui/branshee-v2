@@ -9,11 +9,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/field";
 import { money, UNITS, VAT_RATES } from "@/lib/invoicing";
 import { deleteProduct, saveProduct } from "@/server/actions/invoicing";
+import { useT } from "@/components/app-locale";
 
 type Item = { id: string; name: string; unit: string; price: number; vat: number };
 
 /** Catalogue de prestations réutilisables ; les prestations RDV avec un prix y sont aussi proposées. */
 export function CatalogManager({ items, services, franchise, canManage }: { items: Item[]; services: { id: string; name: string; price: number }[]; franchise: boolean; canManage: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [editing, setEditing] = useState<Item | "new" | null>(null);
   const [form, setForm] = useState({ name: "", unit: "forfait", price: "", vat: "21" });
@@ -36,27 +38,27 @@ export function CatalogManager({ items, services, franchise, canManage }: { item
     <div className="space-y-6">
       {canManage ? (
         <div className="flex justify-end">
-          <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => open("new")}>Ajouter au catalogue</Button>
+          <Button icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => open("new")}>{t("Ajouter au catalogue")}</Button>
         </div>
       ) : null}
       {editing ? (
         <Card className="p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr]">
-            <Field label="Nom" htmlFor="p-name"><Input id="p-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex. : Bilan initial" /></Field>
+            <Field label={t("Nom")} htmlFor="p-name"><Input id="p-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("Ex. : Bilan initial")} /></Field>
             <Field label="Unité" htmlFor="p-unit"><Select id="p-unit" value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>{UNITS.map((u) => <option key={u}>{u}</option>)}</Select></Field>
             <Field label={`Prix${franchise ? "" : " HTVA"} (€)`} htmlFor="p-price"><Input id="p-price" type="number" step="0.01" min="0" inputMode="decimal" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} /></Field>
             {franchise ? null : <Field label="TVA" htmlFor="p-vat"><Select id="p-vat" value={form.vat} onChange={(e) => setForm((f) => ({ ...f, vat: e.target.value }))}>{VAT_RATES.map((r) => <option key={r} value={r}>{r} %</option>)}</Select></Field>}
           </div>
           {error ? <p className="mt-3 text-sm text-danger" role="alert">{error}</p> : null}
           <div className="mt-4 flex gap-2">
-            <Button loading={pending} onClick={submit}>Enregistrer</Button>
-            <Button variant="ghost" onClick={() => setEditing(null)}>Annuler</Button>
+            <Button loading={pending} onClick={submit}>{t("Enregistrer")}</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)}>{t("Annuler")}</Button>
           </div>
         </Card>
       ) : null}
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<Package />} title="Catalogue vide" description="Enregistrez vos prestations et produits habituels : vous les ajouterez à une facture en un clic." />
+          <EmptyState icon={<Package />} title={t("Catalogue vide")} description={t("Enregistrez vos prestations et produits habituels : vous les ajouterez à une facture en un clic.")} />
         ) : (
           <ul className="divide-y divide-border">
             {items.map((it) => (
@@ -79,8 +81,8 @@ export function CatalogManager({ items, services, franchise, canManage }: { item
       {services.length ? (
         <Card>
           <div className="border-b border-border px-5 py-4">
-            <h2 className="text-base font-semibold">Vos prestations RDV</h2>
-            <p className="mt-0.5 text-sm text-muted">Déjà disponibles dans les factures, avec le prix de votre page de réservation.</p>
+            <h2 className="text-base font-semibold">{t("Vos prestations RDV")}</h2>
+            <p className="mt-0.5 text-sm text-muted">{t("Déjà disponibles dans les factures, avec le prix de votre page de réservation.")}</p>
           </div>
           <ul className="divide-y divide-border">
             {services.map((s) => (
