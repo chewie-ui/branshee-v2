@@ -117,7 +117,7 @@ export async function sendWhatsapp(to: string, kind: "reminder" | "confirmation"
   const template = kind === "reminder" ? process.env.WHATSAPP_REMINDER_TEMPLATE || "rdv_rappel" : process.env.WHATSAPP_CONFIRMATION_TEMPLATE || "rdv_confirmation";
   const lang = process.env.WHATSAPP_TEMPLATE_LANG || "fr";
   const data = await post(
-    `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || "v22.0"}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+    `${process.env.WHATSAPP_API_BASE || "https://graph.facebook.com"}/${process.env.WHATSAPP_API_VERSION || "v22.0"}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
     { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
     { messaging_product: "whatsapp", to: recipient, type: "template", template: { name: template, language: { code: lang }, components: params.length ? [{ type: "body", parameters: params.map((p) => ({ type: "text", text: p.replace(/\s+/g, " ").trim() })) }] : [] } },
   );
@@ -191,7 +191,7 @@ async function alertLowBalance(userId: string, balance: number, threshold: numbe
   await db.insert(adminMessages).values({
     recipientId: userId,
     type: empty ? "warning" : "info",
-    title: empty ? "Solde SMS épuisé" : "Solde SMS bientôt épuisé",
+    title: empty ? "Solde SMS / WhatsApp épuisé" : "Solde SMS / WhatsApp bientôt épuisé",
     body: empty ? "Votre solde SMS / WhatsApp est vide : les prochains rappels partent par email en attendant une recharge." : `Il vous reste ${eur(balance)} € de crédit SMS / WhatsApp. Pensez à recharger.`,
     ctaLabel: "Recharger",
     ctaUrl: "/app/reglages/sms",

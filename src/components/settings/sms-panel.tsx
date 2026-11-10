@@ -57,25 +57,36 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
       </div>
 
       <Card>
-        <CardHeader title="SMS" description={smsReady ? "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place." : "Les SMS ne sont pas encore activés sur ce serveur."} />
+        <CardHeader title="WhatsApp" description={waReady ? (smsReady ? "Prioritaire et moins cher que le SMS ; repli SMS puis email." : "Envoyé au numéro du client ; si l'envoi est impossible, l'email part à la place.") : "WhatsApp arrive bientôt : en attendant, vos clients reçoivent tout par e-mail."} />
         <div className="divide-y divide-border">
-          <Switch checked={f.smsReminders} onChange={set("smsReminders")} label="Rappel par SMS" description="Remplace l'email de rappel, au même moment." />
-          <Switch checked={f.smsConfirmations} onChange={set("smsConfirmations")} label="SMS de confirmation" description="En plus de l'email de confirmation." />
-          <Switch checked={f.smsAllowOverage} onChange={set("smsAllowOverage")} label="Continuer au-delà du forfait" description="Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email." />
+          <Switch checked={f.whatsappReminders} onChange={set("whatsappReminders")} label="Rappel par WhatsApp" description="Remplace l'email de rappel, au même moment." disabled={!waReady && !f.whatsappReminders} />
+          <Switch checked={f.whatsappConfirmations} onChange={set("whatsappConfirmations")} label="Confirmation par WhatsApp" description="En plus de l'email de confirmation." disabled={!waReady && !f.whatsappConfirmations} />
         </div>
-        <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
-          <p className="mb-1 flex items-center gap-2 font-medium"><Smartphone className="size-4" aria-hidden="true" />Aperçu</p>
-          <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">votre établissement</span> est jeudi 12 mars à 10:30. Gérer : branshee.com/r/…</p>
-        </div>
+        {waReady ? (
+          <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
+            <p className="mb-1 flex items-center gap-2 font-medium"><MessageCircle className="size-4" aria-hidden="true" />Aperçu</p>
+            <p className="text-muted">Bonjour Marie, votre rendez-vous chez <span className="text-text">votre établissement</span> est confirmé pour le jeudi 12 mars à 10:30. À bientôt !</p>
+          </div>
+        ) : null}
       </Card>
 
+      {smsReady ? (
+        <Card>
+          <CardHeader title="SMS" description={waReady ? "Utilisé si WhatsApp n'a pas pu partir ; sinon l'email part à la place." : "Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place."} />
+          <div className="divide-y divide-border">
+            <Switch checked={f.smsReminders} onChange={set("smsReminders")} label="Rappel par SMS" description="Remplace l'email de rappel, au même moment." />
+            <Switch checked={f.smsConfirmations} onChange={set("smsConfirmations")} label="SMS de confirmation" description="En plus de l'email de confirmation." />
+          </div>
+          <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
+            <p className="mb-1 flex items-center gap-2 font-medium"><Smartphone className="size-4" aria-hidden="true" />Aperçu</p>
+            <p className="text-muted">Rappel : votre rendez-vous chez <span className="text-text">votre établissement</span> est jeudi 12 mars à 10:30. Gérer : branshee.com/r/…</p>
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
-        <CardHeader title="WhatsApp" description={waReady ? "Prioritaire et moins cher que le SMS ; repli SMS puis email." : "WhatsApp n'est pas encore configuré sur ce serveur (API Meta)."} />
-        <div className="divide-y divide-border">
-          <Switch checked={f.whatsappReminders} onChange={set("whatsappReminders")} label="Rappel par WhatsApp" disabled={!waReady && !f.whatsappReminders} />
-          <Switch checked={f.whatsappConfirmations} onChange={set("whatsappConfirmations")} label="Confirmation par WhatsApp" disabled={!waReady && !f.whatsappConfirmations} />
-        </div>
-        <p className="flex items-center gap-2 border-t border-border px-5 py-3 text-xs text-muted"><MessageCircle className="size-3.5" aria-hidden="true" />Même quota et même solde que les SMS.</p>
+        <CardHeader title="Au-delà des messages inclus" description={`${included} messages inclus chaque mois, communs à WhatsApp et aux SMS.`} />
+        <Switch checked={f.smsAllowOverage} onChange={set("smsAllowOverage")} label="Continuer avec le solde prépayé" description="Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email." />
       </Card>
 
       {isOwner ? (
