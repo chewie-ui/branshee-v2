@@ -14,7 +14,11 @@ const nextConfig: NextConfig = {
   // Pas dans le proxy : derrière nginx, une réécriture du proxy vise https://localhost et part en requête externe.
   // Site Skydev en anglais : /en/… sert les mêmes pages (la langue se lit dans l'adresse demandée, voir server/site-locale).
   async rewrites() {
-    return [
+    // Icône de l'onglet : celle de Skydev sur les adresses Skydev (avant les fichiers de /public, qui servent Branshee).
+    const skyHost = "(?:.+\\.)?skydev\\.(?:be|localhost)";
+    const beforeFiles = [{ source: "/favicon.ico", has: [{ type: "host" as const, value: skyHost }], destination: "/skydev-favicon.ico" }];
+    if (process.env.FORCE_BRAND === "skydev") beforeFiles.push({ source: "/favicon.ico", has: [{ type: "host" as const, value: ".*" }], destination: "/skydev-favicon.ico" });
+    const afterFiles = [
       { source: "/pro/:slug([a-z0-9-]{1,80})", destination: "/:slug" },
       { source: "/en", destination: "/" },
       { source: "/en/custom", destination: "/sur-mesure" },
@@ -27,6 +31,7 @@ const nextConfig: NextConfig = {
       { source: "/en/verify-email", destination: "/verifier-email" },
       { source: "/en/:path*", destination: "/:path*" },
     ];
+    return { beforeFiles, afterFiles, fallback: [] };
   },
   // Anciennes adresses de Branshee (liens partagés, favoris, Google) → nouvelles pages.
   async redirects() {

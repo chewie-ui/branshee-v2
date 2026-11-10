@@ -1,14 +1,14 @@
 import type { BrandId } from "@/lib/brand";
 import { BRANDS } from "@/lib/brand";
 
-/** Symbole Skydev « constellation de nuit » : un S d'étoiles reliées, ciel de nuit (version lisible en petit). */
+/** Symbole Skydev : un S au trait arrondi, un point de départ et une étoile (même dessin que l'icône de l'onglet). */
 export function SkydevSymbol({ className = "size-8" }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
       <rect width="48" height="48" rx="12" fill="#4f46e5" />
-      <polyline points="33,13 16,14 15,23 33,25 32,35 15,36" fill="none" stroke="#fff" strokeOpacity="0.7" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx="15" cy="36" r="3" fill="#c7d2fe" />
-      <path d="M33 5.5L34.8 11.2L40.5 13L34.8 14.8L33 20.5L31.2 14.8L25.5 13L31.2 11.2Z" fill="#fff" />
+      <path d="M28.5 13.5H18.5Q15 13.5 15 17V20Q15 23.5 18.5 23.5H29.5Q33 23.5 33 27V30.5Q33 34 29.5 34H18" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="15.5" cy="34" r="2.6" fill="#fff" />
+      <path d="M33.5 7.5L35 12L39.5 13.5L35 15L33.5 19.5L32 15L27.5 13.5L32 12Z" fill="#fff" />
     </svg>
   );
 }
