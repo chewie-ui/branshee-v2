@@ -4,8 +4,9 @@ import { LoyaltyQrScreen } from "@/components/loyalty/qr-screen";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { loyaltyRights, loyaltySettingsOf } from "@/server/loyalty";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "QR code fidélité" };
+export const generateMetadata = appMetadata("QR code fidélité");
 
 export default async function LoyaltyQrPage() {
   const ctx = await requireContext(undefined, { app: "fidelite" });

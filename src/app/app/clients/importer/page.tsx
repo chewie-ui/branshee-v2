@@ -4,8 +4,9 @@ import { ImportWizard } from "@/components/import/import-wizard";
 import { clientWord } from "@/lib/terminology";
 import { currentBrand } from "@/server/brand";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Importer des fiches" };
+export const generateMetadata = appMetadata("Importer des fiches");
 
 /** Import de clients depuis un autre logiciel (Skydev). */
 export default async function ImportCustomersPage() {

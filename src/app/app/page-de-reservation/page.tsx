@@ -11,8 +11,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { sanitizeRichText } from "@/server/rich-text";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Page de réservation" };
+export const generateMetadata = appMetadata("Page de réservation");
 
 export default async function BookingPageContent() {
   const ctx = await requireContext("customization.manage");

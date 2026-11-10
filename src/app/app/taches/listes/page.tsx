@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { ListsIndex } from "@/components/todos/lists-index";
 import { requireContext } from "@/server/context";
 import { teamOf, visibleLists } from "@/server/todos";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Listes · Tâches" };
+export const generateMetadata = appMetadata("Listes · Tâches");
 
 export default async function Page() {
   const ctx = await requireContext();

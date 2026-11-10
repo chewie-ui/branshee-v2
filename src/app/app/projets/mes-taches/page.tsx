@@ -8,8 +8,9 @@ import { todayIn } from "@/lib/planning";
 import { TASK_STATUS, colorClass } from "@/lib/projects";
 import { requireContext } from "@/server/context";
 import { tasksOf } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Mes tâches" };
+export const generateMetadata = appMetadata("Mes tâches");
 const fdate = (d: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(new Date(`${d}T12:00:00Z`));
 
 /** Les tâches qui me sont confiées, tous projets en cours confondus, par échéance. */

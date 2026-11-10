@@ -5,8 +5,9 @@ import { grades } from "@/db/schema";
 import { AddMemberForm } from "@/components/team/member-forms";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Ajouter un membre" };
+export const generateMetadata = appMetadata("Ajouter un membre");
 
 export default async function AddMemberPage() {
   const ctx = await requireContext("team.manage");

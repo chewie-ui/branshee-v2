@@ -7,8 +7,9 @@ import { ServiceTabs } from "@/components/services/service-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { openingBounds } from "@/server/opening";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Jours et heures des prestations" };
+export const generateMetadata = appMetadata("Jours et heures des prestations");
 
 /** Choisir en une fois quand plusieurs prestations sont proposées, dans le cadre des horaires d'ouverture. */
 export default async function ServicesHoursPage() {

@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { activeNavHref, appForPath, type AppIcon as AppIconName, type AppNavItem } from "@/lib/apps";
 import { HomeTopBar, Sidebar } from "@/components/app/sidebar";
 import type { NavItem } from "@/lib/navigation";
+import { useT } from "@/components/app-locale";
 
 export type ShellApp = { id: string; name: string; icon: AppIconName; href: string; nav: AppNavItem[]; match?: string[]; pinned?: boolean; fav?: boolean };
 type Biz = { id: string; name: string; businessType: string | null };
@@ -22,6 +23,7 @@ const starts = (path: string, prefix: string) => path === prefix || path.startsW
  */
 export function SkydevShell({ apps, rdv, business, businesses, user, badges, children }: { apps: ShellApp[]; rdv: RdvSidebar; business: Biz; businesses: Biz[]; user: { name: string; email: string; avatarUrl: string | null }; badges: Record<string, number>; children: ReactNode }) {
   const pathname = usePathname();
+  const t = useT();
   const found = pathname === "/app" ? null : appForPath(apps, pathname);
   // L'app RDV garde l'interface Branshee : ses liens (Patients, Équipe, Site web…) restent dans RDV
   // quand on les ouvre depuis RDV, au lieu de basculer vers l'app correspondante.
@@ -30,17 +32,17 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
   const app = last === "rdv" && found?.id !== "rdv" && inRdvSidebar ? (apps.find((a) => a.id === "rdv") ?? found) : found;
   if ((app?.id ?? null) !== last) setLast(app?.id ?? null);
 
-  const home: NavItem = { href: "/app", label: "Mes apps", icon: "apps" };
+  const home: NavItem = { href: "/app", label: t("Mes apps"), icon: "apps" };
   const settings = new Set(["reglages", "employes"]);
   const groups: { label: string | null; items: NavItem[] }[] =
     app?.id === "rdv"
       ? [...rdv.groups]
       : app
-        ? [{ label: null, items: [home] }, { label: app.name, items: app.nav.map((n) => ({ ...n, label: n.soon ? `${n.label} · bientôt` : n.label })) }]
-        : [{ label: null, items: [home] }, { label: "Vos apps", items: apps.filter((a) => a.pinned !== false && !settings.has(a.id)).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) }];
+        ? [{ label: null, items: [home] }, { label: app.name, items: app.nav.map((n) => ({ ...n, label: n.soon ? `${n.label} · ${t("bientôt")}` : n.label })) }]
+        : [{ label: null, items: [home] }, { label: t("Vos apps"), items: apps.filter((a) => a.pinned !== false && !settings.has(a.id)).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) }];
   // Raccourcis : les apps épinglées (sauf celle ouverte), pour passer de RDV à Factures ou Clients en un clic.
   const shortcuts = app ? apps.filter((a) => a.fav && a.id !== app.id).map((a) => ({ href: a.href, label: a.name, icon: a.icon })) : [];
-  if (shortcuts.length) groups.push({ label: "Raccourcis", items: shortcuts });
+  if (shortcuts.length) groups.push({ label: t("Raccourcis"), items: shortcuts });
   const activeHref = app && app.id !== "rdv" ? activeNavHref(app.nav, pathname) : undefined;
 
   // Accueil et pages hors app (questionnaire de départ, compte, aide, parrainage) : pleine largeur, barre en haut
@@ -59,7 +61,7 @@ export function SkydevShell({ apps, rdv, business, businesses, user, badges, chi
     );
   return (
     <div className="min-h-dvh">
-      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} switcher custom={app.id === "sur-mesure" ? null : { href: `/app/sur-mesure?app=${app.id}`, label: `Une idée pour ${app.name} ?` }} />
+      <Sidebar brand="skydev" groups={groups} footer={rdv.footer} business={business} businesses={businesses} user={user} pendingCount={badges["/app/demandes"] ?? 0} supportUnread={badges["/app/aide"] ?? 0} activeHref={activeHref} switcher custom={app.id === "sur-mesure" ? null : { href: `/app/sur-mesure?app=${app.id}`, label: t("Une idée pour {app} ?", { app: app.name }) }} />
       <AppSwitcher apps={apps} />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>

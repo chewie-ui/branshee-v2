@@ -14,8 +14,9 @@ import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
 import { limitOf } from "@/lib/plans";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Historique" };
+export const generateMetadata = appMetadata("Historique");
 
 const PER_PAGE = 30;
 type SearchParams = Promise<{ q?: string; statut?: string; periode?: string; membre?: string; page?: string }>;

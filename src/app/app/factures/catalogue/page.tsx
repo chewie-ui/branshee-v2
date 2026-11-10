@@ -3,8 +3,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { CatalogManager } from "@/components/invoicing/catalog-manager";
 import { requireContext } from "@/server/context";
 import { catalog, getSellerSettings } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Catalogue" };
+export const generateMetadata = appMetadata("Catalogue");
 
 export default async function Page() {
   const ctx = await requireContext("invoices.view");

@@ -8,8 +8,9 @@ import { currentBrand } from "@/server/brand";
 import { deliveriesOf } from "@/server/connect";
 import { requireContext } from "@/server/context";
 import { shopOrigin, shopSettingsOf } from "@/server/shop";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Connecter un site" };
+export const generateMetadata = appMetadata("Connecter un site");
 export const dynamic = "force-dynamic";
 
 /** Relier le site du pro à Skydev : widgets à copier-coller (tout site), clés API et webhooks (site sur mesure). */

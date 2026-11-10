@@ -24,6 +24,7 @@ export function RegisterForm({ client = false, next, refCode, defaults = {}, loc
       {client ? <input type="hidden" name="kind" value="client" /> : null}
       {next ? <input type="hidden" name="next" value={next} /> : null}
       {refCode ? <input type="hidden" name="ref" value={refCode} /> : null}
+      <input type="hidden" name="lang" value={locale} />
       <Field label={t.fullName} htmlFor="fullName" error={err.fullName}>
         <Input id="fullName" name="fullName" autoComplete="name" required defaultValue={state?.values?.fullName ?? defaults.fullName} aria-invalid={!!err.fullName || undefined} />
       </Field>

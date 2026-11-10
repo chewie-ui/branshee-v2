@@ -13,8 +13,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { formatDay, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Horaires" };
+export const generateMetadata = appMetadata("Horaires");
 
 const hhmm = (t: string) => t.slice(0, 5);
 

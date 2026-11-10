@@ -3,8 +3,9 @@ import { StockBoard } from "@/components/stock/stock-board";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { productsOf, stockRights } from "@/server/stock";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Stock" };
+export const generateMetadata = appMetadata("Stock");
 
 export default async function StockPage() {
   const ctx = await requireContext();

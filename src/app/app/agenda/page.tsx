@@ -14,8 +14,9 @@ import { cn } from "@/lib/cn";
 import { formatDay, formatTime, minutesOfDay, monthGridBounds, parseIsoDay, weekBounds, zoned } from "@/lib/time";
 import { listAppointments, type AgendaItem } from "@/server/appointments";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Agenda" };
+export const generateMetadata = appMetadata("Agenda");
 
 const DEFAULT_START = 8;
 const DEFAULT_END = 19;

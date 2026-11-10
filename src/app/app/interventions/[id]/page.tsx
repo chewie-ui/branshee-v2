@@ -7,8 +7,9 @@ import { InterventionSheet } from "@/components/interventions/intervention-sheet
 import { requireContext } from "@/server/context";
 import { canWork, interventionOf, interventionRights } from "@/server/interventions";
 import { teamOf } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Intervention" };
+export const generateMetadata = appMetadata("Intervention");
 
 export default async function InterventionPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext();

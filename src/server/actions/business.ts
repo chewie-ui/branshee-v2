@@ -15,6 +15,7 @@ import { isOfficialProfession, professionKey } from "@/lib/professions";
 import { BUSINESS_COOKIE } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
 import { requireContext, requireUser } from "@/server/context";
+import { isCountryCode } from "@/lib/countries";
 
 export type CreateBusinessState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
@@ -38,7 +39,8 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   const brand = (await currentBrand()).id;
   // Essai gratuit de 30 jours : seulement pour le premier établissement du compte (même supprimé depuis).
   const firstBusiness = (await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, user.id)).limit(1)).length === 0;
-  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null }, { trial: firstBusiness, trialPlan: brand === "skydev" ? SKYDEV_PLAN : "pro", brand });
+  const country = String(formData.get("country") ?? "BE").toUpperCase();
+  const { business } = await createBusiness(owner!, { name: parsed.data.name, businessType: parsed.data.businessType || null, city: parsed.data.city || null, countryCode: isCountryCode(country) ? country : "BE" }, { trial: firstBusiness, trialPlan: brand === "skydev" ? SKYDEV_PLAN : "pro", brand });
   if (firstBusiness) after(() => notifyWelcomePro(user.id, business.name));
   // Métier hors liste : proposé à l'équipe (page Métiers du super-admin).
   const type = parsed.data.businessType;

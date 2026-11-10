@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { giftCardsOf, loyaltyRights } from "@/server/loyalty";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Cartes cadeaux" };
+export const generateMetadata = appMetadata("Cartes cadeaux");
 
 export default async function GiftCardsPage() {
   const ctx = await requireContext();

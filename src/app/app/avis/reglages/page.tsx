@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DEFAULT_MESSAGE } from "@/lib/google-reviews";
 import { requireContext } from "@/server/context";
 import { reviewRights, reviewSettingsOf } from "@/server/google-reviews";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Réglages des avis" };
+export const generateMetadata = appMetadata("Réglages des avis");
 
 export default async function ReviewSettingsPage() {
   const ctx = await requireContext();

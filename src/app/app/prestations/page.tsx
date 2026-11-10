@@ -10,8 +10,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ServiceTabs } from "@/components/services/service-tabs";
 import { ServicesList } from "@/components/services/services-list";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Prestations" };
+export const generateMetadata = appMetadata("Prestations");
 
 export default async function ServicesPage() {
   const ctx = await requireContext("services.view");

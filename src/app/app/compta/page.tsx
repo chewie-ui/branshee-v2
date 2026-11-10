@@ -9,8 +9,9 @@ import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { accountingFor, monthlySeries, receivables } from "@/server/accounting";
 import { getSellerSettings } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Comptabilité" };
+export const generateMetadata = appMetadata("Comptabilité");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 const monthLabel = (ym: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "short" }).format(new Date(`${ym}-15T12:00:00Z`));
 

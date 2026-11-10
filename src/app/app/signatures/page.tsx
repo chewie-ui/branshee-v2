@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Signatures" };
+export const generateMetadata = appMetadata("Signatures");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 
 /** Toutes les demandes de signature : en attente, ouvertes, signées, refusées. */

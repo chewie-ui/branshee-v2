@@ -4,8 +4,9 @@ import { DocumentEditor } from "@/components/invoicing/document-editor";
 import { requireContext } from "@/server/context";
 import { getDocument, relatedDocuments } from "@/server/invoicing";
 import { editorProps } from "@/server/invoicing-editor";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Modifier" };
+export const generateMetadata = appMetadata("Modifier");
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext("invoices.manage");

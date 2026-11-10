@@ -10,8 +10,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { formatTime, parseIsoDay, zoned } from "@/lib/time";
 import { hhmmOf, minutesOf, parseQuickTime } from "@/lib/time-input";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Bloquer un créneau" };
+export const generateMetadata = appMetadata("Bloquer un créneau");
 
 type SearchParams = Promise<{ id?: string; date?: string; heure?: string; fin?: string; membre?: string }>;
 

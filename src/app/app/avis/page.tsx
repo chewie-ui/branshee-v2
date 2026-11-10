@@ -8,8 +8,9 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { recentRequests, reviewRights, reviewSettingsOf, reviewStats } from "@/server/google-reviews";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Avis Google" };
+export const generateMetadata = appMetadata("Avis Google");
 const fdate = (d: Date) => new Intl.DateTimeFormat("fr-BE", { day: "numeric", month: "short" }).format(d);
 
 export default async function ReviewsPage() {

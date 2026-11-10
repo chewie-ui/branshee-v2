@@ -6,8 +6,9 @@ import { businesses } from "@/db/schema";
 import { AppSetup } from "@/components/apps/app-setup";
 import { currentBrand } from "@/server/brand";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Bien démarrer" };
+export const generateMetadata = appMetadata("Bien démarrer");
 
 /** Skydev : questionnaire de départ (aussi relançable depuis l'accueil pour changer ses apps). */
 export default async function SetupPage() {

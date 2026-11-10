@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/app-locale";
 
 export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/etablissement", label: "Établissement", ready: true },
@@ -16,9 +17,10 @@ export const SETTINGS_SECTIONS = [
 ];
 
 export function SettingsNav({ extra = [] }: { extra?: { href: string; label: string }[] }) {
+  const t = useT();
   const pathname = usePathname();
   return (
-    <nav aria-label="Sections des réglages" className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
+    <nav aria-label={t("Sections des réglages")} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
       {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].map((s) =>
         s.ready ? (
           <Link
@@ -27,12 +29,12 @@ export function SettingsNav({ extra = [] }: { extra?: { href: string; label: str
             aria-current={pathname === s.href ? "page" : undefined}
             className={cn("rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors", pathname === s.href ? "bg-surface text-text shadow-sm ring-1 ring-border" : "text-muted hover:bg-surface hover:text-text")}
           >
-            {s.label}
+            {t(s.label)}
           </Link>
         ) : (
           <span key={s.href} className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap text-muted" aria-disabled="true">
-            {s.label}
-            <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium">Bientôt</span>
+            {t(s.label)}
+            <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium">{t("Bientôt")}</span>
           </span>
         ),
       )}

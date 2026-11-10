@@ -12,8 +12,9 @@ import { cn } from "@/lib/cn";
 import { docState, fdate, FRANCHISE_LIMIT, moneyCents, todayIso } from "@/lib/invoicing";
 import { requireContext } from "@/server/context";
 import { dashboardStats, getSellerSettings, listDocuments } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Factures · Tableau de bord" };
+export const generateMetadata = appMetadata("Factures · Tableau de bord");
 
 const MONTHS = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
 

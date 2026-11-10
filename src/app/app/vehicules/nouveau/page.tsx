@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { redirect } from "next/navigation";
 import { vehicleRights } from "@/server/vehicles";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Nouveau véhicule" };
+export const generateMetadata = appMetadata("Nouveau véhicule");
 
 export default async function NewVehiclePage() {
   const ctx = await requireContext(undefined, { app: "vehicules" });

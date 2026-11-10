@@ -3,8 +3,9 @@ import { MenuEditor } from "@/components/orders/menu-editor";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { menuOf } from "@/server/orders";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Carte" };
+export const generateMetadata = appMetadata("Carte");
 
 export default async function MenuPage() {
   const ctx = await requireContext();

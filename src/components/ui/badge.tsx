@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Tx } from "@/components/app-locale";
 
 type Tone = "neutral" | "accent" | "success" | "warning" | "danger";
 
@@ -12,5 +13,5 @@ const tones: Record<Tone, string> = {
 };
 
 export function Badge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium", tones[tone], className)}>{children}</span>;
+  return <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium", tones[tone], className)}><Tx>{children}</Tx></span>;
 }

@@ -4,8 +4,9 @@ import { TablesEditor } from "@/components/orders/tables-editor";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { tableOrigin, tablesOf } from "@/server/orders";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Tables" };
+export const generateMetadata = appMetadata("Tables");
 
 export default async function TablesPage() {
   const ctx = await requireContext();

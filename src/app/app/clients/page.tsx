@@ -13,8 +13,9 @@ import { clientWord } from "@/lib/terminology";
 import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Clients" };
+export const generateMetadata = appMetadata("Clients");
 
 type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string }>;
 

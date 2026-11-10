@@ -8,8 +8,9 @@ import { requireContext } from "@/server/context";
 import { richTextToPlain, sanitizeArticleHtml } from "@/server/rich-text";
 import { DEFAULT_HELP, DEFAULT_HELP_SKYDEV, getSupportThread, listHelpSections } from "@/server/support";
 import { currentBrand } from "@/server/brand";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Aide et support" };
+export const generateMetadata = appMetadata("Aide et support");
 
 export default async function HelpPage() {
   const ctx = await requireContext();

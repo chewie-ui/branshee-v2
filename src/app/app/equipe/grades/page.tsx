@@ -13,8 +13,9 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Grades et permissions" };
+export const generateMetadata = appMetadata("Grades et permissions");
 
 const TOTAL = Object.values(PERMISSIONS).reduce((n, d) => n + Object.keys(d.actions).length, 0);
 

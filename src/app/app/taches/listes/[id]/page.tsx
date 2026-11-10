@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TodoPage } from "@/server/todo-page";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Liste · Tâches" };
+export const generateMetadata = appMetadata("Liste · Tâches");
 
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ terminees?: string }> }) {
   const { id } = await params;

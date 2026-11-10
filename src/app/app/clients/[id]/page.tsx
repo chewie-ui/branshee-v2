@@ -25,8 +25,9 @@ import { currentBrand } from "@/server/brand";
 import { CustomerBillingForm } from "@/components/invoicing/customer-billing-form";
 import { CustomerActivity, activityLabel } from "@/components/customers/customer-activity";
 import { customerActivity } from "@/server/customer-activity";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Fiche" };
+export const generateMetadata = appMetadata("Fiche");
 
 type SearchParams = Promise<{ onglet?: string; q?: string; prestation?: string; membre?: string; annee?: string }>;
 

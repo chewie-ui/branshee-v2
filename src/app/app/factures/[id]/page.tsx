@@ -16,8 +16,9 @@ import { ublMissing } from "@/lib/ubl";
 import { InvoiceMailPanel } from "@/components/invoicing/invoice-mail-panel";
 import { currentBrand } from "@/server/brand";
 import { invoiceUrl, mailingOf, reminderRuleOf } from "@/server/invoice-mailing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Document" };
+export const generateMetadata = appMetadata("Document");
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext("invoices.view");

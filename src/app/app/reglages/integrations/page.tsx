@@ -7,8 +7,10 @@ import { CalendarFeedCard, GoogleCalendarCard } from "@/components/settings/inte
 import { requireContext } from "@/server/context";
 import { googleConfigured } from "@/server/google";
 import { businessHas } from "@/server/plan";
+import { appT, appMetadata } from "@/server/app-locale";
+import { Tx } from "@/components/app-locale";
 
-export const metadata: Metadata = { title: "Intégrations · Réglages" };
+export const generateMetadata = appMetadata("Intégrations · Réglages");
 
 const NOTICES: Record<string, { ok: boolean; text: string }> = {
   ok: { ok: true, text: "Google Agenda connecté : vos prochains rendez-vous y sont envoyés." },
@@ -17,6 +19,7 @@ const NOTICES: Record<string, { ok: boolean; text: string }> = {
 };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext();
   const [[conn], [me], allowed] = await Promise.all([
     db.select({ email: googleCalendarConnections.googleEmail }).from(googleCalendarConnections).where(eq(googleCalendarConnections.userId, ctx.user.id)),
@@ -26,8 +29,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const notice = NOTICES[(await searchParams).google ?? ""];
   return (
     <div className="space-y-6">
-      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.text}</p> : null}
-      {!allowed ? <UpgradeNotice feature="Synchronisation Google Agenda" required="pro">Le flux iCal ci-dessous reste disponible avec tous les forfaits.</UpgradeNotice> : null}
+      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status"><Tx>{notice.text}</Tx></p> : null}
+      {!allowed ? <UpgradeNotice feature={t("Synchronisation Google Agenda")} required="pro">{t("Le flux iCal ci-dessous reste disponible avec tous les forfaits.")}</UpgradeNotice> : null}
       <GoogleCalendarCard configured={googleConfigured()} allowed={allowed} connectedEmail={conn?.email ?? null} />
       <CalendarFeedCard origin={(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")} token={me?.token ?? null} />
     </div>

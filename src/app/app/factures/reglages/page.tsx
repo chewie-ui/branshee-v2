@@ -6,8 +6,9 @@ import { getSellerSettings } from "@/server/invoicing";
 import { ReminderSettings } from "@/components/invoicing/reminder-settings";
 import { currentBrand } from "@/server/brand";
 import { reminderRuleOf } from "@/server/invoice-mailing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Réglages de facturation" };
+export const generateMetadata = appMetadata("Réglages de facturation");
 
 export default async function Page() {
   const ctx = await requireContext("invoices.view");

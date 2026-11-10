@@ -3,8 +3,9 @@ import { ServiceForm } from "@/components/services/service-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { serviceFormData } from "@/server/services-page";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Nouvelle prestation" };
+export const generateMetadata = appMetadata("Nouvelle prestation");
 
 export default async function NewServicePage() {
   const ctx = await requireContext("services.manage");

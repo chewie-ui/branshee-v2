@@ -8,8 +8,9 @@ import { DAY_SHORT, addDays, dayNum, isDay, isoWeek, mondayOf, todayIn, weekDays
 import { fmtMinutes } from "@/lib/projects";
 import { requireContext } from "@/server/context";
 import { activeProjectsWithTasks, entriesOf } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Mon temps" };
+export const generateMetadata = appMetadata("Mon temps");
 
 /** Feuille de temps de la semaine : ce que j'ai noté, jour par jour, et saisie rapide. */
 export default async function TimesheetPage({ searchParams }: { searchParams: Promise<{ semaine?: string }> }) {

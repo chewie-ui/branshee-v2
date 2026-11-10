@@ -13,6 +13,7 @@ import type { NavItem } from "@/lib/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Brand } from "@/components/brand";
 import type { BrandId } from "@/lib/brand";
+import { useT } from "@/components/app-locale";
 
 const ICONS = NAV_ICONS;
 
@@ -39,6 +40,7 @@ function isActive(pathname: string, href: string) {
 
 function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathname: string; badge?: number; activeHref?: string | null }) {
   const Icon = ICONS[item.icon];
+  const t = useT();
   const active = activeHref !== undefined && item.href !== "/app" ? item.href === activeHref : isActive(pathname, item.href);
   return (
     <Link
@@ -52,7 +54,7 @@ function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathnam
       <Icon className={cn("size-[18px] shrink-0", active ? "text-accent" : "text-muted group-hover:text-text")} strokeWidth={1.75} aria-hidden="true" />
       <span className="truncate">{item.label}</span>
       {badge ? (
-        <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-accent-foreground" aria-label={`${badge} en attente`}>
+        <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-accent-foreground" aria-label={t("{n} en attente", { n: badge })}>
           {badge}
         </span>
       ) : null}
@@ -62,6 +64,7 @@ function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathnam
 
 function BusinessSwitcher({ current, all, brand }: { current: Props["business"]; all: Props["businesses"]; brand: BrandId }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const sky = brand === "skydev";
   return (
     <div className="relative">
@@ -83,25 +86,25 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
       </button>
       {open ? (
         <>
-          <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} aria-label="Fermer" tabIndex={-1} />
+          <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} aria-label={t("Fermer")} tabIndex={-1} />
           <div role="menu" className="absolute inset-x-0 top-full z-20 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg">
-            <p className="px-2 py-1.5 text-xs font-medium text-muted">{sky ? "Vos entreprises" : "Vos établissements"}</p>
+            <p className="px-2 py-1.5 text-xs font-medium text-muted">{sky ? t("Vos entreprises") : t("Vos établissements")}</p>
             {all.map((b) => (
               <form key={b.id} action={switchBusiness.bind(null, b.id)}>
                 <button type="submit" role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted">
                   <span className="min-w-0 flex-1 truncate">{b.name}</span>
-                  {b.id === current.id ? <Check className="size-4 shrink-0 text-accent" aria-label="Actif" /> : null}
+                  {b.id === current.id ? <Check className="size-4 shrink-0 text-accent" aria-label={t("Actif")} /> : null}
                 </button>
               </form>
             ))}
             <div className="my-1 border-t border-border" />
             <Link href="/app/etablissements" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Building2 className="size-4" aria-hidden="true" />
-              {sky ? "Mes entreprises" : "Mes établissements"}
+              {sky ? t("Mes entreprises") : t("Mes établissements")}
             </Link>
             <Link href="/bienvenue" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Plus className="size-4" aria-hidden="true" />
-              {sky ? "Ajouter une entreprise" : "Ajouter un établissement"}
+              {sky ? t("Ajouter une entreprise") : t("Ajouter un établissement")}
             </Link>
           </div>
         </>
@@ -111,24 +114,25 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
 }
 
 function SidebarContent({ brand, groups, footer, business, businesses, user, pendingCount, supportUnread = 0, activeHref, pathname, switcher = false, custom, drawer = false }: Props & { pathname: string; drawer?: boolean }) {
+  const t = useT();
   // Tiroir mobile : tout le contenu défile d'un bloc (sur un petit écran, le bas fixe ne laisserait presque rien au menu).
   return (
     <div className={drawer ? "flex min-h-full flex-col" : "flex h-full flex-col"}>
       <div className="space-y-3 p-3">
-        <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label="Accueil">
+        <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label={t("Accueil")}>
           <Brand brand={brand} small />
         </Link>
         <BusinessSwitcher current={business} all={businesses} brand={brand} />
         {switcher ? (
           <button type="button" onClick={openSwitcher} className="flex h-10 w-full items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 text-sm text-muted transition-colors hover:border-border-strong hover:text-text focus-visible:outline-2 focus-visible:outline-accent">
             <Search className="size-4" aria-hidden="true" />
-            <span className="flex-1 text-left">Aller à une app…</span>
+            <span className="flex-1 text-left">{t("Aller à une app…")}</span>
             <kbd className="hidden rounded border border-border bg-surface px-1.5 text-[11px] lg:inline">Ctrl K</kbd>
           </button>
         ) : null}
       </div>
 
-      <nav className={cn("flex-1 px-3 pb-3", !drawer && "overflow-y-auto")} aria-label="Navigation principale">
+      <nav className={cn("flex-1 px-3 pb-3", !drawer && "overflow-y-auto")} aria-label={t("Navigation principale")}>
         {groups.map((group) => (
           <div key={group.label ?? "main"} className="mt-4 first:mt-1">
             {group.label ? <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-muted uppercase">{group.label}</p> : null}
@@ -149,7 +153,7 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
             <Wand2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
             <span className="min-w-0">
               <span className="block font-medium text-text">{custom.label}</span>
-              <span className="block text-xs text-muted">Décrivez-la, on la construit pour vous.</span>
+              <span className="block text-xs text-muted">{t("Décrivez-la, on la construit pour vous.")}</span>
             </span>
           </Link>
         ) : null}
@@ -176,11 +180,11 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
             </span>
           </Link>
           {/* Ses propres rendez-vous, comme client d'autres pros (espace client). */}
-          <Link href="/espace-client" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Mes rendez-vous en tant que client" title="Mes rendez-vous (côté client)">
+          <Link href="/espace-client" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Mes rendez-vous en tant que client")} title={t("Mes rendez-vous (côté client)")}>
             <CalendarHeart className="size-4" aria-hidden="true" />
           </Link>
           <form action={logout}>
-            <button type="submit" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Se déconnecter" title="Se déconnecter">
+            <button type="submit" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Se déconnecter")} title={t("Se déconnecter")}>
               <LogOut className="size-4" aria-hidden="true" />
             </button>
           </form>
@@ -198,38 +202,39 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
   const settings = footer.find((i) => i.href === "/app/reglages");
   const help = footer.find((i) => i.href === "/app/aide");
   const invite = footer.find((i) => i.href === "/app/parrainage");
+  const t = useT();
   const iconBtn = "relative flex size-10 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text sm:w-auto sm:gap-2 sm:px-3 sm:text-sm sm:font-medium";
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-6 sm:py-0">
-        <Link href="/app" className="flex h-10 shrink-0 items-center rounded-lg px-1" aria-label={`${brand === "skydev" ? "Skydev" : "Branshee"}, accueil`}>
+        <Link href="/app" className="flex h-10 shrink-0 items-center rounded-lg px-1" aria-label={`${brand === "skydev" ? "Skydev" : "Branshee"}, ${t("Accueil").toLowerCase()}`}>
           <Brand brand={brand} small />
         </Link>
         <div className="order-last min-w-0 basis-full sm:order-none sm:w-60 sm:basis-auto">
           <BusinessSwitcher current={business} all={businesses} brand={brand} />
         </div>
-        <nav className="ml-auto flex items-center gap-1" aria-label="Compte">
-          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label="Aller à une app (Ctrl+K)" title="Aller à une app (Ctrl+K)"><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap 2xl:inline">Aller à…</span></button> : null}
+        <nav className="ml-auto flex items-center gap-1" aria-label={t("Compte")}>
+          {switcher ? <button type="button" onClick={openSwitcher} className={iconBtn} aria-label={t("Aller à une app (Ctrl+K)")} title={t("Aller à une app (Ctrl+K)")}><Search className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap 2xl:inline">{t("Aller à…")}</span></button> : null}
           {invite ? (
-            <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Parrainage : 1 mois offert par pro invité">
-              <Gift className="size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap sm:inline">1 mois offert</span>
+            <Link href={invite.href} className="flex h-10 items-center gap-2 rounded-lg bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label={t("Parrainage : 1 mois offert par pro invité")}>
+              <Gift className="size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap sm:inline">{t("1 mois offert")}</span>
             </Link>
           ) : null}
-          {user.isSuperadmin ? <Link href="/admin" className={iconBtn} aria-label="Administration de la plateforme"><Shield className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden lg:inline">Admin</span></Link> : null}
-          {settings ? <Link href={settings.href} className={iconBtn} aria-label="Réglages"><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">Réglages</span></Link> : null}
+          {user.isSuperadmin ? <Link href="/admin" className={iconBtn} aria-label={t("Administration de la plateforme")}><Shield className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden lg:inline">Admin</span></Link> : null}
+          {settings ? <Link href={settings.href} className={iconBtn} aria-label={t("Réglages")}><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">{t("Réglages")}</span></Link> : null}
           {help ? (
-            <Link href={help.href} className={iconBtn} aria-label={supportUnread ? `Aide et support, ${supportUnread} message${supportUnread > 1 ? "s" : ""} non lu${supportUnread > 1 ? "s" : ""}` : "Aide et support"}>
-              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap lg:inline">Aide</span>
+            <Link href={help.href} className={iconBtn} aria-label={supportUnread ? t("Aide et support, {n} message(s) non lu(s)", { n: supportUnread }) : t("Aide et support")}>
+              <LifeBuoy className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap lg:inline">{t("Aide")}</span>
               {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
             </Link>
           ) : null}
-          <Link href="/espace-client" className={iconBtn} aria-label="Mes rendez-vous en tant que client" title="Mes rendez-vous (côté client)"><CalendarHeart className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">Mes RDV</span></Link>
-          <Link href="/app/compte" className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-muted" aria-label="Mon compte" title={user.email}>
+          <Link href="/espace-client" className={iconBtn} aria-label={t("Mes rendez-vous en tant que client")} title={t("Mes rendez-vous (côté client)")}><CalendarHeart className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">{t("Mes RDV")}</span></Link>
+          <Link href="/app/compte" className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-muted" aria-label={t("Mon compte")} title={user.email}>
             <Avatar name={user.name} src={user.avatarUrl} size="sm" />
             <span className="hidden max-w-32 truncate text-sm font-medium lg:block">{user.name}</span>
           </Link>
           <form action={logout}>
-            <button type="submit" className="flex size-10 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label="Se déconnecter" title="Se déconnecter">
+            <button type="submit" className="flex size-10 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Se déconnecter")} title={t("Se déconnecter")}>
               <LogOut className="size-4" aria-hidden="true" />
             </button>
           </form>
@@ -245,6 +250,7 @@ export function Sidebar(props: Props) {
   const [openedOn, setOpenedOn] = useState<string | null>(null);
   const open = openedOn === pathname;
   const setOpen = (value: boolean) => setOpenedOn(value ? pathname : null);
+  const t = useT();
   // Échap ferme le tiroir.
   useEffect(() => {
     if (!open) return;
@@ -257,19 +263,19 @@ export function Sidebar(props: Props) {
     <>
       {/* Barre du haut — mobile uniquement */}
       <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-4 lg:hidden">
-        <button type="button" onClick={() => setOpen(true)} className="-ml-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label="Ouvrir le menu">
+        <button type="button" onClick={() => setOpen(true)} className="-ml-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label={t("Ouvrir le menu")}>
           <Menu className="size-5" aria-hidden="true" />
         </button>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{props.business.name}</span>
-        {props.switcher ? <button type="button" onClick={openSwitcher} className="-mr-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label="Aller à une app"><Search className="size-5" aria-hidden="true" /></button> : null}
+        {props.switcher ? <button type="button" onClick={openSwitcher} className="-mr-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label={t("Aller à une app")}><Search className="size-5" aria-hidden="true" /></button> : null}
       </div>
 
       {/* Tiroir mobile */}
       {open ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button type="button" className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-label="Fermer le menu" />
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t("Menu")}>
+          <button type="button" className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-label={t("Fermer le menu")} />
           <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto overscroll-contain bg-surface shadow-xl">
-            <button type="button" onClick={() => setOpen(false)} className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label="Fermer le menu">
+            <button type="button" onClick={() => setOpen(false)} className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label={t("Fermer le menu")}>
               <X className="size-5" aria-hidden="true" />
             </button>
             <SidebarContent {...props} pathname={pathname} drawer />

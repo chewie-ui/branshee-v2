@@ -4,8 +4,9 @@ import { MessagesInbox } from "@/components/connect/messages-inbox";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { contactMessagesOf } from "@/server/contact-messages";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Messages du site" };
+export const generateMetadata = appMetadata("Messages du site");
 export const dynamic = "force-dynamic";
 
 /** Messages reçus par le formulaire de contact du site (widget, site Skydev ou site sur mesure). */

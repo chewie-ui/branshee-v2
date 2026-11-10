@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { listProjects, projectRights } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Projets" };
+export const generateMetadata = appMetadata("Projets");
 
 export default async function ProjectsPage() {
   const ctx = await requireContext();

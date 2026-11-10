@@ -6,8 +6,12 @@ import { BusinessForm } from "@/components/settings/business-form";
 import { ContactModeForm } from "@/components/settings/contact-mode-form";
 import { contactModeOf } from "@/lib/contact-mode";
 import { requireContext } from "@/server/context";
+import { CountryForm } from "@/components/settings/country-form";
+import { countryOptions } from "@/lib/countries";
+import { currentBrand } from "@/server/brand";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Établissement · Réglages" };
+export const generateMetadata = appMetadata("Établissement · Réglages");
 
 export default async function BusinessSettingsPage() {
   const ctx = await requireContext("business.manage");
@@ -18,6 +22,7 @@ export default async function BusinessSettingsPage() {
         b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "" }}
       />
       <ContactModeForm mode={contactModeOf(b!.contactMode)} note={b!.contactNote ?? ""} hasPhone={!!b!.phone} />
+      {(await currentBrand()).id === "skydev" ? <CountryForm country={b!.countryCode} options={countryOptions(ctx.user.locale ?? "fr")} /> : null}
     </>
   );
 }

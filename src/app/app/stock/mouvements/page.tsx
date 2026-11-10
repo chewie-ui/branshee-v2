@@ -5,8 +5,9 @@ import { cn } from "@/lib/cn";
 import { MOVE_REASONS } from "@/lib/stock";
 import { requireContext } from "@/server/context";
 import { movesOf } from "@/server/stock";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Mouvements de stock" };
+export const generateMetadata = appMetadata("Mouvements de stock");
 
 /** Historique des entrées et sorties : qui, quoi, quand. */
 export default async function MovesPage() {

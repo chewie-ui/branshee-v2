@@ -12,8 +12,8 @@ import { isLocked } from "@/server/plan";
 import { APPS, appForPath } from "@/lib/apps";
 
 export type AppContext = {
-  user: { id: string; name: string; email: string; avatarUrl: string | null; isDemo?: boolean; isSuperadmin?: boolean };
-  business: { id: string; name: string; slug: string; businessType: string | null; timezone: string; brand: string | null };
+  user: { id: string; name: string; email: string; avatarUrl: string | null; isDemo?: boolean; isSuperadmin?: boolean; locale?: "fr" | "en" };
+  business: { id: string; name: string; slug: string; businessType: string | null; timezone: string; brand: string | null; countryCode?: string };
   member: { id: string; isOwner: boolean };
   /** Tous les établissements dont l'utilisateur est membre actif (pour le sélecteur). */
   businesses: { id: string; name: string; businessType: string | null }[];
@@ -36,7 +36,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
   const session = await getSessionUser();
   if (!session) return { kind: "anonymous" };
   const u = session.user;
-  const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl, isDemo: u.isDemo, isSuperadmin: u.isSuperadmin };
+  const user = { id: u.id, name: u.fullName, email: u.email, avatarUrl: u.avatarUrl, isDemo: u.isDemo, isSuperadmin: u.isSuperadmin, locale: (u.locale === "en" ? "en" : "fr") as "fr" | "en" };
 
   const rows = await db
     .select({ business: businesses, member: members, permissions: grades.permissions, appAccess: grades.appAccess })
@@ -59,7 +59,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
     kind: "ok",
     ctx: {
       user,
-      business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone, brand: row.business.brand },
+      business: { id: row.business.id, name: row.business.name, slug: row.business.slug, businessType: row.business.businessType, timezone: row.business.timezone, brand: row.business.brand, countryCode: row.business.countryCode },
       member: { id: row.member.id, isOwner },
       businesses: rows.map((r) => ({ id: r.business.id, name: r.business.name, businessType: r.business.businessType })),
       permissions,

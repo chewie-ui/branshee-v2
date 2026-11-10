@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDay, formatTime } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Séance" };
+export const generateMetadata = appMetadata("Séance");
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const ctx = await requireContext("groupSessions.view");

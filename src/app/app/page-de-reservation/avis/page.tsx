@@ -12,8 +12,9 @@ import { cn } from "@/lib/cn";
 import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Avis · Page de réservation" };
+export const generateMetadata = appMetadata("Avis · Page de réservation");
 
 export default async function ReviewsPage() {
   const ctx = await requireContext("customization.manage");

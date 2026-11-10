@@ -5,8 +5,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { vehicleRights, vehiclesOf } from "@/server/vehicles";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Véhicules" };
+export const generateMetadata = appMetadata("Véhicules");
 
 export default async function VehiclesPage() {
   const ctx = await requireContext(undefined, { app: "vehicules" });

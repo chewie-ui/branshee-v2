@@ -9,12 +9,14 @@ import { formatDay, formatTime } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appT, appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Journal d'activité · Réglages" };
+export const generateMetadata = appMetadata("Journal d'activité · Réglages");
 
 export default async function ActivityLogPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const t = await appT();
   const ctx = await requireContext("logs.view");
-  if (!(await businessHas(ctx.business.id, "activityLog"))) return <UpgradeNotice feature="Journal d'activité" required="pro_plus">Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.</UpgradeNotice>;
+  if (!(await businessHas(ctx.business.id, "activityLog"))) return <UpgradeNotice feature="Journal d'activité" required="pro_plus">{t("Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.")}</UpgradeNotice>;
   const tz = ctx.business.timezone;
   const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const like = `%${q.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
@@ -28,12 +30,12 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <form role="search" className="max-w-sm">
-        <label htmlFor="q" className="sr-only">Rechercher dans le journal</label>
-        <input id="q" name="q" defaultValue={q} placeholder="Rechercher (personne, action…)" className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm placeholder:text-muted focus-visible:border-accent" />
+        <label htmlFor="q" className="sr-only">{t("Rechercher dans le journal")}</label>
+        <input id="q" name="q" defaultValue={q} placeholder={t("Rechercher (personne, action…)")} className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm placeholder:text-muted focus-visible:border-accent" />
       </form>
       <Card className="overflow-hidden">
         {rows.length === 0 ? (
-          <EmptyState icon={<History />} title={q ? "Aucun résultat" : "Journal vide"} description="Les actions de l'équipe (RDV, horaires, prestations, réglages…) apparaîtront ici." />
+          <EmptyState icon={<History />} title={q ? t("Aucun résultat") : t("Journal vide")} description={t("Les actions de l'équipe (RDV, horaires, prestations, réglages…) apparaîtront ici.")} />
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((r) => (
@@ -51,7 +53,7 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
           </ul>
         )}
       </Card>
-      <p className="text-xs text-muted">Les 300 dernières actions sont affichées.</p>
+      <p className="text-xs text-muted">{t("Les 300 dernières actions sont affichées.")}</p>
     </div>
   );
 }

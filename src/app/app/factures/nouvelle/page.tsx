@@ -6,8 +6,9 @@ import { DocumentEditor, type EditorDoc } from "@/components/invoicing/document-
 import { addDays, newLine, todayIso } from "@/lib/invoicing";
 import { requireContext } from "@/server/context";
 import { editorProps } from "@/server/invoicing-editor";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Nouveau document" };
+export const generateMetadata = appMetadata("Nouveau document");
 
 /** Nouvelle facture ou nouveau devis ; `?client=` pré-choisit le client, `?rdv=` reprend un rendez-vous. */
 export default async function Page({ searchParams }: { searchParams: Promise<{ type?: string; client?: string; rdv?: string }> }) {

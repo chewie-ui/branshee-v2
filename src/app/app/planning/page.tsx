@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { isDay, isoWeek, mondayOf, weekRangeLabel } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { planningRights, weekPlanning } from "@/server/planning";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Planning" };
+export const generateMetadata = appMetadata("Planning");
 
 /** Date du jour dans le fuseau de l'établissement (AAAA-MM-JJ). */
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

@@ -6,8 +6,9 @@ import { DocList } from "@/components/invoicing/doc-list";
 import { todayIso } from "@/lib/invoicing";
 import { requireContext } from "@/server/context";
 import { customerOptions, listDocuments } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Factures" };
+export const generateMetadata = appMetadata("Factures");
 
 const FILTERS = [
   { key: "all", label: "Toutes" },

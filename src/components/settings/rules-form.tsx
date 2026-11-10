@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Field, Input, Select } from "@/components/ui/field";
 import { saveBookingRules } from "@/server/actions/settings";
 import { Section, SettingsForm, Toggle } from "./settings-form";
+import { useT } from "@/components/app-locale";
 
 type R = {
   slotMode: "fixed" | "interval";
@@ -44,6 +45,7 @@ const HORIZONS = [
 const BUFFERS = [0, 5, 10, 15, 20, 30, 45, 60];
 
 export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boolean }) {
+  const t = useT();
   const [mode, setMode] = useState(r.slotMode);
   const [fv, setFv] = useState(r.firstVisitQuestion.enabled);
   const pick = (list: { v: string }[], value: number | null) => (value == null ? "none" : list.some((x) => x.v === String(value)) ? String(value) : "custom");
@@ -56,13 +58,13 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
     <SettingsForm action={saveBookingRules}>
       {(err) => (
         <>
-          <Section title="Créneaux proposés">
+          <Section title={t("Créneaux proposés")}>
             <fieldset>
-              <legend className="mb-2 text-sm font-medium">Heures de début</legend>
+              <legend className="mb-2 text-sm font-medium">{t("Heures de début")}</legend>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
-                  { v: "fixed", t: "À la suite", d: "Les créneaux s'enchaînent selon la durée de la prestation (9:00, 9:45, 10:30…)." },
-                  { v: "interval", t: "À intervalle régulier", d: "Un départ possible toutes les N minutes, quelle que soit la durée." },
+                  { v: "fixed", t: t("À la suite"), d: t("Les créneaux s'enchaînent selon la durée de la prestation (9:00, 9:45, 10:30…).") },
+                  { v: "interval", t: t("À intervalle régulier"), d: t("Un départ possible toutes les N minutes, quelle que soit la durée.") },
                 ].map((o) => (
                   <label key={o.v} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${mode === o.v ? "border-accent ring-1 ring-accent" : "border-border hover:border-border-strong"}`}>
                     <input type="radio" name="slotMode" value={o.v} checked={mode === o.v} onChange={() => setMode(o.v as R["slotMode"])} className="mt-0.5 size-4 accent-[var(--accent)]" />
@@ -75,7 +77,7 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
               </div>
             </fieldset>
             {mode === "interval" ? (
-              <Field label="Un départ toutes les" htmlFor="slotIntervalMin">
+              <Field label={t("Un départ toutes les")} htmlFor="slotIntervalMin">
                 <Select id="slotIntervalMin" name="slotIntervalMin" defaultValue={String(r.slotIntervalMin)} className="sm:max-w-xs">
                   {[5, 10, 15, 20, 30, 45, 60].map((m) => <option key={m} value={m}>{m} minutes</option>)}
                 </Select>
@@ -84,77 +86,77 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
               <input type="hidden" name="slotIntervalMin" value={r.slotIntervalMin} />
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" hidden={!showBuffers}>
-              <Field label="Temps de battement avant" htmlFor="bufferBeforeMin" hint="Préparation avant chaque RDV.">
+              <Field label={t("Temps de battement avant")} htmlFor="bufferBeforeMin" hint={t("Préparation avant chaque RDV.")}>
                 <Select id="bufferBeforeMin" name="bufferBeforeMin" defaultValue={String(r.bufferBeforeMin)}>
-                  {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : "Aucun"}</option>)}
+                  {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : t("Aucun")}</option>)}
                 </Select>
               </Field>
-              <Field label="Temps de battement après" htmlFor="bufferAfterMin" hint="Rangement, désinfection, notes…">
+              <Field label={t("Temps de battement après")} htmlFor="bufferAfterMin" hint={t("Rangement, désinfection, notes…")}>
                 <Select id="bufferAfterMin" name="bufferAfterMin" defaultValue={String(r.bufferAfterMin)}>
-                  {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : "Aucun"}</option>)}
+                  {BUFFERS.map((m) => <option key={m} value={m}>{m ? `${m} min` : t("Aucun")}</option>)}
                 </Select>
               </Field>
             </div>
           </Section>
 
-          <Section title="Quand peut-on réserver ?" description="S'applique uniquement aux réservations en ligne.">
+          <Section title={t("Quand peut-on réserver ?")} description={t("S'applique uniquement aux réservations en ligne.")}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Field label="Délai minimum avant un RDV" htmlFor="minLeadSel" error={err.minLeadMin} hint="Pour avoir le temps de vous préparer.">
+                <Field label={t("Délai minimum avant un RDV")} htmlFor="minLeadSel" error={err.minLeadMin} hint={t("Pour avoir le temps de vous préparer.")}>
                   <Select id="minLeadSel" value={lead} onChange={(e) => setLead(e.target.value)}>
-                    {LEADS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                    <option value="custom">Personnalisé…</option>
+                    {LEADS.map((o) => <option key={o.v} value={o.v}>{t(o.l)}</option>)}
+                    <option value="custom">{t("Personnalisé…")}</option>
                   </Select>
                 </Field>
                 {lead === "custom" ? (
                   <label className="flex items-center gap-2 text-sm">
-                    <Input name="minLeadHours" type="number" min={0} max={336} step={0.5} defaultValue={r.minLeadMin != null ? r.minLeadMin / 60 : 3} className="w-24" aria-label="Délai en heures" />
-                    heures avant le créneau
+                    <Input name="minLeadHours" type="number" min={0} max={336} step={0.5} defaultValue={r.minLeadMin != null ? r.minLeadMin / 60 : 3} className="w-24" aria-label={t("Délai en heures")} />
+                    {t("heures avant le créneau")}
                   </label>
                 ) : (
                   <input type="hidden" name="minLeadMin" value={lead} />
                 )}
               </div>
               <div className="space-y-2">
-                <Field label="Réservable jusqu'à" htmlFor="horizonSel" error={err.horizonDays}>
+                <Field label={t("Réservable jusqu'à")} htmlFor="horizonSel" error={err.horizonDays}>
                   <Select id="horizonSel" value={horizon} onChange={(e) => setHorizon(e.target.value)}>
-                    {HORIZONS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                    <option value="custom">Personnalisé…</option>
+                    {HORIZONS.map((o) => <option key={o.v} value={o.v}>{t(o.l)}</option>)}
+                    <option value="custom">{t("Personnalisé…")}</option>
                   </Select>
                 </Field>
                 {horizon === "custom" ? (
                   <label className="flex items-center gap-2 text-sm">
-                    <Input name="horizonDays" type="number" min={1} max={730} defaultValue={r.horizonDays ?? 45} className="w-24" aria-label="Horizon en jours" />
-                    jours à l&apos;avance
+                    <Input name="horizonDays" type="number" min={1} max={730} defaultValue={r.horizonDays ?? 45} className="w-24" aria-label={t("Horizon en jours")} />
+                    {t("jours à l'avance")}
                   </label>
                 ) : (
                   <input type="hidden" name="horizonDays" value={horizon} />
                 )}
               </div>
             </div>
-            <Toggle name="autoConfirm" defaultChecked={r.autoConfirm} label="Confirmer automatiquement les réservations" description="Décoché : chaque réservation arrive en « demande à valider »." />
-            <Toggle name="phoneRequired" defaultChecked={r.phoneRequired} label="Téléphone obligatoire" description="Le client doit laisser un numéro pour réserver." />
-            <Toggle name="waitlistEnabled" defaultChecked={r.waitlistEnabled} label="Liste d'attente" description="Sur un jour complet, le client peut laisser son email : il est prévenu automatiquement si une place se libère." />
-            <Toggle name="allowOverbooking" defaultChecked={r.allowOverbooking} label="Autoriser la surréservation" description="Deux rendez-vous sur le même créneau pour un même membre, à vos risques. Vaut pour les RDV que vous créez vous-même." />
+            <Toggle name="autoConfirm" defaultChecked={r.autoConfirm} label={t("Confirmer automatiquement les réservations")} description={t("Décoché : chaque réservation arrive en « demande à valider ».")} />
+            <Toggle name="phoneRequired" defaultChecked={r.phoneRequired} label={t("Téléphone obligatoire")} description={t("Le client doit laisser un numéro pour réserver.")} />
+            <Toggle name="waitlistEnabled" defaultChecked={r.waitlistEnabled} label={t("Liste d'attente")} description={t("Sur un jour complet, le client peut laisser son email : il est prévenu automatiquement si une place se libère.")} />
+            <Toggle name="allowOverbooking" defaultChecked={r.allowOverbooking} label={t("Autoriser la surréservation")} description={t("Deux rendez-vous sur le même créneau pour un même membre, à vos risques. Vaut pour les RDV que vous créez vous-même.")} />
           </Section>
 
-          <Section title="Regroupement des rendez-vous" description="Idéal quand vous démarrez avec peu de clients : les créneaux proches d'un rendez-vous déjà pris sont mis en avant, pour éviter les journées découpées. Les autres restent réservables.">
+          <Section title={t("Regroupement des rendez-vous")} description={t("Idéal quand vous démarrez avec peu de clients : les créneaux proches d'un rendez-vous déjà pris sont mis en avant, pour éviter les journées découpées. Les autres restent réservables.")}>
             <label className="flex items-start gap-3 text-sm">
               <input type="checkbox" name="sgEnabled" checked={sg} onChange={(e) => setSg(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
-              <span className="font-medium">Mettre en avant les créneaux regroupés</span>
+              <span className="font-medium">{t("Mettre en avant les créneaux regroupés")}</span>
             </label>
             <div className={sg ? "space-y-4" : "hidden"}>
-              <Field label="Fenêtre autour d'un rendez-vous" htmlFor="sgWindow">
+              <Field label={t("Fenêtre autour d'un rendez-vous")} htmlFor="sgWindow">
                 <Select id="sgWindow" name="sgWindow" defaultValue={String(r.smartGrouping.windowHours)} className="sm:max-w-xs">
                   {[1, 2, 3, 4, 5, 6].map((h) => <option key={h} value={h}>{h} heure{h > 1 ? "s" : ""}</option>)}
                 </Select>
               </Field>
               <div>
-                <p className="mb-2 text-sm font-medium">Uniquement ces jours <span className="font-normal text-muted">(aucun = tous les jours)</span></p>
+                <p className="mb-2 text-sm font-medium">{t("Uniquement ces jours")} <span className="font-normal text-muted">{t("(aucun = tous les jours)")}</span></p>
                 <div className="flex flex-wrap gap-2">
                   {WEEKDAYS.map(([d, l]) => (
                     <button key={d} type="button" aria-pressed={sgDays.includes(d)} onClick={() => setSgDays((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))} className={`h-9 w-12 rounded-lg border text-sm font-medium ${sgDays.includes(d) ? "border-accent bg-accent text-accent-foreground" : "border-border-strong bg-surface text-muted hover:text-text"}`}>
-                      {l}
+                      {t(l)}
                     </button>
                   ))}
                 </div>
@@ -163,20 +165,20 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
             </div>
           </Section>
 
-          <Section title="Question « première visite ? »" description="Permet de proposer certaines prestations aux nouveaux clients seulement (ex. bilan initial).">
+          <Section title={t("Question « première visite ? »")} description={t("Permet de proposer certaines prestations aux nouveaux clients seulement (ex. bilan initial).")}>
             <label className="flex items-start gap-3 text-sm">
               <input type="checkbox" name="fvEnabled" checked={fv} onChange={(e) => setFv(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
-              <span className="font-medium">Poser la question avant le choix de la prestation</span>
+              <span className="font-medium">{t("Poser la question avant le choix de la prestation")}</span>
             </label>
             <div className={fv ? "space-y-4" : "hidden"}>
-              <Field label="Question" htmlFor="fvQuestion" error={err.fvQuestion}>
+              <Field label={t("Question")} htmlFor="fvQuestion" error={err.fvQuestion}>
                 <Input id="fvQuestion" name="fvQuestion" defaultValue={r.firstVisitQuestion.question} maxLength={140} />
               </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Réponse « nouveau client »" htmlFor="fvNew">
+                <Field label={t("Réponse « nouveau client »")} htmlFor="fvNew">
                   <Input id="fvNew" name="fvNew" defaultValue={r.firstVisitQuestion.newLabel} maxLength={60} />
                 </Field>
-                <Field label="Réponse « déjà venu »" htmlFor="fvExisting">
+                <Field label={t("Réponse « déjà venu »")} htmlFor="fvExisting">
                   <Input id="fvExisting" name="fvExisting" defaultValue={r.firstVisitQuestion.existingLabel} maxLength={60} />
                 </Field>
               </div>

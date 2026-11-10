@@ -10,8 +10,9 @@ import { clientWord } from "@/lib/terminology";
 import { formatDay, formatTime } from "@/lib/time";
 import { listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Demandes" };
+export const generateMetadata = appMetadata("Demandes");
 
 export default async function RequestsPage() {
   const ctx = await requireContext("appointments.manage");

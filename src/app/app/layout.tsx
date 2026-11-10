@@ -22,6 +22,8 @@ import { BrandNameProvider } from "@/components/brand-context";
 import { effectivePlan } from "@/server/plan";
 import { AssistantPanel } from "@/components/assistant/assistant-panel";
 import { assistantAllowed, assistantEnabled } from "@/server/assistant";
+import { AppLocaleProvider } from "@/components/app-locale";
+import { makeT } from "@/lib/i18n/app";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +68,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       ) : null}
       {!ctx.impersonating ? <SupervisionPrompt /> : null}
       <AdminMessages messages={adminMessages} />
-      <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} />
+      <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} locale={ctx.user.locale ?? "fr"} />
     </>
   );
 
@@ -74,24 +76,30 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     // Une app = ses menus uniquement (filtrés par permissions) ; une app sans menu accessible n'apparaît pas.
     const [apps, ai]: [ShellApp[], boolean] = await Promise.all([visibleApps(ctx, { pending }), assistantAllowed(ctx).then((ok) => (ok ? assistantEnabled(ctx.business.id) : false))]);
     // App RDV : la barre latérale Branshee à l'identique, avec un retour vers toutes les apps en tête.
+    const locale = ctx.user.locale ?? "fr";
+    const t = makeT(locale);
     const rdvSidebar = {
       groups: [
-        { label: null, items: [{ href: "/app", label: "Toutes les apps", icon: "apps" as const }] },
+        { label: null, items: [{ href: "/app", label: t("Toutes les apps"), icon: "apps" as const }] },
         ...NAV_GROUPS.map((g) => ({
           ...g,
+          label: g.label ? t(g.label) : null,
           items: g.items
             .filter(visible)
             .filter((i) => !hidden.has(i.href))
             .filter((i) => i.href !== "/app/demandes" || pending > 0)
             // Employés est commun à toutes les apps : il est dans Administration, plus dans RDV.
             .filter((i) => i.href !== "/app/apps" && i.href !== "/app/modules" && i.href !== "/app/equipe")
-            .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: clients } : i)),
+            .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: t(clients) } : i))
+            .map((i) => (i.href === "/app/clients" ? i : { ...i, label: t(i.label) })),
         })).filter((g) => g.items.length > 0),
       ],
-      footer: NAV_FOOTER.filter(visible),
+      footer: NAV_FOOTER.filter(visible).map((i) => ({ ...i, label: t(i.label) })),
     };
     return (
       <BrandNameProvider name={brand.name}>
+        <AppLocaleProvider locale={locale}>
+        <div lang={locale} className="contents">
         {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
         <SkydevShell apps={apps} rdv={rdvSidebar} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
           {banners}
@@ -100,6 +108,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         {ai ? <AssistantPanel /> : null}
         <RegisterServiceWorker />
         <GuidedTour />
+        </div>
+        </AppLocaleProvider>
       </BrandNameProvider>
     );
   }

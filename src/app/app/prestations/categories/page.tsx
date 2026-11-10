@@ -6,8 +6,9 @@ import { CategoriesEditor } from "@/components/services/categories-editor";
 import { ServiceTabs } from "@/components/services/service-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Catégories" };
+export const generateMetadata = appMetadata("Catégories");
 
 export default async function CategoriesPage() {
   const ctx = await requireContext("services.manage");

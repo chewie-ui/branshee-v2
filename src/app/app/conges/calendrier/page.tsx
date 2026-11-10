@@ -8,8 +8,9 @@ import { LEAVE_KINDS, belgianHolidays, datesBetween } from "@/lib/leave";
 import { addDays } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { leaveMembers, listLeave } from "@/server/leave";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Calendrier des congés" };
+export const generateMetadata = appMetadata("Calendrier des congés");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const INITIAL = ["L", "M", "M", "J", "V", "S", "D"];

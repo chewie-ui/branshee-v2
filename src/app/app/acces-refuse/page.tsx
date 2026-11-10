@@ -3,8 +3,9 @@ import { Lock } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Accès refusé" };
+export const generateMetadata = appMetadata("Accès refusé");
 
 export default function AccessDeniedPage() {
   return (

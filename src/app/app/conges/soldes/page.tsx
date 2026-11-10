@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AllowanceTable } from "@/components/leave/leave-ui";
 import { requireContext } from "@/server/context";
 import { leaveBalances, leaveMembers, leaveRights } from "@/server/leave";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Soldes de congés" };
+export const generateMetadata = appMetadata("Soldes de congés");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 

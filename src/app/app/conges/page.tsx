@@ -5,8 +5,9 @@ import { LeaveList, PendingList, RequestLeaveButton } from "@/components/leave/l
 import { fmtDays } from "@/lib/leave";
 import { requireContext } from "@/server/context";
 import { leaveBalances, leaveMembers, leaveRights, listLeave } from "@/server/leave";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Congés" };
+export const generateMetadata = appMetadata("Congés");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 

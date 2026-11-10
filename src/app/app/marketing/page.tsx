@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { requireContext } from "@/server/context";
 import { audienceCount, campaignsOf, dailyCap, marketingRights } from "@/server/marketing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Marketing" };
+export const generateMetadata = appMetadata("Marketing");
 const STATUS: Record<string, [string, string]> = { draft: ["Brouillon", "bg-surface-muted text-muted"], sending: ["En cours d'envoi", "bg-accent-soft text-accent"], sent: ["Envoyée", "bg-success-soft text-success"] };
 
 export default async function MarketingPage() {

@@ -4,8 +4,9 @@ import { UpcomingSection } from "@/components/app/upcoming-section";
 import { redirect } from "next/navigation";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Modules" };
+export const generateMetadata = appMetadata("Modules");
 
 export default async function Page() {
   // Skydev : remplacé par le catalogue d'apps de l'accueil.

@@ -20,8 +20,9 @@ import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { salesDocuments } from "@/db/schema";
 import { ButtonLink } from "@/components/ui/button";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Rendez-vous" };
+export const generateMetadata = appMetadata("Rendez-vous");
 
 const PAY_METHOD: Record<string, string> = { online: "En ligne", on_site: "Sur place", bank_transfer: "Virement", paypal: "PayPal", cash: "Espèces", none: "—" };
 const PAY_STATUS: Record<string, string> = { none: "Non payé", authorized: "Autorisé", paid: "Payé", refunded: "Remboursé", partial: "Payé en partie", penalty: "Pénalité", failed: "Échec" };

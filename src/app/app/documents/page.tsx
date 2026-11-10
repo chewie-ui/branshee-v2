@@ -7,8 +7,9 @@ import { DocExplorer } from "@/components/documents/doc-explorer";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { QUOTA_BYTES, allFolders, docRights, folderContent, folderPath, searchDocuments, usedBytes } from "@/server/documents";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Documents" };
+export const generateMetadata = appMetadata("Documents");
 
 export default async function DocumentsPage({ searchParams }: { searchParams: Promise<{ dossier?: string; q?: string }> }) {
   const ctx = await requireContext();

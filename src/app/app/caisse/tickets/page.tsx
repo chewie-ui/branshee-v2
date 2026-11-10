@@ -3,8 +3,9 @@ import { SalesList } from "@/components/pos/sales-list";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { salesToday, stockRights } from "@/server/stock";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Tickets" };
+export const generateMetadata = appMetadata("Tickets");
 
 export default async function TicketsPage() {
   const ctx = await requireContext();

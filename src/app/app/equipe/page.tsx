@@ -16,8 +16,9 @@ import { CardHeader } from "@/components/ui/card";
 import { currentBrand } from "@/server/brand";
 import { countBilledUsers } from "@/server/billing";
 import { userPrice } from "@/lib/skydev-plans";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Équipe" };
+export const generateMetadata = appMetadata("Équipe");
 
 export default async function TeamPage() {
   const ctx = await requireContext("team.view");

@@ -5,8 +5,9 @@ import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { listDeals, salesMembers, salesRights } from "@/server/sales";
 import { redirect } from "next/navigation";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Ventes" };
+export const generateMetadata = appMetadata("Ventes");
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<{ piste?: string }> }) {
   const ctx = await requireContext();

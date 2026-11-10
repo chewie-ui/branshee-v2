@@ -11,8 +11,9 @@ import { PROSPECT_STATUS } from "@/lib/prospects";
 import { requireContext } from "@/server/context";
 import { callQueueOf, listProspects, prospectCounts, prospectStats, upcomingCallbacks } from "@/server/prospects";
 import { salesRights } from "@/server/sales";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Prospection" };
+export const generateMetadata = appMetadata("Prospection");
 export const dynamic = "force-dynamic";
 
 type SP = Promise<{ statut?: string; q?: string }>;

@@ -5,8 +5,10 @@ import { paymentSettings } from "@/db/schema";
 import { PaymentsForm, StripeCard } from "@/components/settings/payments-form";
 import { requireContext } from "@/server/context";
 import { stripeEnabled } from "@/server/payments";
+import { appMetadata } from "@/server/app-locale";
+import { Tx } from "@/components/app-locale";
 
-export const metadata: Metadata = { title: "Paiements · Réglages" };
+export const generateMetadata = appMetadata("Paiements · Réglages");
 
 const NOTICES: Record<string, { ok: boolean; text: string }> = {
   ok: { ok: true, text: "Compte Stripe connecté : vous pouvez recevoir des paiements en ligne." },
@@ -30,7 +32,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   };
   return (
     <div className="space-y-6">
-      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status">{notice.text}</p> : null}
+      {notice ? <p className={notice.ok ? "rounded-lg bg-success-soft p-3 text-sm text-success" : "rounded-lg bg-warning-soft p-3 text-sm text-warning"} role="status"><Tx>{notice.text}</Tx></p> : null}
       <StripeCard p={p} />
       <PaymentsForm p={p} />
     </div>

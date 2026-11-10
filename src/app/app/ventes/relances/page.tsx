@@ -9,8 +9,9 @@ import { todayIn } from "@/lib/planning";
 import { followUpState, isOpen, stageLabel } from "@/lib/sales";
 import { requireContext } from "@/server/context";
 import { listDeals, salesRights } from "@/server/sales";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Relances" };
+export const generateMetadata = appMetadata("Relances");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c / 100);
 const fdate = (d: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(new Date(`${d}T12:00:00Z`));
 

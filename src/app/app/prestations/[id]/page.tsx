@@ -16,8 +16,9 @@ import { formatDay, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { listServiceSessions } from "@/server/group-sessions";
 import { serviceFormData } from "@/server/services-page";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Modifier la prestation" };
+export const generateMetadata = appMetadata("Modifier la prestation");
 
 const DAY_NAMES = ["dimanches", "lundis", "mardis", "mercredis", "jeudis", "vendredis", "samedis"];
 

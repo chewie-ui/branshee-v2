@@ -6,8 +6,9 @@ import { ExpensesBoard } from "@/components/expenses/expenses-board";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { getSellerSettings } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Dépenses" };
+export const generateMetadata = appMetadata("Dépenses");
 
 const todayIn = (tz: string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 

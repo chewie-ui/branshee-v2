@@ -6,8 +6,9 @@ import { todayIn } from "@/lib/planning";
 import { winRate } from "@/lib/sales";
 import { requireContext } from "@/server/context";
 import { listDeals, salesMembers, salesRights } from "@/server/sales";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Résultats des ventes" };
+export const generateMetadata = appMetadata("Résultats des ventes");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c / 100);
 const monthLabel = (ym: string) => new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "short" }).format(new Date(`${ym}-15T12:00:00Z`));
 

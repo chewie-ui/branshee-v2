@@ -11,8 +11,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
 import { APPS } from "@/lib/apps";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Modifier le grade" };
+export const generateMetadata = appMetadata("Modifier le grade");
 
 export default async function EditGradePage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext("grades.manage");

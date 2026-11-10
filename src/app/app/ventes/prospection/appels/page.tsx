@@ -4,8 +4,9 @@ import { CallSession } from "@/components/prospects/call-session";
 import { requireContext } from "@/server/context";
 import { callQueueOf, prospectHistory, prospectScript, prospectStats } from "@/server/prospects";
 import { salesRights } from "@/server/sales";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Session d'appels" };
+export const generateMetadata = appMetadata("Session d'appels");
 export const dynamic = "force-dynamic";
 
 /** Session d'appels : un prospect à la fois, le script à côté, le résultat en un clic. */

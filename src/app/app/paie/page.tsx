@@ -6,8 +6,9 @@ import { isMonth } from "@/lib/payroll";
 import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { payrollMonth, payrollRights } from "@/server/payroll";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Paie" };
+export const generateMetadata = appMetadata("Paie");
 
 export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
   const ctx = await requireContext();

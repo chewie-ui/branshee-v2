@@ -7,8 +7,9 @@ import { ProjectBoard } from "@/components/projects/project-board";
 import { todayIn } from "@/lib/planning";
 import { requireContext } from "@/server/context";
 import { projectDetail, projectRights, teamOf } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Projet" };
+export const generateMetadata = appMetadata("Projet");
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

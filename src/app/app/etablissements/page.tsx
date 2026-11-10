@@ -5,8 +5,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { listMemberships } from "@/server/memberships";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Mes établissements" };
+export const generateMetadata = appMetadata("Mes établissements");
 
 export default async function BusinessesPage() {
   const ctx = await requireContext();

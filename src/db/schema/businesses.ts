@@ -52,6 +52,8 @@ export const businesses = pgTable(
     postalCode: text("postal_code"),
     city: text("city"),
     country: text("country"),
+    /** Pays de l'entreprise (code ISO à 2 lettres) : décide des apps disponibles (règles belges, zone euro). */
+    countryCode: text("country_code").notNull().default("BE"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     mapEmbedUrl: text("map_embed_url"),

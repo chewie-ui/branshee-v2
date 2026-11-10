@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ServiceTabs } from "@/components/services/service-tabs";
 import { requireContext } from "@/server/context";
 import { listIntake } from "@/server/intake";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Questions avant réservation" };
+export const generateMetadata = appMetadata("Questions avant réservation");
 
 export default async function IntakePage() {
   const ctx = await requireContext("services.manage");

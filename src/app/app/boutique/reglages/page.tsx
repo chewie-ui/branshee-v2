@@ -4,8 +4,9 @@ import { ShopSettingsForm } from "@/components/shop/shop-settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { shopRights, shopSettingsOf, stripeDestination } from "@/server/shop";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Réglages de la boutique" };
+export const generateMetadata = appMetadata("Réglages de la boutique");
 
 export default async function ShopSettingsPage() {
   const ctx = await requireContext();

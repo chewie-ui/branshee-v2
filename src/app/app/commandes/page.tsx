@@ -3,8 +3,9 @@ import { OrdersBoard } from "@/components/orders/orders-board";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { recentOrders, tablesOf } from "@/server/orders";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Commandes" };
+export const generateMetadata = appMetadata("Commandes");
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {

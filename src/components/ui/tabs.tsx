@@ -2,12 +2,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/app-locale";
 
 /** Onglets basés sur des URL (chaque onglet a sa propre adresse, partageable). */
 export function Tabs({ items }: { items: { href: string; label: string }[] }) {
+  const t = useT();
   const pathname = usePathname();
   return (
-    <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label="Onglets">
+    <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label={t("Onglets")}>
       {items.map((item) => {
         const active = pathname === item.href;
         return (
@@ -20,7 +22,7 @@ export function Tabs({ items }: { items: { href: string; label: string }[] }) {
               active ? "border-accent text-text" : "border-transparent text-muted hover:text-text",
             )}
           >
-            {item.label}
+            {t(item.label)}
           </Link>
         );
       })}

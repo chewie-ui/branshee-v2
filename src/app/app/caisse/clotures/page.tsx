@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { requireContext } from "@/server/context";
 import { sessionsOf } from "@/server/stock";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Clôtures de caisse" };
+export const generateMetadata = appMetadata("Clôtures de caisse");
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 
 export default async function ClosingsPage({ searchParams }: { searchParams: Promise<{ z?: string }> }) {

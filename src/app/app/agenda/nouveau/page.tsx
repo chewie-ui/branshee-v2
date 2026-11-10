@@ -9,8 +9,9 @@ import { clientWord } from "@/lib/terminology";
 import { parseIsoDay, zoned } from "@/lib/time";
 import { parseQuickTime } from "@/lib/time-input";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Nouveau rendez-vous" };
+export const generateMetadata = appMetadata("Nouveau rendez-vous");
 
 type SearchParams = Promise<{ date?: string; heure?: string; fin?: string; membre?: string; client?: string }>;
 

@@ -6,8 +6,9 @@ import { LoyaltyBoard } from "@/components/loyalty/loyalty-board";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { loyaltyCardsOf, loyaltyOrigin, loyaltyRights, loyaltySettingsOf } from "@/server/loyalty";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Fidélité" };
+export const generateMetadata = appMetadata("Fidélité");
 
 export default async function LoyaltyPage() {
   const ctx = await requireContext();

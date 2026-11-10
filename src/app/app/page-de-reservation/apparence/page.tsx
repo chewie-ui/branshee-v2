@@ -10,8 +10,9 @@ import { resolveTheme } from "@/lib/booking-theme";
 import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Apparence · Page de réservation" };
+export const generateMetadata = appMetadata("Apparence · Page de réservation");
 
 export default async function AppearancePage() {
   const ctx = await requireContext("customization.manage");

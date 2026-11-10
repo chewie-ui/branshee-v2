@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Tx } from "@/components/app-locale";
 
 const control =
   "w-full rounded-lg border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-muted transition-colors " +
@@ -11,15 +12,15 @@ export function Field({ label, htmlFor, hint, error, children, className }: { la
   return (
     <div className={cn("space-y-1.5", className)}>
       <label htmlFor={htmlFor} className="block text-sm font-medium text-text">
-        {label}
+        <Tx>{label}</Tx>
       </label>
       {children}
       {error ? (
         <p id={`${htmlFor}-error`} className="text-sm text-danger" role="alert">
-          {error}
+          <Tx>{error}</Tx>
         </p>
       ) : hint ? (
-        <p className="text-sm text-muted">{hint}</p>
+        <p className="text-sm text-muted"><Tx>{hint}</Tx></p>
       ) : null}
     </div>
   );

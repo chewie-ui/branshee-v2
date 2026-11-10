@@ -5,8 +5,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { privateFeedback } from "@/server/google-reviews";
 import { redirect } from "next/navigation";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Remarques privées" };
+export const generateMetadata = appMetadata("Remarques privées");
 
 /** Ce que les clients ont préféré vous dire en privé. */
 export default async function FeedbackPage() {

@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { shopOrdersOf, shopOrigin, shopRights, shopSettingsOf } from "@/server/shop";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Boutique" };
+export const generateMetadata = appMetadata("Boutique");
 
 export default async function ShopPage() {
   const ctx = await requireContext();

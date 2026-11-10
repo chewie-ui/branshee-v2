@@ -10,8 +10,9 @@ import { requireContext } from "@/server/context";
 import { publicPagePath } from "@/server/brand";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Partager · Page de réservation" };
+export const generateMetadata = appMetadata("Partager · Page de réservation");
 
 export default async function SharePage() {
   const ctx = await requireContext("customization.manage");

@@ -11,8 +11,9 @@ import { RulesForm } from "@/components/settings/rules-form";
 import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Règles de réservation · Réglages" };
+export const generateMetadata = appMetadata("Règles de réservation · Réglages");
 
 export default async function BookingRulesPage() {
   const ctx = await requireContext("settings.manage");

@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { openSessionOf, productsOf, sessionTotals } from "@/server/stock";
 import { getSellerSettings } from "@/server/invoicing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Caisse" };
+export const generateMetadata = appMetadata("Caisse");
 export const dynamic = "force-dynamic";
 
 export default async function PosPage() {

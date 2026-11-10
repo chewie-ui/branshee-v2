@@ -4,8 +4,9 @@ import { db } from "@/db";
 import { notificationSettings } from "@/db/schema";
 import { NotificationsForm } from "@/components/settings/notifications-form";
 import { requireContext } from "@/server/context";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Notifications · Réglages" };
+export const generateMetadata = appMetadata("Notifications · Réglages");
 
 export default async function NotificationsPage() {
   const ctx = await requireContext("settings.manage");

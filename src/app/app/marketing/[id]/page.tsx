@@ -6,8 +6,9 @@ import { campaignRecipients, campaigns } from "@/db/schema";
 import { CampaignEditor } from "@/components/marketing/campaign-editor";
 import { requireContext } from "@/server/context";
 import { audienceCount, marketingRights } from "@/server/marketing";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Campagne" };
+export const generateMetadata = appMetadata("Campagne");
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireContext();

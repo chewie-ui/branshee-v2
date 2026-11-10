@@ -10,8 +10,9 @@ import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
 import { ensureReferralCode } from "@/server/referral";
 import { referralStatus } from "@/server/referral-status";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Parrainage" };
+export const generateMetadata = appMetadata("Parrainage");
 
 export default async function ReferralPage() {
   const ctx = await requireContext();

@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Tx } from "@/components/app-locale";
 
 export function Card({ children, className, ...props }: { children: ReactNode; className?: string } & Omit<ComponentProps<"section">, "children" | "className">) {
   return (
@@ -13,8 +14,8 @@ export function CardHeader({ title, description, action }: { title: string; desc
   return (
     <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
       <div className="min-w-0">
-        <h2 className="text-base font-semibold text-text">{title}</h2>
-        {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
+        <h2 className="text-base font-semibold text-text"><Tx>{title}</Tx></h2>
+        {description ? <p className="mt-0.5 text-sm text-muted"><Tx>{description}</Tx></p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>

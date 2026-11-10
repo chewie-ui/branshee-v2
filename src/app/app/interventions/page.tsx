@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { interventionRights, listInterventions } from "@/server/interventions";
 import { teamOf } from "@/server/projects";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Interventions" };
+export const generateMetadata = appMetadata("Interventions");
 
 export default async function InterventionsPage({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const ctx = await requireContext();

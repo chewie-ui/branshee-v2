@@ -9,8 +9,9 @@ import type { SiteSection } from "@/lib/site-templates";
 import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { getOrCreateSite } from "@/server/site-builder";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Mon site" };
+export const generateMetadata = appMetadata("Mon site");
 
 export default async function MySitePage() {
   const ctx = await requireContext("customization.manage");

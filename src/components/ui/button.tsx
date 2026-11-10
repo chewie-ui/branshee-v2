@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Tx } from "@/components/app-locale";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md";
@@ -28,7 +29,7 @@ export function Button({ variant = "primary", size = "md", icon, loading, classN
   return (
     <button className={cn(base, variants[variant], sizes[size], className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
       {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : icon}
-      {children}
+      <Tx>{children}</Tx>
     </button>
   );
 }
@@ -37,7 +38,7 @@ export function ButtonLink({ variant = "primary", size = "md", icon, className, 
   return (
     <Link className={cn(base, variants[variant], sizes[size], className)} {...props}>
       {icon}
-      {children}
+      <Tx>{children}</Tx>
     </Link>
   );
 }

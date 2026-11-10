@@ -11,8 +11,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { VEHICLE_STATUS, vehicleFullTitle, type VehicleStatus } from "@/lib/vehicles";
 import { requireContext } from "@/server/context";
 import { vehicleOf, vehicleRights } from "@/server/vehicles";
+import { appMetadata } from "@/server/app-locale";
 
-export const metadata: Metadata = { title: "Véhicule" };
+export const generateMetadata = appMetadata("Véhicule");
 
 const s = (n: number | null) => (n == null ? "" : String(n));
 const euros = (c: number | null) => (c == null ? "" : String(c % 100 ? (c / 100).toFixed(2).replace(".", ",") : c / 100));

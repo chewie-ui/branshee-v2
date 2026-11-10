@@ -5,11 +5,13 @@ import { useLeaveGuard } from "@/components/ui/unsaved-bar";
 import { Button } from "@/components/ui/button";
 import type { SettingsState } from "@/server/actions/settings";
 import { submitKeepingValues } from "@/lib/form";
+import { useT } from "@/components/app-locale";
 
 type Action = (prev: SettingsState, fd: FormData) => Promise<SettingsState>;
 
 /** Formulaire de réglages : sections, bouton Enregistrer et message de résultat. */
 export function SettingsForm({ action, children }: { action: Action; children: (errors: Record<string, string>) => ReactNode }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState<SettingsState, FormData>(action, undefined);
   const [dirty, setDirty] = useState(false);
   // Enregistrement réussi : plus rien en attente.
@@ -24,13 +26,13 @@ export function SettingsForm({ action, children }: { action: Action; children: (
       {children(state?.fieldErrors ?? {})}
       <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:flex-row sm:items-center sm:justify-end sm:rounded-xl sm:border sm:bg-surface sm:px-5">
         {state?.error ? (
-          <p className="text-sm text-danger sm:mr-auto" role="alert">{state.error}</p>
+          <p className="text-sm text-danger sm:mr-auto" role="alert">{t(state.error)}</p>
         ) : dirty ? (
-          <p className="flex items-center gap-2 text-sm font-medium sm:mr-auto" role="status"><span className="size-2 rounded-full bg-warning" aria-hidden="true" />Modifications non enregistrées</p>
+          <p className="flex items-center gap-2 text-sm font-medium sm:mr-auto" role="status"><span className="size-2 rounded-full bg-warning" aria-hidden="true" />{t("Modifications non enregistrées")}</p>
         ) : state?.ok ? (
-          <p className="text-sm text-success sm:mr-auto" role="status">Modifications enregistrées.</p>
+          <p className="text-sm text-success sm:mr-auto" role="status">{t("Modifications enregistrées.")}</p>
         ) : null}
-        <Button type="submit" loading={pending}>Enregistrer</Button>
+        <Button type="submit" loading={pending}>{t("Enregistrer")}</Button>
       </div>
     </form>
   );
