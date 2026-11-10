@@ -531,6 +531,8 @@ export const EN: Record<string, string> = {
   "Continuer au-delà du forfait": "Continue beyond the allowance",
   "Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email.": "Further messages are taken from the prepaid balance. Otherwise: falls back to email.",
   "Rappel par WhatsApp": "WhatsApp reminder",
+  "Bientôt disponible : cochez dès maintenant, ça démarrera tout seul. En attendant, vos clients reçoivent tout par e-mail.": "Coming soon: switch it on now and it will start by itself. Meanwhile, your clients get everything by email.",
+  "La recharge sera disponible dès l'activation de WhatsApp.": "Top-up will be available once WhatsApp is switched on.",
   "Envoyé au numéro du client ; si l'envoi est impossible, l'email part à la place.": "Sent to the client's number; if it can't be sent, the email goes out instead.",
   "Utilisé si WhatsApp n'a pas pu partir ; sinon l'email part à la place.": "Used if WhatsApp couldn't be sent; otherwise the email goes out instead.",
   "Bonjour Marie, votre rendez-vous chez": "Hello Marie, your appointment at",
