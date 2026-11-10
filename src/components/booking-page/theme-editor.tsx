@@ -111,7 +111,7 @@ export function ThemeEditor({ initial, previewUrl, locked = false }: { initial: 
   // Aperçu en direct : la page publique (ouverte avec ?apercu=1) applique le thème reçu.
   const send = useCallback(() => {
     frame.current?.contentWindow?.postMessage({ type: "branshee-theme", vars: themeVars(th), font: fontStylesheet(th), texts: th.texts, bgImage: th.pageBgImage ?? "", layout: th.layout }, location.origin);
-  }, [t]);
+  }, [th]);
   useEffect(send, [send]);
 
   useEffect(() => {

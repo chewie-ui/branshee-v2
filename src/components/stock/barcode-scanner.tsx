@@ -40,7 +40,7 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
       }
     })();
     return () => { stop = true; stream?.getTracks().forEach((tp) => tp.stop()); };
-  }, [onCode]);
+  }, [onCode, t]);
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={t("Scanner un code-barres")}>
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-black">

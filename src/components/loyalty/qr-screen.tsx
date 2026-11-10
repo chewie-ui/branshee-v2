@@ -27,7 +27,7 @@ export function LoyaltyQrScreen({ business, goal, reward }: { business: string; 
     const onFs = () => setFull(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
     return () => { alive = false; clearTimeout(timer); document.removeEventListener("fullscreenchange", onFs); };
-  }, []);
+  }, [t]);
 
   const toggle = async () => {
     try {

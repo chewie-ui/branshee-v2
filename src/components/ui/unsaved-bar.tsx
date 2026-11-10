@@ -41,5 +41,5 @@ export function useLeaveGuard(dirty: boolean) {
     window.addEventListener("beforeunload", before);
     document.addEventListener("click", click, true);
     return () => { window.removeEventListener("beforeunload", before); document.removeEventListener("click", click, true); };
-  }, [dirty]);
+  }, [dirty, t]);
 }
