@@ -69,6 +69,8 @@ const fr = {
     chooseSlot: "Choisissez un créneau",
     slotsCount: "{n} créneaux",
     full: "complet",
+    closed: "fermé",
+    unavailable: "indisponible",
     noSlotsWeek: "Aucun créneau libre cette semaine. Essayez la semaine suivante.",
     noSlotsWeekWaitlist: "Aucun créneau libre cette semaine. Essayez la semaine suivante, ou choisissez un jour pour être prévenu si une place se libère.",
     recommended: "Créneaux conseillés",

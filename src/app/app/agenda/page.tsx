@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Ban, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import { addDays, addMonths, format } from "date-fns";
-import { and, asc, eq, max, min } from "drizzle-orm";
+import { and, asc, eq, gte, lte, max, min } from "drizzle-orm";
 import { db } from "@/db";
-import { members, weeklyHours } from "@/db/schema";
+import { members, scheduleExceptions, weeklyHours } from "@/db/schema";
 import { DayClickLayer } from "@/components/agenda/grid-click";
 import { EventLink } from "@/components/agenda/event-hover";
 import { ButtonLink } from "@/components/ui/button";
@@ -21,6 +21,11 @@ const DEFAULT_START = 8;
 const DEFAULT_END = 19;
 
 type SearchParams = Promise<{ semaine?: string; membre?: string; vue?: string; densite?: string }>;
+
+/** Congé ou fermeture (Horaires › Congés et fermetures) : grisé dans l'agenda. */
+type DayOff = { memberId: string | null; date: string; isClosed: boolean; hours: { start: string; end: string }[]; reason: string | null };
+const offLabel = (o: DayOff) => o.reason?.trim() || (o.memberId ? "Congé" : "Fermé");
+const HATCH = "repeating-linear-gradient(135deg, color-mix(in srgb, var(--surface-muted) 92%, transparent), color-mix(in srgb, var(--surface-muted) 92%, transparent) 6px, color-mix(in srgb, var(--border) 85%, transparent) 6px, color-mix(in srgb, var(--border) 85%, transparent) 12px)";
 
 const itemColor = (a: AgendaItem) => (a.kind === "block" ? "#a1a1aa" : (a.color ?? "#4f46e5"));
 
@@ -50,6 +55,13 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
   const openRange = { start: toHour(open?.first ?? null, false), end: open?.last && open.last >= "23:59" ? 24 : toHour(open?.last ?? null, true) };
   const dayKey = (d: Date) => format(zoned(d, tz), "yyyy-MM-dd");
   const todayKey = dayKey(new Date());
+  // Congés et fermetures de la période (de l'établissement, et du membre affiché).
+  const offs: DayOff[] = (
+    await db
+      .select({ memberId: scheduleExceptions.memberId, date: scheduleExceptions.date, isClosed: scheduleExceptions.isClosed, hours: scheduleExceptions.hours, reason: scheduleExceptions.reason })
+      .from(scheduleExceptions)
+      .where(and(eq(scheduleExceptions.businessId, ctx.business.id), gte(scheduleExceptions.date, dayKey(range.start)), lte(scheduleExceptions.date, dayKey(addDays(range.end, -1)))))
+  ).filter((o) => !o.memberId || (memberFilter ? o.memberId === memberFilter : team.some((m) => m.id === o.memberId)));
 
   const qs = (patch: { semaine?: Date; membre?: string | null; vue?: string; densite?: string }) => {
     const p = new URLSearchParams();
@@ -125,17 +137,17 @@ export default async function AgendaPage({ searchParams }: { searchParams: Searc
         ) : null}
       </div>
 
-      {view === "month" ? <MonthView items={items} range={range} tz={tz} todayKey={todayKey} refMonth={dayKey(monthStart).slice(0, 7)} qs={qs} /> : <WeekView items={items} range={range} tz={tz} todayKey={todayKey} team={team} memberFilter={memberFilter} hourPx={HOUR_PX} canManage={canManage} openRange={openRange} />}
+      {view === "month" ? <MonthView items={items} offs={offs} team={team} memberFilter={memberFilter} range={range} tz={tz} todayKey={todayKey} refMonth={dayKey(monthStart).slice(0, 7)} qs={qs} /> : <WeekView items={items} offs={offs} range={range} tz={tz} todayKey={todayKey} team={team} memberFilter={memberFilter} hourPx={HOUR_PX} canManage={canManage} openRange={openRange} />}
 
       <p className="mt-3 text-xs text-muted">
         {view === "week" && canManage ? "Cliquez sur un espace libre pour créer un rendez-vous ou bloquer le créneau. " : ""}
-        Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué.
+        Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué, congé ou fermeture.
       </p>
     </>
   );
 }
 
-function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
+function WeekView({ items, offs, range, tz, todayKey, team, memberFilter, hourPx, canManage, openRange }: { items: AgendaItem[]; offs: DayOff[]; range: { start: Date }; tz: string; todayKey: string; team: { id: string; name: string }[]; memberFilter?: string; hourPx: number; canManage: boolean; openRange: { start: number | null; end: number | null } }) {
   // Vue « toute l'équipe » : une colonne par membre dans chaque journée, pour que les RDV simultanés ne se superposent pas.
   const lanes: (string | null)[] = memberFilter ? [memberFilter] : team.length < 2 ? [team[0]?.id ?? null] : team.map((m) => m.id);
   const laneOf = (memberId: string | null) => Math.max(0, lanes.indexOf(memberId));
@@ -167,6 +179,11 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                 <div key={key} className="border-l border-border px-2 py-2 text-center">
                   <p className="text-xs text-muted uppercase">{formatDay(d, tz, "EEE")}</p>
                   <p className={cn("mx-auto mt-0.5 flex size-8 items-center justify-center rounded-full text-sm font-semibold", key === todayKey && "bg-accent text-accent-foreground")}>{formatDay(d, tz, "d")}</p>
+                  {(() => {
+                    // Journée entière fermée pour toute la colonne : l'établissement, ou le seul membre affiché.
+                    const off = offs.find((o) => o.date === key && o.isClosed && (!o.memberId || lanes.length === 1));
+                    return off ? <p className="mt-0.5 truncate text-[11px] font-medium text-muted" title={offLabel(off)}>{offLabel(off)}</p> : null;
+                  })()}
                 </div>
               );
             })}
@@ -188,6 +205,30 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
                     <div key={h} className="pointer-events-none border-b border-border/70" style={{ height: hourPx, backgroundImage: "linear-gradient(to bottom, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% - 0.5px), color-mix(in srgb, var(--border) 45%, transparent) calc(50% + 0.5px), transparent calc(50% + 0.5px))" }} />
                   ))}
                   <DayClickLayer day={key} startHour={startHour} hourPx={hourPx} lanes={lanes} canManage={canManage} />
+                  {offs.filter((o) => o.date === key).flatMap((o) => {
+                    // Fermeture de l'établissement : toute la journée ; congé d'un membre : sa colonne.
+                    const lane = o.memberId ? lanes.indexOf(o.memberId) : -1;
+                    if (o.memberId && lane < 0) return [];
+                    const width = o.memberId ? 100 / lanes.length : 100;
+                    const left = o.memberId ? lane * width : 0;
+                    const toM = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+                    // Journée fermée : toute la grille ; horaires spéciaux : en dehors des plages ouvertes.
+                    const open = o.isClosed ? [] : [...o.hours].map((h) => ({ start: toM(h.start), end: toM(h.end) })).sort((x, y) => x.start - y.start);
+                    const zones: { start: number; end: number }[] = [];
+                    let cur = startHour * 60;
+                    for (const r of open) { if (r.start > cur) zones.push({ start: cur, end: r.start }); cur = Math.max(cur, r.end); }
+                    if (cur < endHour * 60) zones.push({ start: cur, end: endHour * 60 });
+                    return zones.map((z, i) => (
+                      <div
+                        key={`off-${o.memberId ?? "all"}-${i}`}
+                        className="pointer-events-none absolute z-[1] overflow-hidden px-1.5 pt-1 text-[11px] font-medium text-muted"
+                        style={{ top: ((z.start - startHour * 60) / 60) * hourPx, height: ((z.end - z.start) / 60) * hourPx, left: `${left}%`, width: `${width}%`, backgroundImage: HATCH }}
+                        title={offLabel(o)}
+                      >
+                        {i === 0 && (z.end - z.start) >= 45 ? <span className="rounded bg-surface/80 px-1">{offLabel(o)}</span> : null}
+                      </div>
+                    ));
+                  })}
                   {key === todayKey && nowMin >= startHour * 60 && nowMin <= endHour * 60 ? (
                     <div className="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-danger" style={{ top: ((nowMin - startHour * 60) / 60) * hourPx }} aria-hidden="true" />
                   ) : null}
@@ -243,7 +284,7 @@ function WeekView({ items, range, tz, todayKey, team, memberFilter, hourPx, canM
   );
 }
 
-function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: AgendaItem[]; range: { start: Date; end: Date }; tz: string; todayKey: string; refMonth: string; qs: (p: { semaine?: Date; vue?: string }) => string }) {
+function MonthView({ items, offs, team, memberFilter, range, tz, todayKey, refMonth, qs }: { items: AgendaItem[]; offs: DayOff[]; team: { id: string; name: string }[]; memberFilter?: string; range: { start: Date; end: Date }; tz: string; todayKey: string; refMonth: string; qs: (p: { semaine?: Date; vue?: string }) => string }) {
   const days: Date[] = [];
   for (let d = range.start; d < range.end; d = addDays(d, 1)) days.push(d);
   const dayKey = (d: Date) => format(zoned(d, tz), "yyyy-MM-dd");
@@ -262,12 +303,18 @@ function MonthView({ items, range, tz, todayKey, refMonth, qs }: { items: Agenda
           const dayItems = items.filter((a) => dayKey(a.startsAt) === key && a.kind !== "block");
           const blocked = items.some((a) => dayKey(a.startsAt) === key && a.kind === "block");
           const outside = !key.startsWith(refMonth);
+          // Fermé pour tout le monde affiché : l'établissement, ou le membre filtré / le seul membre.
+          const dayOffs = offs.filter((o) => o.date === key);
+          const whole = dayOffs.find((o) => o.isClosed && (!o.memberId || memberFilter || team.length < 2));
+          const partial = whole ? [] : dayOffs.filter((o) => o.memberId && o.isClosed);
           return (
-            <div key={key} className={cn("min-h-24 min-w-0 border-border p-1.5 sm:min-h-28", i % 7 !== 0 && "border-l", i >= 7 && "border-t", outside && "bg-surface-muted/60")}>
+            <div key={key} className={cn("min-h-24 min-w-0 border-border p-1.5 sm:min-h-28", i % 7 !== 0 && "border-l", i >= 7 && "border-t", outside && "bg-surface-muted/60")} style={whole ? { backgroundImage: HATCH } : undefined}>
               <Link href={qs({ semaine: d, vue: "semaine" })} className={cn("mb-1 inline-flex size-7 items-center justify-center rounded-full text-sm font-medium hover:bg-surface-muted", key === todayKey && "bg-accent text-accent-foreground hover:bg-accent", outside && "text-muted")} aria-label={`Voir la semaine du ${formatDay(d, tz)}`}>
                 {formatDay(d, tz, "d")}
               </Link>
               {blocked ? <span className="ml-1 inline-block size-2 rounded-full bg-border-strong align-middle" title="Créneau bloqué ce jour-là" /> : null}
+              {whole ? <p className="mb-0.5 truncate rounded bg-surface/80 px-1 text-[11px] font-medium text-muted" title={offLabel(whole)}>{offLabel(whole)}</p> : null}
+              {partial.length ? <p className="mb-0.5 truncate px-1 text-[11px] text-muted" title={partial.map((o) => team.find((m) => m.id === o.memberId)?.name).join(", ")}>Congé : {partial.map((o) => team.find((m) => m.id === o.memberId)?.name?.split(" ")[0]).join(", ")}</p> : null}
               {dayItems.length ? (
                 <Link href={qs({ semaine: d, vue: "semaine" })} className="block rounded bg-accent-soft px-1 py-0.5 text-center text-[11px] font-semibold text-accent-soft-foreground sm:hidden">
                   {dayItems.length}

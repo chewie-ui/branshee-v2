@@ -22,18 +22,27 @@ export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
   );
 }
 
-export function GrantPlanForm({ businessId, plan, until }: { businessId: string; plan: string; until: string }) {
+export function GrantPlanForm({ businessId, plan, until, suggested }: { businessId: string; plan: string; until: string; suggested: string }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Safari affiche la date du jour en gris dans un champ vide : on pré-remplit vraiment (dans un an) pour éviter
+  // d'enregistrer un champ vide en croyant donner l'accès (ce qui le retirait).
+  const [date, setDate] = useState(until || suggested);
+  const [forever, setForever] = useState(until >= "2099-01-01");
+  const send = (u: string) =>
+    start(async () => {
+      const form = document.getElementById(`grant-${businessId}`) as HTMLFormElement | null;
+      const p = form ? String(new FormData(form).get("plan")) : "pro";
+      const r = await grantPlan(businessId, { plan: p, until: u });
+      setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Enregistré.") : (r.error ?? "Erreur.") });
+    });
   return (
     <form
+      id={`grant-${businessId}`}
       onSubmit={(e) => {
         e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        start(async () => {
-          const r = await grantPlan(businessId, { plan: String(fd.get("plan")), until: String(fd.get("until") ?? "") });
-          setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Enregistré.") : (r.error ?? "Erreur.") });
-        });
+        if (!forever && !date) return setMsg({ ok: false, text: "Choisissez une date de fin, ou « Sans date de fin »." });
+        send(forever ? "2099-12-31" : date);
       }}
       className="space-y-4"
     >
@@ -44,12 +53,19 @@ export function GrantPlanForm({ businessId, plan, until }: { businessId: string;
             <option value="pro_plus">Pro+</option>
           </Select>
         </Field>
-        <Field label="Jusqu'au" htmlFor="until" hint="Laisser vide pour retirer l'accès offert.">
-          <Input id="until" name="until" type="date" defaultValue={until} />
+        <Field label="Jusqu'au" htmlFor="until">
+          <Input id="until" name="until" type="date" value={forever ? "" : date} onChange={(e) => setDate(e.target.value)} disabled={forever} required={!forever} />
         </Field>
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={forever} onChange={(e) => setForever(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+        Sans date de fin (accès offert à vie)
+      </label>
       {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
-      <Button type="submit" loading={pending}>Enregistrer</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" loading={pending}>Enregistrer</Button>
+        {plan !== "free" ? <Button type="button" variant="ghost" disabled={pending} onClick={() => window.confirm("Retirer l'accès offert ?") && send("")}>Retirer l&apos;accès offert</Button> : null}
+      </div>
     </form>
   );
 }

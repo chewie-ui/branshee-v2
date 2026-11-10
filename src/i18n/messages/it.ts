@@ -66,6 +66,8 @@ const it: Messages = {
     chooseSlot: "Scelga un orario",
     slotsCount: "{n} orari",
     full: "al completo",
+    closed: "chiuso",
+    unavailable: "non disponibile",
     noSlotsWeek: "Nessun orario libero questa settimana. Provi la settimana successiva.",
     noSlotsWeekWaitlist: "Nessun orario libero questa settimana. Provi la settimana successiva, oppure scelga un giorno per essere avvisato se si libera un posto.",
     recommended: "Orari consigliati",

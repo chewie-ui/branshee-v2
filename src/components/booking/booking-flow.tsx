@@ -560,6 +560,10 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
             <div className="grid grid-cols-7 gap-1.5" role="group" aria-label={t("common.chooseDay")}>
               {(days ?? Array.from({ length: 7 }, (_, i) => ({ date: addDays(weekStart, i), slots: [] }))).map((d) => {
                 const available = d.slots.length > 0;
+                // Congé ou fermeture : grisé et jamais cliquable (pas de liste d'attente un jour où personne ne travaille).
+                const closed = "closed" in d && !!d.closed && !available;
+                // Prestation pas proposée ce jour-là : grisé, sans pastille ni liste d'attente.
+                const notOffered = "notOffered" in d && !!d.notOffered && !available;
                 const selected = d.date === day;
                 // Pastille : vert = places libres, orange = moins de la moitié des créneaux du jour le plus libre, rouge = complet.
                 const busy = available && d.slots.length < maxDaySlots / 2;
@@ -567,19 +571,19 @@ export function BookingFlow({ data, today, resume: resumeProp = null, viewer = n
                   <button
                     key={d.date}
                     type="button"
-                    disabled={(!available && !waitlistOn) || loadingSlots}
+                    disabled={(!available && (!waitlistOn || closed || notOffered)) || loadingSlots}
                     onClick={() => { setDay(d.date); setTime(null); }}
                     aria-pressed={selected}
-                    aria-label={`${LONG.format(utc(d.date))}, ${available ? t("booking.slotsCount", { n: d.slots.length }) : t("booking.full")}`}
+                    aria-label={`${LONG.format(utc(d.date))}, ${available ? t("booking.slotsCount", { n: d.slots.length }) : closed ? t("booking.closed") : notOffered ? t("booking.unavailable") : t("booking.full")}`}
                     className={cn(
                       "flex min-h-16 flex-col items-center justify-center rounded-lg border text-sm transition-colors disabled:cursor-not-allowed",
-                      selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] text-[var(--day-text,var(--text))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))] hover:text-[var(--day-hover-text,var(--text))]" : "border-transparent bg-surface-muted text-muted",
+                      selected ? "border-transparent bg-[var(--day-selected-bg,var(--accent))] text-[var(--day-selected-text,var(--accent-foreground))]" : available ? "border-border-strong bg-[var(--day-bg,var(--surface))] text-[var(--day-text,var(--text))] hover:border-accent hover:bg-[var(--day-hover-bg,var(--surface))] hover:text-[var(--day-hover-text,var(--text))]" : closed || notOffered ? "border-transparent bg-surface-muted text-muted opacity-50" : "border-transparent bg-surface-muted text-muted",
                       loadingSlots && "animate-pulse",
                     )}
                   >
                     <span className="text-xs capitalize">{WEEKDAY.format(utc(d.date)).replace(".", "")}</span>
                     <span className="text-base font-semibold">{DAYNUM.format(utc(d.date))}</span>
-                    {days ? <span className="mt-1 size-1.5 rounded-full" style={{ background: !available ? "var(--day-full, #ef4444)" : busy ? "var(--day-busy, #ea580c)" : "var(--day-available, #16a34a)" }} aria-hidden="true" /> : null}
+                    {days && closed ? <span className="mt-1 text-[10px] leading-none">{t("booking.closed")}</span> : days && notOffered ? null : days ? <span className="mt-1 size-1.5 rounded-full" style={{ background: !available ? "var(--day-full, #ef4444)" : busy ? "var(--day-busy, #ea580c)" : "var(--day-available, #16a34a)" }} aria-hidden="true" /> : null}
                   </button>
                 );
               })}

@@ -66,6 +66,8 @@ const de: Messages = {
     chooseSlot: "Wählen Sie einen Termin",
     slotsCount: "{n} Termine",
     full: "ausgebucht",
+    closed: "geschlossen",
+    unavailable: "nicht verfügbar",
     noSlotsWeek: "Diese Woche keine freien Termine. Versuchen Sie die nächste Woche.",
     noSlotsWeekWaitlist: "Diese Woche keine freien Termine. Versuchen Sie die nächste Woche oder wählen Sie einen Tag, um benachrichtigt zu werden, wenn ein Platz frei wird.",
     recommended: "Empfohlene Termine",

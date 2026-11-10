@@ -66,6 +66,8 @@ const nl: Messages = {
     chooseSlot: "Kies een tijdslot",
     slotsCount: "{n} tijdsloten",
     full: "volzet",
+    closed: "gesloten",
+    unavailable: "niet beschikbaar",
     noSlotsWeek: "Geen vrije tijdsloten deze week. Probeer de volgende week.",
     noSlotsWeekWaitlist: "Geen vrije tijdsloten deze week. Probeer de volgende week, of kies een dag om verwittigd te worden als er een plaats vrijkomt.",
     recommended: "Aanbevolen tijdsloten",

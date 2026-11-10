@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { computeSlots, type SlotInput } from "./slots";
+import { closedDays, computeSlots, type SlotInput } from "./slots";
 
 const TZ = "Europe/Brussels";
 const MON = "2026-11-02"; // lundi, heure d'hiver (UTC+1)
@@ -129,4 +129,15 @@ describe("computeSlots", () => {
       assert.equal(r[MON]!.some((s) => s.grouped), false);
     });
   });
+});
+
+it("closedDays : congé d'un membre seul, fermeture de l'établissement, jour non ouvré", () => {
+  const weekly = { 1: [{ start: "09:00", end: "17:00" }], 2: [{ start: "09:00", end: "17:00" }] };
+  // 2026-11-16 = lundi, 2026-11-17 = mardi, 2026-11-18 = mercredi (non ouvré)
+  const members = [{ memberId: "a", weekly, exceptions: { "2026-11-16": { isClosed: true, hours: [] } } }];
+  const r = closedDays({ days: ["2026-11-16", "2026-11-17", "2026-11-18"], members, businessExceptions: {}, serviceWindows: null, timezone: "Europe/Brussels" });
+  assert.deepEqual(r, ["2026-11-16", "2026-11-18"]);
+  const two = [...members, { memberId: "b", weekly, exceptions: {} }];
+  assert.deepEqual(closedDays({ days: ["2026-11-16"], members: two, businessExceptions: {}, serviceWindows: null, timezone: "Europe/Brussels" }), []);
+  assert.deepEqual(closedDays({ days: ["2026-11-17"], members: two, businessExceptions: { "2026-11-17": { isClosed: true, hours: [] } }, serviceWindows: null, timezone: "Europe/Brussels" }), ["2026-11-17"]);
 });

@@ -89,6 +89,20 @@ export function workingRanges(member: MemberAvailability, day: string, timezone:
   return member.weekly[weekdayOf(day, timezone)] ?? [];
 }
 
+/**
+ * Jours où personne ne travaille (congé, fermeture, jour non ouvré) pour cette prestation :
+ * à distinguer d'un jour complet (liste d'attente possible) sur la page de réservation.
+ */
+export function closedDays(input: Pick<SlotInput, "days" | "members" | "businessExceptions" | "serviceWindows" | "timezone">): string[] {
+  return input.days.filter((day) =>
+    input.members.every((m) => {
+      const working = workingRanges(m, day, input.timezone, input.businessExceptions);
+      const ranges = input.serviceWindows ? intersectRanges(working, input.serviceWindows[weekdayOf(day, input.timezone)] ?? []) : working.map((r) => ({ start: toMin(r.start), end: toMin(r.end) }));
+      return ranges.length === 0;
+    }),
+  );
+}
+
 /** Intersection de deux listes de plages "HH:MM" (en minutes). */
 export function intersectRanges(a: TimeRange[], b: TimeRange[]): { start: number; end: number }[] {
   const out: { start: number; end: number }[] = [];
