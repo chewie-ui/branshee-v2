@@ -93,6 +93,8 @@ export const formQuestions = pgTable(
     type: formQuestionTypeEnum("type").notNull().default("text"),
     isRequired: boolean("is_required").notNull().default(false),
     options: text("options").array().notNull().default([]),
+    /** Prestations concernées ; vide = toutes les prestations. */
+    serviceIds: uuid("service_ids").array().notNull().default([]),
     position: smallint("position").notNull().default(0),
     ...timestamps,
   },

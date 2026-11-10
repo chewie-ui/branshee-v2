@@ -65,7 +65,7 @@ export const getPublicBusiness = cache(async (slug: string) => {
       .from(members)
       .where(and(eq(members.businessId, biz.id), eq(members.status, "active"), eq(members.isActive, true), eq(members.isBookable, true)))
       .orderBy(asc(members.createdAt)),
-    db.select({ id: formQuestions.id, label: formQuestions.label, type: formQuestions.type, isRequired: formQuestions.isRequired, options: formQuestions.options }).from(formQuestions).where(eq(formQuestions.businessId, biz.id)).orderBy(asc(formQuestions.position)),
+    db.select({ id: formQuestions.id, label: formQuestions.label, type: formQuestions.type, isRequired: formQuestions.isRequired, options: formQuestions.options, serviceIds: formQuestions.serviceIds }).from(formQuestions).where(eq(formQuestions.businessId, biz.id)).orderBy(asc(formQuestions.position)),
     db.select({ weekday: weeklyHours.weekday, start: weeklyHours.startTime, end: weeklyHours.endTime }).from(weeklyHours).where(and(eq(weeklyHours.businessId, biz.id), isNull(weeklyHours.memberId))).orderBy(asc(weeklyHours.startTime)),
     listIntake(biz.id),
   ]);

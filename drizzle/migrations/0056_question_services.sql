@@ -1,0 +1,1 @@
+ALTER TABLE "form_questions" ADD COLUMN "service_ids" uuid[] DEFAULT '{}' NOT NULL;

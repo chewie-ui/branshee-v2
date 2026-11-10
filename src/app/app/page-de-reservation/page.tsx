@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { bookingPageSettings, businesses, formQuestions } from "@/db/schema";
+import { bookingPageSettings, businesses, formQuestions, services } from "@/db/schema";
 import { GalleryEditor, LocationEditor, ProfileEditor, SectionsEditor, SocialEditor } from "@/components/booking-page/content-editors";
 import { FaqEditor, FormQuestionsEditor } from "@/components/booking-page/editors";
 import { PageTabs } from "@/components/booking-page/page-tabs";
@@ -19,10 +19,11 @@ export const generateMetadata = appMetadata("Page de réservation");
 export default async function BookingPageContent() {
   const t = await appT();
   const ctx = await requireContext("customization.manage");
-  const [[page], [b], questions] = await Promise.all([
+  const [[page], [b], questions, svcList] = await Promise.all([
     db.select().from(bookingPageSettings).where(eq(bookingPageSettings.businessId, ctx.business.id)),
     db.select().from(businesses).where(eq(businesses.id, ctx.business.id)),
     db.select().from(formQuestions).where(eq(formQuestions.businessId, ctx.business.id)).orderBy(asc(formQuestions.position)),
+    db.select({ id: services.id, name: services.name, isActive: services.isActive }).from(services).where(eq(services.businessId, ctx.business.id)).orderBy(asc(services.position), asc(services.name)),
   ]);
   const show = page?.showContact ?? { email: true, phone: true, instagram: true, facebook: true, whatsapp: true, website: true };
   // L'ancienne carte était stockée telle quelle (code iframe) : on la représente par son URL.
@@ -49,7 +50,7 @@ export default async function BookingPageContent() {
           initial={{ website: b!.website ?? "", instagram: b!.social.instagram ?? "", facebook: b!.social.facebook ?? "", whatsapp: b!.social.whatsapp ?? "", tiktok: b!.social.tiktok ?? "", linkedin: b!.social.linkedin ?? "", youtube: b!.social.youtube ?? "", show }}
         />
         <FaqEditor initial={page?.faq ?? []} />
-        {ctx.can("forms.manage") ? <FormQuestionsEditor initial={questions.map((q) => ({ label: q.label, type: q.type, isRequired: q.isRequired, options: q.options }))} /> : null}
+        {ctx.can("forms.manage") ? <FormQuestionsEditor initial={questions.map((q) => ({ label: q.label, type: q.type, isRequired: q.isRequired, options: q.options, serviceIds: q.serviceIds }))} services={svcList} /> : null}
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { activityLogs, bookingPageSettings, businesses, formQuestions, type PageSection } from "@/db/schema";
+import { activityLogs, bookingPageSettings, businesses, formQuestions, services, type PageSection } from "@/db/schema";
 import { resolveTheme, themeSchema } from "@/lib/booking-theme";
 import { slugify } from "@/lib/slug";
 import { RESERVED_SLUGS } from "@/server/business";
@@ -21,6 +21,7 @@ const questionSchema = z.object({
   type: z.enum(["text", "choice", "yes_no"]),
   isRequired: z.boolean(),
   options: z.array(z.string().trim().min(1).max(80)).max(12),
+  serviceIds: z.array(z.uuid()).max(200).optional().default([]),
 });
 
 /** Remplace l'ensemble des questions posées avant la réservation (ordre = ordre de la liste). */
@@ -32,14 +33,17 @@ export async function saveFormQuestions(input: unknown): Promise<Result> {
   const plan = (await effectivePlan(ctx.business.id)).plan;
   const maxQ = limitOf(plan, "formQuestions");
   if (parsed.data.length > maxQ) return { ok: false, error: `Votre forfait permet ${maxQ} question${maxQ > 1 ? "s" : ""}. Passez au forfait supérieur pour en ajouter.` };
+  // Prestations ciblées : uniquement celles de l'établissement (les autres sont ignorées).
+  const own = new Set((await db.select({ id: services.id }).from(services).where(eq(services.businessId, ctx.business.id))).map((s) => s.id));
   await db.transaction(async (tx) => {
     await tx.delete(formQuestions).where(eq(formQuestions.businessId, ctx.business.id));
     if (parsed.data.length) {
-      await tx.insert(formQuestions).values(parsed.data.map((q, i) => ({ businessId: ctx.business.id, label: q.label, type: q.type, isRequired: q.isRequired, options: q.type === "choice" ? q.options : [], position: i })));
+      await tx.insert(formQuestions).values(parsed.data.map((q, i) => ({ businessId: ctx.business.id, label: q.label, type: q.type, isRequired: q.isRequired, options: q.type === "choice" ? q.options : [], serviceIds: [...new Set(q.serviceIds)].filter((id) => own.has(id)), position: i })));
     }
     await tx.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "form.update", description: "Questions de réservation modifiées" });
   });
   revalidatePath("/app/page-de-reservation");
+  revalidatePath("/app/prestations/questions");
   return { ok: true };
 }
 
