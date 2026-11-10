@@ -3305,4 +3305,5 @@ export const EN: Record<string, string> = {
   "Vos modifications ne sont pas enregistrées. Quitter quand même ?": "Your changes aren't saved. Leave anyway?",
   "Fermé": "Closed",
   "Bordure en pointillés : demande en attente de confirmation. Zone hachurée : créneau bloqué, congé ou fermeture.": "Dotted border: request awaiting confirmation. Hatched area: blocked slot, time off or closure.",
+  "Description trop longue (2 000 caractères maximum).": "Description too long (2,000 characters maximum).",
 };
