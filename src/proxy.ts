@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
 import { legacyRedirect } from "@/lib/custom-services";
+import { localeOfPath, localize } from "@/lib/site-locale";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -32,6 +33,22 @@ export function proxy(request: NextRequest) {
       const known = skydevHosts().includes(bareHost(host)) ? host : "skydev.be";
       const proto = known.endsWith(".localhost") || known.includes(".localhost:") ? "http" : "https";
       return NextResponse.redirect(new URL(to, `${proto}://${known}`), 301);
+    }
+  }
+  // Skydev : première visite d'une page du site en français, navigateur dans une autre langue → version anglaise.
+  // Une seule fois : dès qu'une page est vue, la langue est retenue (cookie posé par la page), et le bouton FR / EN la change.
+  // Jamais pour les robots (Google doit voir les deux versions) ni pour les requêtes internes de Next.
+  if (request.method === "GET" && brandForHost(host) === "skydev" && !request.cookies.has("site_lang") && localeOfPath(path) === "fr" && /^\/(?:$|apps(?:\/|$)|sur-mesure(?:\/|$)|logiciel(?:\/|$)|inscription$|connexion$|mot-de-passe-oublie$)/.test(path) && !request.headers.get("rsc") && (request.headers.get("accept") ?? "").includes("text/html") && !/bot|crawl|spider|slurp|preview|lighthouse|facebookexternalhit/i.test(request.headers.get("user-agent") ?? "")) {
+    const first = (request.headers.get("accept-language") ?? "").split(",")[0]?.split(";")[0]?.trim().toLowerCase().split("-")[0] ?? "";
+    if (first && first !== "fr" && first !== "*") {
+      const to = localize(path, "en");
+      if (to !== path) {
+        const url = request.nextUrl.clone();
+        url.pathname = to;
+        const res = NextResponse.redirect(url, 307);
+        res.headers.set("Vary", "Accept-Language, Cookie");
+        return res;
+      }
     }
   }
   if (PROTECTED.some((r) => r.test(path)) && !request.cookies.has("bs_session")) {

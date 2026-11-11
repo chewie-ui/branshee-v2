@@ -12,6 +12,8 @@ export function LocaleGuard({ locale }: { locale: SiteLocale }) {
   const pathname = usePathname();
   useEffect(() => {
     document.documentElement.lang = locale;
+    // Langue retenue pour les prochaines visites (le serveur ne redirige plus vers l'anglais une fois la langue choisie).
+    try { document.cookie = `site_lang=${locale}; path=/; max-age=31536000; samesite=lax`; } catch {}
     if (localeOfPath(window.location.pathname) !== locale) window.location.reload();
   }, [pathname, locale]);
   return null;
