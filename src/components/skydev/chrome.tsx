@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/brand";
 import { LEGAL, legalAddress } from "@/lib/legal";
 import { alternatePath } from "@/lib/site-alternate";
 import type { SiteLocale } from "@/lib/site-locale";
+import { LocaleGuard } from "./locale-guard";
 import "./skydev.css";
 
 type L = { href: string; label: string };
@@ -51,6 +52,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
   const switchHref = other === "en" && !alt.startsWith("/en") ? "/en" : alt;
   return (
     <div className="sky" lang={locale}>
+      <LocaleGuard locale={locale} />
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">{t.skip}</a>
       {!signedIn ? (
         <p className="promo-bar"><b>{t.promo[0]}</b>{t.promo[1]}<Link href={L("/inscription")}>{t.tryIt}</Link></p>
@@ -65,7 +67,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
             {t.nav.map((n) => <Link key={n.href} href={L(n.href)}>{n.label}</Link>)}
           </nav>
           <div className="nav-r">
-            <Link className="nav-login nav-lang" href={switchHref} hrefLang={other} aria-label={t.langLabel}>{other.toUpperCase()}</Link>
+            <a className="nav-login nav-lang" href={switchHref} hrefLang={other} aria-label={t.langLabel}>{other.toUpperCase()}</a>
             {signedIn ? (
               <Link className="btn btn-primary btn-sm" href="/app">{t.space}</Link>
             ) : (
@@ -81,7 +83,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
               <nav className="mnav-panel" aria-label={t.mobileNav}>
                 {t.nav.map((n) => <Link key={n.href} href={L(n.href)}>{n.label}</Link>)}
                 {!signedIn ? <Link href={L("/connexion")}>{t.login}</Link> : null}
-                <Link href={switchHref} hrefLang={other}>{t.lang}</Link>
+                <a href={switchHref} hrefLang={other}>{t.lang}</a>
               </nav>
             </details>
           </div>
@@ -102,7 +104,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
           ))}
           <div>
             <h4>{t.contact}</h4>
-            <ul><li><a href="tel:+32477443988">{locale === "en" ? "+32 477 44 39 88" : "0477 44 39 88"}</a></li><li><a href="mailto:info@skydev.be">info@skydev.be</a></li><li>{t.place}</li><li><Link href={switchHref} hrefLang={other}>{t.lang}</Link></li></ul>
+            <ul><li><a href="tel:+32477443988">{locale === "en" ? "+32 477 44 39 88" : "0477 44 39 88"}</a></li><li><a href="mailto:info@skydev.be">info@skydev.be</a></li><li>{t.place}</li><li><a href={switchHref} hrefLang={other}>{t.lang}</a></li></ul>
           </div>
         </div>
         <div className="wrap legal">© {new Date().getFullYear()} Skydev — {LEGAL.owner}, {t.legal} · {legalAddress} · BCE {LEGAL.bce} · TVA {LEGAL.vat}</div>
