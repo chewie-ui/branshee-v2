@@ -22,6 +22,20 @@ export const loyaltySettings = pgTable("loyalty_settings", {
   ...timestamps,
 });
 
+/** QR code « tampon » déjà utilisé : chaque code ne sert qu'une fois (une photo partagée ne donne rien de plus). */
+export const loyaltyQrUses = pgTable(
+  "loyalty_qr_uses",
+  {
+    sig: text("sig").primaryKey(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    window: integer("window").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("loyalty_qr_uses_business_window_idx").on(t.businessId, t.window)],
+);
+
 /** Carte de fidélité d'un client (solde de tampons, lien public pour la voir sur son téléphone). */
 export const loyaltyCards = pgTable(
   "loyalty_cards",

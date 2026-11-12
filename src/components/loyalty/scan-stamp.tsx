@@ -8,7 +8,7 @@ import { Field, Input } from "@/components/ui/field";
 import { scanStamp, type ScanResult } from "@/server/actions/loyalty-scan";
 
 /** Le client a scanné : tampon tout de suite s'il est reconnu, sinon prénom + email la première fois. */
-export function ScanStamp({ b, w, s }: { b: string; w: number; s: string }) {
+export function ScanStamp({ b, w, n = 0, s }: { b: string; w: number; n?: number; s: string }) {
   const router = useRouter();
   const [res, setRes] = useState<ScanResult | null>(null);
   const [need, setNeed] = useState<Extract<ScanResult, { need: "identify" }> | null>(null);
@@ -28,7 +28,7 @@ export function ScanStamp({ b, w, s }: { b: string; w: number; s: string }) {
   useEffect(() => {
     if (once.current) return;
     once.current = true;
-    start(async () => done(await scanStamp({ b, w, s }).catch(() => ({ ok: false as const, error: "Connexion impossible. Réessayez." }))));
+    start(async () => done(await scanStamp({ b, w, n, s }).catch(() => ({ ok: false as const, error: "Connexion impossible. Réessayez." }))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -51,7 +51,7 @@ export function ScanStamp({ b, w, s }: { b: string; w: number; s: string }) {
     return (
       <form
         className="w-full max-w-sm rounded-3xl bg-surface p-6 shadow-sm"
-        onSubmit={(e) => { e.preventDefault(); setFormError(null); start(async () => done(await scanStamp({ b, w, s, ...form }).catch(() => ({ ok: false as const, error: "Connexion impossible. Réessayez." })))); }}
+        onSubmit={(e) => { e.preventDefault(); setFormError(null); start(async () => done(await scanStamp({ b, w, n, s, ...form }).catch(() => ({ ok: false as const, error: "Connexion impossible. Réessayez." })))); }}
       >
         <p className="text-sm font-medium text-accent">{need.business}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Votre carte de fidélité</h1>

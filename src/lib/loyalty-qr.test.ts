@@ -16,6 +16,12 @@ test("QR : valable 5 minutes, refusé ensuite, refusé pour une autre entreprise
   assert.equal(qrVerify(K, B, w + 1, qrSign(K, B, w + 1), now), false, "fenêtre future refusée");
   assert.equal(qrVerify(K, B, w, s.slice(0, -1) + "A", now), s.endsWith("A") ? true : false);
   assert.equal(qrVerify(K, B, w, "", now), false);
+  // Code suivant de la même fenêtre (après un scan) : différent, et vérifié avec son rang.
+  const s1 = qrSign(K, B, w, 1);
+  assert.notEqual(s1, s);
+  assert.equal(qrVerify(K, B, w, s1, now, 1), true);
+  assert.equal(qrVerify(K, B, w, s1, now, 0), false);
+  assert.equal(qrVerify(K, B, w, s, now, 1), false);
   assert.ok(QR_STEP_MS === 30_000);
 });
 

@@ -1,10 +1,10 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { businesses, customers, loyaltyCards } from "@/db/schema";
+import { businesses, customers, loyaltyCards, loyaltyQrUses } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";
 import { qrVerify } from "@/lib/loyalty-qr";
 import { rateLimit } from "@/server/auth/rate-limit";
@@ -17,6 +17,7 @@ export type ScanResult =
   | { ok: false; need: "identify"; business: string; goal: number; reward: string }
   | { ok: false; error: string };
 
+const USED = "Ce QR code vient d'être utilisé. Demandez au commerçant le nouveau code affiché sur son écran.";
 const cookieName = (businessId: string) => `loy_${businessId.replace(/-/g, "").slice(0, 12)}`;
 const who = z.object({
   firstName: z.string().trim().min(1, "Indiquez votre prénom.").max(60),
@@ -29,8 +30,12 @@ const who = z.object({
  * il faut donc être sur place. Le client est reconnu par son téléphone (cookie), son compte client, ou son
  * email la première fois. Un seul tampon par jour.
  */
-export async function scanStamp(input: { b: string; w: number; s: string; firstName?: string; lastName?: string; email?: string }): Promise<ScanResult> {
-  if (!z.uuid().safeParse(input.b).success || !qrVerify(loyaltyQrKey(), input.b, Number(input.w), String(input.s ?? ""))) return { ok: false, error: "Ce QR code a expiré. Demandez à le scanner à nouveau." };
+export async function scanStamp(input: { b: string; w: number; n?: number; s: string; firstName?: string; lastName?: string; email?: string }): Promise<ScanResult> {
+  const n = Number(input.n ?? 0) || 0;
+  if (!z.uuid().safeParse(input.b).success || !qrVerify(loyaltyQrKey(), input.b, Number(input.w), String(input.s ?? ""), Date.now(), n)) return { ok: false, error: "Ce QR code a expiré. Demandez à le scanner à nouveau." };
+  const sig = String(input.s);
+  const [spent] = await db.select({ sig: loyaltyQrUses.sig }).from(loyaltyQrUses).where(eq(loyaltyQrUses.sig, sig));
+  if (spent) return { ok: false, error: USED };
   const ip = clientIp(await headers()) ?? "?";
   if (!rateLimit(`loyalty-scan:${ip}`, 30, 3600_000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
   const [b] = await db.select({ id: businesses.id, name: businesses.name, tz: businesses.timezone }).from(businesses).where(and(eq(businesses.id, input.b), isNull(businesses.deletedAt)));
@@ -72,7 +77,14 @@ export async function scanStamp(input: { b: string; w: number; s: string; firstN
     showCard = !existing;
   }
 
+  // Le code ne sert qu'une fois : on le réserve avant de tamponner (deux scans en même temps : un seul passe).
+  const claimed = await db.insert(loyaltyQrUses).values({ sig, businessId: b.id, window: Number(input.w) }).onConflictDoNothing().returning({ sig: loyaltyQrUses.sig });
+  if (!claimed.length) return { ok: false, error: USED };
   const r = await giveStamp({ businessId: b.id, timezone: b.tz, customerId, source: "qr" });
+  // Déjà tamponné aujourd'hui : le code reste disponible pour le client suivant.
+  if (!r.ok) await db.delete(loyaltyQrUses).where(eq(loyaltyQrUses.sig, sig));
+  // Ménage : les codes de plus de 2 jours ne servent plus à rien.
+  await db.delete(loyaltyQrUses).where(lt(loyaltyQrUses.usedAt, new Date(Date.now() - 2 * 86400_000))).catch(() => {});
   const [card] = await db.select({ stamps: loyaltyCards.stamps, token: loyaltyCards.token }).from(loyaltyCards).where(and(eq(loyaltyCards.businessId, b.id), eq(loyaltyCards.customerId, customerId)));
   if (!card) return { ok: false, error: "Réessayez dans un instant." };
   if (r.ok && (r.first || !showCard)) await sendLoyaltyWelcome(b.id, b.name, email, card.token, s.goal, s.reward, card.stamps);

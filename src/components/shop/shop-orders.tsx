@@ -12,7 +12,7 @@ import { cancelShopOrder, markShopOrderPaid, setShopOrderStatus } from "@/server
 import { useT } from "@/components/app-locale";
 import { intlLocale } from "@/lib/i18n/app";
 
-type Order = { id: string; number: number; status: string; payMethod: string; paid: boolean; fulfilment: string; name: string; email: string; phone: string | null; address: string | null; note: string | null; lines: { name: string; qty: number; unitCents: number }[]; total: number; delivery: number; createdAt: string };
+type Order = { id: string; number: number; status: string; payMethod: string; paid: boolean; fulfilment: string; code: string | null; name: string; email: string; phone: string | null; address: string | null; note: string | null; lines: { name: string; qty: number; unitCents: number }[]; total: number; delivery: number; createdAt: string };
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 const PAY = { online: "Payé en ligne", pickup: "Paiement au retrait", transfer: "Virement" } as const;
 const CLS: Record<string, string> = { pending_payment: "bg-surface-muted text-muted", new: "bg-accent-soft text-accent", ready: "bg-warning-soft text-warning", shipped: "bg-warning-soft text-warning", done: "bg-success-soft text-success", cancelled: "bg-danger-soft text-danger" };
@@ -50,6 +50,7 @@ export function ShopOrders({ orders, canManage, tz }: { orders: Order[]; canMana
                   {o.note ? <p className="mt-2 rounded bg-warning-soft px-2 py-1 text-sm text-warning">{o.note}</p> : null}
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
                     <span>{o.fulfilment === "delivery" ? "Livraison" : "Retrait"}</span>
+                    {o.code ? <span className="rounded bg-surface-muted px-1.5 font-mono font-semibold text-text" title="Demandez ce code au client avant de lui remettre la commande">Code {o.code}</span> : null}
                     {o.address ? <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" aria-hidden="true" />{o.address}</span> : null}
                     <a href={`mailto:${o.email}`} className="inline-flex items-center gap-1 hover:text-text"><Mail className="size-3.5" aria-hidden="true" />{o.email}</a>
                     {o.phone ? <a href={`tel:${o.phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1 hover:text-text"><Phone className="size-3.5" aria-hidden="true" />{o.phone}</a> : null}

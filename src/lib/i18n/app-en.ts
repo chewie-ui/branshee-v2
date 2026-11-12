@@ -531,6 +531,8 @@ export const EN: Record<string, string> = {
   "Continuer au-delà du forfait": "Continue beyond the allowance",
   "Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email.": "Further messages are taken from the prepaid balance. Otherwise: falls back to email.",
   "Rappel par WhatsApp": "WhatsApp reminder",
+  "Tampon donné ! Nouveau code pour le client suivant.": "Stamp given! New code for the next customer.",
+  "Ouvrez l'appareil photo et visez le code. Chaque code ne sert qu'une fois et change toutes les 30 secondes.": "Open the camera and point at the code. Each code works once and changes every 30 seconds.",
   "En option à 6 €/mois (Réglages › Abonnement) : votre page sur votre-nom.skydev.be, activée tout de suite.": "Add-on at €6/month (Settings › Subscription): your page at your-name.skydev.be, live right away.",
   "Votre adresse courte": "Your short address",
   "Adresse courte": "Short address",

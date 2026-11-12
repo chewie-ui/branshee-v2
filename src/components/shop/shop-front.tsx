@@ -19,7 +19,7 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cat, setCat] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: "", email: "", phone: "", address: "", note: "", fulfilment: s.pickup ? "pickup" : "delivery", payMethod: s.payOnline ? "online" : s.payOnPickup ? "pickup" : "transfer", terms: false });
+  const [f, setF] = useState({ name: "", email: "", phone: "", address: "", note: "", pickupAt: "", fulfilment: s.pickup ? "pickup" : "delivery", payMethod: s.payOnline ? "online" : s.payOnPickup ? "pickup" : "transfer", terms: false });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const key = `sky-shop-${slug}`;
@@ -43,7 +43,7 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
     e.preventDefault();
     start(async () => {
       setError(null);
-      const r = await placeShopOrder({ slug, lines: lines.map(([productId, qty]) => ({ productId, qty })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
+      const r = await placeShopOrder({ slug, lines: lines.map(([productId, qty]) => ({ productId, qty })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, pickupAt: f.fulfilment === "pickup" ? f.pickupAt : "", terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
       if (!r.ok) return setError(r.error);
       try { localStorage.removeItem(key); } catch {}
       window.location.href = r.url;
@@ -143,6 +143,7 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
               <div><label htmlFor="so-phone" className="text-sm font-medium">{tx.phone}</label><input id="so-phone" className={input} type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} autoComplete="tel" maxLength={40} /></div>
               <div className="sm:col-span-2"><label htmlFor="so-email" className="text-sm font-medium">{tx.email}</label><input id="so-email" className={input} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="email" maxLength={200} /></div>
               {f.fulfilment === "delivery" ? <div className="sm:col-span-2"><label htmlFor="so-addr" className="text-sm font-medium">{tx.address}</label><input id="so-addr" className={input} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} autoComplete="street-address" maxLength={300} /></div> : null}
+              {f.fulfilment === "pickup" ? <div className="sm:col-span-2"><label htmlFor="so-when" className="text-sm font-medium">{tx.pickupWhen}</label><select id="so-when" className={input} value={f.pickupAt} onChange={(e) => setF({ ...f, pickupAt: e.target.value })}><option value="">{tx.asap}</option>{pickupTimes().map((t) => <option key={t} value={t}>{t}</option>)}</select></div> : null}
               <div className="sm:col-span-2"><label htmlFor="so-note" className="text-sm font-medium">{tx.note}</label><input id="so-note" className={input} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} maxLength={500} /></div>
             </div>
             <fieldset className="mt-4 space-y-2">
@@ -157,4 +158,17 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
       ) : null}
     </div>
   );
+}
+
+/** Heures de retrait proposées : par quart d'heure, de dans 15 minutes jusqu'à 22 h (aujourd'hui). */
+function pickupTimes() {
+  const out: string[] = [];
+  const d = new Date();
+  d.setSeconds(0, 0);
+  d.setMinutes(Math.ceil((d.getMinutes() + 15) / 15) * 15);
+  while (d.getHours() < 22 && d.getDate() === new Date().getDate() && out.length < 48) {
+    out.push(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+    d.setMinutes(d.getMinutes() + 15);
+  }
+  return out;
 }

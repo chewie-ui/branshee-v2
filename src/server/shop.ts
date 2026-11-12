@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import "server-only";
 import { emitWebhook } from "@/server/connect";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
@@ -110,4 +111,12 @@ export async function expireUnpaidShopOrders() {
   let n = 0;
   for (const r of rows) if (await cancelShopOrderAndRestock(r.id)) n++;
   return n;
+}
+
+/**
+ * Code de retrait à 4 chiffres (dérivé du lien secret de la commande) : le client le montre au comptoir,
+ * le commerçant le compare à celui de la commande. Un numéro de commande ou un nom ne suffit pas.
+ */
+export function pickupCode(token: string) {
+  return String(parseInt(createHash("sha256").update(`pickup.${token}`).digest("hex").slice(0, 8), 16) % 10000).padStart(4, "0");
 }

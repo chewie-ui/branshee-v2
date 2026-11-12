@@ -4,7 +4,7 @@ import { ShopOrders } from "@/components/shop/shop-orders";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
-import { shopOrdersOf, shopOrigin, shopRights, shopSettingsOf } from "@/server/shop";
+import { pickupCode, shopOrdersOf, shopOrigin, shopRights, shopSettingsOf } from "@/server/shop";
 import { appMetadata } from "@/server/app-locale";
 import { appT } from "@/server/app-locale";
 
@@ -23,7 +23,7 @@ export default async function ShopPage() {
         {s.enabled ? <a href={url} target="_blank" rel="noopener" className="min-w-0 truncate text-sm font-medium text-accent hover:text-accent-hover">{url.replace(/^https?:\/\//, "")}</a> : <p className="text-sm text-muted">{t("Activez la boutique dans les réglages, puis cochez « En vente sur la boutique » sur vos produits (app Stock).")}</p>}
         {shopRights(ctx).manage ? <Link href="/app/boutique/reglages" className="ml-auto inline-flex h-9 items-center rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted">{t("Réglages")}</Link> : null}
       </Card>
-      <ShopOrders canManage={shopRights(ctx).manage} tz={ctx.business.timezone || "Europe/Brussels"} orders={orders.map((o) => ({ id: o.id, number: o.number, status: o.status, payMethod: o.payMethod, paid: !!o.paidAt, fulfilment: o.fulfilment, name: o.name, email: o.email, phone: o.phone, address: o.address, note: o.note, lines: o.lines, total: o.totalCents, delivery: o.deliveryCents, createdAt: o.createdAt.toISOString() }))} />
+      <ShopOrders canManage={shopRights(ctx).manage} tz={ctx.business.timezone || "Europe/Brussels"} orders={orders.map((o) => ({ id: o.id, number: o.number, status: o.status, payMethod: o.payMethod, paid: !!o.paidAt, fulfilment: o.fulfilment, code: o.fulfilment === "pickup" ? pickupCode(o.token) : null, name: o.name, email: o.email, phone: o.phone, address: o.address, note: o.note, lines: o.lines, total: o.totalCents, delivery: o.deliveryCents, createdAt: o.createdAt.toISOString() }))} />
     </>
   );
 }

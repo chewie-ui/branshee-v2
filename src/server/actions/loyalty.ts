@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { customers, giftCardUses, giftCards, loyaltyCards, loyaltyMoves, loyaltySettings } from "@/db/schema";
+import { customers, giftCardUses, giftCards, loyaltyCards, loyaltyMoves, loyaltyQrUses, loyaltySettings } from "@/db/schema";
 import { addMonths, giftCode, normalizeCode } from "@/lib/loyalty";
 import { todayIn } from "@/lib/planning";
 import { parseEuros } from "@/lib/stock";
@@ -61,16 +61,22 @@ export async function addStamp(customerId: string): Promise<Result> {
   return { ok: true, reward: ready, message: ready ? `${c.name} a ${r.stamps} tampons : récompense débloquée (${r.reward}) !` : `Tampon ajouté : ${r.stamps}/${r.goal} pour ${c.name}.` };
 }
 
-/** QR code « tampon » du moment, affiché sur l'écran du pro (il change toutes les 30 secondes). */
-export async function currentLoyaltyQr(): Promise<{ ok: true; url: string; svg: string; expiresIn: number } | { ok: false; error: string }> {
+/**
+ * QR code « tampon » du moment, affiché sur l'écran du pro. Il change toutes les 30 secondes, et aussitôt
+ * qu'un client l'a utilisé (`used` = tampons donnés par QR aujourd'hui, pour afficher « Tampon donné »).
+ */
+export async function currentLoyaltyQr(): Promise<{ ok: true; url: string; svg: string; expiresIn: number; code: string; used: number } | { ok: false; error: string }> {
   const { ctx, error } = await member();
   if (error) return error;
   const s = await loyaltySettingsOf(ctx.business.id);
   if (!s.qrEnabled) return { ok: false, error: "Activez d'abord le tampon par QR code dans votre programme." };
   const w = qrWindow();
-  const url = `${loyaltyOrigin()}/fidelite/tampon?b=${ctx.business.id}&w=${w}&s=${qrSign(loyaltyQrKey(), ctx.business.id, w)}`;
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(loyaltyQrUses).where(and(eq(loyaltyQrUses.businessId, ctx.business.id), eq(loyaltyQrUses.window, w)));
+  const [{ used }] = await db.select({ used: sql<number>`count(*)::int` }).from(loyaltyQrUses).where(and(eq(loyaltyQrUses.businessId, ctx.business.id), gte(loyaltyQrUses.usedAt, new Date(Date.now() - 86400_000))));
+  const sig = qrSign(loyaltyQrKey(), ctx.business.id, w, n);
+  const url = `${loyaltyOrigin()}/fidelite/tampon?b=${ctx.business.id}&w=${w}${n ? `&n=${n}` : ""}&s=${sig}`;
   const svg = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#111827", light: "#ffffff" } });
-  return { ok: true, url, svg, expiresIn: QR_STEP_MS - (Date.now() % QR_STEP_MS) };
+  return { ok: true, url, svg, expiresIn: QR_STEP_MS - (Date.now() % QR_STEP_MS), code: sig, used };
 }
 
 /** La récompense est utilisée : on retire l'objectif du solde. */

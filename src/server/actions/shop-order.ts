@@ -24,6 +24,7 @@ const schema = z.object({
   phone: z.string().trim().max(40),
   address: z.string().trim().max(300),
   note: z.string().trim().max(500),
+  pickupAt: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).or(z.literal("")).optional().default(""),
   terms: z.literal(true, { message: "Acceptez les conditions de vente." }),
 });
 
@@ -63,7 +64,7 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
     const delivery = d.fulfilment === "delivery" ? deliveryFee(itemsCents, s) : 0;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${shop.business.id}:shop`}))`);
     const [{ n }] = await tx.select({ n: sql<number>`coalesce(max(${shopOrders.number}), 0)::int + 1` }).from(shopOrders).where(eq(shopOrders.businessId, shop.business.id));
-    const [row] = await tx.insert(shopOrders).values({ businessId: shop.business.id, number: n, status: d.payMethod === "online" ? "pending_payment" : "new", payMethod: d.payMethod, fulfilment: d.fulfilment, name: d.name, email: d.email.toLowerCase(), phone: d.phone || null, address: d.fulfilment === "delivery" ? d.address : null, note: d.note || null, lines, itemsCents, deliveryCents: delivery, totalCents: itemsCents + delivery, token }).returning();
+    const [row] = await tx.insert(shopOrders).values({ businessId: shop.business.id, number: n, status: d.payMethod === "online" ? "pending_payment" : "new", payMethod: d.payMethod, fulfilment: d.fulfilment, name: d.name, email: d.email.toLowerCase(), phone: d.phone || null, address: d.fulfilment === "delivery" ? d.address : null, note: [d.fulfilment === "pickup" && d.pickupAt ? `Retrait souhaité : ${d.pickupAt}` : "", d.note].filter(Boolean).join(" · ") || null, lines, itemsCents, deliveryCents: delivery, totalCents: itemsCents + delivery, token }).returning();
     for (const p of items.filter((x) => x.trackStock)) {
       await tx.update(products).set({ stockQty: sql`${products.stockQty} - ${qty.get(p.id)!}`, updatedAt: new Date() }).where(eq(products.id, p.id));
       await tx.insert(stockMoves).values({ businessId: shop.business.id, productId: p.id, delta: -qty.get(p.id)!, reason: "sale", note: `Boutique n° ${n}`, saleId: row!.id });

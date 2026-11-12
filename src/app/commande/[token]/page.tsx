@@ -4,7 +4,7 @@ import { CheckCircle2, Clock } from "lucide-react";
 import { db } from "@/db";
 import { invoiceSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { orderByToken } from "@/server/shop";
+import { orderByToken, pickupCode } from "@/server/shop";
 import { intlLocale } from "@/i18n";
 import { fill, publicTexts } from "@/i18n/public-pages";
 import { resolvePublicLocale } from "@/i18n/server";
@@ -36,6 +36,13 @@ export default async function OrderTracking({ params, searchParams }: { params: 
           <li className="flex justify-between py-2 font-semibold"><span>{tx.total}</span><span className="tabular-nums">{eur(o.totalCents)}</span></li>
         </ul>
         <p className="mt-3 text-sm">{o.fulfilment === "delivery" ? fill(tx.deliverTo, { address: o.address ?? "" }) : tx.pickupInfo}</p>
+        {o.fulfilment === "pickup" && !pendingPay && o.status !== "cancelled" && o.status !== "done" ? (
+          <div className="mt-4 rounded-xl border border-border bg-surface-muted p-4 text-center">
+            <p className="text-sm font-medium text-muted">{tx.pickupCode}</p>
+            <p className="mt-1 font-mono text-4xl font-bold tracking-[0.3em]">{pickupCode(o.token)}</p>
+            <p className="mt-2 text-xs text-muted">{tx.pickupCodeHelp}</p>
+          </div>
+        ) : null}
         {o.payMethod === "transfer" && !o.paidAt && o.status !== "cancelled" && seller?.iban ? <p className="mt-3 rounded-lg bg-surface-muted p-3 text-sm">{fill(tx.transfer, { amount: eur(o.totalCents), name: seller.name || r.business })}<br />IBAN <b className="font-mono">{seller.iban}</b>{seller.bic ? ` · BIC ${seller.bic}` : ""}<br />{tx.comm} : <b>{fill(tx.commValue, { n: o.number })}</b></p> : null}
         {o.payMethod === "pickup" && !o.paidAt && o.status !== "cancelled" ? <p className="mt-3 text-sm text-muted">{fill(tx.payLater, { when: o.fulfilment === "delivery" ? tx.atDelivery : tx.atPickup })}</p> : null}
       </div>
