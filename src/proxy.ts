@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
 import { legacyRedirect } from "@/lib/custom-services";
 import { localeOfPath, localize } from "@/lib/site-locale";
-import { appPathForHost } from "@/lib/app-subdomains";
+import { appPathForHost, proSlugForHost } from "@/lib/app-subdomains";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -33,6 +33,18 @@ export function proxy(request: NextRequest) {
     const local = /\.localhost(:\d+)?$/.test(host);
     const base = local ? `http://skydev.localhost${host.match(/:\d+$/)?.[0] ?? ""}` : "https://skydev.be";
     return NextResponse.redirect(new URL(appPath, base), 302);
+  }
+  // Skydev : adresse d'un pro (option « nom de domaine ») : mon-cabinet.skydev.be affiche sa page (à « / », réservation comprise).
+  // La page vérifie que l'option est active, sinon elle renvoie vers skydev.be/pro/<adresse>.
+  const proSlug = path === "/" ? proSlugForHost(host) : null;
+  if (proSlug) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${proSlug}`;
+    const h = new Headers(request.headers);
+    h.set("x-pathname", "/");
+    h.set("x-pro-subdomain", proSlug);
+    h.set("x-method", request.method);
+    return NextResponse.rewrite(url, { request: { headers: h } });
   }
   // Skydev : anciennes pages de l'ancien site (création de site par ville, services) → nouvelles pages, en 301.
   if ((request.method === "GET" || request.method === "HEAD") && brandForHost(host) === "skydev") {

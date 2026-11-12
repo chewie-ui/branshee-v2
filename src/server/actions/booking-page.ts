@@ -1,5 +1,6 @@
 "use server";
 
+import { isReservedSubdomain } from "@/lib/app-subdomains";
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "@/lib/zod";
@@ -225,7 +226,7 @@ export async function saveSlug(input: string): Promise<Result & { slug?: string 
   if (!(await businessHas(ctx.business.id, "customUrl"))) return { ok: false, error: "L'URL personnalisée est incluse dans le forfait Pro+, ou en option à 5 €/mois avec le forfait Pro (Réglages › Abonnement)." };
   const slug = slugify(String(input ?? ""));
   if (slug.length < 3) return { ok: false, error: "3 caractères minimum (lettres, chiffres, tirets)." };
-  if (RESERVED_SLUGS.has(slug)) return { ok: false, error: "Cette adresse est réservée, choisissez-en une autre." };
+  if (RESERVED_SLUGS.has(slug) || isReservedSubdomain(slug)) return { ok: false, error: "Cette adresse est réservée, choisissez-en une autre." };
   const [taken] = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, slug), ne(businesses.id, ctx.business.id)));
   if (taken) return { ok: false, error: "Cette adresse est déjà prise." };
   await db.update(businesses).set({ slug }).where(eq(businesses.id, ctx.business.id));

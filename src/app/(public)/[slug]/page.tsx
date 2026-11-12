@@ -10,7 +10,8 @@ import type { SiteSection } from "@/lib/site-templates";
 import { countSiteVisit, publishedSiteFor, siteContent } from "@/server/site-builder";
 import { FeatureStatusPage } from "@/components/feature-status";
 import { featureStatus } from "@/server/features";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { hasProSubdomain } from "@/server/plan";
 import type { ReactNode } from "react";
 import { Clock, Facebook, Globe, Instagram, Languages, Linkedin, Mail, MapPin, MessageCircle, Phone, Star, Video, Youtube } from "lucide-react";
 import { format } from "date-fns";
@@ -139,6 +140,9 @@ export default async function PublicBusinessPage({ params, searchParams }: { par
     for (const [k, v] of Object.entries(sp)) for (const x of Array.isArray(v) ? v : v != null ? [v] : []) q.append(k, x);
     permanentRedirect(q.size ? `${wanted}?${q}` : wanted);
   }
+  // Adresse mon-cabinet.skydev.be : réservée à l'option payante « nom de domaine », sinon page habituelle sur skydev.be.
+  const viaSub = (await headers()).get("x-pro-subdomain");
+  if (viaSub && !(await hasProSubdomain(data.business.id))) redirect(`https://skydev.be${wanted}`);
   const { business: b, theme } = data;
   const today = format(zoned(new Date(), b.timezone), "yyyy-MM-dd");
   const locale = await resolvePublicLocale(sp.lang);

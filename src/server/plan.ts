@@ -62,6 +62,12 @@ export const isLocked = cache(async (businessId: string, brand?: string | null):
   return (await effectivePlan(businessId)).source === "free";
 });
 
+/** Skydev : adresse votre-nom.skydev.be = option payante « nom de domaine », active sur un abonnement en cours. */
+export async function hasProSubdomain(businessId: string) {
+  const p = await effectivePlan(businessId);
+  return p.customUrlAddon && p.source !== "free";
+}
+
 export async function businessHas(businessId: string, feature: Feature) {
   const p = await effectivePlan(businessId);
   return hasFeature(p.plan, feature, { customUrl: p.customUrlAddon });

@@ -45,3 +45,16 @@ export function subdomainForAppPath(path: string): string | null {
   const hit = Object.entries(APP_SUBDOMAINS).find(([, p]) => p === path);
   return hit ? `${hit[0]}.skydev.be` : null;
 }
+
+/** Sous-domaines qui ne sont jamais la page d'un pro (infrastructure, sites hébergés ailleurs). */
+const INFRA = new Set(["www", "client", "budget", "api", "admin", "app", "mail", "smtp", "imap", "pop", "ftp", "webmail", "autodiscover", "status", "docs", "blog", "help", "aide", "support", "demo", "static", "cdn", "assets", "preview", "test", "staging", "dev", "ns1", "ns2", "en", "fr", "nl", "pro"]);
+
+/** Nom réservé : ni une app, ni l'infrastructure (un pro ne peut pas le choisir comme adresse). */
+export const isReservedSubdomain = (name: string) => INFRA.has(name) || name in APP_SUBDOMAINS;
+
+/** « mon-cabinet.skydev.be » → « mon-cabinet » (page d'un pro) ; sinon null. */
+export function proSlugForHost(host: string): string | null {
+  const m = /^([a-z0-9][a-z0-9-]{1,79})\.skydev\.(?:be|localhost)(?::\d+)?$/.exec(host.toLowerCase());
+  if (!m || isReservedSubdomain(m[1]!)) return null;
+  return m[1]!;
+}

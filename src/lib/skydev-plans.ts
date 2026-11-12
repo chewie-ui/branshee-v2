@@ -50,7 +50,7 @@ export type SkydevAddonKey = "tel_ia" | "domain";
 
 export const SKYDEV_ADDONS: Record<SkydevAddonKey, { label: string; monthly: number; description: string }> = {
   tel_ia: { label: "Tél IA", monthly: 39, description: "Une IA répond à vos appels manqués et vous envoie le résumé. 100 minutes par mois incluses." },
-  domain: { label: "Votre nom de domaine", monthly: 6, description: "Votre site et votre page de réservation sur votre propre adresse (ex. votre-cabinet.be)." },
+  domain: { label: "Votre nom de domaine", monthly: 6, description: "Votre page sur votre-nom.skydev.be, activée tout de suite (et bientôt sur votre propre adresse, ex. votre-cabinet.be)." },
 };
 
 /** Clé de module (table `modules`) des options qui sont des apps. */
