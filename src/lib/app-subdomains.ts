@@ -28,6 +28,8 @@ export const APP_SUBDOMAINS: Record<string, string> = {
   marketing: "/app/marketing",
   reviews: "/app/avis",
   loyalty: "/app/fidelite",
+  /** Raccourci du commerçant : l'écran du QR code fidélité, directement (à mettre sur l'écran d'accueil). */
+  qr: "/app/fidelite/qr",
   sign: "/app/signatures",
   documents: "/app/documents",
   tasks: "/app/taches/aujourdhui",

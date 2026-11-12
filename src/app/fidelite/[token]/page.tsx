@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, Gift, Star } from "lucide-react";
 import { cardByToken, cardHistory, loyaltySettingsOf } from "@/server/loyalty";
+import { ClaimCard } from "@/components/loyalty/claim-card";
 import { fill, publicTexts } from "@/i18n/public-pages";
 import { resolvePublicLocale } from "@/i18n/server";
 
@@ -32,7 +33,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
         <div className="rounded-3xl bg-accent p-6 text-accent-foreground shadow-lg">
           <p className="text-sm opacity-90">{c.business}</p>
           <h1 className="mt-1 text-2xl font-semibold">{tx.card}</h1>
-          <p className="mt-1 opacity-90">{c.name ?? c.fullName.split(" ")[0]}</p>
+          {c.hasEmail ? <p className="mt-1 opacity-90">{c.name ?? c.fullName.split(" ")[0]}</p> : null}
           <p className="mt-5 text-4xl font-semibold tabular-nums">{shown}<span className="text-xl opacity-80"> / {s.goal}</span></p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/25" aria-hidden="true"><div className="h-full rounded-full bg-white" style={{ width: `${(shown / s.goal) * 100}%` }} /></div>
           <ul className="mt-5 grid grid-cols-5 gap-3" aria-label={fill(tx.stamps, { n: shown, goal: s.goal })}>
@@ -41,6 +42,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
           <p className="mt-6 rounded-xl bg-white/15 px-4 py-3 text-sm">{ready ? <><Gift className="mr-1.5 inline size-4" aria-hidden="true" />{fill(tx.reward, { reward: s.reward })}</> : fill(tx.left, { n: s.goal - c.stamps, reward: s.reward })}</p>
           {c.rewards ? <p className="mt-3 text-xs opacity-80">{fill(tx.earned, { n: c.rewards })}</p> : null}
         </div>
+        {!c.hasEmail ? <ClaimCard token={(await params).token} tx={{ saveTitle: tx.saveTitle, saveText: tx.saveText, firstName: tx.firstName, email: tx.email, save: tx.save, saving: tx.saving, saved: tx.saved, merged: tx.merged, account: tx.account }} signupHref="/inscription?client=1" /> : null}
         {moves.length ? (
           <section className="rounded-2xl bg-surface p-5" aria-labelledby="hist">
             <h2 id="hist" className="text-sm font-semibold">{tx.history}</h2>

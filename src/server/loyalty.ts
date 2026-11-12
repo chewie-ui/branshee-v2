@@ -35,7 +35,7 @@ export async function giftCardsOf(businessId: string) {
 export async function cardByToken(token: string) {
   if (!/^[\w-]{16,40}$/.test(token)) return null;
   const [r] = await db
-    .select({ id: loyaltyCards.id, stamps: loyaltyCards.stamps, rewards: loyaltyCards.rewardsEarned, name: customers.firstName, fullName: customers.fullName, businessId: businesses.id, business: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl })
+    .select({ id: loyaltyCards.id, stamps: loyaltyCards.stamps, rewards: loyaltyCards.rewardsEarned, name: customers.firstName, fullName: customers.fullName, hasEmail: sql<boolean>`${customers.email} is not null`, businessId: businesses.id, business: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl })
     .from(loyaltyCards)
     .innerJoin(customers, eq(customers.id, loyaltyCards.customerId))
     .innerJoin(businesses, eq(businesses.id, loyaltyCards.businessId))

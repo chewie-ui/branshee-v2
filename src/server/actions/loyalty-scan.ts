@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { businesses, customers, loyaltyCards, loyaltyQrUses } from "@/db/schema";
+import { businesses, customers, loyaltyCards, loyaltyMoves, loyaltyQrUses } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";
 import { qrVerify } from "@/lib/loyalty-qr";
 import { rateLimit } from "@/server/auth/rate-limit";
@@ -63,8 +63,13 @@ export async function scanStamp(input: { b: string; w: number; n?: number; s: st
       email = row?.email ?? u.email;
     }
   }
+  // Première fois, sans compte ni email : carte créée tout de suite sur ce téléphone (pas d'attente au comptoir).
+  // Le client ajoute son email ou crée son compte plus tard, depuis sa carte, pour ne pas la perdre.
+  if (!customerId && !input.email) {
+    const [anon] = await db.insert(customers).values({ businessId: b.id, fullName: "Client fidélité (sans email)" }).returning({ id: customers.id });
+    customerId = anon!.id;
+  }
   if (!customerId) {
-    if (!input.email) return { ok: false, need: "identify", business: b.name, goal: s.goal, reward: s.reward };
     const v = who.safeParse({ firstName: input.firstName ?? "", lastName: input.lastName ?? "", email: input.email });
     if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez vos informations." };
     const [existing] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, b.id), sql`lower(${customers.email}) = ${v.data.email.toLowerCase()}`));
@@ -90,4 +95,51 @@ export async function scanStamp(input: { b: string; w: number; n?: number; s: st
   if (r.ok && (r.first || !showCard)) await sendLoyaltyWelcome(b.id, b.name, email, card.token, s.goal, s.reward, card.stamps);
   if (showCard) jar.set(cookieName(b.id), card.token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/fidelite", maxAge: 400 * 86400 });
   return { ok: true, stamps: card.stamps, goal: s.goal, reward: s.reward, already: !r.ok, token: showCard ? card.token : null, business: b.name };
+}
+
+const claimSchema = z.object({
+  token: z.string().regex(/^[\w-]{16,40}$/),
+  firstName: z.string().trim().min(1, "Indiquez votre prénom.").max(60),
+  email: z.email("Adresse email invalide.").max(200),
+});
+
+/**
+ * Carte créée sans email au premier scan : le client y ajoute son prénom et son email quand il veut, pour la
+ * retrouver s'il change de téléphone. Email déjà connu de ce commerce : les tampons sont ajoutés à cette carte,
+ * dont le lien part par email (jamais affiché à quelqu'un qui aurait juste tapé l'adresse d'un autre).
+ */
+export async function claimLoyaltyCard(input: { token: string; firstName: string; email: string }): Promise<{ ok: true; merged: boolean } | { ok: false; error: string }> {
+  const v = claimSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez vos informations." };
+  const ip = clientIp(await headers()) ?? "?";
+  if (!rateLimit(`loyalty-claim:${ip}`, 10, 3600_000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
+  const email = v.data.email.toLowerCase();
+  const [card] = await db.select({ id: loyaltyCards.id, businessId: loyaltyCards.businessId, customerId: loyaltyCards.customerId, stamps: loyaltyCards.stamps, custEmail: customers.email, bName: businesses.name }).from(loyaltyCards).innerJoin(customers, eq(customers.id, loyaltyCards.customerId)).innerJoin(businesses, eq(businesses.id, loyaltyCards.businessId)).where(eq(loyaltyCards.token, v.data.token));
+  if (!card) return { ok: false, error: "Carte introuvable." };
+  if (card.custEmail) return { ok: false, error: "Cette carte est déjà liée à une adresse email." };
+  const s = await loyaltySettingsOf(card.businessId);
+  const [other] = await db.select({ id: customers.id }).from(customers).where(and(eq(customers.businessId, card.businessId), sql`lower(${customers.email}) = ${email}`));
+  if (!other) {
+    await db.update(customers).set({ email, firstName: v.data.firstName, fullName: v.data.firstName, updatedAt: new Date() }).where(eq(customers.id, card.customerId));
+    const [c] = await db.select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps }).from(loyaltyCards).where(eq(loyaltyCards.id, card.id));
+    await sendLoyaltyWelcome(card.businessId, card.bName, email, c!.token, s.goal, s.reward, c!.stamps);
+    return { ok: true, merged: false };
+  }
+  // Fusion : tampons et historique rejoignent la carte existante, la carte sans email disparaît.
+  const target = await db.transaction(async (tx) => {
+    await tx.insert(loyaltyCards).values({ businessId: card.businessId, customerId: other.id, token: (await import("node:crypto")).randomBytes(16).toString("base64url") }).onConflictDoNothing();
+    const [t] = await tx.select().from(loyaltyCards).where(and(eq(loyaltyCards.businessId, card.businessId), eq(loyaltyCards.customerId, other.id))).for("update");
+    const [a] = await tx.select().from(loyaltyCards).where(eq(loyaltyCards.id, card.id)).for("update");
+    if (!t || !a) return null;
+    const last = [t.lastStampAt, a.lastStampAt].filter(Boolean).sort((x, y) => y!.getTime() - x!.getTime())[0] ?? null;
+    await tx.update(loyaltyMoves).set({ cardId: t.id }).where(eq(loyaltyMoves.cardId, a.id));
+    await tx.update(loyaltyCards).set({ stamps: t.stamps + a.stamps, rewardsEarned: t.rewardsEarned + a.rewardsEarned, lastStampAt: last, updatedAt: new Date() }).where(eq(loyaltyCards.id, t.id));
+    await tx.delete(loyaltyCards).where(eq(loyaltyCards.id, a.id));
+    await tx.delete(customers).where(and(eq(customers.id, card.customerId), isNull(customers.email)));
+    return { token: t.token, stamps: t.stamps + a.stamps };
+  });
+  if (!target) return { ok: false, error: "Réessayez dans un instant." };
+  await sendLoyaltyWelcome(card.businessId, card.bName, email, target.token, s.goal, s.reward, target.stamps);
+  (await cookies()).delete({ name: cookieName(card.businessId), path: "/fidelite" });
+  return { ok: true, merged: true };
 }

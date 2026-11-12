@@ -33,9 +33,15 @@ export function LoyaltyQrScreen({ business, goal, reward }: { business: string; 
       else { setError(r.error); timer = setTimeout(load, 5000); }
     };
     load();
+    // L'écran du comptoir ne se met pas en veille pendant que le QR est affiché.
+    let lock: { release: () => Promise<void> } | null = null;
+    const wake = async () => { try { lock = await (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request("screen") ?? null; } catch { /* pas pris en charge */ } };
+    wake();
+    const onVis = () => { if (document.visibilityState === "visible") wake(); };
+    document.addEventListener("visibilitychange", onVis);
     const onFs = () => setFull(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFs);
-    return () => { alive = false; clearTimeout(timer); document.removeEventListener("fullscreenchange", onFs); };
+    return () => { alive = false; clearTimeout(timer); document.removeEventListener("fullscreenchange", onFs); document.removeEventListener("visibilitychange", onVis); lock?.release().catch(() => {}); };
   }, [t]);
 
   const toggle = async () => {
