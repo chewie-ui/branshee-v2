@@ -30,6 +30,9 @@ export async function recordError(e: { source: "server" | "stripe" | "cron"; mes
     if (!due) return;
     const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(errorLogs).where(gte(errorLogs.notifiedAt, new Date(Date.now() - 86400_000)));
     if (n >= 20) return;
+    // Pas plus de 5 alertes par heure, toutes erreurs confondues (une rafale de robots = une poignée d'emails).
+    const [{ lastHour }] = await db.select({ lastHour: sql<number>`count(*)::int` }).from(errorLogs).where(gte(errorLogs.notifiedAt, new Date(Date.now() - 3600_000)));
+    if (lastHour >= 5) return;
     const claimed = await db.update(errorLogs).set({ notifiedAt: new Date() }).where(sql`${errorLogs.id} = ${row.id} and (${errorLogs.notifiedAt} is null or ${errorLogs.notifiedAt} < now() - interval '6 hours')`).returning({ id: errorLogs.id });
     if (!claimed.length) return;
     const base = (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
