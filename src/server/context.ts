@@ -1,12 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, grades, members } from "@/db/schema";
 import { can, type PermissionKey, type Permissions } from "@/lib/permissions";
-import { BUSINESS_COOKIE, getSessionUser } from "@/server/auth/session";
+import { BUSINESS_COOKIE, getSessionUser, readAuthCookie } from "@/server/auth/session";
 import { apiAuth } from "@/server/api/als";
 import { isLocked } from "@/server/plan";
 import { APPS, appForPath } from "@/lib/apps";
@@ -49,7 +49,7 @@ const resolveContext = cache(async (): Promise<Resolved> => {
   if (rows.length === 0) return { kind: "no-business", user };
 
   const api = apiAuth.getStore();
-  const wanted = api ? api.businessId : (await cookies()).get(BUSINESS_COOKIE)?.value;
+  const wanted = api ? api.businessId : await readAuthCookie(BUSINESS_COOKIE);
   const row = rows.find((r) => r.business.id === wanted) ?? rows[0]!;
   const isOwner = row.member.isOwner;
   const permissions = row.permissions ?? null;

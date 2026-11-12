@@ -49,6 +49,9 @@ export function subdomainForAppPath(path: string): string | null {
 /** Sous-domaines qui ne sont jamais la page d'un pro (infrastructure, sites hébergés ailleurs). */
 const INFRA = new Set(["www", "client", "budget", "api", "admin", "app", "mail", "smtp", "imap", "pop", "ftp", "webmail", "autodiscover", "status", "docs", "blog", "help", "aide", "support", "demo", "static", "cdn", "assets", "preview", "test", "staging", "dev", "ns1", "ns2", "en", "fr", "nl", "pro", "mnemo", "pizzamamma", "autoconfig"]);
 
+/** Tous les noms réservés (infrastructure + apps), pour la réécriture de next.config. */
+export const reservedSubdomains = () => [...INFRA, ...Object.keys(APP_SUBDOMAINS)];
+
 /** Nom réservé : ni une app, ni l'infrastructure (un pro ne peut pas le choisir comme adresse). */
 export const isReservedSubdomain = (name: string) => INFRA.has(name) || name in APP_SUBDOMAINS;
 

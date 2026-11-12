@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { clientIp } from "@/lib/client-ip";
 import { rateLimit } from "@/server/auth/rate-limit";
-import { BUSINESS_COOKIE, createSession, getSessionUser } from "@/server/auth/session";
+import { BUSINESS_COOKIE, createSession, getSessionUser, writeAuthCookie } from "@/server/auth/session";
 import { currentBrand } from "@/server/brand";
 import { createDemoSandbox } from "@/server/demo";
 import { and, eq } from "drizzle-orm";
@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
     businessId = sandbox.businessId;
     await createSession(sandbox.userId, { userAgent: h.get("user-agent"), ip: clientIp(h) });
   }
-  const res = NextResponse.redirect(`${origin()}${req.nextUrl.searchParams.get("app") === "rdv" ? "/app/agenda" : "/app"}`);
-  res.cookies.set(BUSINESS_COOKIE, businessId, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 86400 });
-  return res;
+  await writeAuthCookie(BUSINESS_COOKIE, businessId, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 86400 });
+  return NextResponse.redirect(`${origin()}${req.nextUrl.searchParams.get("app") === "rdv" ? "/app/agenda" : "/app"}`);
 }

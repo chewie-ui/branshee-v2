@@ -1,7 +1,6 @@
 "use server";
 
 import { SKYDEV_PLAN } from "@/lib/skydev-plans";
-import { cookies } from "next/headers";
 import { after } from "next/server";
 import { notifyWelcomePro } from "@/server/notifications";
 import { currentBrand } from "@/server/brand";
@@ -12,7 +11,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, jobTitles, members, users } from "@/db/schema";
 import { isOfficialProfession, professionKey } from "@/lib/professions";
-import { BUSINESS_COOKIE } from "@/server/auth/session";
+import { BUSINESS_COOKIE, writeAuthCookie } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
 import { requireContext, requireUser } from "@/server/context";
 import { isCountryCode } from "@/lib/countries";
@@ -47,7 +46,7 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   if (type && !isOfficialProfession(type)) {
     await db.insert(jobTitles).values({ name: type, key: professionKey(type), source: "request", requestedById: user.id }).onConflictDoNothing();
   }
-  (await cookies()).set(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
+  await writeAuthCookie(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   // Sur Skydev, l'accueil est le lanceur d'apps : la carte de bienvenue (étapes RDV) s'affiche dans l'app RDV.
   redirect(brand === "skydev" ? "/app/demarrer" : "/app?bienvenue=1");
 }
@@ -58,7 +57,7 @@ export async function switchBusiness(businessId: string) {
   const id = z.uuid().parse(businessId);
   const [m] = await db.select({ id: members.id }).from(members).where(and(eq(members.userId, user.id), eq(members.businessId, id), eq(members.status, "active"), eq(members.isActive, true)));
   if (!m) return;
-  (await cookies()).set(BUSINESS_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
+  await writeAuthCookie(BUSINESS_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   redirect("/app");
 }
 

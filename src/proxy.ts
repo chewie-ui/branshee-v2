@@ -26,25 +26,31 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
   const path = request.nextUrl.pathname;
-  // Skydev : adresse directe d'une app (calendar.skydev.be…) → l'app dans l'espace sur skydev.be.
-  // Sans session, la garde plus bas renvoie vers la connexion, puis vers l'app.
-  const appPath = request.method === "GET" || request.method === "HEAD" ? appPathForHost(host) : null;
-  if (appPath && !/^\/(_next|api)\//.test(path)) {
-    const local = /\.localhost(:\d+)?$/.test(host);
-    const base = local ? `http://skydev.localhost${host.match(/:\d+$/)?.[0] ?? ""}` : "https://skydev.be";
-    return NextResponse.redirect(new URL(appPath, base), 302);
+  // Skydev : adresse directe d'une app (calendar.skydev.be…) : l'adresse reste affichée, « / » ouvre l'app
+  // (réécriture dans next.config) et tout l'espace reste accessible. Sans session : connexion, puis retour à l'app.
+  const appPath = path === "/" ? appPathForHost(host) : null;
+  if (appPath) {
+    if (!request.cookies.has("bs_session") && !request.cookies.has("sky_session")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/connexion";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    const h = new Headers(request.headers);
+    h.set("x-pathname", appPath);
+    h.set("x-method", request.method);
+    return NextResponse.next({ request: { headers: h } });
   }
   // Skydev : adresse d'un pro (option « nom de domaine ») : mon-cabinet.skydev.be affiche sa page (à « / », réservation comprise).
   // La page vérifie que l'option est active, sinon elle renvoie vers skydev.be/pro/<adresse>.
+  // La réécriture vers /<adresse> est faite dans next.config (une réécriture ici partirait en requête externe derrière nginx).
   const proSlug = path === "/" ? proSlugForHost(host) : null;
   if (proSlug) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${proSlug}`;
     const h = new Headers(request.headers);
     h.set("x-pathname", "/");
     h.set("x-pro-subdomain", proSlug);
     h.set("x-method", request.method);
-    return NextResponse.rewrite(url, { request: { headers: h } });
+    return NextResponse.next({ request: { headers: h } });
   }
   // Skydev : anciennes pages de l'ancien site (création de site par ville, services) → nouvelles pages, en 301.
   if ((request.method === "GET" || request.method === "HEAD") && brandForHost(host) === "skydev") {
@@ -72,7 +78,7 @@ export function proxy(request: NextRequest) {
       }
     }
   }
-  if (PROTECTED.some((r) => r.test(path)) && !request.cookies.has("bs_session")) {
+  if (PROTECTED.some((r) => r.test(path)) && !request.cookies.has("bs_session") && !request.cookies.has("sky_session")) {
     const url = request.nextUrl.clone();
     url.pathname = "/connexion";
     url.search = "";

@@ -11,6 +11,40 @@ export const SESSION_COOKIE = "bs_session";
 export const BUSINESS_COOKIE = "bs_business";
 const SESSION_DAYS = 30;
 
+/*
+ * Skydev : cookies de connexion valables sur tous les sous-domaines (calendar.skydev.be, invoices.skydev.be…)
+ * pour rester connecté d'une app à l'autre. Ils portent un autre nom (sky_…) que les anciens cookies limités
+ * à une adresse (bs_…), qu'on lit encore et qu'on remplace à la connexion. Ailleurs (branshee.com, local) : rien ne change.
+ */
+const DOMAIN_NAMES: Record<string, string> = { bs_session: "sky_session", bs_business: "sky_business", bs_admin: "sky_admin", bs_2fa: "sky_2fa" };
+type CookieOpts = { httpOnly?: boolean; secure?: boolean; sameSite?: "lax" | "strict" | "none"; path?: string; expires?: Date; maxAge?: number };
+
+async function sharedDomain(): Promise<string | null> {
+  const host = ((await headers()).get("host") ?? "").toLowerCase().replace(/:\d+$/, "");
+  return /(^|\.)skydev\.be$/.test(host) ? ".skydev.be" : null;
+}
+
+export async function readAuthCookie(name: string) {
+  const jar = await cookies();
+  return (DOMAIN_NAMES[name] ? jar.get(DOMAIN_NAMES[name]!)?.value : undefined) ?? jar.get(name)?.value;
+}
+
+export async function writeAuthCookie(name: string, value: string, opts: CookieOpts) {
+  const jar = await cookies();
+  const domain = await sharedDomain();
+  if (domain && DOMAIN_NAMES[name]) {
+    jar.set(DOMAIN_NAMES[name]!, value, { ...opts, domain });
+    if (jar.get(name)) jar.delete(name);
+  } else jar.set(name, value, opts);
+}
+
+export async function clearAuthCookie(name: string) {
+  const jar = await cookies();
+  if (jar.get(name)) jar.delete(name);
+  const domain = await sharedDomain();
+  if (domain && DOMAIN_NAMES[name] && jar.get(DOMAIN_NAMES[name]!)) jar.set(DOMAIN_NAMES[name]!, "", { path: "/", domain, maxAge: 0 });
+}
+
 const sha256 = (v: string) => createHash("sha256").update(v).digest("hex");
 
 /**
@@ -22,7 +56,7 @@ export async function createSession(userId: string, meta: { userAgent?: string |
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000);
   await db.insert(sessions).values({ userId, tokenHash: sha256(token), expiresAt, userAgent: meta.userAgent ?? null, ip: meta.ip ?? null });
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
-  (await cookies()).set(SESSION_COOKIE, token, {
+  await writeAuthCookie(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -39,7 +73,7 @@ export async function getSessionUser(): Promise<{ user: typeof users.$inferSelec
     const [user] = await db.select().from(users).where(eq(users.id, api.userId)).limit(1);
     return user && !user.disabledAt ? { user, sessionId: api.sessionId, impersonatedById: null } : null;
   }
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const token = await readAuthCookie(SESSION_COOKIE);
   if (!token) return null;
   const [row] = await db
     .select({ user: users, sessionId: sessions.id, impersonatedById: sessions.impersonatedById })
@@ -53,11 +87,10 @@ export async function getSessionUser(): Promise<{ user: typeof users.$inferSelec
 }
 
 export async function destroySession() {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = await readAuthCookie(SESSION_COOKIE);
   if (token) await db.delete(sessions).where(eq(sessions.tokenHash, sha256(token)));
-  jar.delete(SESSION_COOKIE);
-  jar.delete(BUSINESS_COOKIE);
+  await clearAuthCookie(SESSION_COOKIE);
+  await clearAuthCookie(BUSINESS_COOKIE);
 }
 
 /* ── Double authentification : étape intermédiaire entre le mot de passe et la session ── */
@@ -71,11 +104,11 @@ export async function setPendingTwoFactor(userId: string, next: string | null) {
   const exp = Date.now() + PENDING_MIN * 60000;
   const payload = Buffer.from(JSON.stringify({ u: userId, e: exp, n: next })).toString("base64url");
   const sig = createHmac("sha256", pendingKey()).update(payload).digest("base64url");
-  (await cookies()).set(PENDING_COOKIE, `${payload}.${sig}`, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: PENDING_MIN * 60 });
+  await writeAuthCookie(PENDING_COOKIE, `${payload}.${sig}`, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: PENDING_MIN * 60 });
 }
 
 export async function getPendingTwoFactor(): Promise<{ userId: string; next: string | null } | null> {
-  const raw = (await cookies()).get(PENDING_COOKIE)?.value;
+  const raw = await readAuthCookie(PENDING_COOKIE);
   if (!raw) return null;
   const [payload, sig] = raw.split(".");
   if (!payload || !sig) return null;
@@ -91,12 +124,12 @@ export async function getPendingTwoFactor(): Promise<{ userId: string; next: str
 }
 
 export async function clearPendingTwoFactor() {
-  (await cookies()).delete(PENDING_COOKIE);
+  await clearAuthCookie(PENDING_COOKIE);
 }
 
 /** Ferme toutes les sessions d'un compte (changement de mot de passe, d'email, suppression). */
 export async function destroyAllSessions(userId: string, keepCurrent = false) {
-  const token = keepCurrent ? (await cookies()).get(SESSION_COOKIE)?.value : undefined;
+  const token = keepCurrent ? await readAuthCookie(SESSION_COOKIE) : undefined;
   const all = await db.select({ id: sessions.id, tokenHash: sessions.tokenHash }).from(sessions).where(eq(sessions.userId, userId));
   const keep = token ? sha256(token) : null;
   for (const s of all) if (s.tokenHash !== keep) await db.delete(sessions).where(eq(sessions.id, s.id));
@@ -109,28 +142,26 @@ const SUPERVISION_HOURS = 2;
 
 /** Ouvre une session « supervisée » (2 h max) et met de côté la session du super-admin. */
 export async function startImpersonation(userId: string, adminId: string) {
-  const jar = await cookies();
-  const adminToken = jar.get(SESSION_COOKIE)?.value;
+  const adminToken = await readAuthCookie(SESSION_COOKIE);
   if (!adminToken) throw new Error("Session administrateur absente.");
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SUPERVISION_HOURS * 3600000);
   await db.insert(sessions).values({ userId, tokenHash: sha256(token), expiresAt, impersonatedById: adminId });
   const opts = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", expires: expiresAt };
-  jar.set(ADMIN_BACKUP_COOKIE, adminToken, opts);
-  jar.set(SESSION_COOKIE, token, opts);
-  jar.delete(BUSINESS_COOKIE);
+  await writeAuthCookie(ADMIN_BACKUP_COOKIE, adminToken, opts);
+  await writeAuthCookie(SESSION_COOKIE, token, opts);
+  await clearAuthCookie(BUSINESS_COOKIE);
 }
 
 /** Fin de supervision : la session du pro est supprimée, celle du super-admin restaurée. */
 export async function stopImpersonation() {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
-  const backup = jar.get(ADMIN_BACKUP_COOKIE)?.value;
+  const token = await readAuthCookie(SESSION_COOKIE);
+  const backup = await readAuthCookie(ADMIN_BACKUP_COOKIE);
   if (token) await db.delete(sessions).where(and(eq(sessions.tokenHash, sha256(token)), isNotNull(sessions.impersonatedById)));
-  jar.delete(ADMIN_BACKUP_COOKIE);
-  jar.delete(BUSINESS_COOKIE);
-  if (backup) jar.set(SESSION_COOKIE, backup, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_DAYS * 86400 });
-  else jar.delete(SESSION_COOKIE);
+  await clearAuthCookie(ADMIN_BACKUP_COOKIE);
+  await clearAuthCookie(BUSINESS_COOKIE);
+  if (backup) await writeAuthCookie(SESSION_COOKIE, backup, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_DAYS * 86400 });
+  else await clearAuthCookie(SESSION_COOKIE);
 }
 
 /** Le pro met fin à la supervision : toutes les sessions supervisées de son compte sont fermées. */
