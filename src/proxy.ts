@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
 import { legacyRedirect } from "@/lib/custom-services";
 import { localeOfPath, localize } from "@/lib/site-locale";
+import { appPathForHost } from "@/lib/app-subdomains";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -25,6 +26,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
   const path = request.nextUrl.pathname;
+  // Skydev : adresse directe d'une app (calendar.skydev.be…) → l'app dans l'espace sur skydev.be.
+  // Sans session, la garde plus bas renvoie vers la connexion, puis vers l'app.
+  const appPath = request.method === "GET" || request.method === "HEAD" ? appPathForHost(host) : null;
+  if (appPath && !/^\/(_next|api)\//.test(path)) {
+    const local = /\.localhost(:\d+)?$/.test(host);
+    const base = local ? `http://skydev.localhost${host.match(/:\d+$/)?.[0] ?? ""}` : "https://skydev.be";
+    return NextResponse.redirect(new URL(appPath, base), 302);
+  }
   // Skydev : anciennes pages de l'ancien site (création de site par ville, services) → nouvelles pages, en 301.
   if ((request.method === "GET" || request.method === "HEAD") && brandForHost(host) === "skydev") {
     const to = legacyRedirect(path);
