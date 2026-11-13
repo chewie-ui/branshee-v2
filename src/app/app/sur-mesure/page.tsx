@@ -4,6 +4,9 @@ import { APPS, appById } from "@/lib/apps";
 import { CUSTOM_FEATURES } from "@/lib/custom-work";
 import { requireContext } from "@/server/context";
 import { featuresOf, requestsOf } from "@/server/custom-work";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 
 const app = appById("sur-mesure");
 export const metadata: Metadata = { title: app.name };
@@ -24,6 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       canRequest={manager}
       apps={choices}
       defaultApp={defaultApp}
+      contact={{ email: ctx.user.email, phone: (await db.select({ phone: users.phone }).from(users).where(eq(users.id, ctx.user.id)))[0]?.phone ?? "" }}
       features={feats.map((x) => ({ label: CUSTOM_FEATURES[x.key]?.label ?? x.key, monthly: x.monthlyCents }))}
       requests={reqs.map((r) => ({ id: r.id, title: r.title, description: r.description, app: r.appId ? (names.get(r.appId as never) ?? null) : null, status: r.status, setupCents: r.setupCents, monthlyCents: r.monthlyCents, reply: r.reply, createdAt: r.createdAt.toISOString() }))}
     />

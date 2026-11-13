@@ -41,7 +41,7 @@ export const surMesureRoutes: Route[] = [
     path: "/custom-requests",
     handler: async (r: ApiRequest) => {
       await needSurMesure();
-      return ok(await submitCustomRequest({ appId: str(r.body.appId, 40), title: str(r.body.title, 120), description: str(r.body.description, 5000) }));
+      return ok(await submitCustomRequest({ appId: str(r.body.appId, 40), title: str(r.body.title, 120), description: str(r.body.description, 5000), email: str(r.body.email, 200), phone: str(r.body.phone, 40) }, { requireContact: false }));
     },
   },
   {

@@ -19,7 +19,7 @@ import { requireContext } from "@/server/context";
 import { clientWord } from "@/lib/terminology";
 import { PlanBanner } from "@/components/app/plan-banner";
 import { BrandNameProvider } from "@/components/brand-context";
-import { effectivePlan } from "@/server/plan";
+import { effectivePlan, hadOwnPlan } from "@/server/plan";
 import { AssistantPanel } from "@/components/assistant/assistant-panel";
 import { assistantAllowed, assistantEnabled } from "@/server/assistant";
 import { AppLocaleProvider } from "@/components/app-locale";
@@ -68,7 +68,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       ) : null}
       {!ctx.impersonating ? <SupervisionPrompt /> : null}
       <AdminMessages messages={adminMessages} />
-      <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} locale={ctx.user.locale ?? "fr"} />
+      <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} locale={ctx.user.locale ?? "fr"} businessName={ctx.business.name} noTrial={plan.source === "free" && brand.id === "skydev" && !(await hadOwnPlan(ctx.business.id))} />
     </>
   );
 

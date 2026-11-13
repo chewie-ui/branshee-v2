@@ -17,10 +17,10 @@ type Res = { ok: boolean; message?: string; error?: string };
 const TONE: Record<string, string> = { neutral: "bg-surface-muted text-muted", accent: "bg-accent-soft text-accent", warning: "bg-warning-soft text-warning", success: "bg-success-soft text-success", danger: "bg-danger-soft text-danger" };
 
 /** Sur mesure : décrire une demande, suivre le prix et l'avancement. */
-export function RequestBoard({ requests, apps, canRequest, features, defaultApp = "" }: { requests: Req[]; apps: { id: string; name: string }[]; canRequest: boolean; features: { label: string; monthly: number }[]; defaultApp?: string }) {
+export function RequestBoard({ requests, apps, canRequest, features, defaultApp = "", contact = { email: "", phone: "" } }: { requests: Req[]; apps: { id: string; name: string }[]; canRequest: boolean; features: { label: string; monthly: number }[]; defaultApp?: string; contact?: { email: string; phone: string } }) {
   const t = useT();
   const router = useRouter();
-  const [f, setF] = useState({ appId: defaultApp, title: "", description: "" });
+  const [f, setF] = useState({ appId: defaultApp, title: "", description: "", email: contact.email, phone: contact.phone });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const fmtDate = (iso: string) => new Intl.DateTimeFormat(intlLocale(t.locale), { dateStyle: "medium" }).format(new Date(iso));
@@ -41,7 +41,7 @@ export function RequestBoard({ requests, apps, canRequest, features, defaultApp 
       {canRequest ? (
         <Card className="max-w-3xl">
           <CardHeader title={t("Nouvelle demande")} />
-          <form className="grid gap-4 p-5" onSubmit={(e) => { e.preventDefault(); run(() => submitCustomRequest(f), () => setF({ appId: "", title: "", description: "" })); }}>
+          <form className="grid gap-4 p-5" onSubmit={(e) => { e.preventDefault(); run(() => submitCustomRequest(f), () => setF((x) => ({ ...x, appId: "", title: "", description: "" }))); }}>
             <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
               <Field label={t("Pour quelle app ?")} htmlFor="cr-app">
                 <Select id="cr-app" value={f.appId} onChange={(e) => setF({ ...f, appId: e.target.value })}>
@@ -52,6 +52,11 @@ export function RequestBoard({ requests, apps, canRequest, features, defaultApp 
               <Field label={t("En une phrase")} htmlFor="cr-title"><Input id="cr-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} maxLength={120} placeholder={t("Ex. : un acompte différent selon la prestation")} /></Field>
             </div>
             <Field label={t("Expliquez ce que vous voulez")} htmlFor="cr-desc" hint={t("Comment vous travaillez aujourd'hui, ce qui vous fait perdre du temps, ce que vous aimeriez voir à l'écran.")}><Textarea id="cr-desc" rows={6} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} maxLength={5000} /></Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t("Votre email")} htmlFor="cr-email"><Input id="cr-email" type="email" autoComplete="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} maxLength={200} /></Field>
+              <Field label={t("Votre téléphone")} htmlFor="cr-phone"><Input id="cr-phone" type="tel" autoComplete="tel" required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} maxLength={40} placeholder="0470 12 34 56" /></Field>
+            </div>
+            <p className="text-sm text-muted">{t("On vous contacte pour bien comprendre ce que vous voulez, puis on vous envoie un prix fixe. Rien n'est lancé sans votre accord.")}</p>
             <div><Button type="submit" loading={pending} icon={<Send className="size-4" aria-hidden="true" />}>{t("Envoyer la demande")}</Button></div>
           </form>
         </Card>

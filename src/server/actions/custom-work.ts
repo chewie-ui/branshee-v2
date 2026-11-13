@@ -21,22 +21,31 @@ const reqSchema = z.object({
   appId: z.string().max(40).default(""),
   title: z.string().trim().min(3, "Donnez un titre court à votre demande.").max(120),
   description: z.string().trim().min(10, "Décrivez un peu plus ce que vous voulez.").max(5000),
+  // Pour vous rappeler et clarifier la demande avant de chiffrer.
+  // (L'API publique peut les omettre : l'email du compte est alors utilisé.)
+  email: z.string().trim().toLowerCase().max(200).optional().default("").refine((v) => !v || z.string().email().safeParse(v).success, "Indiquez une adresse email valide."),
+  phone: z.string().trim().max(40).optional().default("").refine((v) => !v || /^[+0-9 ./()-]{6,}$/.test(v), "Numéro de téléphone invalide."),
 });
 
 /** Demander une modif ou un outil sur mesure (réservé au responsable : c'est payant). */
-export async function submitCustomRequest(input: z.input<typeof reqSchema>): Promise<Result> {
+export async function submitCustomRequest(input: z.input<typeof reqSchema>, opts: { requireContact?: boolean } = { requireContact: true }): Promise<Result> {
   const ctx = await requireContext(undefined, { write: true });
   if (ctx.impersonating) return { ok: false, error: "Lecture seule pendant la supervision." };
   if (!(ctx.member.isOwner || ctx.can("settings.manage"))) return { ok: false, error: "Seul le responsable peut faire une demande sur mesure." };
   const v = reqSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez la demande." };
+  // Depuis l'app : email et téléphone obligatoires (on rappelle pour clarifier la demande avant de chiffrer).
+  if (opts.requireContact !== false && !v.data.email) return { ok: false, error: "Indiquez votre email pour qu'on vous recontacte." };
+  if (opts.requireContact !== false && !v.data.phone) return { ok: false, error: "Indiquez votre numéro de téléphone pour qu'on vous rappelle." };
+  const email = v.data.email || ctx.user.email;
   const appId = APPS.some((a) => a.id === v.data.appId) ? v.data.appId : null;
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(customRequests).where(and(eq(customRequests.businessId, ctx.business.id), gte(customRequests.createdAt, new Date(Date.now() - 86400_000))));
   if (n >= 10) return { ok: false, error: "10 demandes en 24 heures : réessayez demain, ou appelez-nous." };
-  const [r] = await db.insert(customRequests).values({ businessId: ctx.business.id, userId: ctx.user.id, appId, title: v.data.title, description: v.data.description }).returning({ id: customRequests.id });
-  await sendEmail({ to: adminTo(), ...emails.customRequestAdmin({ business: ctx.business.name, title: v.data.title, text: `${v.data.description}\n\n${ctx.user.name} · ${ctx.user.email}`, event: "Nouvelle demande", url: `${origin()}/admin/sur-mesure/${r!.id}` }), template: "custom_request_admin", replyTo: ctx.user.email }).catch(() => {});
+  const description = `${v.data.description}\n\nÀ recontacter : ${[email, v.data.phone].filter(Boolean).join(" · ")}`;
+  const [r] = await db.insert(customRequests).values({ businessId: ctx.business.id, userId: ctx.user.id, appId, title: v.data.title, description }).returning({ id: customRequests.id });
+  await sendEmail({ to: adminTo(), ...emails.customRequestAdmin({ business: ctx.business.name, title: v.data.title, text: `${description}\n\n${ctx.user.name} · ${ctx.user.email}`, event: "Nouvelle demande", url: `${origin()}/admin/sur-mesure/${r!.id}` }), template: "custom_request_admin", replyTo: email }).catch(() => {});
   revalidatePath("/app/sur-mesure");
-  return { ok: true, message: "Demande envoyée : nous revenons vers vous avec un prix, en général sous 48 heures.", id: r!.id };
+  return { ok: true, message: "Demande envoyée. On vous contacte très vite par téléphone ou par email pour bien comprendre ce que vous voulez, puis on vous envoie un prix fixe.", id: r!.id };
 }
 
 /** Le client accepte ou refuse le prix proposé, ou annule sa demande. */

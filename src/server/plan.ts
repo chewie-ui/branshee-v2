@@ -121,3 +121,9 @@ export async function canUserCreateBusiness(userId: string) {
 }
 
 
+
+/** L'établissement a-t-il eu son propre essai ou abonnement ? (non = 2e entreprise du compte : l'essai a servi ailleurs) */
+export async function hadOwnPlan(businessId: string) {
+  const [row] = await db.select({ isTrial: businessPlans.isTrial, sub: businessPlans.stripeSubscriptionId, until: businessPlans.grantedUntil, plan: businessPlans.plan }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
+  return !!row && (row.isTrial || !!row.sub || !!row.until || row.plan !== "free");
+}
