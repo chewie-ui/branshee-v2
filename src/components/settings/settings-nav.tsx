@@ -16,12 +16,13 @@ export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/journal", label: "Journal d'activité", ready: true },
 ];
 
-export function SettingsNav({ extra = [] }: { extra?: { href: string; label: string }[] }) {
+/** hide : sections masquées (Skydev : les réglages propres à une app sont dans l'app, ex. RDV › Réglages). */
+export function SettingsNav({ extra = [], hide = [] }: { extra?: { href: string; label: string }[]; hide?: string[] }) {
   const t = useT();
   const pathname = usePathname();
   return (
     <nav aria-label={t("Sections des réglages")} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
-      {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].map((s) =>
+      {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].filter((s) => !hide.includes(s.href)).map((s) =>
         s.ready ? (
           <Link
             key={s.href}

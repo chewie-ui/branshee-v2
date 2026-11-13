@@ -92,7 +92,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             .filter((i) => i.href !== "/app/apps" && i.href !== "/app/modules" && i.href !== "/app/equipe")
             .map((i) => (i.href === "/app" ? { ...i, href: "/app/rdv" } : i.href === "/app/clients" ? { ...i, label: t(clients) } : i))
             .map((i) => (i.href === "/app/clients" ? i : { ...i, label: t(i.label) })),
-        })).filter((g) => g.items.length > 0),
+        }))
+          // Réglages propres à RDV (règles de réservation, emails aux clients) : dans « Organisation », après Horaires.
+          .map((g) => (ctx.can("settings.manage") && g.items.some((i) => i.href === "/app/horaires") ? { ...g, items: [...g.items, { href: "/app/rdv/parametres", label: t("Réglages de RDV"), icon: "settings" as const }] } : g))
+          .filter((g) => g.items.length > 0),
       ],
       footer: NAV_FOOTER.filter(visible).map((i) => ({ ...i, label: t(i.label) })),
     };

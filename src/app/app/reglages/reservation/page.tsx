@@ -12,10 +12,18 @@ import { requireContext } from "@/server/context";
 import { businessHas } from "@/server/plan";
 import { UpgradeNotice } from "@/components/app/upgrade-notice";
 import { appMetadata } from "@/server/app-locale";
+import { redirect } from "next/navigation";
+import { currentBrand } from "@/server/brand";
 
 export const generateMetadata = appMetadata("Règles de réservation · Réglages");
 
+// Skydev : les règles de réservation sont propres à l'app RDV (RDV › Réglages). Branshee : inchangé.
 export default async function BookingRulesPage() {
+  if ((await currentBrand()).id === "skydev") redirect("/app/rdv/parametres");
+  return <BookingRules />;
+}
+
+export async function BookingRules() {
   const ctx = await requireContext("settings.manage");
   const [s] = await db.select().from(bookingSettings).where(eq(bookingSettings.businessId, ctx.business.id));
   const advanced = await businessHas(ctx.business.id, "advancedAvailability");

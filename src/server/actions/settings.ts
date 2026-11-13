@@ -124,6 +124,7 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
     .where(eq(bookingSettings.businessId, ctx.business.id));
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "settings.booking", description: "Règles de réservation modifiées" });
   revalidatePath("/app/reglages/reservation");
+  revalidatePath("/app/rdv/parametres");
   return { ok: true };
 }
 
@@ -166,5 +167,6 @@ export async function saveNotifications(_prev: SettingsState, fd: FormData): Pro
     })
     .where(eq(notificationSettings.businessId, ctx.business.id));
   revalidatePath("/app/reglages/notifications");
+  revalidatePath("/app/rdv/parametres/notifications");
   return { ok: true };
 }

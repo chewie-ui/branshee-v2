@@ -342,6 +342,7 @@ export const APPS: SkyApp[] = [
       { href: "/app/prestations", label: "Prestations", icon: "scissors", permission: "services.view" },
       { href: "/app/horaires", label: "Horaires", icon: "clock" },
       { href: "/app/page-de-reservation", label: "Page de réservation", icon: "globe", permission: "customization.manage" },
+      { href: "/app/rdv/parametres", label: "Réglages de RDV", icon: "settings", permission: "settings.manage" },
     ],
   },
   {
