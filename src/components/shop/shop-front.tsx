@@ -15,12 +15,12 @@ type Seller = { iban: string; legalName: string; street: string; zip: string; ci
 const input = "h-11 w-full rounded-lg border border-border bg-surface px-3";
 
 /** Vitrine, panier et commande (sans compte). */
-export function ShopFront({ look, slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string; look?: { vars: Record<string, string>; layout: "grid" | "list"; bannerUrl: string | null; title: string | null } }) {
+export function ShopFront({ me = null, look, slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string; me?: { name: string; email: string; phone: string } | null; look?: { vars: Record<string, string>; layout: "grid" | "list"; bannerUrl: string | null; title: string | null } }) {
   const eur = (c: number) => new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(c / 100);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cat, setCat] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: "", email: "", phone: "", address: "", note: "", pickupAt: "", fulfilment: s.pickup ? "pickup" : "delivery", payMethod: s.payOnline ? "online" : s.payOnPickup ? "pickup" : "transfer", terms: false });
+  const [f, setF] = useState({ name: me?.name ?? "", email: me?.email ?? "", phone: me?.phone ?? "", address: "", note: "", pickupAt: "", fulfilment: s.pickup ? "pickup" : "delivery", payMethod: s.payOnline ? "online" : s.payOnPickup ? "pickup" : "transfer", terms: false });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const key = `sky-shop-${slug}`;
@@ -165,6 +165,14 @@ export function ShopFront({ look, slug, business, settings: s, items, seller, tx
                 </li>
               ); })}
             </ul>
+            {me ? (
+              <p className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-sm text-muted">{fill(tx.signedAs, { email: me.email })}</p>
+            ) : (
+              <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm">
+                <span className="flex-1">{tx.hasAccount}</span>
+                <a href={`/connexion?suite=${encodeURIComponent(`/boutique/${slug}`)}`} className="font-semibold text-[var(--accent-link,var(--accent))] underline underline-offset-2">{tx.signInShort}</a>
+              </p>
+            )}
             <fieldset className="mt-4 space-y-2">
               <legend className="text-sm font-medium">{tx.howGet}</legend>
               {s.pickup ? <label className="flex items-start gap-2 text-sm"><input type="radio" name="ful" checked={f.fulfilment === "pickup"} onChange={() => setF({ ...f, fulfilment: "pickup" })} className="mt-0.5 size-4" /><span>{tx.pickupFree}{s.pickupNote ? <span className="block text-muted">{s.pickupNote}</span> : null}</span></label> : null}

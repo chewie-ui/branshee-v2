@@ -26,8 +26,8 @@ export default async function ShopFrontPage({ params, searchParams }: { params: 
   const locale = await resolvePublicLocale(sp.lang);
   // Aperçu en direct de l'éditeur (?theme=) : réservé aux membres de l'entreprise, même boutique fermée.
   let preview = false;
+  const u = (await getSessionUser())?.user;
   if (sp.theme) {
-    const u = (await getSessionUser())?.user;
     const [b] = u ? await db.select({ id: members.id }).from(members).innerJoin(businesses, eq(businesses.id, members.businessId)).where(and(eq(businesses.slug, slug), eq(members.userId, u.id), eq(members.status, "active"))).limit(1) : [];
     preview = !!b;
   }
@@ -39,6 +39,7 @@ export default async function ShopFrontPage({ params, searchParams }: { params: 
     <>
     {font ? <link rel="stylesheet" href={font} /> : null}
     <ShopFront
+      me={u ? { name: u.fullName, email: u.email, phone: u.phone ?? "" } : null}
       look={{ vars: shopVars(theme), layout: theme.layout, bannerUrl: theme.bannerUrl || null, title: theme.title || null }}
       slug={slug}
       business={{ name: s.business.name, photoUrl: s.business.photoUrl, city: s.business.city }}

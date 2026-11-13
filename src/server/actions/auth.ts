@@ -36,7 +36,7 @@ function fieldErrors(error: z.ZodError) {
 function safeNext(value: FormDataEntryValue | null): string | null {
   const v = typeof value === "string" ? value : "";
   if (!v.startsWith("/") || v.startsWith("//") || v.includes("\\")) return null;
-  return /^\/(app|espace-client|r)(\/[\w\-/?=&%.]*)?$/.test(v) || /^\/[a-z0-9-]{3,60}(\?[\w\-=&%.]*)?$/.test(v) ? v : null;
+  return /^\/(app|espace-client|r|boutique|commande|fidelite)(\/[\w\-/?=&%.]*)?$/.test(v) || /^\/[a-z0-9-]{3,60}(\?[\w\-=&%.]*)?$/.test(v) ? v : null;
 }
 
 /**
