@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/espace-client", label: "Mes rendez-vous" },
+  { href: "/espace-client/commandes", label: "Mes commandes" },
+  { href: "/espace-client/fidelite", label: "Fidélité" },
   { href: "/espace-client/avis", label: "Mes avis" },
   { href: "/espace-client/parametres", label: "Paramètres" },
 ];

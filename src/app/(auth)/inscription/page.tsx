@@ -11,6 +11,8 @@ import { googleConfigured } from "@/server/google";
 import { currentBrand } from "@/server/brand";
 import { localize } from "@/lib/site-locale";
 import { siteLocale } from "@/server/site-locale";
+import { headers } from "next/headers";
+import { isClientHost } from "@/lib/app-subdomains";
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await siteLocale();
@@ -22,7 +24,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   const gate = await featureStatus("register");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
   const sp = await searchParams;
-  const client = sp.client === "1";
+  // Sur client.skydev.be, l'inscription est « particulier » par défaut (?client=0 pour une entreprise).
+  const clientHost = isClientHost((await headers()).get("host"));
+  const client = sp.client === "1" || (clientHost && sp.client !== "0");
   const session = await getSessionUser();
   // Visiteur de la démo : il peut créer son vrai compte (la démo ne s'enregistre pas).
   if (session && !session.user.isDemo) redirect(client ? "/espace-client" : "/app");
@@ -37,7 +41,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       {brand.id === "skydev" && !sp.ref ? (
         <nav aria-label={en ? "Account type" : "Type de compte"} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1">
           {[
-            { href: L(sp.suite ? `/inscription?suite=${encodeURIComponent(sp.suite)}` : "/inscription"), on: !client, title: en ? "Business" : "Entreprise", text: en ? "Run my business" : "Gérer mon activité" },
+            { href: clientHost ? "https://skydev.be/inscription" : L(sp.suite ? `/inscription?suite=${encodeURIComponent(sp.suite)}` : "/inscription"), on: !client, title: en ? "Business" : "Entreprise", text: en ? "Run my business" : "Gérer mon activité" },
             { href: L(`/inscription?client=1${sp.suite ? `&suite=${encodeURIComponent(sp.suite)}` : ""}`), on: client, title: en ? "Individual" : "Particulier", text: en ? "Follow my appointments" : "Suivre mes rendez-vous" },
           ].map((t) => (
             <Link key={t.title} href={t.href} aria-current={t.on ? "page" : undefined} className={`rounded-lg px-3 py-2.5 text-center transition-colors focus-visible:outline-2 focus-visible:outline-accent ${t.on ? "bg-surface shadow-sm" : "text-muted hover:text-text"}`}>

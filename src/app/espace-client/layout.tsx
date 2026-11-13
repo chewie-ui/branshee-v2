@@ -25,14 +25,14 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           <Link href="/espace-client" aria-label="Espace client"><Brand brand={brand} /></Link>
           <div className="ml-auto flex items-center gap-3 text-sm">
             {pro ? (
-              <Link href="/app" className="font-medium text-accent hover:text-accent-hover">{brand === "skydev" ? "Espace entreprise" : "Espace pro"}</Link>
+              <Link href="/app" className="font-medium whitespace-nowrap text-accent hover:text-accent-hover">{brand === "skydev" ? "Espace entreprise" : "Espace pro"}</Link>
             ) : (
               // Pas encore d'entreprise : un indépendant ou un gérant peut créer la sienne d'ici.
-              <Link href="/bienvenue" className="font-medium text-accent hover:text-accent-hover">{brand === "skydev" ? "Créer mon espace entreprise" : "Créer mon espace pro"}</Link>
+              <Link href="/bienvenue" className="font-medium whitespace-nowrap text-accent hover:text-accent-hover"><span className="sm:hidden">Je suis pro</span><span className="hidden sm:inline">{brand === "skydev" ? "Créer mon espace entreprise" : "Créer mon espace pro"}</span></Link>
             )}
             <span className="hidden text-muted sm:inline">{user.fullName}</span>
             <form action={logout}>
-              <button type="submit" className="font-medium text-muted hover:text-text">Se déconnecter</button>
+              <button type="submit" className="font-medium whitespace-nowrap text-muted hover:text-text">Se déconnecter</button>
             </form>
           </div>
         </div>

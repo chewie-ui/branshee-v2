@@ -2,8 +2,10 @@ import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
-import { CalendarDays, Clock, Gift, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
 import { cardsOfUser } from "@/server/loyalty";
+import { LoyaltyCards } from "@/components/client/loyalty-cards";
+import { DirectorySearch } from "@/components/directory/directory-search";
 import { AddToCalendar } from "@/components/booking/add-to-calendar";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,26 @@ export default async function ClientDashboard() {
   const upcoming = list.filter((a) => a.startsAt > now && a.status !== "cancelled").sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   const past = list.filter((a) => a.startsAt <= now || a.status === "cancelled");
   const reviewed = new Set(myReviews.map((r) => r.business.id));
+  // Mes pros : les établissements où j'ai déjà eu rendez-vous (pour reprendre RDV en un clic).
+  // « Laisser un avis » une seule fois par pro (sur le dernier RDV honoré), pas sur chaque ligne.
+  const reviewOn = new Set<string>();
+  const asked = new Set(reviewed);
+  for (const a of past) if (a.status !== "cancelled" && !asked.has(a.business.id)) { asked.add(a.business.id); reviewOn.add(a.id); }
+  const row = (a: Appt) => (
+    <li key={a.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{a.serviceName ?? "Rendez-vous"} · {a.business.name}</p>
+        <p className="text-muted">
+          {cap(formatDay(a.startsAt, a.business.timezone, "EEEE d MMMM yyyy"))}
+          {a.status === "cancelled" ? " · annulé" : ""}
+        </p>
+      </div>
+      {reviewOn.has(a.id) ? (
+        <Link href={`${appPagePath(a.business.slug)}#avis`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Star className="size-4" aria-hidden="true" />Laisser un avis</Link>
+      ) : null}
+    </li>
+  );
+  const mine = [...new Map(list.filter((a) => !a.business.pausedAt).map((a) => [a.business.id, a.business])).values()].slice(0, 8);
 
   return (
     <div className="space-y-8">
@@ -81,47 +103,49 @@ export default async function ClientDashboard() {
         )}
       </section>
 
-      {cards.length ? (
-        <section className="space-y-3" aria-labelledby="cartes">
-          <h2 id="cartes" className="text-lg font-semibold">Mes cartes de fidélité</h2>
+      {mine.length ? (
+        <section className="space-y-3" aria-labelledby="mes-pros">
+          <h2 id="mes-pros" className="text-lg font-semibold">Mes pros</h2>
           <ul className="grid gap-3 sm:grid-cols-2">
-            {cards.map((c) => (
-              <li key={c.token}>
-                <Link href={`/fidelite/${c.token}`} className="block rounded-2xl bg-accent p-4 text-accent-foreground transition-opacity duration-150 hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                  <span className="flex items-center justify-between gap-3"><span className="truncate font-semibold">{c.business}</span><Gift className="size-5 shrink-0" aria-hidden="true" /></span>
-                  <span className="mt-3 block text-2xl font-semibold tabular-nums">{Math.min(c.stamps, c.goal)}<span className="text-base opacity-80"> / {c.goal} tampons</span></span>
-                  <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/25" aria-hidden="true"><span className="block h-full rounded-full bg-white" style={{ width: `${(Math.min(c.stamps, c.goal) / c.goal) * 100}%` }} /></span>
-                  <span className="mt-2 block truncate text-sm opacity-90">{c.stamps >= c.goal ? `Récompense débloquée : ${c.reward}` : `Au bout : ${c.reward}`}</span>
-                </Link>
+            {mine.map((b) => (
+              <li key={b.id}>
+                <Card className="flex items-center gap-3 p-4">
+                  <Avatar name={b.name} src={b.photoUrl} />
+                  <Link href={appPagePath(b.slug)} className="min-w-0 flex-1 truncate font-medium hover:text-accent">{b.name}</Link>
+                  <ButtonLink href={appPagePath(b.slug)} size="sm" variant="secondary" icon={<RotateCcw className="size-4" aria-hidden="true" />}>Réserver</ButtonLink>
+                </Card>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
 
+      {cards.length ? (
+        <section className="space-y-3" aria-labelledby="cartes">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="cartes" className="text-lg font-semibold">Mes cartes de fidélité</h2>
+            <Link href="/espace-client/fidelite" className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link>
+          </div>
+          <LoyaltyCards cards={cards.slice(0, 4)} />
+        </section>
+      ) : null}
+
+      <section className="space-y-3" aria-labelledby="trouver">
+        <h2 id="trouver" className="text-lg font-semibold">Trouver un pro</h2>
+        <DirectorySearch />
+      </section>
+
       {past.length ? (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Historique</h2>
           <Card>
-            <ul className="divide-y divide-border">
-              {past.slice(0, 60).map((a) => (
-                <li key={a.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{a.serviceName ?? "Rendez-vous"} · {a.business.name}</p>
-                    <p className="text-muted">
-                      {cap(formatDay(a.startsAt, a.business.timezone, "EEEE d MMMM yyyy"))}
-                      {a.status === "cancelled" ? " · annulé" : ""}
-                    </p>
-                  </div>
-                  {a.status !== "cancelled" && !reviewed.has(a.business.id) ? (
-                    <Link href={`${appPagePath(a.business.slug)}#avis`} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><Star className="size-4" aria-hidden="true" />Laisser un avis</Link>
-                  ) : null}
-                  {!a.business.pausedAt ? (
-                    <Link href={appPagePath(a.business.slug)} className="inline-flex items-center gap-1 font-medium text-accent hover:text-accent-hover"><RotateCcw className="size-4" aria-hidden="true" />Reprendre RDV</Link>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <ul className="divide-y divide-border">{past.slice(0, 8).map(row)}</ul>
+            {past.length > 8 ? (
+              <details className="group border-t border-border">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center px-5 text-sm font-medium text-accent hover:text-accent-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent group-open:hidden">Voir tout l&apos;historique ({past.length})</summary>
+                <ul className="divide-y divide-border">{past.slice(8, 120).map(row)}</ul>
+              </details>
+            ) : null}
           </Card>
         </section>
       ) : null}

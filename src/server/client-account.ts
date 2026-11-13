@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, customers, members, reviews, users } from "@/db/schema";
+import { appointments, businesses, customers, members, reviews, shopOrders, users } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
 
 /**
@@ -96,3 +96,17 @@ export async function reviewEligibility(userId: string, businessId: string) {
 }
 
 
+
+/**
+ * Commandes en ligne (boutique, click & collect) passées avec l'adresse VÉRIFIÉE du compte.
+ * Les commandes en attente de paiement abandonnées (plus de 2 jours) ne sont pas montrées.
+ */
+export async function listMyOrders(email: string) {
+  return db
+    .select({ id: shopOrders.id, number: shopOrders.number, status: shopOrders.status, fulfilment: shopOrders.fulfilment, totalCents: shopOrders.totalCents, token: shopOrders.token, createdAt: shopOrders.createdAt, lines: shopOrders.lines, business: { name: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl } })
+    .from(shopOrders)
+    .innerJoin(businesses, eq(businesses.id, shopOrders.businessId))
+    .where(and(sql`lower(${shopOrders.email}) = ${email.toLowerCase()}`, isNull(businesses.deletedAt), sql`not (${shopOrders.status} = 'pending_payment' and ${shopOrders.createdAt} < now() - interval '2 days')`))
+    .orderBy(desc(shopOrders.createdAt))
+    .limit(60);
+}

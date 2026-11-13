@@ -30,7 +30,14 @@ export function proxy(request: NextRequest) {
   // l'espace (réécriture dans next.config), et pro.skydev.be/qr l'écran du QR fidélité. Sans session : connexion.
   const appPath = path === "/" ? appPathForHost(host) : /^pro\.skydev\.(?:be|localhost)(:\d+)?$/.test(host) ? (PRO_SHORTCUTS[path] ?? null) : null;
   if (appPath) {
-    if (!request.cookies.has("bs_session") && !request.cookies.has("sky_session")) {
+    const signedIn = request.cookies.has("bs_session") || request.cookies.has("sky_session");
+    // client.skydev.be sans session : page d'accueil des particuliers (réécriture dans next.config), pas la connexion.
+    if (!signedIn && appPath === "/espace-client") {
+      const h = new Headers(request.headers);
+      h.set("x-pathname", "/particuliers");
+      return NextResponse.next({ request: { headers: h } });
+    }
+    if (!signedIn) {
       const url = request.nextUrl.clone();
       url.pathname = "/connexion";
       url.search = "";

@@ -43,3 +43,6 @@ export function proSlugForHost(host: string): string | null {
   if (!m || isReservedSubdomain(m[1]!)) return null;
   return m[1]!;
 }
+
+/** client.skydev.be (espace des particuliers) : inscription et connexion orientées « client » par défaut. */
+export const isClientHost = (host: string | null | undefined) => /^client\.skydev\.(?:be|localhost)(?::\d+)?$/.test((host ?? "").toLowerCase());

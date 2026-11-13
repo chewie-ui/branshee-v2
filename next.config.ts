@@ -1,3 +1,4 @@
+import type { Rewrite } from "next/dist/lib/load-custom-routes";
 import type { NextConfig } from "next";
 import { APP_SUBDOMAINS, PRO_SHORTCUTS, reservedSubdomains } from "./src/lib/app-subdomains";
 
@@ -17,9 +18,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // Icône de l'onglet : celle de Skydev sur les adresses Skydev (avant les fichiers de /public, qui servent Branshee).
     const skyHost = "(?:.+\\.)?skydev\\.(?:be|localhost)";
-    const beforeFiles = [{ source: "/favicon.ico", has: [{ type: "host" as const, value: skyHost }], destination: "/skydev-favicon.ico" }];
+    const beforeFiles: Rewrite[] = [{ source: "/favicon.ico", has: [{ type: "host" as const, value: skyHost }], destination: "/skydev-favicon.ico" }];
     if (process.env.FORCE_BRAND === "skydev") beforeFiles.push({ source: "/favicon.ico", has: [{ type: "host" as const, value: ".*" }], destination: "/skydev-favicon.ico" });
     // pro.skydev.be/ ouvre l'espace pro, client.skydev.be/ l'espace client (l'adresse reste affichée).
+    // client.skydev.be/ sans session : la page d'accueil des particuliers (recherche d'un pro, connexion, inscription).
+    beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `client\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], missing: [{ type: "cookie" as const, key: "sky_session" }, { type: "cookie" as const, key: "bs_session" }], destination: "/particuliers" });
     for (const [sub, dest] of Object.entries(APP_SUBDOMAINS)) beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `${sub}\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
     for (const [src, dest] of Object.entries(PRO_SHORTCUTS)) beforeFiles.push({ source: src, has: [{ type: "host" as const, value: `pro\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
     // Adresse d'un pro : mon-cabinet.skydev.be/ → sa page (/mon-cabinet). Les noms réservés (apps, www, client…) sont exclus.

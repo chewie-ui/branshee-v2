@@ -12,6 +12,8 @@ import { googleConfigured } from "@/server/google";
 import { safeInternalPath } from "@/lib/safe-path";
 import { localize } from "@/lib/site-locale";
 import { siteLocale } from "@/server/site-locale";
+import { headers } from "next/headers";
+import { isClientHost } from "@/lib/app-subdomains";
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await siteLocale();
@@ -24,7 +26,10 @@ const internal = safeInternalPath;
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ suite?: string; google?: string; reinitialise?: string }> }) {
   const gate = await featureStatus("login");
   if (gate.status !== "active") return <FeatureStatusPage status={gate.status} message={gate.message} />;
-  const { suite, google, reinitialise } = await searchParams;
+  const sp = await searchParams;
+  const { google, reinitialise } = sp;
+  // Sur client.skydev.be, la connexion mène à l'espace client par défaut.
+  const suite = sp.suite ?? (isClientHost((await headers()).get("host")) ? "/espace-client" : undefined);
   const s = await getSessionUser();
   if (s && !s.user.isDemo) redirect(internal(suite) ?? ((await isPro(s.user.id)) ? "/app" : "/espace-client"));
   const clientFlow = !!suite && !suite.startsWith("/app");
