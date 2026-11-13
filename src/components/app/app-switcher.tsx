@@ -44,8 +44,15 @@ export function AppSwitcher({ apps }: { apps: SwitchApp[] }) {
     const sorted = [...apps].sort((a, b) => Number(!!b.fav) - Number(!!a.fav));
     const appsE = sorted.map((a) => ({ key: a.id, href: a.href, label: a.name, sub: null, icon: a.icon, fav: !!a.fav }));
     const pages = sorted.flatMap((a) => a.nav.filter((n) => !n.soon && n.href !== a.href && n.label !== a.name).map((n) => ({ key: `${a.id}:${n.href}`, href: n.href, label: n.label, sub: a.name, icon: a.icon, fav: false })));
-    return [...appsE, ...pages];
-  }, [apps]);
+    // Pages hors apps : l'espace client du pro (ses propres RDV, commandes, cartes), les réglages, l'aide.
+    const extra: Entry[] = [
+      { key: "espace-client", href: "/espace-client", label: t("Mon espace client"), sub: t("Mes rendez-vous, commandes et cartes de fidélité"), icon: "calendar", fav: false },
+      { key: "reglages", href: "/app/reglages", label: t("Réglages"), sub: null, icon: "settings", fav: false },
+      { key: "abonnement", href: "/app/reglages/abonnement", label: t("Abonnement"), sub: t("Réglages"), icon: "card", fav: false },
+      { key: "aide", href: "/app/aide", label: t("Aide"), sub: null, icon: "help", fav: false },
+    ];
+    return [...appsE, ...pages, ...extra];
+  }, [apps, t]);
   const results = useMemo(() => {
     const k = norm(q.trim());
     if (!k) return all.filter((e) => !e.sub);

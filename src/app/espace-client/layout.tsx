@@ -21,7 +21,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   return (
     <div className="min-h-dvh">
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:h-16 sm:px-6 sm:py-0">
           <Link href="/espace-client" aria-label="Espace client"><Brand brand={brand} /></Link>
           <div className="ml-auto flex items-center gap-3 text-sm">
             {pro ? (
@@ -38,7 +38,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         </div>
         <ClientNav sections={sections} />
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
   );
 }

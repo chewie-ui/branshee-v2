@@ -6,7 +6,7 @@ type CardRow = { token: string; stamps: number; business: string; goal: number; 
 /** Cartes de fidélité du client (espace client) : tampons, objectif, récompense. */
 export function LoyaltyCards({ cards }: { cards: CardRow[] }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
         <li key={c.token}>
           <Link href={`/fidelite/${c.token}`} className="block rounded-2xl bg-accent p-4 text-accent-foreground transition-opacity duration-150 hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">

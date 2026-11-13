@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ExternalLink, Eye, EyeOff, ImagePlus, Loader2, Plus, RotateCw, Trash2 } from "lucide-react";
 import type { SocialLinks } from "@/db/schema";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { cn } from "@/lib/cn";
 import { SECTION_LABELS, SITE_FONTS, SITE_TEMPLATES, type SiteSection, type SiteTheme } from "@/lib/site-templates";
-import { applySiteTemplate, saveSite, setSitePublished, uploadSiteImage } from "@/server/actions/site";
+import { applySiteTemplate, previewSiteDraft, saveSite, setSitePublished, uploadSiteImage } from "@/server/actions/site";
 import { useT } from "@/components/app-locale";
 
 type State = { sections: SiteSection[]; theme: SiteTheme; seo: { title: string; description: string }; social: SocialLinks; logoUrl: string; customDomain: string };
@@ -170,7 +170,19 @@ export function SiteEditor({ initial, published: initialPublished, publicUrl, vi
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("content");
   const [open, setOpen] = useState<string | null>(initial.sections[0]?.id ?? null);
   const [published, setPublished] = useState(initialPublished);
-  const [frameKey, setFrameKey] = useState(0);
+  // Aperçu en direct : chaque changement s'affiche (brouillon non enregistré) ; une 2e iframe se charge
+  // en arrière-plan puis remplace la première, à la même position de défilement (pas de flash blanc).
+  const [frames, setFrames] = useState<{ n: number; src: string; shown: boolean }[]>([{ n: 0, src: "/apercu-site", shown: true }]);
+  const frameEls = useRef(new Map<number, HTMLIFrameElement>());
+  const refresh = (draft: boolean) => setFrames((f) => [...f.filter((x) => x.shown), { n: Date.now(), src: `/apercu-site${draft ? "?brouillon=1&" : "?"}v=${Date.now()}`, shown: false }]);
+  const swapIn = (n: number) => {
+    const cur = frames.find((x) => x.shown);
+    try {
+      const y = cur ? frameEls.current.get(cur.n)?.contentWindow?.scrollY ?? 0 : 0;
+      frameEls.current.get(n)?.contentWindow?.scrollTo(0, y);
+    } catch { /* même origine : ne devrait pas arriver */ }
+    setFrames((f) => f.filter((x) => x.n === n).map((x) => ({ ...x, shown: true })));
+  };
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [adding, setAdding] = useState(false);
   const [pending, start] = useTransition();
@@ -183,8 +195,26 @@ export function SiteEditor({ initial, published: initialPublished, publicUrl, vi
     start(async () => {
       const r = await saveSite({ ...st, theme: { ...st.theme, headingFont: (st.theme.headingFont ?? "") as SiteTheme["fontFamily"] } } as never);
       setMsg({ ok: r.ok, text: r.ok ? (r.message ?? t("Enregistré.")) : (r.error ?? t("Erreur.")) });
-      if (r.ok) { setSaved(JSON.stringify(st)); setFrameKey((k) => k + 1); }
+      if (r.ok) { setSaved(JSON.stringify(st)); refresh(false); }
     });
+
+  // Changement non enregistré : aperçu mis à jour ~0,6 s après la dernière modification.
+  const draftJson = JSON.stringify(st);
+  const wasDirty = useRef(false);
+  useEffect(() => {
+    if (!dirty) {
+      if (wasDirty.current) refresh(false); // « Annuler » : retour au site enregistré
+      wasDirty.current = false;
+      return;
+    }
+    wasDirty.current = true;
+    const id = setTimeout(async () => {
+      const r = await previewSiteDraft({ ...st, theme: { ...st.theme, headingFont: (st.theme.headingFont ?? "") as SiteTheme["fontFamily"] } } as never);
+      if (r.ok) refresh(true);
+    }, 600);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftJson, dirty]);
 
   return (
     <div className="space-y-4">
@@ -304,13 +334,26 @@ export function SiteEditor({ initial, published: initialPublished, publicUrl, vi
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 text-sm text-muted">
-            <span>Aperçu {dirty ? "(enregistrez pour voir vos changements)" : ""}</span>
+            <span>{t("Aperçu")}{dirty ? ` · ${t("en direct, pas encore enregistré")}` : ""}</span>
             <span className="flex gap-1">
-              <button type="button" onClick={() => setFrameKey((k) => k + 1)} className="flex size-8 items-center justify-center rounded-lg hover:bg-surface-muted" aria-label={t("Recharger l'aperçu")}><RotateCw className="size-4" aria-hidden="true" /></button>
+              <button type="button" onClick={() => refresh(dirty)} className="flex size-8 items-center justify-center rounded-lg hover:bg-surface-muted" aria-label={t("Recharger l'aperçu")}><RotateCw className="size-4" aria-hidden="true" /></button>
               <a href="/apercu-site" target="_blank" rel="noreferrer" className="flex size-8 items-center justify-center rounded-lg hover:bg-surface-muted" aria-label={t("Ouvrir l'aperçu dans un onglet")}><ExternalLink className="size-4" aria-hidden="true" /></a>
             </span>
           </div>
-          <iframe key={frameKey} src="/apercu-site" title={t("Aperçu du site")} className="h-[calc(100dvh-220px)] min-h-[520px] w-full bg-white" />
+          <div className="relative h-[calc(100dvh-220px)] min-h-[520px]">
+            {frames.map((f) => (
+              <iframe
+                key={f.n}
+                ref={(el) => { if (el) frameEls.current.set(f.n, el); else frameEls.current.delete(f.n); }}
+                src={f.src}
+                title={t("Aperçu du site")}
+                onLoad={f.shown ? undefined : () => swapIn(f.n)}
+                aria-hidden={f.shown ? undefined : true}
+                tabIndex={f.shown ? undefined : -1}
+                className={cn("absolute inset-0 size-full bg-white", !f.shown && "pointer-events-none opacity-0")}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

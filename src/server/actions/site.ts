@@ -17,6 +17,8 @@ import { sanitizeArticleHtml } from "@/server/rich-text";
 import { getOrCreateSite } from "@/server/site-builder";
 import { savePublicImage } from "@/server/storage";
 import { clientIp } from "@/lib/client-ip";
+import { clearSiteDraft, putSiteDraft } from "@/server/site-preview";
+import type { SiteSection } from "@/lib/site-templates";
 
 type Result = { ok: boolean; error?: string; message?: string };
 const LOCKED: Result = { ok: false, error: "« Mon site » est inclus dans le forfait Pro+." };
@@ -57,6 +59,23 @@ const saveSchema = z.object({
   customDomain: z.string().trim().toLowerCase().max(120).refine((v) => !v || /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v), "Nom de domaine invalide (ex. www.moncabinet.be).").optional().default(""),
 });
 
+/** Aperçu en direct : garde le brouillon (validé comme à l'enregistrement) pour /apercu-site?brouillon=1, sans toucher au site. */
+export async function previewSiteDraft(input: z.input<typeof saveSchema>): Promise<Result> {
+  const { ctx, site } = await ctxWithSite();
+  if (!site) return LOCKED;
+  const parsed = saveSchema.omit({ customDomain: true }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Contenu invalide." };
+  const d = parsed.data;
+  const sections: SiteSection[] = [];
+  for (const s of d.sections) {
+    const data = DATA[s.type].safeParse(s.data);
+    if (!data.success) return { ok: false, error: `Section « ${s.type} » : ${data.error.issues[0]?.message ?? "contenu invalide"}` };
+    sections.push({ id: s.id, type: s.type, enabled: s.enabled, data: data.data as Record<string, unknown> } as SiteSection);
+  }
+  putSiteDraft(ctx.business.id, { sections, theme: { ...d.theme, headingFont: d.theme.headingFont || undefined }, logoUrl: d.logoUrl || null, social: Object.fromEntries(Object.entries(d.social).filter(([, v]) => v)) });
+  return { ok: true };
+}
+
 export async function saveSite(input: z.input<typeof saveSchema>): Promise<Result> {
   const { ctx, site } = await ctxWithSite();
   if (!site) return LOCKED;
@@ -83,6 +102,7 @@ export async function saveSite(input: z.input<typeof saveSchema>): Promise<Resul
     .update(sites)
     .set({ sections, theme: { ...d.theme, headingFont: d.theme.headingFont || undefined }, seo: { title: d.seo.title || undefined, description: d.seo.description || undefined }, social, logoUrl: d.logoUrl || null, customDomain: d.customDomain || null })
     .where(eq(sites.id, site.id));
+  clearSiteDraft(ctx.business.id);
   revalidatePath("/app/site");
   revalidatePath(`/${ctx.business.slug}`);
   return { ok: true, message: "Site enregistré." };

@@ -164,7 +164,7 @@ export default async function ClientDashboard() {
       {mine.length ? (
         <section className="space-y-3" aria-labelledby="mes-pros">
           <h2 id="mes-pros" className="text-lg font-semibold">Mes pros</h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mine.map((b) => (
               <li key={b.id}>
                 <Card className="flex items-center gap-3 p-4">

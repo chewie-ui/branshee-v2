@@ -106,6 +106,11 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
               <Plus className="size-4" aria-hidden="true" />
               {sky ? t("Ajouter une entreprise") : t("Ajouter un établissement")}
             </Link>
+            <div className="my-1 border-t border-border" />
+            <Link href="/espace-client" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
+              <CalendarHeart className="size-4" aria-hidden="true" />
+              {t("Mon espace client")}
+            </Link>
           </div>
         </>
       ) : null}
@@ -228,7 +233,6 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
               {supportUnread ? <span className="absolute top-1 right-1 size-2 rounded-full bg-accent sm:static sm:size-auto sm:px-1.5 sm:text-[11px] sm:leading-5 sm:font-semibold sm:text-accent-foreground" aria-hidden="true">{supportUnread}</span> : null}
             </Link>
           ) : null}
-          <Link href="/espace-client" className={iconBtn} aria-label={t("Mes rendez-vous en tant que client")} title={t("Mes rendez-vous (côté client)")}><CalendarHeart className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden whitespace-nowrap xl:inline">{t("Mes RDV")}</span></Link>
           <Link href="/app/compte" className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-muted" aria-label={t("Mon compte")} title={user.email}>
             <Avatar name={user.name} src={user.avatarUrl} size="sm" />
             <span className="hidden max-w-32 truncate text-sm font-medium lg:block">{user.name}</span>

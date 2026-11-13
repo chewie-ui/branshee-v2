@@ -17,7 +17,7 @@ export function ClientNav({ sections: s }: { sections: Sections }) {
     { href: "/espace-client/parametres", label: "Paramètres" },
   ].filter((i) => i !== null);
   return (
-    <nav className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Espace client">
+    <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Espace client">
       {ITEMS.map((i) => {
         const active = path === i.href;
         return (
