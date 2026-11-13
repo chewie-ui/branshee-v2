@@ -4,16 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
-const ITEMS = [
-  { href: "/espace-client", label: "Mes rendez-vous" },
-  { href: "/espace-client/commandes", label: "Mes commandes" },
-  { href: "/espace-client/fidelite", label: "Fidélité" },
-  { href: "/espace-client/avis", label: "Mes avis" },
-  { href: "/espace-client/parametres", label: "Paramètres" },
-];
+type Sections = { appts: boolean; orders: boolean; cards: boolean; reviews: boolean };
 
-export function ClientNav() {
+/** Onglets selon ce que la personne utilise : « Accueil » et « Paramètres » toujours, le reste s'il y a du contenu. */
+export function ClientNav({ sections: s }: { sections: Sections }) {
   const path = usePathname();
+  const ITEMS = [
+    { href: "/espace-client", label: s.appts ? "Mes rendez-vous" : "Accueil" },
+    s.orders ? { href: "/espace-client/commandes", label: "Mes commandes" } : null,
+    s.cards ? { href: "/espace-client/fidelite", label: "Fidélité" } : null,
+    s.appts || s.reviews ? { href: "/espace-client/avis", label: "Mes avis" } : null,
+    { href: "/espace-client/parametres", label: "Paramètres" },
+  ].filter((i) => i !== null);
   return (
     <nav className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Espace client">
       {ITEMS.map((i) => {

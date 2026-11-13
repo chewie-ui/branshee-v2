@@ -2,7 +2,7 @@ import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import { currentBrand } from "@/server/brand";
 import Link from "next/link";
-import { CalendarDays, Clock, MapPin, Navigation, RotateCcw, Star, UserRound } from "lucide-react";
+import { CalendarDays, Clock, Gift, MapPin, Navigation, RotateCcw, ShoppingBag, Star, UserRound } from "lucide-react";
 import { cardsOfUser } from "@/server/loyalty";
 import { LoyaltyCards } from "@/components/client/loyalty-cards";
 import { DirectorySearch } from "@/components/directory/directory-search";
@@ -12,11 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatDay, formatTime } from "@/lib/time";
-import { listClientAppointments, listMyReviews, requireClient } from "@/server/client-account";
+import { listClientAppointments, listMyOrders, listMyReviews, requireClient } from "@/server/client-account";
+import { pickupCode } from "@/server/shop";
 
 // Page du même segment que le layout : le modèle de titre du layout ne s'applique pas, on donne le titre complet.
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: { absolute: `Mes rendez-vous · ${(await currentBrand()).name}` } };
+  return { title: { absolute: `Mon espace · ${(await currentBrand()).name}` } };
 }
 
 type Appt = Awaited<ReturnType<typeof listClientAppointments>>[number];
@@ -26,7 +27,12 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default async function ClientDashboard() {
   const user = await requireClient();
-  const [list, myReviews, cards] = await Promise.all([listClientAppointments(user.id), listMyReviews(user.id), user.emailVerifiedAt ? cardsOfUser(user.id, user.email) : Promise.resolve([])]);
+  const [list, myReviews, cards, orders] = await Promise.all([listClientAppointments(user.id), listMyReviews(user.id), cardsOfUser(user.id, user.email), listMyOrders(user.email)]);
+  // L'espace s'adapte : on ne montre que ce que la personne utilise (un étudiant avec sa seule carte de fidélité
+  // ne voit pas de rubrique « rendez-vous » vide).
+  const hasAppts = list.length > 0;
+  const openOrders = orders.filter((o) => !["done", "cancelled"].includes(o.status));
+  const empty = !hasAppts && !cards.length && !orders.length;
   const now = new Date();
   const upcoming = list.filter((a) => a.startsAt > now && a.status !== "cancelled").sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   const past = list.filter((a) => a.startsAt <= now || a.status === "cancelled");
@@ -36,6 +42,13 @@ export default async function ClientDashboard() {
   const reviewOn = new Set<string>();
   const asked = new Set(reviewed);
   for (const a of past) if (a.status !== "cancelled" && !asked.has(a.business.id)) { asked.add(a.business.id); reviewOn.add(a.id); }
+  const summary = upcoming.length
+    ? `Vous avez ${upcoming.length} rendez-vous à venir.`
+    : openOrders.length
+      ? `${openOrders.length} commande${openOrders.length > 1 ? "s" : ""} en cours.`
+      : cards.length
+        ? `${cards.length} carte${cards.length > 1 ? "s" : ""} de fidélité.`
+        : hasAppts ? "Aucun rendez-vous à venir." : null;
   const row = (a: Appt) => (
     <li key={a.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
       <div className="min-w-0 flex-1">
@@ -56,10 +69,23 @@ export default async function ClientDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Bonjour {user.fullName.split(" ")[0]}</h1>
-        <p className="mt-1 text-sm text-muted">{upcoming.length ? `Vous avez ${upcoming.length} rendez-vous à venir.` : "Aucun rendez-vous à venir."}</p>
+        {summary ? <p className="mt-1 text-sm text-muted">{summary}</p> : null}
       </div>
 
-      <section className="space-y-3">
+      {empty ? (
+        <Card className="p-6">
+          <h2 className="font-semibold">Votre espace est prêt</h2>
+          <p className="mt-1 text-sm text-muted">Tout ce que vous faites chez les pros sur Skydev arrive ici tout seul, avec l&apos;adresse {user.email} :</p>
+          <ul className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+            <li className="flex gap-2"><Gift className="size-5 shrink-0 text-accent" aria-hidden="true" /><span><b className="font-medium">Cartes de fidélité</b><br /><span className="text-muted">Scannez le QR en caisse.</span></span></li>
+            <li className="flex gap-2"><ShoppingBag className="size-5 shrink-0 text-accent" aria-hidden="true" /><span><b className="font-medium">Commandes</b><br /><span className="text-muted">Commandez en ligne, passez récupérer.</span></span></li>
+            <li className="flex gap-2"><CalendarDays className="size-5 shrink-0 text-accent" aria-hidden="true" /><span><b className="font-medium">Rendez-vous</b><br /><span className="text-muted">Réservez en ligne, 24 h/24.</span></span></li>
+          </ul>
+        </Card>
+      ) : null}
+
+      {upcoming.length ? (
+        <section className="space-y-3">
         <h2 className="text-lg font-semibold">À venir</h2>
         {upcoming.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted">
@@ -102,6 +128,38 @@ export default async function ClientDashboard() {
           })
         )}
       </section>
+      ) : null}
+
+      {openOrders.length ? (
+        <section className="space-y-3" aria-labelledby="commandes">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="commandes" className="text-lg font-semibold">Commandes en cours</h2>
+            <Link href="/espace-client/commandes" className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link>
+          </div>
+          <Card>
+            <ul className="divide-y divide-border">
+              {openOrders.slice(0, 3).map((o) => (
+                <li key={o.id}>
+                  <Link href={`/commande/${o.token}`} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+                    <span className="min-w-0 flex-1"><span className="block font-medium">{o.business.name}</span><span className="block text-muted">Commande n° {o.number}{o.status === "ready" ? " · prête à retirer" : o.status === "pending_payment" ? " · paiement en attente" : ""}</span></span>
+                    {o.fulfilment === "pickup" && o.status !== "pending_payment" ? <span className="font-mono text-lg font-bold tracking-widest" aria-label={`Code de retrait ${pickupCode(o.token)}`}>{pickupCode(o.token)}</span> : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
+      {cards.length ? (
+        <section className="space-y-3" aria-labelledby="cartes">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="cartes" className="text-lg font-semibold">Mes cartes de fidélité</h2>
+            <Link href="/espace-client/fidelite" className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link>
+          </div>
+          <LoyaltyCards cards={cards.slice(0, 4)} />
+        </section>
+      ) : null}
 
       {mine.length ? (
         <section className="space-y-3" aria-labelledby="mes-pros">
@@ -117,16 +175,6 @@ export default async function ClientDashboard() {
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {cards.length ? (
-        <section className="space-y-3" aria-labelledby="cartes">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 id="cartes" className="text-lg font-semibold">Mes cartes de fidélité</h2>
-            <Link href="/espace-client/fidelite" className="text-sm font-medium text-accent hover:text-accent-hover">Tout voir</Link>
-          </div>
-          <LoyaltyCards cards={cards.slice(0, 4)} />
         </section>
       ) : null}
 

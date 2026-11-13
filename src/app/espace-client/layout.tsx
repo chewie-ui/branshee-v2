@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { ClientNav } from "@/components/client/client-nav";
 import { logout } from "@/server/actions/auth";
-import { requireClient, isPro } from "@/server/client-account";
+import { clientSections, requireClient, isPro } from "@/server/client-account";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ClientLayout({ children }: { children: ReactNode }) {
   const user = await requireClient();
-  const pro = await isPro(user.id);
+  const [pro, sections] = await Promise.all([isPro(user.id), clientSections(user.id, user.email)]);
   const brand = (await currentBrand()).id;
   return (
     <div className="min-h-dvh">
@@ -36,7 +36,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
             </form>
           </div>
         </div>
-        <ClientNav />
+        <ClientNav sections={sections} />
       </header>
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
     </div>
