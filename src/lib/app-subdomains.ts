@@ -1,42 +1,22 @@
 /**
- * Adresse directe de chaque app : calendar.skydev.be ouvre l'app RDV, invoices.skydev.be l'app Factures…
- * (noms en anglais, compris en français comme en anglais). Le visiteur arrive dans son espace,
- * directement dans l'app, et garde accès à toutes les autres apps.
+ * Deux espaces, deux adresses : pro.skydev.be ouvre l'espace des pros (toutes les apps, le panel),
+ * client.skydev.be l'espace client des particuliers (leurs rendez-vous, leurs cartes de fidélité…).
+ * L'adresse reste affichée ; la connexion est partagée entre les sous-domaines de skydev.be.
  */
 export const APP_SUBDOMAINS: Record<string, string> = {
-  calendar: "/app/rdv",
-  booking: "/app/rdv",
-  clients: "/app/clients",
-  website: "/app/site",
-  invoices: "/app/factures",
-  team: "/app/equipe",
-  shop: "/app/boutique",
-  vehicles: "/app/vehicules",
-  phone: "/app/tel-ia",
-  custom: "/app/sur-mesure",
-  schedule: "/app/planning",
-  leave: "/app/conges",
-  orders: "/app/commandes",
-  payroll: "/app/paie",
-  sales: "/app/ventes",
-  projects: "/app/projets",
-  jobs: "/app/interventions",
-  stock: "/app/stock",
-  pos: "/app/caisse",
-  expenses: "/app/depenses",
-  accounting: "/app/compta",
-  marketing: "/app/marketing",
-  reviews: "/app/avis",
-  loyalty: "/app/fidelite",
-  /** Raccourci du commerçant : l'écran du QR code fidélité, directement (à mettre sur l'écran d'accueil). */
-  qr: "/app/fidelite/qr",
-  sign: "/app/signatures",
-  documents: "/app/documents",
-  tasks: "/app/taches/aujourdhui",
-  messages: "/app/messagerie",
+  pro: "/app",
+  client: "/espace-client",
 };
 
-/** « calendar.skydev.be » → « /app/rdv » ; sinon null (skydev.be, www, sites des clients…). */
+/** Raccourcis courts sur pro.skydev.be (ex. pro.skydev.be/qr = écran du QR fidélité, à mettre sur l'écran d'accueil). */
+export const PRO_SHORTCUTS: Record<string, string> = {
+  "/qr": "/app/fidelite/qr",
+};
+
+/** Noms des apps : réservés (un pro ne peut pas prendre « calendar.skydev.be » comme adresse). */
+const APP_WORDS = ["calendar", "booking", "clients", "website", "invoices", "team", "shop", "vehicles", "phone", "custom", "schedule", "leave", "orders", "payroll", "sales", "projects", "jobs", "stock", "pos", "expenses", "accounting", "marketing", "reviews", "loyalty", "sign", "documents", "tasks", "messages", "qr"];
+
+/** « pro.skydev.be » → « /app », « client.skydev.be » → « /espace-client » ; sinon null. */
 export function appPathForHost(host: string): string | null {
   const m = /^([a-z-]+)\.skydev\.(?:be|localhost)(?::\d+)?$/.exec(host.toLowerCase());
   return m ? (APP_SUBDOMAINS[m[1]!] ?? null) : null;
@@ -52,10 +32,10 @@ export function subdomainForAppPath(path: string): string | null {
 const INFRA = new Set(["www", "client", "budget", "api", "admin", "app", "mail", "smtp", "imap", "pop", "ftp", "webmail", "autodiscover", "status", "docs", "blog", "help", "aide", "support", "demo", "static", "cdn", "assets", "preview", "test", "staging", "dev", "ns1", "ns2", "en", "fr", "nl", "pro", "mnemo", "pizzamamma", "autoconfig"]);
 
 /** Tous les noms réservés (infrastructure + apps), pour la réécriture de next.config. */
-export const reservedSubdomains = () => [...INFRA, ...Object.keys(APP_SUBDOMAINS)];
+export const reservedSubdomains = () => [...INFRA, ...APP_WORDS, ...Object.keys(APP_SUBDOMAINS)];
 
 /** Nom réservé : ni une app, ni l'infrastructure (un pro ne peut pas le choisir comme adresse). */
-export const isReservedSubdomain = (name: string) => INFRA.has(name) || name in APP_SUBDOMAINS;
+export const isReservedSubdomain = (name: string) => INFRA.has(name) || APP_WORDS.includes(name) || name in APP_SUBDOMAINS;
 
 /** « mon-cabinet.skydev.be » → « mon-cabinet » (page d'un pro) ; sinon null. */
 export function proSlugForHost(host: string): string | null {

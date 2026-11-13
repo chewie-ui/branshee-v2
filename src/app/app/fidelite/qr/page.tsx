@@ -19,7 +19,7 @@ export default async function LoyaltyQrPage() {
       {s.qrEnabled ? (
         <>
           <LoyaltyQrScreen business={ctx.business.name} goal={s.goal} reward={s.reward} />
-          <p className="mx-auto mt-4 max-w-md text-center text-sm text-muted">{t("Raccourci : ouvrez")} <a href="https://qr.skydev.be" className="font-medium text-accent hover:underline">qr.skydev.be</a> {t("sur le téléphone ou la tablette du comptoir, puis « Ajouter à l'écran d'accueil ». Un appui suffit ensuite pour afficher le QR.")}</p>
+          <p className="mx-auto mt-4 max-w-md text-center text-sm text-muted">{t("Raccourci : ouvrez")} <a href="https://pro.skydev.be/qr" className="font-medium text-accent hover:underline">pro.skydev.be/qr</a> {t("sur le téléphone ou la tablette du comptoir, puis « Ajouter à l'écran d'accueil ». Un appui suffit ensuite pour afficher le QR.")}</p>
         </>
       ) : (
         <div className="rounded-xl border border-border bg-surface p-6 text-sm text-muted">

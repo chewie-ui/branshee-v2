@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
 import { legacyRedirect } from "@/lib/custom-services";
 import { localeOfPath, localize } from "@/lib/site-locale";
-import { appPathForHost, proSlugForHost } from "@/lib/app-subdomains";
+import { PRO_SHORTCUTS, appPathForHost, proSlugForHost } from "@/lib/app-subdomains";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -26,9 +26,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
   const path = request.nextUrl.pathname;
-  // Skydev : adresse directe d'une app (calendar.skydev.be…) : l'adresse reste affichée, « / » ouvre l'app
-  // (réécriture dans next.config) et tout l'espace reste accessible. Sans session : connexion, puis retour à l'app.
-  const appPath = path === "/" ? appPathForHost(host) : null;
+  // Skydev : pro.skydev.be (espace pro) et client.skydev.be (espace client) : l'adresse reste affichée, « / » ouvre
+  // l'espace (réécriture dans next.config), et pro.skydev.be/qr l'écran du QR fidélité. Sans session : connexion.
+  const appPath = path === "/" ? appPathForHost(host) : /^pro\.skydev\.(?:be|localhost)(:\d+)?$/.test(host) ? (PRO_SHORTCUTS[path] ?? null) : null;
   if (appPath) {
     if (!request.cookies.has("bs_session") && !request.cookies.has("sky_session")) {
       const url = request.nextUrl.clone();

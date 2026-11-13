@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { APP_SUBDOMAINS, reservedSubdomains } from "./src/lib/app-subdomains";
+import { APP_SUBDOMAINS, PRO_SHORTCUTS, reservedSubdomains } from "./src/lib/app-subdomains";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -19,8 +19,9 @@ const nextConfig: NextConfig = {
     const skyHost = "(?:.+\\.)?skydev\\.(?:be|localhost)";
     const beforeFiles = [{ source: "/favicon.ico", has: [{ type: "host" as const, value: skyHost }], destination: "/skydev-favicon.ico" }];
     if (process.env.FORCE_BRAND === "skydev") beforeFiles.push({ source: "/favicon.ico", has: [{ type: "host" as const, value: ".*" }], destination: "/skydev-favicon.ico" });
-    // Adresse directe d'une app : calendar.skydev.be/ ouvre l'app RDV (l'adresse reste affichée).
+    // pro.skydev.be/ ouvre l'espace pro, client.skydev.be/ l'espace client (l'adresse reste affichée).
     for (const [sub, dest] of Object.entries(APP_SUBDOMAINS)) beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `${sub}\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
+    for (const [src, dest] of Object.entries(PRO_SHORTCUTS)) beforeFiles.push({ source: src, has: [{ type: "host" as const, value: `pro\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
     // Adresse d'un pro : mon-cabinet.skydev.be/ → sa page (/mon-cabinet). Les noms réservés (apps, www, client…) sont exclus.
     const reserved = reservedSubdomains().join("|");
     beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `(?<pro>(?!(?:${reserved})\\.)[a-z0-9][a-z0-9-]{1,79})\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: "/:pro" });
