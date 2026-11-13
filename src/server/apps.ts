@@ -9,7 +9,10 @@ import { hiddenNavHrefs } from "@/server/features";
 import { appAvailableIn, appText } from "@/lib/apps-i18n";
 import { tr } from "@/lib/i18n/app";
 
-export type VisibleApp = { id: SkyApp["id"]; name: string; icon: AppIcon; href: string; nav: AppNavItem[]; match?: string[]; status: SkyApp["status"]; billing: SkyApp["billing"]; tagline: string; category: SkyApp["category"]; pinned: boolean; fav: boolean; available: boolean };
+/** App indispensable à une autre : son raccourci reste dans les menus même si elle est rangée hors de l'accueil. */
+const NAV_NEEDS: Partial<Record<SkyApp["id"], SkyApp["id"]>> = { boutique: "stock" };
+
+export type VisibleApp ={ id: SkyApp["id"]; name: string; icon: AppIcon; href: string; nav: AppNavItem[]; match?: string[]; status: SkyApp["status"]; billing: SkyApp["billing"]; tagline: string; category: SkyApp["category"]; pinned: boolean; fav: boolean; available: boolean };
 
 /**
  * Apps visibles pour ce membre : chaque app ne garde que les menus permis (permissions, menus masqués
@@ -45,8 +48,9 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number; wit
       .filter((i) => !i.permission || ctx.can(i.permission))
       .filter((i) => !hidden.has(i.href))
       .filter((i) => i.href !== "/app/demandes" || (opts.pending ?? 0) > 0)
-      // Raccourci vers une autre app (Stock ↔ Boutique) : seulement si cette app est sur l'accueil.
-      .filter((i) => { const other = APPS.find((o) => o.id !== a.id && o.href === i.href); return !other || (!off.has(other.id) && ctx.canApp(other.id)); })
+      // Raccourci vers une autre app (Stock ↔ Boutique) : si ce membre y a accès et qu'elle est sur l'accueil.
+      // Boutique › Produits et stock reste toujours là : la boutique ne marche pas sans le Stock, même rangé hors de l'accueil.
+      .filter((i) => { const other = APPS.find((o) => o.id !== a.id && o.href === i.href); return !other || (ctx.canApp(other.id) && (!off.has(other.id) || NAV_NEEDS[a.id] === other.id)); })
       .map((i) => (i.href === "/app/clients" ? { ...i, label: clients } : { ...i, label: t(i.label) })),
   }))
     .filter((a) => a.nav.length > 0)
