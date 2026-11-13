@@ -4,18 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
-type Sections = { appts: boolean; orders: boolean; cards: boolean; reviews: boolean };
+const ITEMS = [
+  { href: "/espace-client", label: "Accueil" },
+  { href: "/espace-client/rendez-vous", label: "Rendez-vous" },
+  { href: "/espace-client/fidelite", label: "Fidélité" },
+  { href: "/espace-client/commandes", label: "Commandes" },
+  { href: "/espace-client/avis", label: "Mes avis" },
+  { href: "/espace-client/parametres", label: "Paramètres" },
+];
 
-/** Onglets selon ce que la personne utilise : « Accueil » et « Paramètres » toujours, le reste s'il y a du contenu. */
-export function ClientNav({ sections: s }: { sections: Sections }) {
+/** Onglets de l'espace client : toujours les mêmes (chaque page explique quoi faire quand elle est vide). */
+export function ClientNav() {
   const path = usePathname();
-  const ITEMS = [
-    { href: "/espace-client", label: s.appts ? "Mes rendez-vous" : "Accueil" },
-    s.orders ? { href: "/espace-client/commandes", label: "Mes commandes" } : null,
-    s.cards ? { href: "/espace-client/fidelite", label: "Fidélité" } : null,
-    s.appts || s.reviews ? { href: "/espace-client/avis", label: "Mes avis" } : null,
-    { href: "/espace-client/parametres", label: "Paramètres" },
-  ].filter((i) => i !== null);
   return (
     <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Espace client">
       {ITEMS.map((i) => {

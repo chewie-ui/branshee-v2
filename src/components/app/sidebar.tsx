@@ -62,7 +62,8 @@ function NavLink({ item, pathname, badge, activeHref }: { item: NavItem; pathnam
   );
 }
 
-function BusinessSwitcher({ current, all, brand }: { current: Props["business"]; all: Props["businesses"]; brand: BrandId }) {
+/** Menu « entreprise » (pro) ; current = null : on est dans l'espace client (même menu, l'espace client coché). */
+export function BusinessSwitcher({ current, all, brand }: { current: Props["business"] | null; all: Props["businesses"]; brand: BrandId }) {
   const [open, setOpen] = useState(false);
   const t = useT();
   const sky = brand === "skydev";
@@ -76,11 +77,11 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
         className="flex w-full items-center gap-3 rounded-lg border border-border bg-surface p-2 text-left transition-colors hover:bg-surface-muted"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-semibold text-accent-foreground" aria-hidden="true">
-          {current.name.charAt(0).toUpperCase()}
+          {current ? current.name.charAt(0).toUpperCase() : <CalendarHeart className="size-4" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-text">{current.name}</span>
-          {current.businessType ? <span className="block truncate text-xs text-muted">{current.businessType}</span> : null}
+          <span className="block truncate text-sm font-semibold text-text">{current ? current.name : t("Mon espace client")}</span>
+          {current ? (current.businessType ? <span className="block truncate text-xs text-muted">{current.businessType}</span> : null) : <span className="block truncate text-xs text-muted">{t("Rendez-vous, fidélité, commandes")}</span>}
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-muted" aria-hidden="true" />
       </button>
@@ -88,28 +89,33 @@ function BusinessSwitcher({ current, all, brand }: { current: Props["business"];
         <>
           <button type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} aria-label={t("Fermer")} tabIndex={-1} />
           <div role="menu" className="absolute inset-x-0 top-full z-20 mt-1 rounded-lg border border-border bg-surface p-1 shadow-lg">
-            <p className="px-2 py-1.5 text-xs font-medium text-muted">{sky ? t("Vos entreprises") : t("Vos établissements")}</p>
-            {all.map((b) => (
-              <form key={b.id} action={switchBusiness.bind(null, b.id)}>
-                <button type="submit" role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted">
-                  <span className="min-w-0 flex-1 truncate">{b.name}</span>
-                  {b.id === current.id ? <Check className="size-4 shrink-0 text-accent" aria-label={t("Actif")} /> : null}
-                </button>
-              </form>
-            ))}
-            <div className="my-1 border-t border-border" />
-            <Link href="/app/etablissements" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
-              <Building2 className="size-4" aria-hidden="true" />
-              {sky ? t("Mes entreprises") : t("Mes établissements")}
-            </Link>
+            {all.length ? (
+              <>
+                <p className="px-2 py-1.5 text-xs font-medium text-muted">{sky ? t("Vos entreprises") : t("Vos établissements")}</p>
+                {all.map((b) => (
+                  <form key={b.id} action={switchBusiness.bind(null, b.id)}>
+                    <button type="submit" role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted">
+                      <span className="min-w-0 flex-1 truncate">{b.name}</span>
+                      {b.id === current?.id ? <Check className="size-4 shrink-0 text-accent" aria-label={t("Actif")} /> : null}
+                    </button>
+                  </form>
+                ))}
+                <div className="my-1 border-t border-border" />
+                <Link href="/app/etablissements" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
+                  <Building2 className="size-4" aria-hidden="true" />
+                  {sky ? t("Mes entreprises") : t("Mes établissements")}
+                </Link>
+              </>
+            ) : null}
             <Link href="/bienvenue" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
               <Plus className="size-4" aria-hidden="true" />
               {sky ? t("Ajouter une entreprise") : t("Ajouter un établissement")}
             </Link>
             <div className="my-1 border-t border-border" />
-            <Link href="/espace-client" role="menuitem" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted hover:bg-surface-muted hover:text-text">
+            <Link href="/espace-client" role="menuitem" className={cn("flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted", current ? "text-muted hover:text-text" : "text-text")}>
               <CalendarHeart className="size-4" aria-hidden="true" />
-              {t("Mon espace client")}
+              <span className="flex-1">{t("Mon espace client")}</span>
+              {current ? null : <Check className="size-4 shrink-0 text-accent" aria-label={t("Actif")} />}
             </Link>
           </div>
         </>

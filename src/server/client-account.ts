@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, customers, loyaltyCards, members, reviews, shopOrders, users } from "@/db/schema";
+import { appointments, businesses, customers, members, reviews, shopOrders, users } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
 
 /**
@@ -111,13 +111,3 @@ export async function listMyOrders(email: string) {
     .limit(60);
 }
 
-/** Rubriques utiles à ce compte (onglets de l'espace client) : on n'affiche pas « Mes rendez-vous » à qui n'en a jamais eu. */
-export async function clientSections(userId: string, email: string) {
-  const mail = email.toLowerCase();
-  const [r] = await db.execute<{ appts: boolean; orders: boolean; cards: boolean; reviews: boolean }>(sql`select
-    exists (select 1 from ${appointments} a join ${customers} c on c.id = a.customer_id where c.user_id = ${userId} and a.kind = 'appointment') as appts,
-    exists (select 1 from ${shopOrders} o where lower(o.email) = ${mail}) as orders,
-    exists (select 1 from ${loyaltyCards} l join ${customers} c on c.id = l.customer_id where c.user_id = ${userId} or lower(c.email) = ${mail}) as cards,
-    exists (select 1 from ${reviews} v where v.user_id = ${userId}) as reviews`);
-  return { appts: !!r?.appts, orders: !!r?.orders, cards: !!r?.cards, reviews: !!r?.reviews };
-}

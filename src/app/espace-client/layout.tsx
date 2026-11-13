@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { db } from "@/db";
+import { businesses, members } from "@/db/schema";
 import { currentBrand } from "@/server/brand";
-import Link from "next/link";
-import { Brand } from "@/components/brand";
 import { ClientNav } from "@/components/client/client-nav";
-import { logout } from "@/server/actions/auth";
-import { clientSections, requireClient, isPro } from "@/server/client-account";
+import { ClientTopBar } from "@/components/client/client-top-bar";
+import { requireClient } from "@/server/client-account";
 
 export const dynamic = "force-dynamic";
 
@@ -16,27 +17,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ClientLayout({ children }: { children: ReactNode }) {
   const user = await requireClient();
-  const [pro, sections] = await Promise.all([isPro(user.id), clientSections(user.id, user.email)]);
   const brand = (await currentBrand()).id;
+  // Ses entreprises (s'il en a) : le même menu que côté pro pour passer de l'espace client à une entreprise.
+  const mine = await db
+    .select({ id: businesses.id, name: businesses.name, businessType: businesses.businessType })
+    .from(members)
+    .innerJoin(businesses, eq(businesses.id, members.businessId))
+    .where(and(eq(members.userId, user.id), eq(members.status, "active"), eq(members.isActive, true), isNull(businesses.deletedAt)))
+    .orderBy(asc(businesses.createdAt));
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:h-16 sm:px-6 sm:py-0">
-          <Link href="/espace-client" aria-label="Espace client"><Brand brand={brand} /></Link>
-          <div className="ml-auto flex items-center gap-3 text-sm">
-            {pro ? (
-              <Link href="/app" className="font-medium whitespace-nowrap text-accent hover:text-accent-hover">{brand === "skydev" ? "Espace entreprise" : "Espace pro"}</Link>
-            ) : (
-              // Pas encore d'entreprise : un indépendant ou un gérant peut créer la sienne d'ici.
-              <Link href="/bienvenue" className="font-medium whitespace-nowrap text-accent hover:text-accent-hover"><span className="sm:hidden">Je suis pro</span><span className="hidden sm:inline">{brand === "skydev" ? "Créer mon espace entreprise" : "Créer mon espace pro"}</span></Link>
-            )}
-            <span className="hidden text-muted sm:inline">{user.fullName}</span>
-            <form action={logout}>
-              <button type="submit" className="font-medium whitespace-nowrap text-muted hover:text-text">Se déconnecter</button>
-            </form>
-          </div>
-        </div>
-        <ClientNav sections={sections} />
+      <header className="sticky top-0 z-30 border-b border-border bg-surface">
+        <ClientTopBar brand={brand} businesses={mine} user={{ name: user.fullName, email: user.email, avatarUrl: user.avatarUrl }} />
+        <ClientNav />
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
