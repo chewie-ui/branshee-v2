@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { BusinessForm } from "@/components/settings/business-form";
+import { LogoCard } from "@/components/settings/logo-card";
 import { ContactModeForm } from "@/components/settings/contact-mode-form";
 import { contactModeOf } from "@/lib/contact-mode";
 import { requireContext } from "@/server/context";
@@ -18,6 +19,7 @@ export default async function BusinessSettingsPage() {
   const [b] = await db.select().from(businesses).where(eq(businesses.id, ctx.business.id));
   return (
     <>
+      <div id="logo"><LogoCard photoUrl={b!.photoUrl} name={b!.name} /></div>
       <BusinessForm
         b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "" }}
       />

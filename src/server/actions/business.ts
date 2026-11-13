@@ -10,6 +10,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, jobTitles, members, users } from "@/db/schema";
+import { deletePublicImage, savePublicImage } from "@/server/storage";
 import { isOfficialProfession, professionKey } from "@/lib/professions";
 import { BUSINESS_COOKIE, writeAuthCookie } from "@/server/auth/session";
 import { createBusiness } from "@/server/business";
@@ -73,4 +74,25 @@ export async function dismissOnboarding() {
   const ctx = await requireContext(undefined, { allowLocked: true });
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ dismissedAt: new Date().toISOString() })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app");
+}
+
+/** Photo ou logo de l'établissement (Réglages › Établissement) : la même image que sur la page publique. */
+export async function saveBusinessLogo(fd: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireContext("business.manage");
+  const file = fd.get("photo");
+  let photo: string | null;
+  if (file instanceof File && file.size > 0) {
+    if (file.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };
+    try {
+      photo = await savePublicImage(Buffer.from(await file.arrayBuffer()));
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Image invalide." };
+    }
+  } else if (fd.get("removePhoto") === "1") photo = null;
+  else return { ok: false, error: "Choisissez une image." };
+  const [before] = await db.select({ photoUrl: businesses.photoUrl }).from(businesses).where(eq(businesses.id, ctx.business.id));
+  await db.update(businesses).set({ photoUrl: photo }).where(eq(businesses.id, ctx.business.id));
+  await deletePublicImage(before?.photoUrl);
+  revalidatePath("/app", "layout");
+  return { ok: true };
 }

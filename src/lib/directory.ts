@@ -92,7 +92,7 @@ export function pageCompleteness(f: PageFacts) {
     { key: "type", label: "Votre métier", href: "/app/reglages/etablissement", done: f.type },
     { key: "address", label: "Votre adresse et votre ville", href: "/app/reglages/etablissement", done: f.address },
     { key: "description", label: "Une courte présentation", href: "/app/reglages/etablissement", done: f.description },
-    { key: "photo", label: "Une photo ou un logo", href: "/app/reglages/etablissement", done: f.photo },
+    { key: "photo", label: "Une photo ou un logo", href: "/app/reglages/etablissement#logo", done: f.photo },
     { key: "services", label: "Au moins une prestation", href: "/app/prestations", done: f.services > 0 },
     { key: "hours", label: "Vos horaires", href: "/app/horaires", done: f.hours },
   ];
