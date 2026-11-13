@@ -48,7 +48,7 @@ export default async function SharePage() {
         {subdomain ? (
           <Card>
             <CardHeader title={t("Votre adresse courte")} description={t("Votre page est aussi en ligne à cette adresse. Elle suit l'adresse choisie ci-dessus.")} />
-            <div className="px-5 pb-5">
+            <div className="p-5">
               <a href={`https://${ctx.business.slug}.skydev.be`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface-muted px-4 font-medium hover:bg-surface"><Globe2 className="size-4 text-accent" aria-hidden="true" />{ctx.business.slug}.skydev.be</a>
             </div>
           </Card>

@@ -18,13 +18,13 @@ export default async function BusinessSettingsPage() {
   const ctx = await requireContext("business.manage");
   const [b] = await db.select().from(businesses).where(eq(businesses.id, ctx.business.id));
   return (
-    <>
-      <div id="logo"><LogoCard photoUrl={b!.photoUrl} name={b!.name} /></div>
+    <div className="space-y-6">
+      <div id="logo" className="scroll-mt-20"><LogoCard photoUrl={b!.photoUrl} name={b!.name} /></div>
       <BusinessForm
         b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "" }}
       />
       <ContactModeForm mode={contactModeOf(b!.contactMode)} note={b!.contactNote ?? ""} hasPhone={!!b!.phone} />
       {(await currentBrand()).id === "skydev" ? <CountryForm country={b!.countryCode} options={countryOptions(ctx.user.locale ?? "fr")} /> : null}
-    </>
+    </div>
   );
 }

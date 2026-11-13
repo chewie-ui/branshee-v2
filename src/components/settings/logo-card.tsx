@@ -25,7 +25,7 @@ export function LogoCard({ photoUrl, name }: { photoUrl: string | null; name: st
   return (
     <Card>
       <CardHeader title={t("Photo ou logo")} description={t("Affiché en haut de votre page et dans l'annuaire. JPG, PNG ou WebP, 5 Mo maximum.")} />
-      <div className="flex flex-wrap items-center gap-4 px-5 pb-5">
+      <div className="flex flex-wrap items-center gap-4 p-5">
         <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-surface-muted text-2xl font-semibold text-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {preview ? <img src={preview} alt={t("Logo actuel")} className="size-full object-cover" /> : name.slice(0, 1).toUpperCase()}
