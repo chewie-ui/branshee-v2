@@ -141,7 +141,9 @@ export async function autoStamps() {
         .select({ id: shopOrders.id, email: shopOrders.email, name: shopOrders.name, phone: shopOrders.phone })
         .from(shopOrders)
         .where(and(
-          eq(shopOrders.businessId, b.id), isNotNull(shopOrders.paidAt), ne(shopOrders.status, "cancelled"), gt(shopOrders.paidAt, new Date(now - 7 * 86400_000)),
+          // Payée en ligne, ou retirée / livrée (paiement sur place) : 1 tampon par achat, jamais pour une commande annulée.
+          eq(shopOrders.businessId, b.id), ne(shopOrders.status, "cancelled"), or(isNotNull(shopOrders.paidAt), eq(shopOrders.status, "done")),
+          gt(sql`coalesce(${shopOrders.paidAt}, ${shopOrders.updatedAt})`, new Date(now - 7 * 86400_000)),
           sql`not exists (select 1 from "loyalty_moves" m where m.business_id = ${b.id} and m.ref = 'order:' || ${shopOrders.id})`,
         ))
         .limit(500);

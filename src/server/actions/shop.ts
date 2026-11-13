@@ -11,6 +11,8 @@ import { requireContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { cancelShopOrderAndRestock, shopOrigin, shopRights } from "@/server/shop";
+import { shopThemeSchema } from "@/lib/shop-theme";
+import { savePublicImage } from "@/server/storage";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 const SUPERVISION = { ok: false as const, error: "Action réservée au titulaire du compte (session de supervision)." };
@@ -82,4 +84,28 @@ export async function cancelShopOrder(id: string): Promise<Result> {
   await cancelShopOrderAndRestock(o.id, ctx.member.id);
   refresh();
   return { ok: true, message: o.paidAt && o.payMethod === "online" ? "Commande annulée, stock rendu. Remboursez le client depuis votre compte Stripe." : "Commande annulée, stock rendu." };
+}
+
+/** Apparence de la boutique (couleurs, police, bannière, mise en page). */
+export async function saveShopTheme(input: unknown): Promise<Result> {
+  const ctx = await requireContext(undefined, { app: "boutique" });
+  if (ctx.impersonating) return SUPERVISION;
+  if (!shopRights(ctx).manage) return { ok: false, error: "Seul le responsable règle la boutique." };
+  const v = shopThemeSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Apparence invalide." };
+  await db.insert(shopSettings).values({ businessId: ctx.business.id, theme: v.data }).onConflictDoUpdate({ target: shopSettings.businessId, set: { theme: v.data, updatedAt: new Date() } });
+  refresh();
+  revalidatePath(`/boutique/${ctx.business.slug}`);
+  return { ok: true, message: "Apparence enregistrée." };
+}
+
+/** Bannière de la boutique (image en haut de la page). */
+export async function uploadShopBanner(fd: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const ctx = await requireContext(undefined, { app: "boutique" });
+  if (ctx.impersonating) return SUPERVISION;
+  if (!shopRights(ctx).manage) return { ok: false, error: "Seul le responsable règle la boutique." };
+  const f = fd.get("file");
+  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "Choisissez une image." };
+  if (f.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };
+  try { return { ok: true, url: await savePublicImage(Buffer.from(await f.arrayBuffer())) }; } catch { return { ok: false, error: "Image : JPG, PNG ou WebP." }; }
 }

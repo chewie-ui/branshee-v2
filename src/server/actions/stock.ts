@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
+import { optionGroupsSchema, type OptionGroup } from "@/lib/product-options";
 import { db } from "@/db";
 import { posSales, products, stockMoves } from "@/db/schema";
 import { gridById, variantName } from "@/lib/sizes";
@@ -35,6 +36,10 @@ const productSchema = z.object({
   removePhoto: z.literal("1").optional(),
   onlineEnabled: z.literal("1").optional(),
   description: z.string().trim().max(1000).optional(),
+  // Boutique : promo (prix TVAC, jusqu'au …) et options à la commande (JSON, voir lib/product-options).
+  promo: z.string().trim().max(20).optional(),
+  promoUntil: z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/, "Date de fin de promo invalide.").optional(),
+  options: z.string().max(40000).optional(),
 });
 
 /** Ajouter ou modifier un produit (photo facultative). La quantité de départ crée un mouvement « Inventaire ». */
@@ -54,7 +59,20 @@ export async function saveProduct(fd: FormData): Promise<Result> {
     if (file.size > 5 * 1024 * 1024) return { ok: false, error: "Photo trop lourde (5 Mo maximum)." };
     try { photoUrl = await savePublicImage(Buffer.from(await file.arrayBuffer())); } catch { return { ok: false, error: "Photo : JPG, PNG, WebP ou GIF." }; }
   }
-  const values = { name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, onlineEnabled: !!d.onlineEnabled, description: d.description || null, updatedAt: new Date() };
+  const promoCents = d.promo ? parseEuros(d.promo) : null;
+  if (d.promo && promoCents === null) return { ok: false, error: "Prix promo invalide." };
+  if (promoCents !== null && promoCents >= d.price) return { ok: false, error: "Le prix promo doit être plus bas que le prix normal." };
+  let options: OptionGroup[] = [];
+  if (d.options) {
+    let parsedOpts: unknown;
+    try { parsedOpts = JSON.parse(d.options); } catch { return { ok: false, error: "Options illisibles." }; }
+    const o = optionGroupsSchema.safeParse(parsedOpts);
+    if (!o.success) return { ok: false, error: o.error.issues[0]?.message ?? "Vérifiez les options." };
+    options = o.data;
+  }
+  // Fin de promo : le soir du jour choisi (23:59, heure belge).
+  const promoUntil = promoCents !== null && d.promoUntil ? new Date(`${d.promoUntil}T23:59:59+01:00`) : null;
+  const values = { promoCents, promoUntil, options, name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, onlineEnabled: !!d.onlineEnabled, description: d.description || null, updatedAt: new Date() };
   if (typeof fd.get("variants") === "string") return saveModel(ctx, d.id, values, String(fd.get("variants")), String(fd.get("sizeGrid") ?? ""), photoUrl, !!d.removePhoto);
   try {
     if (d.id) {
@@ -81,7 +99,7 @@ export async function saveProduct(fd: FormData): Promise<Result> {
 }
 
 const variantSchema = z.array(z.object({ id: z.uuid().optional(), size: z.string().trim().max(30).nullable(), color: z.string().trim().max(40).nullable(), barcode: z.string().trim().max(40).regex(/^[\w-]*$/, "Code-barres : chiffres et lettres seulement.").default(""), qty: z.string().trim().regex(/^\d{0,6}$/, "Quantité invalide.").default("") })).min(1, "Choisissez au moins une taille ou une couleur.").max(300, "300 déclinaisons maximum par produit.");
-type Values = { name: string; sku: string | null; barcode: string | null; category: string | null; priceCents: number; vatRate: number; costCents: number | null; trackStock: boolean; minQty: number | null; supplier: string | null; onlineEnabled: boolean; description: string | null; updatedAt: Date };
+type Values = { promoCents: number | null; promoUntil: Date | null; options: OptionGroup[]; name: string; sku: string | null; barcode: string | null; category: string | null; priceCents: number; vatRate: number; costCents: number | null; trackStock: boolean; minQty: number | null; supplier: string | null; onlineEnabled: boolean; description: string | null; updatedAt: Date };
 
 /**
  * Produit en plusieurs tailles et/ou couleurs : un modèle (jamais vendu tel quel) et une déclinaison par
@@ -99,7 +117,7 @@ async function saveModel(ctx: Awaited<ReturnType<typeof requireContext>>, id: st
   const codes = list.map((x) => x.barcode).filter(Boolean);
   if (new Set(codes).size !== codes.length) return { ok: false, error: "Deux déclinaisons ont le même code-barres." };
   const grid = gridById(sizeGrid)?.id ?? null;
-  const common = { category: values.category, priceCents: values.priceCents, vatRate: values.vatRate, costCents: values.costCents, trackStock: values.trackStock, minQty: values.minQty, supplier: values.supplier, onlineEnabled: values.onlineEnabled, description: values.description, sizeGrid: grid, updatedAt: new Date() };
+  const common = { promoCents: values.promoCents, promoUntil: values.promoUntil, options: values.options, category: values.category, priceCents: values.priceCents, vatRate: values.vatRate, costCents: values.costCents, trackStock: values.trackStock, minQty: values.minQty, supplier: values.supplier, onlineEnabled: values.onlineEnabled, description: values.description, sizeGrid: grid, updatedAt: new Date() };
   try {
     const out = await db.transaction(async (tx) => {
       let modelId = id;

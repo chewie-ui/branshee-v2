@@ -1,5 +1,6 @@
 "use client";
 
+import { OptionsEditor } from "@/components/stock/options-editor";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -286,9 +287,18 @@ function ProductDialog({ product, variants, barcode, categories, onClose, onDone
         </fieldset>
         <fieldset className="mt-4 rounded-xl border border-border p-4">
           <legend className="px-1 text-sm font-medium">{t("Boutique en ligne")}</legend>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="onlineEnabled" value="1" defaultChecked={product?.onlineEnabled ?? false} className="size-4" />{t("En vente sur la boutique en ligne")}</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="onlineEnabled" value="1" defaultChecked={product?.onlineEnabled ?? true} className="size-4" />{t("En vente sur la boutique en ligne")}</label>
           <label htmlFor="pr-desc" className="mt-3 block text-sm">{t("Description (facultatif)")}</label>
           <textarea id="pr-desc" name="description" rows={2} maxLength={1000} defaultValue={product?.description ?? ""} className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Field label={t("Prix promo (€ TVAC, facultatif)")} htmlFor="pr-promo" hint={t("Le prix normal est barré sur la boutique")}><Input id="pr-promo" name="promo" inputMode="decimal" defaultValue={euroStr(product?.promoCents ?? undefined)} placeholder="0,00" /></Field>
+            <Field label={t("Promo jusqu'au (facultatif)")} htmlFor="pr-promo-until" hint={t("Vide = jusqu'à ce que vous la retiriez")}><Input id="pr-promo-until" name="promoUntil" type="date" defaultValue={product?.promoUntil ? new Date(product.promoUntil).toISOString().slice(0, 10) : ""} /></Field>
+          </div>
+        </fieldset>
+        <fieldset className="mt-4 rounded-xl border border-border p-4">
+          <legend className="px-1 text-sm font-medium">{t("Options à la commande")}</legend>
+          <p className="mb-3 text-xs text-muted">{t("Composer son sandwich, retirer un ingrédient, ajouter des suppléments : le prix se met à jour pour le client.")}</p>
+          <OptionsEditor initial={product?.options ?? []} />
         </fieldset>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <label htmlFor="pr-photo" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted focus-within:outline-2 focus-within:outline-accent"><ImagePlus className="size-4" aria-hidden="true" />{product?.photoUrl || file ? t("Changer la photo") : t("Ajouter une photo")}</label>

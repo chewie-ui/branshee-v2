@@ -10,10 +10,11 @@ import { emails } from "@/server/email/templates";
 
 const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(c / 100);
 import type { AppContext } from "@/server/context";
+import { promoPrice } from "@/lib/product-options";
 
 export const shopRights = (ctx: AppContext) => ({ manage: ctx.member.isOwner || ctx.can("settings.manage") });
 export const shopOrigin = () => (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
-export const DEFAULT_SHOP = { enabled: false, pickup: true, pickupNote: null, delivery: false, deliveryCents: 0, freeDeliveryFromCents: null, deliveryNote: null, payOnline: false, payOnPickup: true, payTransfer: false, intro: null };
+export const DEFAULT_SHOP = { enabled: false, pickup: true, pickupNote: null, delivery: false, deliveryCents: 0, freeDeliveryFromCents: null, deliveryNote: null, payOnline: false, payOnPickup: true, payTransfer: false, intro: null, theme: {} as Record<string, unknown> };
 
 export async function shopSettingsOf(businessId: string) {
   const [s] = await db.select().from(shopSettings).where(eq(shopSettings.businessId, businessId));
@@ -26,18 +27,21 @@ export async function stripeDestination(businessId: string) {
 }
 
 /** Boutique publique : établissement visible, boutique activée, produits en ligne. */
-export async function publicShop(slug: string) {
+export async function publicShop(slug: string, opts: { preview?: boolean } = {}) {
   if (!/^[a-z0-9-]{1,80}$/.test(slug)) return null;
   const [b] = await db.select({ id: businesses.id, name: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl, city: businesses.city }).from(businesses).where(and(eq(businesses.slug, slug), isNull(businesses.deletedAt), isNull(businesses.pausedAt)));
   if (!b) return null;
   const s = await shopSettingsOf(b.id);
-  if (!s.enabled || (await isLocked(b.id))) return null;
+  // Aperçu de l'éditeur (membre de l'entreprise) : visible même boutique fermée.
+  if ((!s.enabled && !opts.preview) || (await isLocked(b.id))) return null;
   const [items, [seller], dest] = await Promise.all([
-    db.select({ id: products.id, name: products.name, description: products.description, category: products.category, priceCents: products.priceCents, photoUrl: products.photoUrl, trackStock: products.trackStock, stockQty: products.stockQty, isModel: products.isModel, parentId: products.parentId, size: products.size, color: products.color, sizeGrid: products.sizeGrid }).from(products).where(and(eq(products.businessId, b.id), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(asc(products.category), asc(products.name)),
+    db.select({ id: products.id, name: products.name, description: products.description, category: products.category, priceCents: products.priceCents, promoCents: products.promoCents, promoUntil: products.promoUntil, options: products.options, photoUrl: products.photoUrl, trackStock: products.trackStock, stockQty: products.stockQty, isModel: products.isModel, parentId: products.parentId, size: products.size, color: products.color, sizeGrid: products.sizeGrid }).from(products).where(and(eq(products.businessId, b.id), eq(products.active, true), eq(products.onlineEnabled, true))).orderBy(asc(products.category), asc(products.name)),
     db.select({ iban: invoiceSettings.iban, legalName: invoiceSettings.legalName, street: invoiceSettings.street, zip: invoiceSettings.zip, city: invoiceSettings.city, vat: invoiceSettings.vatNumber, bce: invoiceSettings.bce, email: invoiceSettings.email }).from(invoiceSettings).where(eq(invoiceSettings.businessId, b.id)),
     stripeDestination(b.id),
   ]);
-  return { business: b, settings: s, items, seller: seller ?? null, canPayOnline: s.payOnline && !!dest };
+  // Prix affiché = prix du jour (promo active comprise) ; regularCents = prix normal, barré s'il y a une promo.
+  const shown = items.map(({ promoCents, promoUntil, ...it }) => { const promo = promoPrice({ priceCents: it.priceCents, promoCents, promoUntil }); return { ...it, priceCents: promo ?? it.priceCents, regularCents: promo != null ? it.priceCents : null }; });
+  return { business: b, settings: s, items: shown, seller: seller ?? null, canPayOnline: s.payOnline && !!dest && !!process.env.STRIPE_SECRET_KEY };
 }
 
 export async function shopOrdersOf(businessId: string) {

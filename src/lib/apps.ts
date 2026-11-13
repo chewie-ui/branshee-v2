@@ -177,6 +177,7 @@ const UPCOMING: SkyApp[] = [
     nav: [
       { href: "/app/stock", label: "Produits", icon: "boxes" },
       { href: "/app/stock/mouvements", label: "Mouvements", icon: "history" },
+      { href: "/app/boutique", label: "Boutique en ligne", icon: "bag" },
     ],
   },
   {
@@ -411,9 +412,11 @@ export const APPS: SkyApp[] = [
     href: "/app/boutique",
     status: "active",
     billing: "included",
-    features: ["Vos produits du Stock en vente en ligne", "Retrait ou livraison, frais au choix", "Paiement Bancontact et carte, virement ou sur place", "Commandes et stock suivis en direct"],
+    features: ["Avec l'app Stock (ajoutée automatiquement, indispensable) : vos produits en vente en ligne", "Options et suppléments (ex. composer son sandwich), promos", "Apparence à votre image : couleurs, police, bannière", "Retrait ou livraison, paiement Bancontact et carte, virement ou sur place"],
     nav: [
       { href: "/app/boutique", label: "Commandes", icon: "bag" },
+      { href: "/app/stock", label: "Produits et stock", icon: "boxes" },
+      { href: "/app/boutique/apparence", label: "Apparence", icon: "layout", permission: "settings.manage" },
       { href: "/app/boutique/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
     ],
   },

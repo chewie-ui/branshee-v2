@@ -10,13 +10,15 @@ import { clientIp } from "@/lib/client-ip";
 import { MAX_SHOP_QTY, deliveryFee } from "@/lib/shop";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { stripe } from "@/server/payments";
-import { notifyNewOrder, publicShop, shopOrigin, stripeDestination } from "@/server/shop";
+import { cancelShopOrderAndRestock, notifyNewOrder, publicShop, shopOrigin, stripeDestination } from "@/server/shop";
+import { priceSelection, promoPrice } from "@/lib/product-options";
 
 type Result = { ok: true; url: string } | { ok: false; error: string };
 
 const schema = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
-  lines: z.array(z.object({ productId: z.uuid(), qty: z.number().int().min(1).max(MAX_SHOP_QTY) })).min(1, "Votre panier est vide.").max(50),
+  // choices : options choisies (pain, suppléments…) ; le prix est recalculé ici, jamais pris du navigateur.
+  lines: z.array(z.object({ productId: z.uuid(), qty: z.number().int().min(1).max(MAX_SHOP_QTY), choices: z.array(z.string().regex(/^[a-z0-9]{4,16}$/)).max(60).optional().default([]) })).min(1, "Votre panier est vide.").max(50),
   fulfilment: z.enum(["pickup", "delivery"]),
   payMethod: z.enum(["online", "pickup", "transfer"]),
   name: z.string().trim().min(2, "Indiquez votre nom.").max(120),
@@ -48,18 +50,32 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
   if ((d.payMethod === "online" && !shop.canPayOnline) || (d.payMethod === "pickup" && !s.payOnPickup) || (d.payMethod === "transfer" && !s.payTransfer)) return { ok: false, error: "Moyen de paiement indisponible." };
   const [recent] = await db.select({ n: sql<number>`count(*)::int` }).from(shopOrders).where(and(eq(shopOrders.businessId, shop.business.id), eq(shopOrders.email, d.email.toLowerCase()), sql`${shopOrders.createdAt} > now() - interval '1 hour'`));
   if ((recent?.n ?? 0) >= 3) return { ok: false, error: "Vous avez déjà passé plusieurs commandes : contactez la boutique." };
+  // Quantité totale par produit (pour le stock), toutes options confondues.
   const qty = new Map<string, number>();
-  for (const l of d.lines) qty.set(l.productId, Math.min(MAX_SHOP_QTY, (qty.get(l.productId) ?? 0) + l.qty));
+  for (const l of d.lines) qty.set(l.productId, (qty.get(l.productId) ?? 0) + l.qty);
+  if ([...qty.values()].some((q) => q > MAX_SHOP_QTY)) return { ok: false, error: `${MAX_SHOP_QTY} exemplaires maximum par produit.` };
   const token = randomBytes(18).toString("base64url");
   const order = await db.transaction(async (tx) => {
     const items = await tx.select().from(products).where(and(eq(products.businessId, shop.business.id), inArray(products.id, [...qty.keys()]), eq(products.active, true), eq(products.onlineEnabled, true), eq(products.isModel, false))).orderBy(products.id).for("update");
     if (items.length !== qty.size) return { error: "Un produit de votre panier n'est plus en vente. Rechargez la page." };
-    const lines: ShopLine[] = [];
+    const byId = new Map(items.map((p) => [p.id, p]));
     for (const p of items) {
       const q = qty.get(p.id)!;
       if (p.trackStock && p.stockQty < q) return { error: `Plus que ${Math.max(0, p.stockQty)} « ${p.name} » en stock.` };
-      lines.push({ productId: p.id, name: p.name, qty: q, unitCents: p.priceCents, vatRate: p.vatRate });
     }
+    // Une ligne par produit + options : prix = prix du jour (promo comprise) + suppléments, recalculés ici.
+    const merged = new Map<string, ShopLine>();
+    for (const l of d.lines) {
+      const p = byId.get(l.productId)!;
+      const sel = priceSelection(p.options ?? [], [...new Set(l.choices)]);
+      if (!sel) return { error: `« ${p.name} » : vérifiez les options choisies (un choix obligatoire manque ou n'existe plus). Rechargez la page.` };
+      const unit = (promoPrice(p) ?? p.priceCents) + sel.extraCents;
+      const name = sel.label ? `${p.name} (${sel.label})` : p.name;
+      const key = `${p.id}|${[...new Set(l.choices)].sort().join(",")}`;
+      const prev = merged.get(key);
+      merged.set(key, prev ? { ...prev, qty: prev.qty + l.qty } : { productId: p.id, name, qty: l.qty, unitCents: unit, vatRate: p.vatRate });
+    }
+    const lines = [...merged.values()];
     const itemsCents = lines.reduce((a, l) => a + l.qty * l.unitCents, 0);
     const delivery = d.fulfilment === "delivery" ? deliveryFee(itemsCents, s) : 0;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${shop.business.id}:shop`}))`);
@@ -77,7 +93,9 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
   if (d.payMethod === "online") {
     const st = stripe();
     const dest = await stripeDestination(shop.business.id);
-    if (!st || !dest) return { ok: true, url: track };
+    // Paiement en ligne impossible à démarrer : on annule la commande (stock rendu) et le client choisit un autre moyen.
+    const fail = async () => { await cancelShopOrderAndRestock(o.id); return { ok: false as const, error: "Le paiement en ligne ne répond pas pour le moment. Réessayez, ou choisissez un autre moyen de paiement." }; };
+    if (!st || !dest) return fail();
     try {
       const session = await st.checkout.sessions.create({
         mode: "payment",
@@ -90,10 +108,11 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
         expires_at: Math.floor(Date.now() / 1000) + 1800,
       });
       await db.update(shopOrders).set({ stripeSessionId: session.id }).where(eq(shopOrders.id, o.id));
-      return { ok: true, url: session.url ?? track };
+      if (!session.url) return fail();
+      return { ok: true, url: session.url };
     } catch (e) {
       console.error("[boutique] paiement :", e);
-      return { ok: true, url: track };
+      return fail();
     }
   }
   await notifyNewOrder(o.id);

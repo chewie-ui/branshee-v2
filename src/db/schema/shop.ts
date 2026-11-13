@@ -18,6 +18,8 @@ export const shopSettings = pgTable("shop_settings", {
   payOnPickup: boolean("pay_on_pickup").notNull().default(true),
   payTransfer: boolean("pay_transfer").notNull().default(false),
   intro: text("intro"),
+  /** Apparence de la boutique (couleurs, police, bannière, mise en page) : voir lib/shop-theme. */
+  theme: jsonb("theme").$type<Record<string, unknown>>().notNull().default({}),
   ...timestamps,
 });
 

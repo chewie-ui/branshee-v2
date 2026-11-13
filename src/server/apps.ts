@@ -45,6 +45,8 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number; wit
       .filter((i) => !i.permission || ctx.can(i.permission))
       .filter((i) => !hidden.has(i.href))
       .filter((i) => i.href !== "/app/demandes" || (opts.pending ?? 0) > 0)
+      // Raccourci vers une autre app (Stock ↔ Boutique) : seulement si cette app est sur l'accueil.
+      .filter((i) => { const other = APPS.find((o) => o.id !== a.id && o.href === i.href); return !other || (!off.has(other.id) && ctx.canApp(other.id)); })
       .map((i) => (i.href === "/app/clients" ? { ...i, label: clients } : { ...i, label: t(i.label) })),
   }))
     .filter((a) => a.nav.length > 0)

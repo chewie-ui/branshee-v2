@@ -31,6 +31,11 @@ export const products = pgTable(
     /** App Boutique : produit visible dans la boutique en ligne, avec sa description. */
     onlineEnabled: boolean("online_enabled").notNull().default(false),
     description: text("description"),
+    /** Promo boutique en ligne : prix promo TVAC (prix normal barré), jusqu'à une date (null = sans fin). */
+    promoCents: integer("promo_cents"),
+    promoUntil: timestamp("promo_until", { withTimezone: true }),
+    /** Options à la commande (boutique) : composer, retirer, suppléments payants. Voir lib/product-options. */
+    options: jsonb("options").$type<import("@/lib/product-options").OptionGroup[]>().notNull().default([]),
     /**
      * Tailles et couleurs : un « modèle » (isModel, jamais vendu tel quel) et ses déclinaisons
      * (parentId = le modèle), chacune avec son stock, son code-barres et sa ligne de ticket.

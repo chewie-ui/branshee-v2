@@ -42,7 +42,7 @@ export function AppStore({ items, canEdit, activeAddons, metiers, mine, country 
     start(async () => {
       const r = await setAppPinned(a.id, add);
       setBusy(null);
-      setMsg(r.ok ? { ok: true, text: add ? t("{app} est ajoutée à votre accueil.", { app: a.name }) : t("{app} est retirée de votre accueil.", { app: a.name }) } : { ok: false, text: r.error });
+      setMsg(r.ok ? { ok: true, text: add ? (r.added?.length ? t("{app} est ajoutée à votre accueil, avec {needs} : indispensable, c'est là que vous créez vos produits et suivez le stock.", { app: a.name, needs: r.added.join(", ") }) : t("{app} est ajoutée à votre accueil.", { app: a.name })) : t("{app} est retirée de votre accueil.", { app: a.name }) } : { ok: false, text: r.error });
       router.refresh();
     });
   };

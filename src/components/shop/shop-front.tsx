@@ -7,14 +7,15 @@ import { cn } from "@/lib/cn";
 import { MAX_SHOP_QTY, deliveryFee } from "@/lib/shop";
 import { placeShopOrder } from "@/server/actions/shop-order";
 import { fill, type PublicTexts } from "@/i18n/public-pages";
+import { priceSelection, type OptionGroup } from "@/lib/product-options";
 
-type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; photoUrl: string | null; trackStock: boolean; stockQty: number; isModel?: boolean; parentId?: string | null; size?: string | null; color?: string | null; sizeGrid?: string | null };
+type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; regularCents?: number | null; options?: OptionGroup[]; photoUrl: string | null; trackStock: boolean; stockQty: number; isModel?: boolean; parentId?: string | null; size?: string | null; color?: string | null; sizeGrid?: string | null };
 type Settings = { intro: string | null; pickup: boolean; pickupNote: string | null; delivery: boolean; deliveryCents: number; freeDeliveryFromCents: number | null; deliveryNote: string | null; payOnline: boolean; payOnPickup: boolean; payTransfer: boolean };
 type Seller = { iban: string; legalName: string; street: string; zip: string; city: string; vat: string; bce: string; email: string } | null;
 const input = "h-11 w-full rounded-lg border border-border bg-surface px-3";
 
 /** Vitrine, panier et commande (sans compte). */
-export function ShopFront({ slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string }) {
+export function ShopFront({ look, slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string; look?: { vars: Record<string, string>; layout: "grid" | "list"; bannerUrl: string | null; title: string | null } }) {
   const eur = (c: number) => new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(c / 100);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cat, setCat] = useState<string | null>(null);
@@ -26,12 +27,18 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
   useEffect(() => { try { const raw = localStorage.getItem(key); if (raw) setCart(JSON.parse(raw)); } catch {} }, [key]); // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { try { localStorage.setItem(key, JSON.stringify(cart)); } catch {} }, [cart, key]);
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const lines = Object.entries(cart).filter(([id, q]) => q > 0 && byId.has(id));
-  const itemsCents = lines.reduce((a, [id, q]) => a + byId.get(id)!.priceCents * q, 0);
+  // Panier : une ligne par produit + options (clé « id|choix1,choix2 ») ; prix recalculé par le serveur à la commande.
+  const parse = (key: string) => { const [id, ch] = key.split("|"); return { id: id!, choices: ch ? ch.split(",").filter(Boolean) : [] }; };
+  const lineOf = (key: string) => { const { id, choices } = parse(key); const it = byId.get(id); if (!it) return null; const sel = priceSelection(it.options ?? [], choices); if (!sel) return null; return { it, choices, unit: it.priceCents + sel.extraCents, label: sel.label }; };
+  const lines = Object.entries(cart).filter(([k, q]) => q > 0 && lineOf(k));
+  const itemsCents = lines.reduce((a, [k, q]) => a + lineOf(k)!.unit * q, 0);
+  const qtyOf = (id: string) => Object.entries(cart).reduce((a, [k, q]) => a + (parse(k).id === id ? q : 0), 0);
+  const [opt, setOpt] = useState<Item | null>(null);
   const fee = f.fulfilment === "delivery" ? deliveryFee(itemsCents, s) : 0;
   const count = lines.reduce((a, [, q]) => a + q, 0);
   const max = (it: Item) => (it.trackStock ? Math.min(MAX_SHOP_QTY, it.stockQty) : MAX_SHOP_QTY);
-  const add = (it: Item, d: number) => setCart((c) => ({ ...c, [it.id]: Math.max(0, Math.min(max(it), (c[it.id] ?? 0) + d)) }));
+  const addKey = (key: string, d: number) => { const it = byId.get(parse(key).id); if (!it) return; setCart((c) => { const cur = c[key] ?? 0; const room = max(it) - (qtyOf(it.id) - cur); return { ...c, [key]: Math.max(0, Math.min(room, cur + d)) }; }); };
+  const add = (it: Item, d: number) => addKey(it.id, d);
   const cats = [...new Set(items.map((i) => i.category).filter((x): x is string => !!x))];
   // Tailles et couleurs : une seule carte par modèle, la déclinaison se choisit dans la carte.
   const variantsOf = (id: string) => items.filter((v) => v.parentId === id);
@@ -43,7 +50,7 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
     e.preventDefault();
     start(async () => {
       setError(null);
-      const r = await placeShopOrder({ slug, lines: lines.map(([productId, qty]) => ({ productId, qty })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, pickupAt: f.fulfilment === "pickup" ? f.pickupAt : "", terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
+      const r = await placeShopOrder({ slug, lines: lines.map(([k, qty]) => ({ productId: parse(k).id, qty, choices: parse(k).choices })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, pickupAt: f.fulfilment === "pickup" ? f.pickupAt : "", terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
       if (!r.ok) return setError(r.error);
       try { localStorage.removeItem(key); } catch {}
       window.location.href = r.url;
@@ -51,14 +58,18 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
   };
 
   return (
-    <div className="min-h-dvh bg-bg pb-28">
+    <div className="min-h-dvh bg-background pb-28 font-sans text-text" style={look?.vars as React.CSSProperties}>
+      {look?.bannerUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={look.bannerUrl} alt="" className="h-40 w-full object-cover sm:h-56" />
+      ) : null}
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
           {business.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={business.photoUrl} alt="" className="size-14 rounded-xl object-cover" />
           ) : <span className="flex size-14 items-center justify-center rounded-xl bg-accent-soft text-accent" aria-hidden="true"><Store className="size-7" /></span>}
-          <div className="min-w-0"><h1 className="truncate text-xl font-semibold">{business.name}</h1><p className="text-sm text-muted">{tx.online}{business.city ? ` · ${business.city}` : ""}</p></div>
+          <div className="min-w-0"><h1 className="truncate text-xl font-semibold">{look?.title || business.name}</h1><p className="text-sm text-muted">{tx.online}{business.city ? ` · ${business.city}` : ""}</p></div>
         </div>
         {s.intro ? <p className="mx-auto max-w-5xl px-4 pb-4 text-sm text-muted">{s.intro}</p> : null}
       </header>
@@ -70,20 +81,23 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
           </div>
         ) : null}
         {items.length === 0 ? <p className="py-16 text-center text-muted">{tx.empty}</p> : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className={look?.layout === "list" ? "grid gap-3 sm:grid-cols-2" : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>
             {shown.map((card) => {
               const vars = card.isModel ? variantsOf(card.id) : [];
               const avail = vars.filter((v) => !v.trackStock || v.stockQty > 0);
               const it = card.isModel ? (vars.find((v) => v.id === pick[card.id]) ?? avail[0] ?? vars[0]!) : card;
               const q = cart[it.id] ?? 0;
+              const hasOpts = (it.options ?? []).length > 0;
+              const fromCents = it.priceCents + (it.options ?? []).filter((g) => g.required).reduce((a, g) => a + (g.multi ? 0 : Math.min(...g.choices.map((c) => c.priceCents))), 0);
               const out = it.trackStock && it.stockQty <= 0;
               return (
-                <li key={card.id} className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+                <li key={card.id} className={cn("relative flex overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--card-shadow)]", look?.layout === "list" ? "flex-row" : "flex-col")}>
+                  {it.regularCents ? <span className="absolute top-2 left-2 z-10 rounded-full bg-danger px-2 py-0.5 text-xs font-semibold text-white">{tx.promo} −{Math.round((1 - it.priceCents / it.regularCents) * 100)} %</span> : null}
                   {it.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.photoUrl} alt="" className="aspect-square w-full object-cover" loading="lazy" />
-                  ) : <span className="flex aspect-square items-center justify-center bg-surface-muted text-muted" aria-hidden="true"><Package className="size-10" /></span>}
-                  <div className="flex flex-1 flex-col p-3">
+                    <img src={it.photoUrl} alt="" className={look?.layout === "list" ? "size-28 shrink-0 object-cover sm:size-32" : "aspect-square w-full object-cover"} loading="lazy" />
+                  ) : <span className={cn("flex items-center justify-center bg-surface-muted text-muted", look?.layout === "list" ? "size-28 shrink-0 sm:size-32" : "aspect-square")} aria-hidden="true"><Package className="size-10" /></span>}
+                  <div className="flex min-w-0 flex-1 flex-col p-3">
                     <p className="font-medium">{card.name}</p>
                     {card.isModel ? (
                       <select aria-label={`${tx.option} : ${card.name}`} value={it.id} onChange={(e) => setPick((p) => ({ ...p, [card.id]: e.target.value }))} className="mt-2 h-10 w-full rounded-lg border border-border-strong bg-surface px-2 text-sm">
@@ -96,8 +110,13 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
                     ) : null}
                     {it.description ? <p className="mt-0.5 line-clamp-3 text-sm text-muted">{it.description}</p> : null}
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
-                      <span className="font-semibold tabular-nums">{eur(it.priceCents)}</span>
-                      {out ? <span className="text-xs font-medium text-danger">{tx.soldOut}</span> : q ? (
+                      <span className="flex flex-wrap items-baseline gap-x-1.5">
+                        <span className={cn("font-semibold tabular-nums", it.regularCents ? "text-danger" : "")}>{hasOpts && fromCents !== it.priceCents ? fill(tx.fromPrice, { price: eur(fromCents) }) : eur(it.priceCents)}</span>
+                        {it.regularCents ? <s className="text-sm text-muted tabular-nums">{eur(it.regularCents)}</s> : null}
+                      </span>
+                      {out ? <span className="text-xs font-medium text-danger">{tx.soldOut}</span> : hasOpts ? (
+                        <button type="button" onClick={() => setOpt(it)} className="inline-flex h-10 items-center gap-1 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover" aria-label={`${tx.choose} : ${it.name}`}><Plus className="size-4" aria-hidden="true" />{tx.choose}{qtyOf(it.id) ? ` (${qtyOf(it.id)})` : ""}</button>
+                      ) : q ? (
                         <span className="inline-flex items-center rounded-full border border-border-strong">
                           <button type="button" onClick={() => add(it, -1)} className="flex size-10 items-center justify-center" aria-label={fill(tx.lessAria, { name: it.name })}><Minus className="size-4" aria-hidden="true" /></button>
                           <span className="w-5 text-center text-sm font-semibold tabular-nums">{q}</span>
@@ -127,12 +146,25 @@ export function ShopFront({ slug, business, settings: s, items, seller, tx, intl
         </div>
       ) : null}
 
+      {opt ? <OptionsDialog item={opt} eur={eur} tx={tx} room={max(opt) - qtyOf(opt.id)} onClose={() => setOpt(null)} onAdd={(choices, n) => { addKey(choices.length ? `${opt.id}|${[...choices].sort().join(",")}` : opt.id, n); setOpt(null); }} /> : null}
+
       {open ? (
         <div className="fixed inset-0 z-30 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="cart-h">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label={tx.close} tabIndex={-1} onClick={() => setOpen(false)} />
           <form onSubmit={submit} className="relative max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-surface p-5 shadow-xl sm:rounded-2xl" noValidate>
             <div className="flex items-center justify-between"><h2 id="cart-h" className="text-lg font-semibold">{tx.yourOrder}</h2><button type="button" onClick={() => setOpen(false)} className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label={tx.close}><X className="size-5" aria-hidden="true" /></button></div>
-            <ul className="mt-2 divide-y divide-border text-sm">{lines.map(([id, q]) => <li key={id} className="flex justify-between py-2"><span>{q} × {byId.get(id)!.name}</span><span className="tabular-nums">{eur(q * byId.get(id)!.priceCents)}</span></li>)}</ul>
+            <ul className="mt-2 divide-y divide-border text-sm">
+              {lines.map(([k, q]) => { const l = lineOf(k)!; return (
+                <li key={k} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1"><span className="block">{q} × {l.it.name}</span>{l.label ? <span className="block text-xs text-muted">{l.label}</span> : null}</span>
+                  <span className="inline-flex items-center rounded-full border border-border">
+                    <button type="button" onClick={() => addKey(k, -1)} className="flex size-9 items-center justify-center" aria-label={fill(tx.lessAria, { name: l.it.name })}><Minus className="size-3.5" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => addKey(k, 1)} disabled={qtyOf(l.it.id) >= max(l.it)} className="flex size-9 items-center justify-center disabled:opacity-30" aria-label={fill(tx.moreAria, { name: l.it.name })}><Plus className="size-3.5" aria-hidden="true" /></button>
+                  </span>
+                  <span className="w-16 text-right tabular-nums">{eur(q * l.unit)}</span>
+                </li>
+              ); })}
+            </ul>
             <fieldset className="mt-4 space-y-2">
               <legend className="text-sm font-medium">{tx.howGet}</legend>
               {s.pickup ? <label className="flex items-start gap-2 text-sm"><input type="radio" name="ful" checked={f.fulfilment === "pickup"} onChange={() => setF({ ...f, fulfilment: "pickup" })} className="mt-0.5 size-4" /><span>{tx.pickupFree}{s.pickupNote ? <span className="block text-muted">{s.pickupNote}</span> : null}</span></label> : null}
@@ -171,4 +203,76 @@ function pickupTimes() {
     d.setMinutes(d.getMinutes() + 15);
   }
   return out;
+}
+
+/** Choix des options d'un produit (pain, garnitures, retirer, suppléments) : le prix se met à jour en direct. */
+function OptionsDialog({ item, eur, tx, room, onClose, onAdd }: { item: Item; eur: (c: number) => string; tx: PublicTexts["shop"]; room: number; onClose: () => void; onAdd: (choices: string[], qty: number) => void }) {
+  const groups = item.options ?? [];
+  const [picked, setPicked] = useState<string[]>(() => groups.filter((g) => g.required && !g.multi && g.choices.length === 1).map((g) => g.choices[0]!.id));
+  const [n, setN] = useState(1);
+  const [err, setErr] = useState<string | null>(null);
+  const sel = priceSelection(groups, picked);
+  const unit = item.priceCents + groups.flatMap((g) => g.choices).filter((c) => picked.includes(c.id)).reduce((a, c) => a + c.priceCents, 0);
+  const toggle = (g: OptionGroup, id: string) => {
+    setErr(null);
+    setPicked((p) => {
+      if (!g.multi) return [...p.filter((x) => !g.choices.some((c) => c.id === x)), id];
+      if (p.includes(id)) return p.filter((x) => x !== id);
+      if (g.max && g.choices.filter((c) => p.includes(c.id)).length >= g.max) return p;
+      return [...p, id];
+    });
+  };
+  const confirm = () => {
+    const missing = groups.find((g) => g.required && !g.choices.some((c) => picked.includes(c.id)));
+    if (missing) return setErr(fill(tx.missingChoice, { name: missing.name }));
+    if (!sel) return;
+    onAdd(picked, Math.max(1, Math.min(n, room)));
+  };
+  return (
+    <div className="fixed inset-0 z-30 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="opt-h">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label={tx.close} tabIndex={-1} onClick={onClose} />
+      <div className="relative flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-border p-5">
+          <div className="min-w-0"><h2 id="opt-h" className="text-lg font-semibold">{item.name}</h2>{item.description ? <p className="mt-0.5 text-sm text-muted">{item.description}</p> : null}</div>
+          <button type="button" onClick={onClose} className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label={tx.close}><X className="size-5" aria-hidden="true" /></button>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          {groups.map((g) => {
+            const count = g.choices.filter((c) => picked.includes(c.id)).length;
+            return (
+              <fieldset key={g.id}>
+                <legend className="flex w-full flex-wrap items-baseline gap-x-2 text-sm font-semibold">{g.name}<span className="text-xs font-normal text-muted">{[g.required ? tx.required : "", g.multi && g.max ? fill(tx.upTo, { n: g.max }) : ""].filter(Boolean).join(" · ")}</span></legend>
+                <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
+                  {g.choices.map((c) => {
+                    const on = picked.includes(c.id);
+                    const full = g.multi && !!g.max && count >= g.max && !on;
+                    return (
+                      <li key={c.id}>
+                        <label className={cn("flex min-h-12 cursor-pointer items-center gap-3 px-3 text-sm", full && "cursor-not-allowed opacity-50")}>
+                          <input type={g.multi ? "checkbox" : "radio"} name={`g-${g.id}`} checked={on} disabled={full} onChange={() => toggle(g, c.id)} className="size-4 accent-[var(--accent)]" />
+                          <span className="flex-1">{c.name}</span>
+                          {c.priceCents ? <span className="text-muted tabular-nums">+ {eur(c.priceCents)}</span> : null}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </fieldset>
+            );
+          })}
+        </div>
+        <div className="space-y-3 border-t border-border p-4">
+          {err ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{err}</p> : null}
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center rounded-full border border-border-strong">
+              <button type="button" onClick={() => setN((x) => Math.max(1, x - 1))} className="flex size-11 items-center justify-center" aria-label={fill(tx.lessAria, { name: item.name })}><Minus className="size-4" aria-hidden="true" /></button>
+              <span className="w-6 text-center font-semibold tabular-nums">{n}</span>
+              <button type="button" onClick={() => setN((x) => Math.min(room, x + 1))} disabled={n >= room} className="flex size-11 items-center justify-center disabled:opacity-30" aria-label={fill(tx.moreAria, { name: item.name })}><Plus className="size-4" aria-hidden="true" /></button>
+            </span>
+            <button type="button" onClick={confirm} disabled={room <= 0} className="flex h-12 flex-1 items-center justify-center rounded-xl bg-accent px-4 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">{room <= 0 ? tx.soldOut : fill(tx.addFor, { price: eur(unit * n) })}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

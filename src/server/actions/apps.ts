@@ -9,7 +9,7 @@ import { ALWAYS_SHOWN, APPS, NEEDS, TEAM_SIZES, hiddenAppsFor, type AppId, type 
 import { recommendedApps } from "@/lib/app-store";
 import { requireContext } from "@/server/context";
 
-type Result = { ok: true; message?: string } | { ok: false; error: string };
+type Result = { ok: true; message?: string; added?: string[] } | { ok: false; error: string };
 
 const setupSchema = z.object({
   teamSize: z.enum(TEAM_SIZES.map((t) => t.value) as [TeamSize, ...TeamSize[]]),
@@ -40,12 +40,20 @@ export async function setAppPinned(appId: string, pinned: boolean): Promise<Resu
   if (!APPS.some((a) => a.id === appId) || appId === "reglages") return { ok: false, error: "App inconnue." };
   const [b] = await db.select({ o: businesses.onboarding }).from(businesses).where(eq(businesses.id, ctx.business.id));
   const hidden = new Set(b?.o.hiddenApps ?? []);
-  if (pinned) hidden.delete(appId);
+  // Apps indispensables à une autre (Boutique vend les produits du Stock) : ajoutées avec elle, et pas retirables tant qu'elle est là.
+  const needs = APP_NEEDS[appId as keyof typeof APP_NEEDS] ?? [];
+  const neededBy = Object.entries(APP_NEEDS).filter(([k, v]) => (v as readonly string[]).includes(appId) && !hidden.has(k)).map(([k]) => APPS.find((a) => a.id === k)?.name ?? k);
+  if (!pinned && neededBy.length) return { ok: false, error: `${APPS.find((a) => a.id === appId)?.name ?? appId} est indispensable à ${neededBy.join(", ")} : retirez d'abord ${neededBy.length > 1 ? "ces apps" : "cette app"}.` };
+  const added = pinned ? needs.filter((n) => hidden.has(n)) : [];
+  if (pinned) { hidden.delete(appId); for (const n of needs) hidden.delete(n); }
   else hidden.add(appId);
   await db.update(businesses).set({ onboarding: sql`${businesses.onboarding} || ${JSON.stringify({ hiddenApps: [...hidden] })}::jsonb` }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app", "layout");
-  return { ok: true, message: pinned ? "App ajoutée." : "App retirée." };
+  return { ok: true, message: pinned ? "App ajoutée." : "App retirée.", added: added.map((n) => APPS.find((a) => a.id === n)?.name ?? n) };
 }
+
+/** Une app qui a besoin d'une autre pour fonctionner. */
+const APP_NEEDS = { boutique: ["stock"] } as const;
 
 /** Épingler une app en favori (préférence personnelle) : elle passe en tête de l'accueil et dans les raccourcis. */
 export async function setFavoriteApp(appId: string, fav: boolean): Promise<Result> {
