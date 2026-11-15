@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { cn } from "@/lib/cn";
 import { useT } from "@/components/app-locale";
 
@@ -12,7 +12,7 @@ const TABS = [
 
 export function RdvSettingsTabs() {
   const t = useT();
-  const path = usePathname();
+  const path = useSpacePath();
   return (
     <nav aria-label={t("Réglages de RDV")} className="flex gap-1 overflow-x-auto border-b border-border">
       {TABS.map((x) => (

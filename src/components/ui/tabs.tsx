@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { cn } from "@/lib/cn";
 import { useT } from "@/components/app-locale";
 
 /** Onglets basés sur des URL (chaque onglet a sa propre adresse, partageable). */
 export function Tabs({ items }: { items: { href: string; label: string }[] }) {
   const t = useT();
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   return (
     <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto border-b border-border px-1" aria-label={t("Onglets")}>
       {items.map((item) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
@@ -15,7 +15,7 @@ const ITEMS = [
 
 /** Onglets de l'espace client : toujours les mêmes (chaque page explique quoi faire quand elle est vide). */
 export function ClientNav() {
-  const path = usePathname();
+  const path = useSpacePath("/espace-client");
   return (
     <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6" aria-label="Espace client">
       {ITEMS.map((i) => {

@@ -1,5 +1,6 @@
 "use server";
 
+import { spaceHref } from "@/server/space-url";
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -91,5 +92,5 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
   if (u?.twoFactorSecret) redirect("/connexion?reinitialise=1");
   const h = await headers();
   await createSession(userId, { ip: await ip(), userAgent: h.get("user-agent") });
-  redirect("/app");
+  redirect(await spaceHref("/app"));
 }

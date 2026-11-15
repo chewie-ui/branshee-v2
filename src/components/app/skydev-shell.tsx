@@ -1,7 +1,7 @@
 "use client";
 
 import { AppSwitcher } from "@/components/app/app-switcher";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { useState, type ReactNode } from "react";
 import { activeNavHref, appForPath, type AppIcon as AppIconName, type AppNavItem } from "@/lib/apps";
 import { HomeTopBar, Sidebar } from "@/components/app/sidebar";
@@ -22,7 +22,7 @@ const starts = (path: string, prefix: string) => path === prefix || path.startsW
  * de l'entreprise. L'app RDV garde sa barre Branshee à l'identique.
  */
 export function SkydevShell({ apps, rdv, business, businesses, user, badges, children }: { apps: ShellApp[]; rdv: RdvSidebar; business: Biz; businesses: Biz[]; user: { name: string; email: string; avatarUrl: string | null }; badges: Record<string, number>; children: ReactNode }) {
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   const t = useT();
   const found = pathname === "/app" ? null : appForPath(apps, pathname);
   // L'app RDV garde l'interface Branshee : ses liens (Patients, Équipe, Site web…) restent dans RDV

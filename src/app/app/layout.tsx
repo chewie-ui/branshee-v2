@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SpaceUrlFix } from "@/components/space-url-fix";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/app/sidebar";
@@ -103,6 +104,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <BrandNameProvider name={brand.name}>
         <AppLocaleProvider locale={locale}>
         <div lang={locale} className="contents">
+        <SpaceUrlFix />
         {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
         <SkydevShell apps={apps} rdv={rdvSidebar} business={ctx.business} businesses={ctx.businesses} user={ctx.user} badges={{ "/app/demandes": pending, "/app/aide": unread }}>
           {banners}

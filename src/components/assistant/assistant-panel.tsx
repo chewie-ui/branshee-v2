@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { Send, Sparkles, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MAX_TEXT, segments, type ChatTurn } from "@/lib/assistant";
@@ -34,7 +34,7 @@ function Rich({ text, onNavigate }: { text: string; onNavigate: () => void }) {
 /** Assistant IA de Skydev : un panneau de discussion ouvert depuis toutes les apps. */
 export function AssistantPanel() {
   const t = useT();
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [text, setText] = useState("");

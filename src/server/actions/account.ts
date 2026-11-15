@@ -1,5 +1,6 @@
 "use server";
 
+import { spaceHref } from "@/server/space-url";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ne, sql } from "drizzle-orm";
@@ -47,7 +48,7 @@ export async function verifyEmail(_prev: Result | undefined, fd: FormData): Prom
   await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, u.id));
   await linkCustomerRecords(u.id, u.email);
   await linkInvitations(u.id, u.email);
-  redirect(internal(String(fd.get("next") ?? "")) ?? "/espace-client");
+  redirect(await spaceHref(internal(String(fd.get("next") ?? "")) ?? "/espace-client"));
 }
 
 /* ───────────── Profil ───────────── */

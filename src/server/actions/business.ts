@@ -1,5 +1,6 @@
 "use server";
 
+import { spaceHref } from "@/server/space-url";
 import { SKYDEV_PLAN } from "@/lib/skydev-plans";
 import { after } from "next/server";
 import { notifyWelcomePro } from "@/server/notifications";
@@ -49,7 +50,7 @@ export async function createBusinessAction(_prev: CreateBusinessState, formData:
   }
   await writeAuthCookie(BUSINESS_COOKIE, business.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
   // Sur Skydev, l'accueil est le lanceur d'apps : la carte de bienvenue (étapes RDV) s'affiche dans l'app RDV.
-  redirect(brand === "skydev" ? "/app/demarrer" : "/app?bienvenue=1");
+  redirect(await spaceHref(brand === "skydev" ? "/app/demarrer" : "/app?bienvenue=1"));
 }
 
 /** Change l'établissement actif (uniquement parmi ceux dont l'utilisateur est membre actif). */
@@ -59,7 +60,7 @@ export async function switchBusiness(businessId: string) {
   const [m] = await db.select({ id: members.id }).from(members).where(and(eq(members.userId, user.id), eq(members.businessId, id), eq(members.status, "active"), eq(members.isActive, true)));
   if (!m) return;
   await writeAuthCookie(BUSINESS_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 365 * 86400 });
-  redirect("/app");
+  redirect(await spaceHref("/app"));
 }
 
 /** Checklist « Bien démarrer » : le lien a été copié / partagé. */

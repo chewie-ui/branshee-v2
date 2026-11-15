@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { bareHost, brandForHost, skydevHosts } from "@/lib/brand";
 import { legacyRedirect } from "@/lib/custom-services";
 import { localeOfPath, localize } from "@/lib/site-locale";
-import { PRO_SHORTCUTS, appPathForHost, proSlugForHost } from "@/lib/app-subdomains";
+import { PRO_SHORTCUTS, appPathForHost, proSlugForHost, spaceInternalPath, spaceOfHost, spaceShortPath, spaceUrlFromMainHost } from "@/lib/app-subdomains";
 
 /** Pages réservées aux personnes connectées (la vérification complète se fait côté serveur dans `requireContext`). */
 const PROTECTED = [/^\/app(\/|$)/, /^\/imprimer(\/|$)/, /^\/admin(\/|$)/, /^\/bienvenue$/, /^\/espace-client(\/|$)/, /^\/verifier-email$/];
@@ -26,11 +26,43 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
   const path = request.nextUrl.pathname;
+  const isRead = request.method === "GET" || request.method === "HEAD";
+  const signedIn = request.cookies.has("bs_session") || request.cookies.has("sky_session");
+  // Skydev : l'espace pro vit sur pro.skydev.be, l'espace client sur client.skydev.be, avec des adresses courtes.
+  // skydev.be/app/agenda → pro.skydev.be/agenda ; skydev.be/espace-client/fidelite → client.skydev.be/fidelite (liens, favoris, emails).
+  if (isRead) {
+    const to = spaceUrlFromMainHost(host, path);
+    if (to) return NextResponse.redirect(new URL(to + request.nextUrl.search), 308);
+  }
+  const space = spaceOfHost(host);
+  if (space) {
+    // Ancienne adresse longue sur le sous-domaine (liens internes en /app/…) → adresse courte.
+    const short = isRead ? spaceShortPath(space, path) : null;
+    if (short) {
+      const url = request.nextUrl.clone();
+      url.pathname = short;
+      return NextResponse.redirect(url, 308);
+    }
+    // Adresse courte : la page servie est /app/… (réécriture dans next.config). Le proxy lui transmet le vrai chemin.
+    const inner = spaceInternalPath(space, path);
+    if (inner) {
+      if (!signedIn) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/connexion";
+        url.search = "";
+        url.searchParams.set("suite", inner + request.nextUrl.search);
+        return NextResponse.redirect(url);
+      }
+      const h = new Headers(request.headers);
+      h.set("x-pathname", inner);
+      h.set("x-method", request.method);
+      return NextResponse.next({ request: { headers: h } });
+    }
+  }
   // Skydev : pro.skydev.be (espace pro) et client.skydev.be (espace client) : l'adresse reste affichée, « / » ouvre
   // l'espace (réécriture dans next.config), et pro.skydev.be/qr l'écran du QR fidélité. Sans session : connexion.
   const appPath = path === "/" ? appPathForHost(host) : /^pro\.skydev\.(?:be|localhost)(:\d+)?$/.test(host) ? (PRO_SHORTCUTS[path] ?? null) : null;
   if (appPath) {
-    const signedIn = request.cookies.has("bs_session") || request.cookies.has("sky_session");
     // client.skydev.be sans session : page d'accueil des particuliers (réécriture dans next.config), pas la connexion.
     if (!signedIn && appPath === "/espace-client") {
       const h = new Headers(request.headers);

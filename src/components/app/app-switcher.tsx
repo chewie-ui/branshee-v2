@@ -60,7 +60,8 @@ export function AppSwitcher({ apps }: { apps: SwitchApp[] }) {
   }, [all, q]);
 
   const close = () => { setOpen(false); lastFocus.current?.focus?.(); };
-  const go = (e: Entry | undefined) => { if (!e) return; setOpen(false); router.push(e.href); };
+  // L'espace client vit sur une autre adresse (client.skydev.be) : navigation complète.
+  const go = (e: Entry | undefined) => { if (!e) return; setOpen(false); if (e.href.startsWith("/espace-client")) window.location.href = e.href; else router.push(e.href); };
 
   if (!open) return null;
   return (

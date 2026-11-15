@@ -1,9 +1,15 @@
 import type { Rewrite } from "next/dist/lib/load-custom-routes";
 import type { NextConfig } from "next";
 import { APP_SUBDOMAINS, PRO_SHORTCUTS, reservedSubdomains } from "./src/lib/app-subdomains";
+import { spaceRoutes } from "./src/lib/space-routes";
+
+// Pages des deux espaces, lues dans src/app : pro.skydev.be/agenda = /app/agenda, client.skydev.be/fidelite = /espace-client/fidelite.
+const SPACES = spaceRoutes(`${process.cwd()}/src/app`);
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Transmis au proxy (figé dans le build) : il doit savoir quelle page est ouverte derrière une adresse courte.
+  env: { SPACE_ROUTES: JSON.stringify({ pro: SPACES.pro.map((r) => r.regex), client: SPACES.client.map((r) => r.regex) }) },
   // Ne pas générer AGENTS.md / CLAUDE.md à chaque `next dev`.
   agentRules: false,
   experimental: {
@@ -24,6 +30,10 @@ const nextConfig: NextConfig = {
     // client.skydev.be/ sans session : la page d'accueil des particuliers (recherche d'un pro, connexion, inscription).
     beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `client\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], missing: [{ type: "cookie" as const, key: "sky_session" }, { type: "cookie" as const, key: "bs_session" }], destination: "/particuliers" });
     for (const [sub, dest] of Object.entries(APP_SUBDOMAINS)) beforeFiles.push({ source: "/", has: [{ type: "host" as const, value: `${sub}\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
+    // Adresses courtes : pro.skydev.be/agenda → /app/agenda, client.skydev.be/fidelite → /espace-client/fidelite.
+    for (const [sub, prefix, list] of [["pro", "/app", SPACES.pro], ["client", "/espace-client", SPACES.client]] as const) {
+      for (const r of list) beforeFiles.push({ source: r.source, has: [{ type: "host" as const, value: `${sub}\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: prefix + r.source.replace(/\([^)]*\)/g, "") });
+    }
     for (const [src, dest] of Object.entries(PRO_SHORTCUTS)) beforeFiles.push({ source: src, has: [{ type: "host" as const, value: `pro\\.skydev\\.(?:be|localhost)(?::\\d+)?` }], destination: dest });
     // Adresse d'un pro : mon-cabinet.skydev.be/ → sa page (/mon-cabinet). Les noms réservés (apps, www, client…) sont exclus.
     const reserved = reservedSubdomains().join("|");
@@ -83,7 +93,9 @@ const nextConfig: NextConfig = {
       ["/group-sessions", "/app/prestations"],
       ["/dashboard", "/app"],
     ];
-    return map.map(([source, destination]) => ({ source, destination, permanent: true }));
+    // Jamais sur pro.skydev.be / client.skydev.be : là, /demarrer, /parrainage, /demandes… sont les adresses courtes des pages.
+    const spaces = [{ type: "host" as const, value: "(?:pro|client)\\.skydev\\.(?:be|localhost)(?::\\d+)?" }];
+    return map.map(([source, destination]) => ({ source, destination, permanent: true, missing: spaces }));
   },
   async headers() {
     const noFrame = [

@@ -1,5 +1,6 @@
 "use server";
 
+import { spaceHref } from "@/server/space-url";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
@@ -95,7 +96,7 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
     const next = safeNext(formData.get("next")) ?? "/espace-client";
     redirect(`/verifier-email?suite=${encodeURIComponent(next)}`);
   }
-  redirect("/app");
+  redirect(await spaceHref("/app"));
 }
 
 const loginSchema = z.object({
@@ -139,7 +140,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "password", ip: meta.ip });
   await linkInvitations(user.id, email);
-  redirect(safeNext(formData.get("next")) ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent)));
+  redirect(await spaceHref(safeNext(formData.get("next")) ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent))));
 }
 
 export async function logout() {
@@ -168,5 +169,5 @@ export async function verifyLoginTwoFactor(_prev: TwoFactorState, formData: Form
   await createSession(user.id, meta);
   await db.insert(loginEvents).values({ userId: user.id, method: "two_factor", ip: meta.ip });
   await linkInvitations(user.id, user.email);
-  redirect(pending.next ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent)));
+  redirect(await spaceHref(pending.next ?? (await landing(user.id, !!user.emailVerifiedAt, user.signupIntent))));
 }

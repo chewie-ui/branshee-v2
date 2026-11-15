@@ -46,3 +46,51 @@ export function proSlugForHost(host: string): string | null {
 
 /** client.skydev.be (espace des particuliers) : inscription et connexion orientées « client » par défaut. */
 export const isClientHost = (host: string | null | undefined) => /^client\.skydev\.(?:be|localhost)(?::\d+)?$/.test((host ?? "").toLowerCase());
+
+/**
+ * Adresses courtes des espaces (liste des pages calculée au build par next.config, voir lib/space-routes) :
+ * pro.skydev.be/agenda ↔ /app/agenda, client.skydev.be/fidelite ↔ /espace-client/fidelite.
+ */
+export const SPACE_PREFIX = { pro: "/app", client: "/espace-client" } as const;
+export type Space = keyof typeof SPACE_PREFIX;
+const SPACE_RE: Record<Space, RegExp[]> = (() => {
+  try {
+    const raw = JSON.parse(process.env.SPACE_ROUTES ?? "{}") as Partial<Record<Space, string[]>>;
+    return { pro: (raw.pro ?? []).map((r) => new RegExp(r)), client: (raw.client ?? []).map((r) => new RegExp(r)) };
+  } catch {
+    return { pro: [], client: [] };
+  }
+})();
+
+/** pro.skydev.be → « pro », client.skydev.be → « client », sinon null. */
+export function spaceOfHost(host: string): Space | null {
+  const m = /^(pro|client)\.skydev\.(?:be|localhost)(?::\d+)?$/.exec(host.toLowerCase());
+  return m ? (m[1] as Space) : null;
+}
+
+/** Page interne derrière une adresse courte (« /agenda » sur pro → « /app/agenda »), ou null. */
+export function spaceInternalPath(space: Space, path: string): string | null {
+  return SPACE_RE[space].some((r) => r.test(path)) ? SPACE_PREFIX[space] + path.replace(/\/$/, "") : null;
+}
+
+/** Ancienne adresse longue sur l'espace (« /app/agenda » sur pro.skydev.be) → adresse courte (« /agenda »), ou null. */
+export function spaceShortPath(space: Space, path: string): string | null {
+  const p = SPACE_PREFIX[space];
+  return path === p || path.startsWith(`${p}/`) ? path.slice(p.length) || "/" : null;
+}
+
+/**
+ * Espace ouvert sur la mauvaise adresse → bonne adresse complète, sinon null :
+ * skydev.be/app/agenda → pro.skydev.be/agenda, skydev.be/espace-client/fidelite → client.skydev.be/fidelite,
+ * client.skydev.be/app/… → pro.skydev.be/…, pro.skydev.be/espace-client/… → client.skydev.be/….
+ */
+export function spaceUrlFromMainHost(host: string, path: string): string | null {
+  const m = /^(?:(www|pro|client)\.)?(skydev\.(?:be|localhost)(?::\d+)?)$/.exec(host.toLowerCase());
+  if (!m) return null;
+  for (const space of ["pro", "client"] as const) {
+    if (m[1] === space) continue;
+    const short = spaceShortPath(space, path);
+    if (short) return `${m[2]!.includes("localhost") ? "http" : "https"}://${space}.${m[2]}${short}`;
+  }
+  return null;
+}

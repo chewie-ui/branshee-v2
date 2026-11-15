@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { tourByKey } from "@/lib/tours";
@@ -84,7 +85,7 @@ export function GuidedTour() {
   const state = parse(raw);
   const tour = state ? tourByKey(state.key) : undefined;
   const step = tour?.steps[state!.step];
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   const router = useRouter();
   const [box, setBox] = useState<Box | null>(null);
   const onPage = !!step && new RegExp(step.path).test(pathname);

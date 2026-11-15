@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { cn } from "@/lib/cn";
 import { useT } from "@/components/app-locale";
 
@@ -19,7 +19,7 @@ export const SETTINGS_SECTIONS = [
 /** hide : sections masquées (Skydev : les réglages propres à une app sont dans l'app, ex. RDV › Réglages). */
 export function SettingsNav({ extra = [], hide = [] }: { extra?: { href: string; label: string }[]; hide?: string[] }) {
   const t = useT();
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   return (
     <nav aria-label={t("Sections des réglages")} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
       {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].filter((s) => !hide.includes(s.href)).map((s) =>

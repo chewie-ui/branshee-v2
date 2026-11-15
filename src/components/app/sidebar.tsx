@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSpacePath } from "@/lib/use-space-path";
 import { useEffect, useState } from "react";
 import { CalendarHeart, Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
 import { openSwitcher } from "@/components/app/app-switcher";
@@ -112,11 +112,12 @@ export function BusinessSwitcher({ current, all, brand }: { current: Props["busi
               {sky ? t("Ajouter une entreprise") : t("Ajouter un établissement")}
             </Link>
             <div className="my-1 border-t border-border" />
-            <Link href="/espace-client" role="menuitem" className={cn("flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted", current ? "text-muted hover:text-text" : "text-text")}>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- l'espace client vit sur client.skydev.be : navigation complète */}
+            <a href="/espace-client" role="menuitem" className={cn("flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-muted", current ? "text-muted hover:text-text" : "text-text")}>
               <CalendarHeart className="size-4" aria-hidden="true" />
               <span className="flex-1">{t("Mon espace client")}</span>
               {current ? null : <Check className="size-4 shrink-0 text-accent" aria-label={t("Actif")} />}
-            </Link>
+            </a>
           </div>
         </>
       ) : null}
@@ -191,9 +192,10 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
             </span>
           </Link>
           {/* Ses propres rendez-vous, comme client d'autres pros (espace client). */}
-          <Link href="/espace-client" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Mes rendez-vous en tant que client")} title={t("Mes rendez-vous (côté client)")}>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- l'espace client vit sur client.skydev.be : navigation complète */}
+            <a href="/espace-client" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Mes rendez-vous en tant que client")} title={t("Mes rendez-vous (côté client)")}>
             <CalendarHeart className="size-4" aria-hidden="true" />
-          </Link>
+          </a>
           <form action={logout}>
             <button type="submit" className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-text" aria-label={t("Se déconnecter")} title={t("Se déconnecter")}>
               <LogOut className="size-4" aria-hidden="true" />
@@ -255,7 +257,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
 }
 
 export function Sidebar(props: Props) {
-  const pathname = usePathname();
+  const pathname = useSpacePath();
   // Le tiroir mobile est lié à la page où il a été ouvert : il se ferme tout seul en changeant de page.
   const [openedOn, setOpenedOn] = useState<string | null>(null);
   const open = openedOn === pathname;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpaceUrlFix } from "@/components/space-url-fix";
 import type { ReactNode } from "react";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -27,6 +28,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     .orderBy(asc(businesses.createdAt));
   return (
     <div className="min-h-dvh">
+      <SpaceUrlFix />
       <header className="sticky top-0 z-30 border-b border-border bg-surface">
         <ClientTopBar brand={brand} businesses={mine} user={{ name: user.fullName, email: user.email, avatarUrl: user.avatarUrl }} />
         <ClientNav />
