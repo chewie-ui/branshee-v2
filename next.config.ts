@@ -111,7 +111,9 @@ const nextConfig: NextConfig = {
     ];
     return [
       { source: "/:path*", headers: everywhere },
-      ...["/app/:path*", "/admin/:path*", "/connexion", "/inscription", "/mot-de-passe-oublie/:path*", "/bienvenue", "/espace-client/:path*", "/espace-client"].map((source) => ({ source, headers: noFrame })),
+      // pro.skydev.be et client.skydev.be : toutes les pages (adresses courtes /agenda, /fidelite…) jamais dans un cadre.
+      { source: "/:path*", has: [{ type: "host" as const, value: "(?:pro|client)\\.skydev\\.(?:be|localhost)(?::\\d+)?" }], headers: noFrame },
+      ...["/app/:path*", "/admin/:path*", "/connexion", "/connexion/:path*", "/inscription", "/mot-de-passe-oublie/:path*", "/bienvenue", "/espace-client/:path*", "/espace-client"].map((source) => ({ source, headers: noFrame })),
     ];
   },
 };

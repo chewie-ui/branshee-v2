@@ -1,9 +1,8 @@
-import { createHash } from "node:crypto";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { pageViews } from "@/db/schema";
-import { clientIp } from "@/lib/client-ip";
+import { visitorId } from "@/server/visitor";
 
 export const dynamic = "force-dynamic";
 
@@ -38,16 +37,10 @@ export async function POST(req: Request) {
   }
   const source = d.source || refHost || null;
   const medium = d.medium || (d.gclid ? "cpc" : refHost ? "referral" : null);
-  const ip = (clientIp(h) ?? "");
-  // Empreinte du jour (IP + navigateur + date + secret) : compte les visiteurs uniques sans cookie ni donnée réversible.
-  const day = new Date().toISOString().slice(0, 10);
-  const visitorId = createHash("sha256").update(`${ip}|${ua}|${day}|${process.env.DATA_ENCRYPTION_KEY ?? "dev"}`).digest("hex").slice(0, 32);
-  await db.insert(pageViews).values({ visitorId, path: d.path.slice(0, 300), source, medium, campaign: d.campaign || null, gclid: d.gclid || null }).catch(() => {});
-  // Attribution de l'inscription : première source vue, gardée 30 jours (cookie fonctionnel, première partie).
-  const jar = await cookies();
-  if (!jar.has(ACQ_COOKIE) && (source || d.campaign || d.gclid)) {
-    const acq = { source: source ?? undefined, medium: medium ?? undefined, campaign: d.campaign, term: d.term, content: d.content, gclid: d.gclid, referrer: d.referrer, landing: d.path, capturedAt: new Date().toISOString() };
-    jar.set(ACQ_COOKIE, Buffer.from(JSON.stringify(acq)).toString("base64url"), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 86400 });
-  }
+  // Empreinte du jour (voir server/visitor) : compte les visiteurs uniques sans cookie ni donnée réversible.
+  const vid = visitorId(h);
+  await db.insert(pageViews).values({ visitorId: vid, path: d.path.slice(0, 300), source, medium, campaign: d.campaign || null, gclid: d.gclid || null }).catch(() => {});
+  // Attribution d'une inscription : retrouvée au moment de l'inscription grâce à l'empreinte du jour (aucun cookie).
+
   return new Response(null, { status: 204 });
 }

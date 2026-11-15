@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
 /** Mise en page des pages légales : sommaire + sections numérotées. */
-export function LegalPage({ title, updated, sections }: { title: string; updated: string; sections: { id: string; title: string; body: ReactNode }[] }) {
+export function LegalPage({ title, updated, sections, brand = "Branshee" }: { title: string; updated: string; sections: { id: string; title: string; body: ReactNode }[]; brand?: string }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
       <h1 className="text-4xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-3 text-sm text-muted">Dernière mise à jour : {updated} — Branshee, Belgique</p>
+      <p className="mt-3 text-sm text-muted">Dernière mise à jour : {updated} — {brand}, Belgique</p>
       <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Sommaire" className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-sm font-semibold">Sommaire</p>

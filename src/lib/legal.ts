@@ -13,6 +13,9 @@ export const LEGAL = {
   email: "support@branshee.com",
 } as const;
 
+/** Même entreprise, dénomination Skydev (skydev.be). */
+export const SKYDEV_LEGAL = { ...LEGAL, trade: "Skydev", email: "info@skydev.be" } as const;
+
 export const legalAddress = `${LEGAL.street}, ${LEGAL.city}, ${LEGAL.country}`;
 
 /** Pied de facture Stripe : mentions obligatoires d'une facture belge (identité, adresse, BCE, TVA). */

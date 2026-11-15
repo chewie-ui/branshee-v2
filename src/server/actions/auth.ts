@@ -1,12 +1,13 @@
 "use server";
 
 import { spaceHref } from "@/server/space-url";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { loginEvents, users } from "@/db/schema";
+import { loginEvents, pageViews, users } from "@/db/schema";
+import { visitorId } from "@/server/visitor";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
 import { rateLimit, resetRateLimit } from "@/server/auth/rate-limit";
 import { clearPendingTwoFactor, createSession, destroySession, getPendingTwoFactor, setPendingTwoFactor } from "@/server/auth/session";
@@ -50,16 +51,18 @@ async function landing(userId: string, verified: boolean, intent?: string | null
 }
 
 /** Première source de visite (cookie posé par /api/track), pour savoir d'où viennent les inscrits. */
+/**
+ * Source de la visite qui a mené à l'inscription (campagne, référent). Sans cookie : on retrouve les pages vues
+ * aujourd'hui (ou hier) avec la même empreinte de visiteur, et on garde la première qui avait une source.
+ */
 async function readAcquisition() {
-  const raw = (await cookies()).get("bs_acq")?.value;
-  if (!raw) return null;
-  try {
-    const v = JSON.parse(Buffer.from(raw, "base64url").toString()) as Record<string, unknown>;
-    const pick = (k: string) => (typeof v[k] === "string" ? (v[k] as string).slice(0, 300) : undefined);
-    return { source: pick("source"), medium: pick("medium"), campaign: pick("campaign"), term: pick("term"), content: pick("content"), gclid: pick("gclid"), referrer: pick("referrer"), landing: pick("landing"), capturedAt: pick("capturedAt") };
-  } catch {
-    return null;
-  }
+  const h = await headers();
+  const now = Date.now();
+  const ids = [0, 1].map((d) => visitorId(h, new Date(now - d * 86400_000).toISOString().slice(0, 10)));
+  const [v] = await db.select().from(pageViews).where(and(inArray(pageViews.visitorId, ids), or(isNotNull(pageViews.source), isNotNull(pageViews.campaign), isNotNull(pageViews.gclid)))).orderBy(asc(pageViews.createdAt)).limit(1);
+  if (!v) return null;
+  const cut = (x: string | null) => x?.slice(0, 300) ?? undefined;
+  return { source: cut(v.source), medium: cut(v.medium), campaign: cut(v.campaign), gclid: cut(v.gclid), landing: cut(v.path), capturedAt: v.createdAt.toISOString() };
 }
 
 const registerSchema = z.object({

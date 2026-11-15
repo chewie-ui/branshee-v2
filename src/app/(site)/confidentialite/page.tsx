@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/site/legal";
+import { SkydevPrivacy } from "@/components/legal/skydev-privacy";
+import { currentBrand } from "@/server/brand";
 import { LEGAL, legalAddress } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Politique de confidentialité", alternates: { canonical: "/confidentialite" } };
 
 const M = () => <a href="mailto:privacy@branshee.com">privacy@branshee.com</a>;
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  if ((await currentBrand()).id === "skydev") return <SkydevPrivacy />;
   return (
     <LegalPage
       title="Politique de confidentialité"

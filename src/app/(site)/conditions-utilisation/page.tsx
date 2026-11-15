@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/site/legal";
+import { SkydevTerms } from "@/components/legal/skydev-terms";
+import { currentBrand } from "@/server/brand";
 import { LEGAL, legalAddress } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Conditions d'utilisation", alternates: { canonical: "/conditions-utilisation" } };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  if ((await currentBrand()).id === "skydev") return <SkydevTerms />;
   return (
     <LegalPage
       title="Conditions générales d'utilisation"

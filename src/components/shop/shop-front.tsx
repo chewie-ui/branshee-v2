@@ -247,7 +247,7 @@ export function ShopFront({ deals = [], me = null, look, slug, business, setting
               <legend className="text-sm font-medium">{tx.payment}</legend>
               {(["online", "pickup", "transfer"] as const).filter((k) => (k === "online" ? s.payOnline : k === "pickup" ? s.payOnPickup : s.payTransfer)).map((k) => <label key={k} className="flex items-center gap-2 text-sm"><input type="radio" name="pay" checked={f.payMethod === k} onChange={() => setF({ ...f, payMethod: k })} className="size-4" />{payLabel[k]}</label>)}
             </fieldset>
-            <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={f.terms} onChange={(e) => setF({ ...f, terms: e.target.checked })} className="mt-0.5 size-4" /><span>{tx.terms}</span></label>
+            <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={f.terms} onChange={(e) => setF({ ...f, terms: e.target.checked })} className="mt-0.5 size-4" /><span>{tx.terms} <a href={`/boutique/${slug}/conditions`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{tx.termsLink}</a></span></label>
             {error ? <p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
             <button type="submit" disabled={pending} className="mt-4 flex h-14 w-full items-center justify-between rounded-xl bg-accent px-5 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60"><span>{pending ? tx.sending : f.payMethod === "online" ? tx.orderPay : tx.order}</span><span className="tabular-nums">{eur(itemsCents + fee)}</span></button>
           </form>
