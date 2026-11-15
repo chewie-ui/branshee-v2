@@ -215,3 +215,48 @@ export async function undoOrderStamp(businessId: string, orderId: string) {
     if (m && m.delta > 0) await tx.update(loyaltyCards).set({ stamps: sql`greatest(0, ${loyaltyCards.stamps} - ${m.delta})`, updatedAt: new Date() }).where(eq(loyaltyCards.id, m.cardId));
   });
 }
+
+/**
+ * Le client rejoint la carte de fidélité d'un commerce (depuis sa commande ou son espace client) :
+ * la carte est créée tout de suite, et ses achats déjà payés ou retirés (60 derniers jours) donnent leurs tampons.
+ */
+export async function joinLoyaltyByEmail(businessId: string, who: { email: string; name: string; phone?: string | null; userId?: string | null }) {
+  const s = await loyaltySettingsOf(businessId);
+  if (!s.autoShop) return { ok: false as const, error: "Ce commerce ne propose pas de carte de fidélité avec les achats en ligne." };
+  const [first, ...rest] = who.name.trim().split(/\s+/);
+  const c = await customerByEmail(businessId, { email: who.email, firstName: first ?? "", lastName: rest.join(" "), phone: who.phone, userId: who.userId });
+  if (!c) return { ok: false as const, error: "Carte impossible à créer." };
+  if (who.userId) await db.update(customers).set({ userId: who.userId }).where(and(eq(customers.id, c.id), isNull(customers.userId)));
+  const [existing] = await db.select({ token: loyaltyCards.token }).from(loyaltyCards).where(and(eq(loyaltyCards.businessId, businessId), eq(loyaltyCards.customerId, c.id)));
+  if (!existing) await db.insert(loyaltyCards).values({ businessId, customerId: c.id, token: randomBytes(16).toString("base64url") }).onConflictDoNothing();
+  // Achats passés déjà payés ou retirés, pas encore comptés.
+  const past = await db.select({ id: shopOrders.id }).from(shopOrders).where(and(
+    eq(shopOrders.businessId, businessId), sql`lower(${shopOrders.email}) = ${who.email.toLowerCase()}`, ne(shopOrders.status, "cancelled"),
+    or(isNotNull(shopOrders.paidAt), eq(shopOrders.status, "done")), gt(shopOrders.createdAt, new Date(Date.now() - 60 * 86400_000)),
+    sql`not exists (select 1 from "loyalty_moves" m where m.business_id = ${businessId} and m.ref = 'order:' || ${shopOrders.id})`,
+  )).limit(50);
+  let added = 0;
+  for (const o of past) added += await stampShopOrder(o.id).catch(() => 0);
+  const [card] = await db.select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps }).from(loyaltyCards).where(and(eq(loyaltyCards.businessId, businessId), eq(loyaltyCards.customerId, c.id)));
+  if (!card) return { ok: false as const, error: "Carte impossible à créer." };
+  if (!existing && !added) {
+    const [b] = await db.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, businessId));
+    await sendLoyaltyWelcome(businessId, b?.name ?? "", who.email, card.token, s.goal, s.reward, card.stamps);
+  }
+  return { ok: true as const, token: card.token, stamps: card.stamps, added };
+}
+
+/** Espace client : commerces où l'on a commandé, qui proposent la fidélité sur les achats, sans carte encore. */
+export async function joinableLoyalty(userId: string, email: string) {
+  const mail = email.toLowerCase();
+  return db
+    .selectDistinct({ businessId: businesses.id, name: businesses.name, photoUrl: businesses.photoUrl, goal: loyaltySettings.goal, reward: loyaltySettings.reward })
+    .from(shopOrders)
+    .innerJoin(businesses, eq(businesses.id, shopOrders.businessId))
+    .innerJoin(loyaltySettings, eq(loyaltySettings.businessId, shopOrders.businessId))
+    .where(and(
+      sql`lower(${shopOrders.email}) = ${mail}`, eq(loyaltySettings.autoShop, true), isNull(businesses.deletedAt),
+      sql`not exists (select 1 from "loyalty_cards" l join "customers" c on c.id = l.customer_id where l.business_id = ${businesses.id} and (c.user_id = ${userId} or lower(c.email) = ${mail}))`,
+    ))
+    .limit(20);
+}

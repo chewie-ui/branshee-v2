@@ -4,12 +4,12 @@ import { cookies, headers } from "next/headers";
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { businesses, customers, loyaltyCards, loyaltyMoves, loyaltyQrUses } from "@/db/schema";
+import { businesses, customers, loyaltyCards, loyaltyMoves, loyaltyQrUses, shopOrders } from "@/db/schema";
 import { clientIp } from "@/lib/client-ip";
 import { qrVerify } from "@/lib/loyalty-qr";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { getSessionUser } from "@/server/auth/session";
-import { customerByEmail, giveStamp, loyaltyQrKey, loyaltySettingsOf, sendLoyaltyWelcome } from "@/server/loyalty";
+import { customerByEmail, giveStamp, loyaltyQrKey, loyaltySettingsOf, sendLoyaltyWelcome, joinLoyaltyByEmail } from "@/server/loyalty";
 import { isLocked } from "@/server/plan";
 
 export type ScanResult =
@@ -142,4 +142,29 @@ export async function claimLoyaltyCard(input: { token: string; firstName: string
   await sendLoyaltyWelcome(card.businessId, card.bName, email, target.token, s.goal, s.reward, target.stamps);
   (await cookies()).delete({ name: cookieName(card.businessId), path: "/fidelite" });
   return { ok: true, merged: true };
+}
+
+/** Depuis la page d'une commande (le lien secret de la commande suffit) : rejoindre la carte de fidélité du commerce. */
+export async function joinLoyaltyFromOrder(orderToken: string): Promise<{ ok: true; token: string; added: number } | { ok: false; error: string }> {
+  if (!/^[\w-]{16,40}$/.test(orderToken)) return { ok: false, error: "Commande introuvable." };
+  const ip = clientIp(await headers());
+  if (!rateLimit(`loyalty-join:${ip}`, 20, 3600_000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
+  const [o] = await db.select({ businessId: shopOrders.businessId, email: shopOrders.email, name: shopOrders.name, phone: shopOrders.phone, status: shopOrders.status }).from(shopOrders).where(eq(shopOrders.token, orderToken));
+  if (!o || o.status === "cancelled") return { ok: false, error: "Commande introuvable." };
+  if (await isLocked(o.businessId)) return { ok: false, error: "Ce commerce ne propose pas la fidélité pour le moment." };
+  const u = (await getSessionUser())?.user;
+  const r = await joinLoyaltyByEmail(o.businessId, { email: o.email, name: o.name, phone: o.phone, userId: u && u.email.toLowerCase() === o.email.toLowerCase() ? u.id : null });
+  return r.ok ? { ok: true, token: r.token, added: r.added } : r;
+}
+
+/** Depuis l'espace client (email vérifié) : rejoindre la carte d'un commerce où l'on a déjà commandé. */
+export async function joinLoyaltyAsClient(businessId: string): Promise<{ ok: true; token: string; added: number } | { ok: false; error: string }> {
+  if (!z.uuid().safeParse(businessId).success) return { ok: false, error: "Commerce introuvable." };
+  const u = (await getSessionUser())?.user;
+  if (!u || !u.emailVerifiedAt) return { ok: false, error: "Connectez-vous avec une adresse vérifiée." };
+  const [o] = await db.select({ name: shopOrders.name, phone: shopOrders.phone }).from(shopOrders).where(and(eq(shopOrders.businessId, businessId), sql`lower(${shopOrders.email}) = ${u.email.toLowerCase()}`)).limit(1);
+  if (!o) return { ok: false, error: "Aucune commande chez ce commerce avec votre adresse." };
+  if (await isLocked(businessId)) return { ok: false, error: "Ce commerce ne propose pas la fidélité pour le moment." };
+  const r = await joinLoyaltyByEmail(businessId, { email: u.email, name: u.fullName || o.name, phone: o.phone, userId: u.id });
+  return r.ok ? { ok: true, token: r.token, added: r.added } : r;
 }

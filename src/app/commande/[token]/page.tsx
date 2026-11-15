@@ -7,6 +7,7 @@ import { customers, invoiceSettings, loyaltyCards, loyaltyMoves } from "@/db/sch
 import { and, eq, sql } from "drizzle-orm";
 import { getSessionUser } from "@/server/auth/session";
 import { loyaltySettingsOf, orderStampCount } from "@/server/loyalty";
+import { JoinLoyalty } from "@/components/loyalty/join-loyalty";
 import { orderByToken, pickupCode } from "@/server/shop";
 import { intlLocale } from "@/i18n";
 import { fill, publicTexts } from "@/i18n/public-pages";
@@ -28,8 +29,9 @@ export default async function OrderTracking({ params, searchParams }: { params: 
   const pendingPay = o.status === "pending_payment";
   // Fidélité : tampons que rapporte cette commande selon la règle du commerçant (rien si la règle ne la concerne pas).
   const loyalty = await loyaltySettingsOf(o.businessId);
-  const earn = loyalty.autoShop && o.status !== "cancelled" ? await orderStampCount(o.businessId, loyalty.shopRule, o.lines) : 0;
-  const [card] = earn
+  const loyaltyOn = loyalty.autoShop && o.status !== "cancelled";
+  const earn = loyaltyOn ? await orderStampCount(o.businessId, loyalty.shopRule, o.lines) : 0;
+  const [card] = loyaltyOn
     ? await db.select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps }).from(loyaltyCards).innerJoin(customers, eq(customers.id, loyaltyCards.customerId)).where(and(eq(loyaltyCards.businessId, o.businessId), sql`lower(${customers.email}) = ${o.email.toLowerCase()}`)).limit(1)
     : [];
   const [stamped] = earn ? await db.select({ delta: loyaltyMoves.delta }).from(loyaltyMoves).where(and(eq(loyaltyMoves.businessId, o.businessId), eq(loyaltyMoves.ref, `order:${o.id}`))).limit(1) : [];
@@ -59,12 +61,18 @@ export default async function OrderTracking({ params, searchParams }: { params: 
         ) : null}
         {o.payMethod === "transfer" && !o.paidAt && o.status !== "cancelled" && seller?.iban ? <p className="mt-3 rounded-lg bg-surface-muted p-3 text-sm">{fill(tx.transfer, { amount: eur(o.totalCents), name: seller.name || r.business })}<br />IBAN <b className="font-mono">{seller.iban}</b>{seller.bic ? ` · BIC ${seller.bic}` : ""}<br />{tx.comm} : <b>{fill(tx.commValue, { n: o.number })}</b></p> : null}
         {o.payMethod === "pickup" && !o.paidAt && o.status !== "cancelled" ? <p className="mt-3 text-sm text-muted">{fill(tx.payLater, { when: o.fulfilment === "delivery" ? tx.atDelivery : tx.atPickup })}</p> : null}
-        {earn > 0 ? (
+        {loyaltyOn ? (
           <div className="mt-4 flex items-start gap-3 rounded-xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
             <Gift className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-            <div>
-              <p>{stamped && card ? fill(tx.loyaltyDone, { n: stamped.delta, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : card ? fill(tx.loyaltyHas, { n: earn, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyNew, { n: earn, goal: loyalty.goal, reward: loyalty.reward })}</p>
-              {card ? <a href={`/fidelite/${card.token}`} className="mt-1 inline-block font-medium underline underline-offset-2">{tx.seeCard}</a> : null}
+            <div className="min-w-0 flex-1">
+              <p>
+                {card
+                  ? earn > 0
+                    ? stamped ? fill(tx.loyaltyDone, { n: stamped.delta, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyHas, { n: earn, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })
+                    : fill(tx.myCard, { stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })
+                  : earn > 0 ? fill(tx.loyaltyNew, { n: earn, goal: loyalty.goal, reward: loyalty.reward }) : fill(tx.loyaltyJoin, { shop: r.business, goal: loyalty.goal, reward: loyalty.reward })}
+              </p>
+              {card ? <a href={`/fidelite/${card.token}`} className="mt-1 inline-block font-medium underline underline-offset-2">{tx.seeCard}</a> : <JoinLoyalty orderToken={o.token} label={tx.joinCard} busy={tx.joining} className="mt-3" />}
             </div>
           </div>
         ) : null}
