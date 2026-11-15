@@ -2,7 +2,9 @@ import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Gift, Star } from "lucide-react";
+import { CalendarDays, Gift } from "lucide-react";
+import { LoyaltyCardView } from "@/components/loyalty/loyalty-card-view";
+import { loyaltyColors, loyaltyFontHref, resolveLoyaltyTheme } from "@/lib/loyalty-theme";
 import { cardByToken, cardHistory, loyaltySettingsOf } from "@/server/loyalty";
 import { ClaimCard } from "@/components/loyalty/claim-card";
 import { fill, publicTexts } from "@/i18n/public-pages";
@@ -21,27 +23,31 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
   const [s, moves] = await Promise.all([loyaltySettingsOf(c.businessId), cardHistory(c.id)]);
   const ready = c.stamps >= s.goal;
   const shown = Math.min(c.stamps, s.goal);
+  const theme = resolveLoyaltyTheme(s.theme);
+  const font = loyaltyFontHref(theme);
+  const colors = loyaltyColors(theme);
   const fmt = new Intl.DateTimeFormat(locale === "nl" ? "nl-BE" : locale === "en" ? "en-GB" : "fr-BE", { day: "numeric", month: "short", year: "numeric" });
   return (
-    <div className="flex min-h-dvh justify-center bg-background p-4 sm:items-center">
+    <div className="flex min-h-dvh justify-center p-4 sm:items-center" style={{ background: colors.page }}>
+      {font ? <link rel="stylesheet" href={font} /> : null}
       <div className="w-full max-w-sm space-y-4">
         {sp.tampon ? (
           <p className={`rounded-2xl px-4 py-3 text-center text-sm font-medium ${sp.tampon === "deja" ? "bg-surface text-muted" : "bg-success-soft text-success"}`} role="status">
             {sp.tampon === "deja" ? tx.already : tx.added}
           </p>
         ) : null}
-        <div className="rounded-3xl bg-accent p-6 text-accent-foreground shadow-lg">
-          <p className="text-sm opacity-90">{c.business}</p>
-          <h1 className="mt-1 text-2xl font-semibold">{tx.card}</h1>
-          {c.hasEmail ? <p className="mt-1 opacity-90">{c.name ?? c.fullName.split(" ")[0]}</p> : null}
-          <p className="mt-5 text-4xl font-semibold tabular-nums">{shown}<span className="text-xl opacity-80"> / {s.goal}</span></p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/25" aria-hidden="true"><div className="h-full rounded-full bg-white" style={{ width: `${(shown / s.goal) * 100}%` }} /></div>
-          <ul className="mt-5 grid grid-cols-5 gap-3" aria-label={fill(tx.stamps, { n: shown, goal: s.goal })}>
-            {Array.from({ length: s.goal }, (_, i) => <li key={i} className={`flex aspect-square items-center justify-center rounded-full border-2 border-white/70 ${i < c.stamps ? "bg-white text-accent" : ""}`}>{i < c.stamps ? <Star className="size-5 fill-current" aria-hidden="true" /> : i === s.goal - 1 ? <Gift className="size-4 opacity-80" aria-hidden="true" /> : null}</li>)}
-          </ul>
-          <p className="mt-6 rounded-xl bg-white/15 px-4 py-3 text-sm">{ready ? <><Gift className="mr-1.5 inline size-4" aria-hidden="true" />{fill(tx.reward, { reward: s.reward })}</> : fill(tx.left, { n: s.goal - c.stamps, reward: s.reward })}</p>
-          {c.rewards ? <p className="mt-3 text-xs opacity-80">{fill(tx.earned, { n: c.rewards })}</p> : null}
-        </div>
+        <LoyaltyCardView
+          theme={theme}
+          business={c.business}
+          businessLogo={c.photoUrl}
+          holder={c.hasEmail ? (c.name ?? c.fullName.split(" ")[0]) : null}
+          stamps={c.stamps}
+          goal={s.goal}
+          title={tx.card}
+          stampsLabel={fill(tx.stamps, { n: shown, goal: s.goal })}
+          footer={ready ? <><Gift className="mr-1.5 inline size-4" aria-hidden="true" />{fill(tx.reward, { reward: s.reward })}</> : fill(tx.left, { n: s.goal - c.stamps, reward: s.reward })}
+          earned={c.rewards ? fill(tx.earned, { n: c.rewards }) : null}
+        />
         {!c.hasEmail ? <ClaimCard token={(await params).token} tx={{ saveTitle: tx.saveTitle, saveText: tx.saveText, firstName: tx.firstName, email: tx.email, save: tx.save, saving: tx.saving, saved: tx.saved, merged: tx.merged, account: tx.account }} signupHref="/inscription?client=1" /> : null}
         {moves.length ? (
           <section className="rounded-2xl bg-surface p-5" aria-labelledby="hist">
@@ -57,7 +63,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
           </section>
         ) : null}
         <Link href={appPagePath(c.slug)} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link>
-        <p className="text-center text-xs text-muted">{tx.keep}</p>
+        <p className="text-center text-xs" style={{ color: colors.pageText }}>{tx.keep}</p>
       </div>
     </div>
   );

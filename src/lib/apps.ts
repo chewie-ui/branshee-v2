@@ -261,6 +261,7 @@ const UPCOMING: SkyApp[] = [
     nav: [
       { href: "/app/fidelite", label: "Fidélité", icon: "gift" },
       { href: "/app/fidelite/qr", label: "QR code à scanner", icon: "qr" },
+      { href: "/app/fidelite/apparence", label: "Apparence de la carte", icon: "layout", permission: "settings.manage" },
       { href: "/app/fidelite/cartes-cadeaux", label: "Cartes cadeaux", icon: "card" },
     ],
   },

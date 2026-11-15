@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { businesses } from "./businesses";
 import { customers } from "./appointments";
@@ -19,6 +19,8 @@ export const loyaltySettings = pgTable("loyalty_settings", {
   autoShop: boolean("auto_shop").notNull().default(false),
   /** Le client scanne un QR code affiché par le pro (code qui change toutes les 30 secondes). */
   qrEnabled: boolean("qr_enabled").notNull().default(false),
+  /** Apparence de la carte (couleurs, police, icône, logo, nom) : voir lib/loyalty-theme. */
+  theme: jsonb("theme").$type<Record<string, unknown>>().notNull().default({}),
   ...timestamps,
 });
 

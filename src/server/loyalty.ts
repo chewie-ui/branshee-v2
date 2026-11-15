@@ -14,7 +14,7 @@ export const loyaltyOrigin = () => (process.env.SKYDEV_APP_URL ?? process.env.AP
 
 export async function loyaltySettingsOf(businessId: string) {
   const [s] = await db.select().from(loyaltySettings).where(eq(loyaltySettings.businessId, businessId));
-  return s ?? { businessId, goal: 10, reward: "Une prestation offerte", autoAppointment: false, autoShop: false, qrEnabled: false };
+  return s ?? { businessId, goal: 10, reward: "Une prestation offerte", autoAppointment: false, autoShop: false, qrEnabled: false, theme: {} as Record<string, unknown> };
 }
 
 export async function loyaltyCardsOf(businessId: string) {
@@ -170,7 +170,7 @@ export async function undoAppointmentStamp(businessId: string, appointmentId: st
 /** Espace client : les cartes de fidélité du compte (fiches liées au compte ou à son email vérifié). */
 export async function cardsOfUser(userId: string, email: string) {
   return db
-    .select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps, business: businesses.name, goal: sql<number>`coalesce(${loyaltySettings.goal}, 10)`, reward: sql<string>`coalesce(${loyaltySettings.reward}, 'Une prestation offerte')` })
+    .select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps, business: businesses.name, photoUrl: businesses.photoUrl, theme: loyaltySettings.theme, goal: sql<number>`coalesce(${loyaltySettings.goal}, 10)`, reward: sql<string>`coalesce(${loyaltySettings.reward}, 'Une prestation offerte')` })
     .from(loyaltyCards)
     .innerJoin(customers, eq(customers.id, loyaltyCards.customerId))
     .innerJoin(businesses, eq(businesses.id, loyaltyCards.businessId))

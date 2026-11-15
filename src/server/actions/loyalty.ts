@@ -13,6 +13,8 @@ import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import QRCode from "qrcode";
+import { loyaltyThemeSchema } from "@/lib/loyalty-theme";
+import { savePublicImage } from "@/server/storage";
 import { QR_STEP_MS, qrSign, qrWindow } from "@/lib/loyalty-qr";
 import { giveStamp, loyaltyOrigin, loyaltyQrKey, loyaltyRights, loyaltySettingsOf, sendLoyaltyWelcome } from "@/server/loyalty";
 
@@ -156,4 +158,29 @@ export async function cancelGiftCard(id: string): Promise<Result> {
   await db.update(giftCards).set({ cancelledAt: new Date(), updatedAt: new Date() }).where(and(eq(giftCards.id, id), eq(giftCards.businessId, ctx.business.id)));
   refresh();
   return { ok: true, message: "Carte annulée." };
+}
+
+/** Apparence de la carte de fidélité (couleurs, police, icône, logo, nom). */
+export async function saveLoyaltyTheme(input: unknown): Promise<Result> {
+  const { ctx, error } = await member();
+  if (error) return error;
+  if (!loyaltyRights(ctx).manage) return { ok: false, error: "Seul le responsable modifie la carte." };
+  const v = loyaltyThemeSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Apparence invalide." };
+  await db.insert(loyaltySettings).values({ businessId: ctx.business.id, theme: v.data }).onConflictDoUpdate({ target: loyaltySettings.businessId, set: { theme: v.data, updatedAt: new Date() } });
+  refresh();
+  revalidatePath("/fidelite", "layout");
+  revalidatePath("/espace-client", "layout");
+  return { ok: true, message: "Apparence de la carte enregistrée." };
+}
+
+/** Logo ou image de fond propre à la carte. */
+export async function uploadLoyaltyImage(fd: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const { ctx, error } = await member();
+  if (error) return error;
+  if (!loyaltyRights(ctx).manage) return { ok: false, error: "Seul le responsable modifie la carte." };
+  const f = fd.get("file");
+  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "Choisissez une image." };
+  if (f.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };
+  try { return { ok: true, url: await savePublicImage(Buffer.from(await f.arrayBuffer())) }; } catch { return { ok: false, error: "Image : JPG, PNG ou WebP." }; }
 }
