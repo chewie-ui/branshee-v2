@@ -164,7 +164,7 @@ function MenuSaving({ deal, products }: { deal: Extract<Deal, { kind: "menu" }>;
 }
 
 /** Choix des produits concernés : des catégories entières et/ou des produits précis (rien = toute la boutique). */
-function TargetPicker({ value, onChange, products, categories }: { value: DealTarget; onChange: (v: DealTarget) => void; products: P[]; categories: string[] }) {
+export function TargetPicker({ value, onChange, products, categories }: { value: DealTarget; onChange: (v: DealTarget) => void; products: P[]; categories: string[] }) {
   const t = useT();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);

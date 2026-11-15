@@ -12,6 +12,7 @@ import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { cancelShopOrderAndRestock, shopOrigin, shopRights } from "@/server/shop";
 import { shopThemeSchema } from "@/lib/shop-theme";
+import { stampShopOrder, undoOrderStamp } from "@/server/loyalty";
 import { dealsSchema } from "@/lib/deals";
 import { savePublicImage } from "@/server/storage";
 
@@ -60,6 +61,8 @@ export async function setShopOrderStatus(id: string, status: string): Promise<Re
   const from = status === "done" ? ["ready", "shipped"] : ["new"];
   const [o] = await db.update(shopOrders).set({ status, updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), inArray(shopOrders.status, from))).returning();
   if (!o) return { ok: false, error: "Cette commande ne peut pas passer à cette étape." };
+  // Retirée / livrée : les tampons de fidélité tombent tout de suite (sans attendre la tâche automatique).
+  if (status === "done") await stampShopOrder(o.id).catch(() => 0);
   if (status === "ready" || status === "shipped") await sendEmail({ to: o.email, ...emails.shopOrderStatus({ shopName: ctx.business.name, number: o.number, status: SHOP_STATUS[status].label, url: `${shopOrigin()}/commande/${o.token}` }), template: "shop_order_status", businessId: ctx.business.id }).catch(() => {});
   refresh();
   return { ok: true, message: `Commande n° ${o.number} : ${SHOP_STATUS[status].label.toLowerCase()}.` };
@@ -71,6 +74,7 @@ export async function markShopOrderPaid(id: string): Promise<Result> {
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Commande introuvable." };
   const done = await db.update(shopOrders).set({ paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), isNull(shopOrders.paidAt), inArray(shopOrders.status, ["new", "ready", "shipped", "done"]))).returning({ n: shopOrders.number });
   if (!done.length) return { ok: false, error: "Commande introuvable, annulée ou déjà encaissée." };
+  await stampShopOrder(id).catch(() => 0);
   refresh();
   return { ok: true, message: `Commande n° ${done[0]!.n} encaissée.` };
 }
@@ -83,6 +87,7 @@ export async function cancelShopOrder(id: string): Promise<Result> {
   const [o] = await db.select({ id: shopOrders.id, paidAt: shopOrders.paidAt, payMethod: shopOrders.payMethod }).from(shopOrders).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id)));
   if (!o) return { ok: false, error: "Commande introuvable." };
   await cancelShopOrderAndRestock(o.id, ctx.member.id);
+  await undoOrderStamp(ctx.business.id, o.id).catch(() => {});
   refresh();
   return { ok: true, message: o.paidAt && o.payMethod === "online" ? "Commande annulée, stock rendu. Remboursez le client depuis votre compte Stripe." : "Commande annulée, stock rendu." };
 }

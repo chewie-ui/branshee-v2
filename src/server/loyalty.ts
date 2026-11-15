@@ -1,9 +1,10 @@
 import "server-only";
 import { createHmac, randomBytes } from "node:crypto";
-import { and, asc, desc, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, customers, giftCards, loyaltyCards, loyaltyMoves, loyaltySettings, shopOrders } from "@/db/schema";
+import { appointments, businesses, customers, giftCards, loyaltyCards, loyaltyMoves, loyaltySettings, products, shopOrders } from "@/db/schema";
 import { sameDay } from "@/lib/loyalty-qr";
+import { resolveShopRule, stampsForOrder } from "@/lib/loyalty-rules";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { isLocked } from "@/server/plan";
@@ -14,7 +15,7 @@ export const loyaltyOrigin = () => (process.env.SKYDEV_APP_URL ?? process.env.AP
 
 export async function loyaltySettingsOf(businessId: string) {
   const [s] = await db.select().from(loyaltySettings).where(eq(loyaltySettings.businessId, businessId));
-  return s ?? { businessId, goal: 10, reward: "Une prestation offerte", autoAppointment: false, autoShop: false, qrEnabled: false, theme: {} as Record<string, unknown> };
+  return s ?? { businessId, goal: 10, reward: "Une prestation offerte", autoAppointment: false, autoShop: false, qrEnabled: false, theme: {} as Record<string, unknown>, shopRule: {} as Record<string, unknown> };
 }
 
 export async function loyaltyCardsOf(businessId: string) {
@@ -66,7 +67,8 @@ export function loyaltyQrKey() {
  * Ajoute un tampon. Le pro (manuel) : pas deux en moins de 2 heures (double clic). QR, rendez-vous, achat :
  * un seul par jour et par client, tous canaux confondus. `ref` rend chaque rendez-vous ou achat unique.
  */
-export async function giveStamp(p: { businessId: string; timezone: string; customerId: string; source: StampSource; ref?: string; memberId?: string | null }): Promise<StampResult> {
+export async function giveStamp(p: { businessId: string; timezone: string; customerId: string; source: StampSource; ref?: string; memberId?: string | null; count?: number }): Promise<StampResult> {
+  const count = Math.max(1, Math.min(50, p.count ?? 1));
   const s = await loyaltySettingsOf(p.businessId);
   const r = await db.transaction(async (tx) => {
     await tx.insert(loyaltyCards).values({ businessId: p.businessId, customerId: p.customerId, token: randomBytes(16).toString("base64url") }).onConflictDoNothing();
@@ -74,14 +76,15 @@ export async function giveStamp(p: { businessId: string; timezone: string; custo
     if (!card) return { ok: false as const, reason: "duplicate" as const };
     const now = new Date();
     if (p.source === "manual" && card.lastStampAt && now.getTime() - card.lastStampAt.getTime() < 2 * 3600_000) return { ok: false as const, reason: "recent" as const };
-    if (p.source !== "manual" && sameDay(card.lastStampAt, now, p.timezone || "Europe/Brussels")) {
+    // Achat en ligne : chaque commande payée ou retirée compte (la règle du commerçant fixe le nombre) ; sinon un par jour.
+    if (p.source !== "manual" && p.source !== "shop" && sameDay(card.lastStampAt, now, p.timezone || "Europe/Brussels")) {
       // Déjà tamponné aujourd'hui : on note quand même l'origine, pour ne pas réessayer ce rendez-vous ou cet achat.
       if (p.ref) await tx.insert(loyaltyMoves).values({ businessId: p.businessId, cardId: card.id, delta: 0, kind: "fix", source: p.source, ref: p.ref }).onConflictDoNothing();
       return { ok: false as const, reason: "today" as const };
     }
-    const moved = await tx.insert(loyaltyMoves).values({ businessId: p.businessId, cardId: card.id, delta: 1, kind: "stamp", source: p.source, ref: p.ref ?? null, memberId: p.memberId ?? null }).onConflictDoNothing().returning({ id: loyaltyMoves.id });
+    const moved = await tx.insert(loyaltyMoves).values({ businessId: p.businessId, cardId: card.id, delta: count, kind: "stamp", source: p.source, ref: p.ref ?? null, memberId: p.memberId ?? null }).onConflictDoNothing().returning({ id: loyaltyMoves.id });
     if (!moved.length) return { ok: false as const, reason: "duplicate" as const };
-    const stamps = card.stamps + 1;
+    const stamps = card.stamps + count;
     await tx.update(loyaltyCards).set({ stamps, lastStampAt: now, updatedAt: now }).where(eq(loyaltyCards.id, card.id));
     return { ok: true as const, stamps, token: card.token, first: card.stamps === 0 && !card.lastStampAt };
   });
@@ -138,22 +141,16 @@ export async function autoStamps() {
     }
     if (b.shop) {
       const paid = await db
-        .select({ id: shopOrders.id, email: shopOrders.email, name: shopOrders.name, phone: shopOrders.phone })
+        .select({ id: shopOrders.id })
         .from(shopOrders)
         .where(and(
-          // Payée en ligne, ou retirée / livrée (paiement sur place) : 1 tampon par achat, jamais pour une commande annulée.
+          // Payée en ligne, ou retirée / livrée (paiement sur place) ; jamais une commande annulée.
           eq(shopOrders.businessId, b.id), ne(shopOrders.status, "cancelled"), or(isNotNull(shopOrders.paidAt), eq(shopOrders.status, "done")),
           gt(sql`coalesce(${shopOrders.paidAt}, ${shopOrders.updatedAt})`, new Date(now - 7 * 86400_000)),
           sql`not exists (select 1 from "loyalty_moves" m where m.business_id = ${b.id} and m.ref = 'order:' || ${shopOrders.id})`,
         ))
         .limit(500);
-      for (const o of paid) {
-        const [first, ...rest] = o.name.trim().split(/\s+/);
-        const c = await customerByEmail(b.id, { email: o.email, firstName: first ?? "", lastName: rest.join(" "), phone: o.phone }).catch(() => null);
-        if (!c) continue;
-        const r = await giveStamp({ businessId: b.id, timezone: tz, customerId: c.id, source: "shop", ref: `order:${o.id}` }).catch(() => null);
-        if (r?.ok) { n++; if (r.first) await sendLoyaltyWelcome(b.id, b.name, c.email, r.token, r.goal, r.reward); }
-      }
+      for (const o of paid) if ((await stampShopOrder(o.id).catch(() => 0)) > 0) n++;
     }
   }
   return n;
@@ -178,4 +175,43 @@ export async function cardsOfUser(userId: string, email: string) {
     .where(and(isNull(businesses.deletedAt), or(eq(customers.userId, userId), sql`lower(${customers.email}) = ${email.toLowerCase()}`)))
     .orderBy(desc(loyaltyCards.lastStampAt))
     .limit(30);
+}
+
+/**
+ * Tampons d'une commande de la boutique selon la règle du commerçant (dès qu'elle est payée ou retirée).
+ * Crée la carte au premier achat et envoie son lien au client. Sans effet si déjà fait, annulée ou non concernée.
+ */
+export async function stampShopOrder(orderId: string): Promise<number> {
+  const [o] = await db.select({ id: shopOrders.id, businessId: shopOrders.businessId, status: shopOrders.status, paidAt: shopOrders.paidAt, email: shopOrders.email, name: shopOrders.name, phone: shopOrders.phone, lines: shopOrders.lines, tz: businesses.timezone, bname: businesses.name }).from(shopOrders).innerJoin(businesses, eq(businesses.id, shopOrders.businessId)).where(eq(shopOrders.id, orderId));
+  if (!o || o.status === "cancelled" || (!o.paidAt && o.status !== "done")) return 0;
+  const s = await loyaltySettingsOf(o.businessId);
+  if (!s.autoShop) return 0;
+  const [done] = await db.select({ id: loyaltyMoves.id }).from(loyaltyMoves).where(and(eq(loyaltyMoves.businessId, o.businessId), eq(loyaltyMoves.ref, `order:${o.id}`))).limit(1);
+  if (done) return 0;
+  const n = await orderStampCount(o.businessId, s.shopRule, o.lines);
+  if (n <= 0) return 0;
+  const [first, ...rest] = o.name.trim().split(/\s+/);
+  const c = await customerByEmail(o.businessId, { email: o.email, firstName: first ?? "", lastName: rest.join(" "), phone: o.phone });
+  if (!c) return 0;
+  const r = await giveStamp({ businessId: o.businessId, timezone: o.tz || "Europe/Brussels", customerId: c.id, source: "shop", ref: `order:${o.id}`, count: n });
+  if (!r.ok) return 0;
+  if (r.first) await sendLoyaltyWelcome(o.businessId, o.bname, c.email, r.token, r.goal, r.reward, r.stamps);
+  return n;
+}
+
+/** Combien de tampons rapporte cette commande (catégories des produits lues en base). */
+export async function orderStampCount(businessId: string, ruleRaw: unknown, lines: { productId: string; unitCents: number; qty: number }[]) {
+  const rule = resolveShopRule(ruleRaw);
+  const ids = [...new Set(lines.map((l) => l.productId).filter(Boolean))];
+  const cats = ids.length ? await db.select({ id: products.id, category: products.category }).from(products).where(and(eq(products.businessId, businessId), inArray(products.id, ids))) : [];
+  const cat = new Map(cats.map((c) => [c.id, c.category]));
+  return stampsForOrder(rule, lines.map((l) => ({ ...l, category: cat.get(l.productId) ?? null })));
+}
+
+/** Commande annulée après coup : ses tampons sont retirés de la carte. */
+export async function undoOrderStamp(businessId: string, orderId: string) {
+  await db.transaction(async (tx) => {
+    const [m] = await tx.delete(loyaltyMoves).where(and(eq(loyaltyMoves.businessId, businessId), eq(loyaltyMoves.ref, `order:${orderId}`))).returning({ cardId: loyaltyMoves.cardId, delta: loyaltyMoves.delta });
+    if (m && m.delta > 0) await tx.update(loyaltyCards).set({ stamps: sql`greatest(0, ${loyaltyCards.stamps} - ${m.delta})`, updatedAt: new Date() }).where(eq(loyaltyCards.id, m.cardId));
+  });
 }

@@ -21,6 +21,8 @@ export const loyaltySettings = pgTable("loyalty_settings", {
   qrEnabled: boolean("qr_enabled").notNull().default(false),
   /** Apparence de la carte (couleurs, police, icône, logo, nom) : voir lib/loyalty-theme. */
   theme: jsonb("theme").$type<Record<string, unknown>>().notNull().default({}),
+  /** Règle des tampons pour les achats en ligne (par commande, par article, par montant ; produits concernés) : lib/loyalty-rules. */
+  shopRule: jsonb("shop_rule").$type<Record<string, unknown>>().notNull().default({}),
   ...timestamps,
 });
 

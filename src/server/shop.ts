@@ -12,6 +12,7 @@ const eur = (c: number) => new Intl.NumberFormat("fr-BE", { style: "currency", c
 import type { AppContext } from "@/server/context";
 import { promoPrice } from "@/lib/product-options";
 import { dealLive, todayBrussels } from "@/lib/deals";
+import { stampShopOrder } from "@/server/loyalty";
 
 export const shopRights = (ctx: AppContext) => ({ manage: ctx.member.isOwner || ctx.can("settings.manage") });
 export const shopOrigin = () => (process.env.SKYDEV_APP_URL ?? process.env.APP_URL ?? "https://skydev.be").replace(/\/$/, "");
@@ -98,7 +99,7 @@ export async function completeShopPayment(session: { id: string; payment_status:
   const id = session.metadata.orderId;
   if (!id) return false;
   const done = await db.update(shopOrders).set({ status: "new", paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "pending_payment"))).returning({ id: shopOrders.id });
-  if (done.length) await notifyNewOrder(id);
+  if (done.length) { await notifyNewOrder(id); await stampShopOrder(id).catch(() => 0); }
   else {
     // Payé trop tard (commande déjà annulée, stock remis en vente) : le responsable doit rembourser ou honorer.
     const [o] = await db.select().from(shopOrders).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "cancelled")));

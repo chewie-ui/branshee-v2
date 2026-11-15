@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, Gift, UserRound } from "lucide-react";
 import { db } from "@/db";
-import { customers, invoiceSettings, loyaltyCards } from "@/db/schema";
+import { customers, invoiceSettings, loyaltyCards, loyaltyMoves } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { getSessionUser } from "@/server/auth/session";
-import { loyaltySettingsOf } from "@/server/loyalty";
+import { loyaltySettingsOf, orderStampCount } from "@/server/loyalty";
 import { orderByToken, pickupCode } from "@/server/shop";
 import { intlLocale } from "@/i18n";
 import { fill, publicTexts } from "@/i18n/public-pages";
@@ -26,11 +26,13 @@ export default async function OrderTracking({ params, searchParams }: { params: 
   const o = r.o;
   const [seller] = o.payMethod === "transfer" ? await db.select({ iban: invoiceSettings.iban, bic: invoiceSettings.bic, name: invoiceSettings.legalName }).from(invoiceSettings).where(eq(invoiceSettings.businessId, o.businessId)) : [];
   const pendingPay = o.status === "pending_payment";
-  // Fidélité : si la boutique donne un tampon par achat, on montre la carte du client (ou celle qu'il va recevoir).
+  // Fidélité : tampons que rapporte cette commande selon la règle du commerçant (rien si la règle ne la concerne pas).
   const loyalty = await loyaltySettingsOf(o.businessId);
-  const [card] = loyalty.autoShop
+  const earn = loyalty.autoShop && o.status !== "cancelled" ? await orderStampCount(o.businessId, loyalty.shopRule, o.lines) : 0;
+  const [card] = earn
     ? await db.select({ token: loyaltyCards.token, stamps: loyaltyCards.stamps }).from(loyaltyCards).innerJoin(customers, eq(customers.id, loyaltyCards.customerId)).where(and(eq(loyaltyCards.businessId, o.businessId), sql`lower(${customers.email}) = ${o.email.toLowerCase()}`)).limit(1)
     : [];
+  const [stamped] = earn ? await db.select({ delta: loyaltyMoves.delta }).from(loyaltyMoves).where(and(eq(loyaltyMoves.businessId, o.businessId), eq(loyaltyMoves.ref, `order:${o.id}`))).limit(1) : [];
   // Compte : connecté avec l'email de la commande → elle est dans « Mes commandes » ; sinon on propose de créer un compte.
   const user = (await getSessionUser())?.user;
   const mine = !!user && user.email.toLowerCase() === o.email.toLowerCase();
@@ -57,11 +59,11 @@ export default async function OrderTracking({ params, searchParams }: { params: 
         ) : null}
         {o.payMethod === "transfer" && !o.paidAt && o.status !== "cancelled" && seller?.iban ? <p className="mt-3 rounded-lg bg-surface-muted p-3 text-sm">{fill(tx.transfer, { amount: eur(o.totalCents), name: seller.name || r.business })}<br />IBAN <b className="font-mono">{seller.iban}</b>{seller.bic ? ` · BIC ${seller.bic}` : ""}<br />{tx.comm} : <b>{fill(tx.commValue, { n: o.number })}</b></p> : null}
         {o.payMethod === "pickup" && !o.paidAt && o.status !== "cancelled" ? <p className="mt-3 text-sm text-muted">{fill(tx.payLater, { when: o.fulfilment === "delivery" ? tx.atDelivery : tx.atPickup })}</p> : null}
-        {loyalty.autoShop && o.status !== "cancelled" ? (
+        {earn > 0 ? (
           <div className="mt-4 flex items-start gap-3 rounded-xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
             <Gift className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <div>
-              <p>{card ? fill(tx.loyaltyHas, { stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyNew, { goal: loyalty.goal, reward: loyalty.reward })}</p>
+              <p>{stamped && card ? fill(tx.loyaltyDone, { n: stamped.delta, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : card ? fill(tx.loyaltyHas, { n: earn, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyNew, { n: earn, goal: loyalty.goal, reward: loyalty.reward })}</p>
               {card ? <a href={`/fidelite/${card.token}`} className="mt-1 inline-block font-medium underline underline-offset-2">{tx.seeCard}</a> : null}
             </div>
           </div>

@@ -14,6 +14,7 @@ import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import QRCode from "qrcode";
 import { loyaltyThemeSchema } from "@/lib/loyalty-theme";
+import { shopRuleSchema } from "@/lib/loyalty-rules";
 import { savePublicImage } from "@/server/storage";
 import { QR_STEP_MS, qrSign, qrWindow } from "@/lib/loyalty-qr";
 import { giveStamp, loyaltyOrigin, loyaltyQrKey, loyaltyRights, loyaltySettingsOf, sendLoyaltyWelcome } from "@/server/loyalty";
@@ -33,6 +34,7 @@ const settingsSchema = z.object({
   autoAppointment: z.boolean().optional(),
   autoShop: z.boolean().optional(),
   qrEnabled: z.boolean().optional(),
+  shopRule: shopRuleSchema.optional(),
 });
 
 export async function saveLoyaltySettings(input: z.input<typeof settingsSchema>): Promise<Result> {
@@ -42,7 +44,7 @@ export async function saveLoyaltySettings(input: z.input<typeof settingsSchema>)
   const v = settingsSchema.safeParse(input);
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Réglages invalides." };
   const cur = await loyaltySettingsOf(ctx.business.id);
-  const values = { goal: v.data.goal, reward: v.data.reward, autoAppointment: v.data.autoAppointment ?? cur.autoAppointment, autoShop: v.data.autoShop ?? cur.autoShop, qrEnabled: v.data.qrEnabled ?? cur.qrEnabled };
+  const values = { goal: v.data.goal, reward: v.data.reward, autoAppointment: v.data.autoAppointment ?? cur.autoAppointment, autoShop: v.data.autoShop ?? cur.autoShop, qrEnabled: v.data.qrEnabled ?? cur.qrEnabled, shopRule: (v.data.shopRule ?? cur.shopRule) as Record<string, unknown> };
   await db.insert(loyaltySettings).values({ businessId: ctx.business.id, ...values }).onConflictDoUpdate({ target: loyaltySettings.businessId, set: { ...values, updatedAt: new Date() } });
   refresh();
   return { ok: true, message: "Programme enregistré." };

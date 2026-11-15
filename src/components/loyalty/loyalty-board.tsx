@@ -4,11 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Gift, Link2, QrCode, Search, Stamp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
-import { addStamp, saveLoyaltySettings, redeemReward } from "@/server/actions/loyalty";
+import { addStamp, redeemReward } from "@/server/actions/loyalty";
 import { useT } from "@/components/app-locale";
 import { intlLocale } from "@/lib/i18n/app";
 
@@ -24,11 +24,6 @@ export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings
   const router = useRouter();
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string; reward?: boolean } | null>(null);
-  const [goal, setGoal] = useState(String(settings.goal));
-  const [reward, setReward] = useState(settings.reward);
-  const [autoAppointment, setAutoAppointment] = useState(settings.autoAppointment);
-  const [autoShop, setAutoShop] = useState(settings.autoShop);
-  const [qrEnabled, setQrEnabled] = useState(settings.qrEnabled);
   const [pending, start] = useTransition();
   const byCustomer = new Map(cards.map((c) => [c.customerId, c]));
   const ql = q.trim().toLowerCase();
@@ -97,29 +92,9 @@ export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings
         <ul className="mt-2 space-y-1 text-xs text-muted">
           {settings.qrEnabled ? <li>{t("Tampon par QR code activé")}</li> : null}
           {settings.autoAppointment ? <li>{t("Tampon automatique après chaque rendez-vous honoré")}</li> : null}
-          {settings.autoShop ? <li>{t("Tampon automatique après chaque achat en ligne")}</li> : null}
+          {settings.autoShop ? <li>{t("Tampons avec les achats en ligne")}</li> : null}
         </ul>
-        {canManage ? (
-          <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); run(() => saveLoyaltySettings({ goal: Number(goal), reward, autoAppointment, autoShop, qrEnabled })); }}>
-            <Field label={t("Nombre de tampons")} htmlFor="ly-goal"><Input id="ly-goal" inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/\D/g, ""))} /></Field>
-            <Field label="Récompense" htmlFor="ly-reward"><Input id="ly-reward" value={reward} onChange={(e) => setReward(e.target.value)} maxLength={120} placeholder={t("Ex. une séance offerte, -20 %, un café")} /></Field>
-            <fieldset className="space-y-2 pt-1">
-              <legend className="mb-1 text-sm font-medium">{t("Donner des tampons")}</legend>
-              {[
-                { id: "ly-qr", on: qrEnabled, set: setQrEnabled, label: t("Par QR code"), hint: t("Le client scanne un QR code sur votre écran.") },
-                { id: "ly-appt", on: autoAppointment, set: setAutoAppointment, label: t("Après chaque rendez-vous"), hint: t("Automatique, sauf si vous marquez une absence.") },
-                { id: "ly-shop", on: autoShop, set: setAutoShop, label: t("Après chaque achat en ligne"), hint: t("Commandes payées sur votre boutique.") },
-              ].map((o) => (
-                <label key={o.id} htmlFor={o.id} className="flex cursor-pointer items-start gap-2.5 rounded-lg p-1.5 hover:bg-surface-muted">
-                  <input id={o.id} type="checkbox" checked={o.on} onChange={(e) => o.set(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
-                  <span className="min-w-0"><span className="block text-sm">{t(o.label)}</span><span className="block text-xs text-muted">{t(o.hint)}</span></span>
-                </label>
-              ))}
-              <p className="text-xs text-muted">{t("Un seul tampon automatique ou scanné par jour et par client.")}</p>
-            </fieldset>
-            <Button type="submit" size="sm" loading={pending}>{t("Enregistrer")}</Button>
-          </form>
-        ) : null}
+        {canManage ? <ButtonLink href="/app/fidelite/programme" size="sm" variant="secondary" className="mt-4">{t("Modifier le programme")}</ButtonLink> : null}
       </Card>
     </div>
   );

@@ -16,7 +16,7 @@ export default async function MyCards() {
       {cards.length === 0 ? (
         <Card className="p-6 text-center text-sm text-muted">
           <Gift className="mx-auto mb-2 size-8" aria-hidden="true" />
-          Pas encore de carte. Chez un pro qui a la fidélité, scannez son QR code en caisse : la carte se crée toute seule. Ajoutez-y votre adresse {user.email} et elle apparaîtra ici.
+          Pas encore de carte. Chez un pro qui a la fidélité, la carte se crée toute seule : en scannant son QR code en caisse, ou avec vos achats sur sa boutique en ligne (dès que la commande est payée ou retirée). Avec l&apos;adresse {user.email}, elle apparaît ici.
         </Card>
       ) : (
         <LoyaltyCards cards={cards} />
