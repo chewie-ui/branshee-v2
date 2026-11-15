@@ -12,7 +12,7 @@ import { addStamp, redeemReward } from "@/server/actions/loyalty";
 import { useT } from "@/components/app-locale";
 import { intlLocale } from "@/lib/i18n/app";
 
-type CardRow = { id: string; stamps: number; rewards: number; last: string | null; customerId: string; name: string; email: string | null; url: string };
+type CardRow = { id: string; stamps: number; rewards: number; last: string | null; customerId: string; name: string; email: string | null; url: string; code: string | null };
 type Client = { id: string; name: string; email: string | null; phone: string | null };
 type Res = { ok: boolean; message?: string; error?: string; reward?: boolean };
 
@@ -64,9 +64,15 @@ export function LoyaltyBoard({ settings, cards, clients, canManage }: { settings
 
         {ready.length ? (
           <Card className="border-warning">
-            <CardHeader title={t("Récompenses à offrir")} description={settings.reward} />
+            <CardHeader title={t("Récompenses à offrir")} description={t("{reward}. Le client montre le code affiché sur sa carte : s'il correspond, offrez la récompense puis cliquez sur « Offerte ». La carte repart à zéro.", { reward: settings.reward })} />
             <ul className="divide-y divide-border">
-              {ready.map((c) => <li key={c.id} className="flex items-center gap-3 px-5 py-2.5"><span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name}</span><Button size="sm" variant="secondary" loading={pending} onClick={() => run(() => redeemReward(c.id))}>{t("Récompense utilisée")}</Button></li>)}
+              {ready.map((c) => (
+                <li key={c.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{c.name}</span><span className="block text-xs text-muted">{c.stamps}/{settings.goal} {t("tampons")}</span></span>
+                  {c.code ? <span className="rounded-md bg-surface-muted px-2 py-1 font-mono text-base font-bold tracking-widest tabular-nums" title={t("Code affiché sur la carte du client")}>{c.code}</span> : null}
+                  <Button size="sm" variant="secondary" loading={pending} icon={<Gift className="size-4" aria-hidden="true" />} onClick={() => run(() => redeemReward(c.id))}>{t("Offerte")}</Button>
+                </li>
+              ))}
             </ul>
           </Card>
         ) : null}

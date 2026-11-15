@@ -5,7 +5,7 @@ import { customers } from "@/db/schema";
 import { LoyaltyBoard } from "@/components/loyalty/loyalty-board";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
-import { loyaltyCardsOf, loyaltyOrigin, loyaltyRights, loyaltySettingsOf } from "@/server/loyalty";
+import { loyaltyCardsOf, loyaltyOrigin, loyaltyRights, loyaltySettingsOf, rewardCode } from "@/server/loyalty";
 import { appMetadata } from "@/server/app-locale";
 import { appT } from "@/server/app-locale";
 
@@ -18,7 +18,7 @@ export default async function LoyaltyPage() {
   return (
     <>
       <PageHeader title={t("Fidélité")} description={t("Une carte à tampons pour vos clients : un passage, un tampon, et la récompense que vous choisissez au bout.")} />
-      <LoyaltyBoard settings={{ goal: s.goal, reward: s.reward, autoAppointment: s.autoAppointment, autoShop: s.autoShop, qrEnabled: s.qrEnabled }} cards={cards.map((c) => ({ ...c, last: c.last?.toISOString() ?? null, url: `${loyaltyOrigin()}/fidelite/${c.token}` }))} clients={clients} canManage={loyaltyRights(ctx).manage} />
+      <LoyaltyBoard settings={{ goal: s.goal, reward: s.reward, autoAppointment: s.autoAppointment, autoShop: s.autoShop, qrEnabled: s.qrEnabled }} cards={cards.map((c) => ({ ...c, last: c.last?.toISOString() ?? null, url: `${loyaltyOrigin()}/fidelite/${c.token}`, code: c.stamps >= s.goal ? rewardCode(c.id, c.rewards) : null }))} clients={clients} canManage={loyaltyRights(ctx).manage} />
     </>
   );
 }

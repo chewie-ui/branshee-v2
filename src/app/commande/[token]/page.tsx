@@ -38,6 +38,8 @@ export default async function OrderTracking({ params, searchParams }: { params: 
   // Compte : connecté avec l'email de la commande → elle est dans « Mes commandes » ; sinon on propose de créer un compte.
   const user = (await getSessionUser())?.user;
   const mine = !!user && user.email.toLowerCase() === o.email.toLowerCase();
+  // Carte de fidélité visible ici seulement pour le compte vérifié de cette adresse (l'email d'une commande n'est pas vérifié).
+  const verified = mine && !!user?.emailVerifiedAt;
   const suite = encodeURIComponent("/espace-client/commandes");
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg p-4">
@@ -65,14 +67,25 @@ export default async function OrderTracking({ params, searchParams }: { params: 
           <div className="mt-4 flex items-start gap-3 rounded-xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
             <Gift className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p>
-                {card
-                  ? earn > 0
-                    ? stamped ? fill(tx.loyaltyDone, { n: stamped.delta, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyHas, { n: earn, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })
-                    : fill(tx.myCard, { stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })
-                  : earn > 0 ? fill(tx.loyaltyNew, { n: earn, goal: loyalty.goal, reward: loyalty.reward }) : fill(tx.loyaltyJoin, { shop: r.business, goal: loyalty.goal, reward: loyalty.reward })}
-              </p>
-              {card ? <a href={`/fidelite/${card.token}`} className="mt-1 inline-block font-medium underline underline-offset-2">{tx.seeCard}</a> : <JoinLoyalty orderToken={o.token} label={tx.joinCard} busy={tx.joining} className="mt-3" />}
+              {card && verified ? (
+                <>
+                  <p>
+                    {earn > 0
+                      ? stamped ? fill(tx.loyaltyDone, { n: stamped.delta, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal }) : fill(tx.loyaltyHas, { n: earn, stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })
+                      : fill(tx.myCard, { stamps: Math.min(card.stamps, loyalty.goal), goal: loyalty.goal })}
+                  </p>
+                  {card.stamps >= loyalty.goal ? <p className="mt-1 font-semibold">{fill(tx.rewardReady, { reward: loyalty.reward })}</p> : null}
+                  <a href={`/fidelite/${card.token}`} className="mt-1 inline-block font-medium underline underline-offset-2">{tx.seeCard}</a>
+                </>
+              ) : card ? (
+                // Email de commande non vérifié : on ne montre ni le lien ni le solde de la carte (elle peut appartenir à quelqu'un d'autre).
+                <p>{earn > 0 ? `${stamped ? fill(tx.loyaltyDoneAnon, { n: stamped.delta }) : fill(tx.loyaltyHasAnon, { n: earn })} ` : ""}{tx.cardByEmail}</p>
+              ) : (
+                <>
+                  <p>{earn > 0 ? fill(tx.loyaltyNew, { n: earn, goal: loyalty.goal, reward: loyalty.reward }) : fill(tx.loyaltyJoin, { shop: r.business, goal: loyalty.goal, reward: loyalty.reward })}</p>
+                  <JoinLoyalty orderToken={o.token} label={tx.joinCard} busy={tx.joining} emailed={tx.cardByEmail} className="mt-3" />
+                </>
+              )}
             </div>
           </div>
         ) : null}

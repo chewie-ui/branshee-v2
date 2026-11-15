@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { businesses, customers, loyaltyCards, loyaltyMoves, loyaltyQrUses, shopOrders } from "@/db/schema";
@@ -114,7 +114,7 @@ export async function claimLoyaltyCard(input: { token: string; firstName: string
   const ip = clientIp(await headers()) ?? "?";
   if (!rateLimit(`loyalty-claim:${ip}`, 10, 3600_000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
   const email = v.data.email.toLowerCase();
-  const [card] = await db.select({ id: loyaltyCards.id, businessId: loyaltyCards.businessId, customerId: loyaltyCards.customerId, stamps: loyaltyCards.stamps, custEmail: customers.email, bName: businesses.name }).from(loyaltyCards).innerJoin(customers, eq(customers.id, loyaltyCards.customerId)).innerJoin(businesses, eq(businesses.id, loyaltyCards.businessId)).where(eq(loyaltyCards.token, v.data.token));
+  const [card] = await db.select({ id: loyaltyCards.id, businessId: loyaltyCards.businessId, customerId: loyaltyCards.customerId, stamps: loyaltyCards.stamps, custEmail: customers.email, bName: businesses.name, tz: businesses.timezone }).from(loyaltyCards).innerJoin(customers, eq(customers.id, loyaltyCards.customerId)).innerJoin(businesses, eq(businesses.id, loyaltyCards.businessId)).where(eq(loyaltyCards.token, v.data.token));
   if (!card) return { ok: false, error: "Carte introuvable." };
   if (card.custEmail) return { ok: false, error: "Cette carte est déjà liée à une adresse email." };
   const s = await loyaltySettingsOf(card.businessId);
@@ -132,11 +132,27 @@ export async function claimLoyaltyCard(input: { token: string; firstName: string
     const [a] = await tx.select().from(loyaltyCards).where(eq(loyaltyCards.id, card.id)).for("update");
     if (!t || !a) return null;
     const last = [t.lastStampAt, a.lastStampAt].filter(Boolean).sort((x, y) => y!.getTime() - x!.getTime())[0] ?? null;
+    // Anti-fraude : plusieurs cartes sans email (téléphones, navigateurs privés…) réunies sur une même adresse ne
+    // donnent jamais plus d'un tampon QR ou rendez-vous par jour. Les tampons en double sont annulés.
+    const day = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: card.tz || "Europe/Brussels" }).format(d);
+    const auto = (src: string) => src === "qr" || src === "appointment";
+    const tMoves = await tx.select({ at: loyaltyMoves.createdAt, source: loyaltyMoves.source }).from(loyaltyMoves).where(and(eq(loyaltyMoves.cardId, t.id), eq(loyaltyMoves.kind, "stamp"), gt(loyaltyMoves.delta, 0)));
+    const days = new Set(tMoves.filter((m) => auto(m.source)).map((m) => day(m.at)));
+    const aMoves = await tx.select({ id: loyaltyMoves.id, at: loyaltyMoves.createdAt, source: loyaltyMoves.source, delta: loyaltyMoves.delta }).from(loyaltyMoves).where(and(eq(loyaltyMoves.cardId, a.id), eq(loyaltyMoves.kind, "stamp"), gt(loyaltyMoves.delta, 0))).orderBy(loyaltyMoves.createdAt);
+    let dropped = 0;
+    for (const m of aMoves) {
+      if (!auto(m.source)) continue;
+      const d = day(m.at);
+      if (!days.has(d)) { days.add(d); continue; }
+      dropped += m.delta;
+      await tx.update(loyaltyMoves).set({ delta: 0, kind: "fix" }).where(eq(loyaltyMoves.id, m.id));
+    }
+    const kept = Math.max(0, a.stamps - dropped);
     await tx.update(loyaltyMoves).set({ cardId: t.id }).where(eq(loyaltyMoves.cardId, a.id));
-    await tx.update(loyaltyCards).set({ stamps: t.stamps + a.stamps, rewardsEarned: t.rewardsEarned + a.rewardsEarned, lastStampAt: last, updatedAt: new Date() }).where(eq(loyaltyCards.id, t.id));
+    await tx.update(loyaltyCards).set({ stamps: t.stamps + kept, rewardsEarned: t.rewardsEarned + a.rewardsEarned, lastStampAt: last, updatedAt: new Date() }).where(eq(loyaltyCards.id, t.id));
     await tx.delete(loyaltyCards).where(eq(loyaltyCards.id, a.id));
     await tx.delete(customers).where(and(eq(customers.id, card.customerId), isNull(customers.email)));
-    return { token: t.token, stamps: t.stamps + a.stamps };
+    return { token: t.token, stamps: t.stamps + kept };
   });
   if (!target) return { ok: false, error: "Réessayez dans un instant." };
   await sendLoyaltyWelcome(card.businessId, card.bName, email, target.token, s.goal, s.reward, target.stamps);
@@ -145,7 +161,7 @@ export async function claimLoyaltyCard(input: { token: string; firstName: string
 }
 
 /** Depuis la page d'une commande (le lien secret de la commande suffit) : rejoindre la carte de fidélité du commerce. */
-export async function joinLoyaltyFromOrder(orderToken: string): Promise<{ ok: true; token: string; added: number } | { ok: false; error: string }> {
+export async function joinLoyaltyFromOrder(orderToken: string): Promise<{ ok: true; token: string | null; added: number } | { ok: false; error: string }> {
   if (!/^[\w-]{16,40}$/.test(orderToken)) return { ok: false, error: "Commande introuvable." };
   const ip = clientIp(await headers());
   if (!rateLimit(`loyalty-join:${ip}`, 20, 3600_000).ok) return { ok: false, error: "Trop de tentatives. Réessayez plus tard." };
@@ -153,8 +169,18 @@ export async function joinLoyaltyFromOrder(orderToken: string): Promise<{ ok: tr
   if (!o || o.status === "cancelled") return { ok: false, error: "Commande introuvable." };
   if (await isLocked(o.businessId)) return { ok: false, error: "Ce commerce ne propose pas la fidélité pour le moment." };
   const u = (await getSessionUser())?.user;
-  const r = await joinLoyaltyByEmail(o.businessId, { email: o.email, name: o.name, phone: o.phone, userId: u && u.email.toLowerCase() === o.email.toLowerCase() ? u.id : null });
-  return r.ok ? { ok: true, token: r.token, added: r.added } : r;
+  // L'email d'une commande n'est pas vérifié : le lien de la carte n'est montré qu'au compte vérifié de cette adresse.
+  // Sinon il part par email (quelqu'un qui commande avec l'adresse d'un autre ne voit jamais sa carte).
+  const mine = !!u?.emailVerifiedAt && u.email.toLowerCase() === o.email.toLowerCase();
+  const r = await joinLoyaltyByEmail(o.businessId, { email: o.email, name: o.name, phone: o.phone, userId: mine ? u!.id : null });
+  if (!r.ok) return r;
+  if (mine) return { ok: true, token: r.token, added: r.added };
+  if (r.existed) {
+    const [b] = await db.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, o.businessId));
+    const s = await loyaltySettingsOf(o.businessId);
+    await sendLoyaltyWelcome(o.businessId, b?.name ?? "", o.email, r.token, s.goal, s.reward, r.stamps);
+  }
+  return { ok: true, token: null, added: r.added };
 }
 
 /** Depuis l'espace client (email vérifié) : rejoindre la carte d'un commerce où l'on a déjà commandé. */

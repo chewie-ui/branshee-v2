@@ -64,6 +64,15 @@ export function loyaltyQrKey() {
 }
 
 /**
+ * Code récompense (4 chiffres) affiché sur la carte pleine, que le commerçant voit aussi avant d'offrir.
+ * Seul le détenteur du lien secret de la carte le connaît ; il change après chaque récompense offerte.
+ */
+export function rewardCode(cardId: string, rewardsEarned: number) {
+  const h = createHmac("sha256", loyaltyQrKey()).update(`reward:${cardId}:${rewardsEarned}`).digest();
+  return String(h.readUInt32BE(0) % 10000).padStart(4, "0");
+}
+
+/**
  * Ajoute un tampon. Le pro (manuel) : pas deux en moins de 2 heures (double clic). QR, rendez-vous, achat :
  * un seul par jour et par client, tous canaux confondus. `ref` rend chaque rendez-vous ou achat unique.
  */
@@ -243,7 +252,7 @@ export async function joinLoyaltyByEmail(businessId: string, who: { email: strin
     const [b] = await db.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, businessId));
     await sendLoyaltyWelcome(businessId, b?.name ?? "", who.email, card.token, s.goal, s.reward, card.stamps);
   }
-  return { ok: true as const, token: card.token, stamps: card.stamps, added };
+  return { ok: true as const, token: card.token, stamps: card.stamps, added, existed: !!existing };
 }
 
 /** Espace client : commerces où l'on a commandé, qui proposent la fidélité sur les achats, sans carte encore. */

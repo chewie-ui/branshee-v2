@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { businesses, services, shopSettings } from "@/db/schema";
 import { LoyaltyCardView } from "@/components/loyalty/loyalty-card-view";
 import { loyaltyColors, loyaltyFontHref, resolveLoyaltyTheme } from "@/lib/loyalty-theme";
-import { cardByToken, cardHistory, loyaltySettingsOf } from "@/server/loyalty";
+import { cardByToken, cardHistory, loyaltySettingsOf, rewardCode } from "@/server/loyalty";
 import { ClaimCard } from "@/components/loyalty/claim-card";
 import { fill, publicTexts } from "@/i18n/public-pages";
 import { resolvePublicLocale } from "@/i18n/server";
@@ -59,6 +59,13 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
           footer={ready ? <><Gift className="mr-1.5 inline size-4" aria-hidden="true" />{fill(tx.reward, { reward: s.reward })}</> : fill(tx.left, { n: s.goal - c.stamps, reward: s.reward })}
           earned={c.rewards ? fill(tx.earned, { n: c.rewards }) : null}
         />
+        {ready ? (
+          <section className="rounded-2xl bg-surface p-5 text-center" aria-labelledby="rw">
+            <h2 id="rw" className="flex items-center justify-center gap-2 text-sm font-semibold"><Gift className="size-4 text-accent" aria-hidden="true" />{tx.codeTitle}</h2>
+            <p className="mt-2 font-mono text-5xl font-bold tracking-[0.3em] tabular-nums">{rewardCode(c.id, c.rewards)}</p>
+            <p className="mt-3 text-sm text-muted">{fill(tx.codeHelp, { reward: s.reward })}</p>
+          </section>
+        ) : null}
         {!c.hasEmail ? <ClaimCard token={(await params).token} tx={{ saveTitle: tx.saveTitle, saveText: tx.saveText, firstName: tx.firstName, email: tx.email, save: tx.save, saving: tx.saving, saved: tx.saved, merged: tx.merged, account: tx.account }} signupHref="/inscription?client=1" /> : null}
         {moves.length ? (
           <section className="rounded-2xl bg-surface p-5" aria-labelledby="hist">
