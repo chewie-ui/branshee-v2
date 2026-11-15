@@ -2,7 +2,10 @@ import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Gift } from "lucide-react";
+import { CalendarDays, Gift, ShoppingBag } from "lucide-react";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { businesses, services, shopSettings } from "@/db/schema";
 import { LoyaltyCardView } from "@/components/loyalty/loyalty-card-view";
 import { loyaltyColors, loyaltyFontHref, resolveLoyaltyTheme } from "@/lib/loyalty-theme";
 import { cardByToken, cardHistory, loyaltySettingsOf } from "@/server/loyalty";
@@ -24,6 +27,14 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
   const ready = c.stamps >= s.goal;
   const shown = Math.min(c.stamps, s.goal);
   const theme = resolveLoyaltyTheme(s.theme);
+  // Boutons du bas selon ce que propose le commerce : boutique en ligne ouverte, prise de rendez-vous (prestations actives).
+  const [[biz], [shop], [svc]] = await Promise.all([
+    db.select({ o: businesses.onboarding }).from(businesses).where(eq(businesses.id, c.businessId)),
+    db.select({ on: shopSettings.enabled }).from(shopSettings).where(eq(shopSettings.businessId, c.businessId)),
+    db.select({ id: services.id }).from(services).where(and(eq(services.businessId, c.businessId), eq(services.isActive, true))).limit(1),
+  ]);
+  const hidden = new Set(biz?.o.hiddenApps ?? []);
+  const offers = { shop: !!shop?.on && !hidden.has("boutique"), rdv: !!svc && !hidden.has("rdv") };
   const font = loyaltyFontHref(theme);
   const colors = loyaltyColors(theme);
   const fmt = new Intl.DateTimeFormat(locale === "nl" ? "nl-BE" : locale === "en" ? "en-GB" : "fr-BE", { day: "numeric", month: "short", year: "numeric" });
@@ -62,7 +73,8 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
             </ul>
           </section>
         ) : null}
-        <Link href={appPagePath(c.slug)} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link>
+        {offers.shop ? <Link href={`/boutique/${c.slug}`} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><ShoppingBag className="size-4" aria-hidden="true" />{tx.order}</Link> : null}
+        {offers.rdv ? <Link href={appPagePath(c.slug)} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link> : null}
         <p className="text-center text-xs" style={{ color: colors.pageText }}>{tx.keep}</p>
       </div>
     </div>
