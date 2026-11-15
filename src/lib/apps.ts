@@ -417,6 +417,7 @@ export const APPS: SkyApp[] = [
     nav: [
       { href: "/app/boutique", label: "Commandes", icon: "bag" },
       { href: "/app/stock", label: "Produits et stock", icon: "boxes" },
+      { href: "/app/boutique/promos", label: "Promos et menus", icon: "tag", permission: "settings.manage" },
       { href: "/app/boutique/apparence", label: "Apparence", icon: "layout", permission: "settings.manage" },
       { href: "/app/boutique/reglages", label: "Réglages", icon: "settings", permission: "settings.manage" },
     ],

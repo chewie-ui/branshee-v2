@@ -2,20 +2,22 @@
 
 import { sizeHint } from "@/lib/sizes";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Minus, Package, Plus, ShoppingBag, Store, X } from "lucide-react";
+import { Minus, Package, Plus, ShoppingBag, Store, Tag, UtensilsCrossed, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MAX_SHOP_QTY, deliveryFee } from "@/lib/shop";
 import { placeShopOrder } from "@/server/actions/shop-order";
 import { fill, type PublicTexts } from "@/i18n/public-pages";
 import { priceSelection, type OptionGroup } from "@/lib/product-options";
+import { photoFitClass } from "@/lib/photo-fit";
+import { computeDiscounts, inTarget, toUnits, todayBrussels, type Deal } from "@/lib/deals";
 
-type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; regularCents?: number | null; options?: OptionGroup[]; photoUrl: string | null; trackStock: boolean; stockQty: number; isModel?: boolean; parentId?: string | null; size?: string | null; color?: string | null; sizeGrid?: string | null };
+type Item = { id: string; name: string; description: string | null; category: string | null; priceCents: number; regularCents?: number | null; options?: OptionGroup[]; photoUrl: string | null; photoFit?: string; trackStock: boolean; stockQty: number; isModel?: boolean; parentId?: string | null; size?: string | null; color?: string | null; sizeGrid?: string | null };
 type Settings = { intro: string | null; pickup: boolean; pickupNote: string | null; delivery: boolean; deliveryCents: number; freeDeliveryFromCents: number | null; deliveryNote: string | null; payOnline: boolean; payOnPickup: boolean; payTransfer: boolean };
 type Seller = { iban: string; legalName: string; street: string; zip: string; city: string; vat: string; bce: string; email: string } | null;
 const input = "h-11 w-full rounded-lg border border-border bg-surface px-3";
 
 /** Vitrine, panier et commande (sans compte). */
-export function ShopFront({ me = null, look, slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string; me?: { name: string; email: string; phone: string } | null; look?: { vars: Record<string, string>; layout: "grid" | "list"; bannerUrl: string | null; title: string | null } }) {
+export function ShopFront({ deals = [], me = null, look, slug, business, settings: s, items, seller, tx, intl }: { slug: string; business: { name: string; photoUrl: string | null; city: string | null }; settings: Settings; items: Item[]; seller: Seller; tx: PublicTexts["shop"]; intl: string; deals?: Deal[]; me?: { name: string; email: string; phone: string } | null; look?: { vars: Record<string, string>; layout: "grid" | "list"; bannerUrl: string | null; title: string | null } }) {
   const eur = (c: number) => new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(c / 100);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cat, setCat] = useState<string | null>(null);
@@ -30,14 +32,26 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
   // Panier : une ligne par produit + options (clé « id|choix1,choix2 ») ; prix recalculé par le serveur à la commande.
   const parse = (key: string) => { const [id, ch] = key.split("|"); return { id: id!, choices: ch ? ch.split(",").filter(Boolean) : [] }; };
   const lineOf = (key: string) => { const { id, choices } = parse(key); const it = byId.get(id); if (!it) return null; const sel = priceSelection(it.options ?? [], choices); if (!sel) return null; return { it, choices, unit: it.priceCents + sel.extraCents, label: sel.label }; };
-  const lines = Object.entries(cart).filter(([k, q]) => q > 0 && lineOf(k));
-  const itemsCents = lines.reduce((a, [k, q]) => a + lineOf(k)!.unit * q, 0);
-  const qtyOf = (id: string) => Object.entries(cart).reduce((a, [k, q]) => a + (parse(k).id === id ? q : 0), 0);
+  // Menus : clé « m:<menu>:<produit1>,<produit2>… » (un produit choisi par emplacement), au prix fixe du menu.
+  const menus = deals.filter((d): d is Extract<Deal, { kind: "menu" }> => d.kind === "menu");
+  const offers = deals.filter((d): d is Extract<Deal, { kind: "buyget" }> => d.kind === "buyget");
+  const menuOf = (key: string) => { if (!key.startsWith("m:")) return null; const [, mid, ps] = key.split(":"); const def = menus.find((m) => m.id === mid); const picks = (ps ?? "").split(",").map((id) => byId.get(id)); if (!def || picks.length !== def.slots.length || picks.some((p) => !p)) return null; return { def, picks: picks as Item[] }; };
+  const lines = Object.entries(cart).filter(([k, q]) => q > 0 && !k.startsWith("m:") && lineOf(k));
+  const menuLines = Object.entries(cart).filter(([k, q]) => q > 0 && menuOf(k));
+  // Promos « X achetés → Y à −Z % » : même calcul que le serveur (qui a le dernier mot sur le prix).
+  const discounts = computeDiscounts(toUnits(lines.map(([k, q]) => { const l = lineOf(k)!; return { productId: l.it.id, category: l.it.category, unitCents: l.unit, vatRate: 0, qty: q }; })), offers, todayBrussels());
+  const discountCents = discounts.reduce((a, d) => a + d.cents, 0);
+  const itemsCents = lines.reduce((a, [k, q]) => a + lineOf(k)!.unit * q, 0) + menuLines.reduce((a, [k, q]) => a + menuOf(k)!.def.priceCents * q, 0) - discountCents;
+  const qtyOf = (id: string) => Object.entries(cart).reduce((a, [k, q]) => a + (k.startsWith("m:") ? (menuOf(k)?.picks.filter((p) => p.id === id).length ?? 0) * q : parse(k).id === id ? q : 0), 0);
+  const [menuOpen, setMenuOpen] = useState<Extract<Deal, { kind: "menu" }> | null>(null);
+  const offerFor = (it: Item) => offers.find((d) => inTarget(d.buy, it) || inTarget(d.get, it));
   const [opt, setOpt] = useState<Item | null>(null);
   const fee = f.fulfilment === "delivery" ? deliveryFee(itemsCents, s) : 0;
-  const count = lines.reduce((a, [, q]) => a + q, 0);
+  const count = lines.reduce((a, [, q]) => a + q, 0) + menuLines.reduce((a, [, q]) => a + q, 0);
   const max = (it: Item) => (it.trackStock ? Math.min(MAX_SHOP_QTY, it.stockQty) : MAX_SHOP_QTY);
-  const addKey = (key: string, d: number) => { const it = byId.get(parse(key).id); if (!it) return; setCart((c) => { const cur = c[key] ?? 0; const room = max(it) - (qtyOf(it.id) - cur); return { ...c, [key]: Math.max(0, Math.min(room, cur + d)) }; }); };
+  const addKey = (key: string, d: number) => {
+    if (key.startsWith("m:")) { const m = menuOf(key); if (!m) return; setCart((c) => { const cur = c[key] ?? 0; const room = Math.min(...m.picks.map((p) => Math.floor((max(p) - (qtyOf(p.id) - cur * m.picks.filter((x) => x.id === p.id).length)) / m.picks.filter((x) => x.id === p.id).length))); return { ...c, [key]: Math.max(0, Math.min(room, cur + d)) }; }); return; }
+    const it = byId.get(parse(key).id); if (!it) return; setCart((c) => { const cur = c[key] ?? 0; const room = max(it) - (qtyOf(it.id) - cur); return { ...c, [key]: Math.max(0, Math.min(room, cur + d)) }; }); };
   const add = (it: Item, d: number) => addKey(it.id, d);
   const cats = [...new Set(items.map((i) => i.category).filter((x): x is string => !!x))];
   // Tailles et couleurs : une seule carte par modèle, la déclinaison se choisit dans la carte.
@@ -50,7 +64,7 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
     e.preventDefault();
     start(async () => {
       setError(null);
-      const r = await placeShopOrder({ slug, lines: lines.map(([k, qty]) => ({ productId: parse(k).id, qty, choices: parse(k).choices })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, pickupAt: f.fulfilment === "pickup" ? f.pickupAt : "", terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
+      const r = await placeShopOrder({ slug, lines: lines.map(([k, qty]) => ({ productId: parse(k).id, qty, choices: parse(k).choices })), menus: menuLines.map(([k, qty]) => ({ menuId: menuOf(k)!.def.id, qty, picks: menuOf(k)!.picks.map((p) => p.id) })), fulfilment: f.fulfilment as "pickup" | "delivery", payMethod: f.payMethod as "online" | "pickup" | "transfer", name: f.name, email: f.email, phone: f.phone, address: f.address, note: f.note, pickupAt: f.fulfilment === "pickup" ? f.pickupAt : "", terms: f.terms as true }).catch(() => ({ ok: false as const, error: tx.sendError }));
       if (!r.ok) return setError(r.error);
       try { localStorage.removeItem(key); } catch {}
       window.location.href = r.url;
@@ -74,6 +88,32 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
         {s.intro ? <p className="mx-auto max-w-5xl px-4 pb-4 text-sm text-muted">{s.intro}</p> : null}
       </header>
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+        {offers.length ? (
+          <section aria-label={tx.offers} className="flex flex-wrap gap-2">
+            {offers.map((d) => <span key={d.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"><Tag className="size-4" aria-hidden="true" />{d.name}</span>)}
+          </section>
+        ) : null}
+        {menus.length && !cat ? (
+          <section aria-labelledby="menus-h" className="space-y-3">
+            <h2 id="menus-h" className="text-lg font-semibold">{tx.menus}</h2>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {menus.map((m) => {
+                const ok = m.slots.every((sl) => items.some((p) => !p.isModel && inTarget(sl.target, p) && (!p.trackStock || p.stockQty > 0)));
+                return (
+                  <li key={m.id} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 shadow-[var(--card-shadow)]">
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent" aria-hidden="true"><UtensilsCrossed className="size-6" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">{m.name}</span>
+                      <span className="block text-sm text-muted">{m.slots.map((sl) => sl.label).join(" + ")}{m.description ? ` · ${m.description}` : ""}</span>
+                      <span className="mt-1 block font-semibold tabular-nums">{eur(m.priceCents)}</span>
+                    </span>
+                    {ok ? <button type="button" onClick={() => setMenuOpen(m)} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"><Plus className="size-4" aria-hidden="true" />{tx.compose}</button> : <span className="text-xs font-medium text-danger">{tx.menuUnavailable}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
         {cats.length > 1 ? (
           <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label={tx.categories}>
             <button type="button" aria-pressed={!cat} onClick={() => setCat(null)} className={cn("h-9 shrink-0 rounded-full border px-3 text-sm", !cat ? "border-accent bg-accent-soft font-medium text-accent" : "border-border")}>{tx.all}</button>
@@ -95,10 +135,11 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
                   {it.regularCents ? <span className="absolute top-2 left-2 z-10 rounded-full bg-danger px-2 py-0.5 text-xs font-semibold text-white">{tx.promo} −{Math.round((1 - it.priceCents / it.regularCents) * 100)} %</span> : null}
                   {it.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.photoUrl} alt="" className={look?.layout === "list" ? "size-28 shrink-0 object-cover sm:size-32" : "aspect-square w-full object-cover"} loading="lazy" />
+                    <img src={it.photoUrl} alt="" className={cn(look?.layout === "list" ? "size-28 shrink-0 sm:size-32" : "aspect-square w-full", it.photoFit === "contain" && "bg-white", photoFitClass(it.photoFit))} loading="lazy" />
                   ) : <span className={cn("flex items-center justify-center bg-surface-muted text-muted", look?.layout === "list" ? "size-28 shrink-0 sm:size-32" : "aspect-square")} aria-hidden="true"><Package className="size-10" /></span>}
                   <div className="flex min-w-0 flex-1 flex-col p-3">
                     <p className="font-medium">{card.name}</p>
+                    {offerFor(it) ? <p className="mt-1 inline-flex items-center gap-1 self-start rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-soft-foreground"><Tag className="size-3" aria-hidden="true" />{offerFor(it)!.name}</p> : null}
                     {card.isModel ? (
                       <select aria-label={`${tx.option} : ${card.name}`} value={it.id} onChange={(e) => setPick((p) => ({ ...p, [card.id]: e.target.value }))} className="mt-2 h-10 w-full rounded-lg border border-border-strong bg-surface px-2 text-sm">
                         {vars.map((v) => (
@@ -146,6 +187,7 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
         </div>
       ) : null}
 
+      {menuOpen ? <MenuDialog menu={menuOpen} items={items.filter((p) => !p.isModel)} eur={eur} tx={tx} max={max} qtyOf={qtyOf} onClose={() => setMenuOpen(null)} onAdd={(picks) => { addKey(`m:${menuOpen.id}:${picks.join(",")}`, 1); setMenuOpen(null); }} /> : null}
       {opt ? <OptionsDialog item={opt} eur={eur} tx={tx} room={max(opt) - qtyOf(opt.id)} onClose={() => setOpt(null)} onAdd={(choices, n) => { addKey(choices.length ? `${opt.id}|${[...choices].sort().join(",")}` : opt.id, n); setOpt(null); }} /> : null}
 
       {open ? (
@@ -164,6 +206,21 @@ export function ShopFront({ me = null, look, slug, business, settings: s, items,
                   <span className="w-16 text-right tabular-nums">{eur(q * l.unit)}</span>
                 </li>
               ); })}
+              {menuLines.map(([k, q]) => { const m = menuOf(k)!; return (
+                <li key={k} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1"><span className="block">{q} × {m.def.name}</span><span className="block text-xs text-muted">{m.picks.map((p) => p.name).join(", ")}</span></span>
+                  <span className="inline-flex items-center rounded-full border border-border">
+                    <button type="button" onClick={() => addKey(k, -1)} className="flex size-9 items-center justify-center" aria-label={fill(tx.lessAria, { name: m.def.name })}><Minus className="size-3.5" aria-hidden="true" /></button>
+                    <button type="button" onClick={() => addKey(k, 1)} className="flex size-9 items-center justify-center" aria-label={fill(tx.moreAria, { name: m.def.name })}><Plus className="size-3.5" aria-hidden="true" /></button>
+                  </span>
+                  <span className="w-16 text-right tabular-nums">{eur(q * m.def.priceCents)}</span>
+                </li>
+              ); })}
+              {discounts.map((d) => (
+                <li key={`${d.dealId}-${d.vatRate}`} className="flex items-center gap-3 py-2 font-medium text-success">
+                  <Tag className="size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 flex-1">{d.name}</span><span className="w-16 text-right tabular-nums">−{eur(d.cents)}</span>
+                </li>
+              ))}
             </ul>
             {me ? (
               <p className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-sm text-muted">{fill(tx.signedAs, { email: me.email })}</p>
@@ -279,6 +336,57 @@ function OptionsDialog({ item, eur, tx, room, onClose, onAdd }: { item: Item; eu
             </span>
             <button type="button" onClick={confirm} disabled={room <= 0} className="flex h-12 flex-1 items-center justify-center rounded-xl bg-accent px-4 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">{room <= 0 ? tx.soldOut : fill(tx.addFor, { price: eur(unit * n) })}</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Composer un menu : un produit par élément (sandwich, boisson, dessert…), au prix fixe du menu. */
+function MenuDialog({ menu, items, eur, tx, max, qtyOf, onClose, onAdd }: { menu: Extract<Deal, { kind: "menu" }>; items: Item[]; eur: (c: number) => string; tx: PublicTexts["shop"]; max: (it: Item) => number; qtyOf: (id: string) => number; onClose: () => void; onAdd: (picks: string[]) => void }) {
+  const [picks, setPicks] = useState<(string | null)[]>(() => menu.slots.map((sl) => { const ok = items.filter((p) => inTarget(sl.target, p)); return ok.length === 1 ? ok[0]!.id : null; }));
+  const [err, setErr] = useState<string | null>(null);
+  const confirm = () => {
+    const i = picks.findIndex((p) => !p);
+    if (i >= 0) return setErr(fill(tx.menuPick, { label: menu.slots[i]!.label }));
+    onAdd(picks as string[]);
+  };
+  return (
+    <div className="fixed inset-0 z-30 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="menu-h">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label={tx.close} tabIndex={-1} onClick={onClose} />
+      <div className="relative flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-border p-5">
+          <div className="min-w-0"><h2 id="menu-h" className="text-lg font-semibold">{menu.name}</h2>{menu.description ? <p className="mt-0.5 text-sm text-muted">{menu.description}</p> : null}</div>
+          <button type="button" onClick={onClose} className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-muted" aria-label={tx.close}><X className="size-5" aria-hidden="true" /></button>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          {menu.slots.map((sl, i) => (
+            <fieldset key={sl.id}>
+              <legend className="text-sm font-semibold">{sl.label}</legend>
+              <ul className="mt-2 divide-y divide-border rounded-xl border border-border">
+                {items.filter((p) => inTarget(sl.target, p)).map((p) => {
+                  const out = p.trackStock && qtyOf(p.id) + picks.filter((x, j) => x === p.id && j !== i).length >= max(p);
+                  return (
+                    <li key={p.id}>
+                      <label className={cn("flex min-h-12 cursor-pointer items-center gap-3 px-3 text-sm", out && "cursor-not-allowed opacity-50")}>
+                        <input type="radio" name={`slot-${sl.id}`} checked={picks[i] === p.id} disabled={out} onChange={() => { setErr(null); setPicks((ps) => ps.map((x, j) => (j === i ? p.id : x))); }} className="size-4 accent-[var(--accent)]" />
+                        {p.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.photoUrl} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+                        ) : null}
+                        <span className="flex-1">{p.name}</span>
+                        {out ? <span className="text-xs text-danger">{tx.soldOut}</span> : null}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </fieldset>
+          ))}
+        </div>
+        <div className="space-y-3 border-t border-border p-4">
+          {err ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{err}</p> : null}
+          <button type="button" onClick={confirm} className="flex h-12 w-full items-center justify-center rounded-xl bg-accent px-4 font-semibold text-accent-foreground hover:bg-accent-hover">{fill(tx.menuAdd, { price: eur(menu.priceCents) })}</button>
         </div>
       </div>
     </div>

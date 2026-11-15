@@ -40,6 +40,7 @@ const productSchema = z.object({
   promo: z.string().trim().max(20).optional(),
   promoUntil: z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/, "Date de fin de promo invalide.").optional(),
   options: z.string().max(40000).optional(),
+  photoFit: z.enum(["cover", "cover-top", "cover-bottom", "contain"]).optional(),
 });
 
 /** Ajouter ou modifier un produit (photo facultative). La quantité de départ crée un mouvement « Inventaire ». */
@@ -72,7 +73,7 @@ export async function saveProduct(fd: FormData): Promise<Result> {
   }
   // Fin de promo : le soir du jour choisi (23:59, heure belge).
   const promoUntil = promoCents !== null && d.promoUntil ? new Date(`${d.promoUntil}T23:59:59+01:00`) : null;
-  const values = { promoCents, promoUntil, options, name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, onlineEnabled: !!d.onlineEnabled, description: d.description || null, updatedAt: new Date() };
+  const values = { ...(d.photoFit ? { photoFit: d.photoFit } : {}), promoCents, promoUntil, options, name: d.name, sku: d.sku || null, barcode: d.barcode || null, category: d.category || null, priceCents: d.price, vatRate: d.vatRate, costCents: cost, trackStock: !!d.trackStock, minQty: d.minQty ? Number(d.minQty) : null, supplier: d.supplier || null, onlineEnabled: !!d.onlineEnabled, description: d.description || null, updatedAt: new Date() };
   if (typeof fd.get("variants") === "string") return saveModel(ctx, d.id, values, String(fd.get("variants")), String(fd.get("sizeGrid") ?? ""), photoUrl, !!d.removePhoto);
   try {
     if (d.id) {

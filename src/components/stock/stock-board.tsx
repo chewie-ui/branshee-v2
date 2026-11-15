@@ -1,10 +1,11 @@
 "use client";
 
 import { OptionsEditor } from "@/components/stock/options-editor";
+import { photoFitClass, type PhotoFit } from "@/lib/photo-fit";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ChevronDown, ClipboardCheck, FileUp, ImagePlus, Package, Plus, Ruler, ScanLine, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUpFromLine, ChevronDown, ClipboardCheck, FileUp, ImagePlus, Package, Plus, Ruler, ScanLine, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -136,9 +137,9 @@ export function StockBoard({ products, canManage }: { products: ProductView[]; c
                     </span>
                     {p.active && p.trackStock ? (
                       <div className="flex shrink-0 gap-1">
-                        <button type="button" onClick={() => setMove({ p, reason: "in" })} className="flex size-10 items-center justify-center rounded-lg border border-border hover:bg-surface-muted" aria-label={`Réception de ${p.name}`} title="Réception"><ArrowDownToLine className="size-4" aria-hidden="true" /></button>
-                        <button type="button" onClick={() => setMove({ p, reason: "out" })} className="flex size-10 items-center justify-center rounded-lg border border-border hover:bg-surface-muted" aria-label={`Sortie de ${p.name}`} title={t("Sortie (casse, usage…)")}><ArrowUpFromLine className="size-4" aria-hidden="true" /></button>
-                        <button type="button" onClick={() => setMove({ p, reason: "count" })} className="flex size-10 items-center justify-center rounded-lg border border-border hover:bg-surface-muted" aria-label={`Inventaire de ${p.name}`} title="Inventaire"><ClipboardCheck className="size-4" aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setMove({ p, reason: "in" })} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover" aria-label={t("Ajouter du stock : {name}", { name: p.name })} title={t("Ajouter du stock (livraison, réception)")}><Plus className="size-4" aria-hidden="true" />{t("Stock")}</button>
+                        <button type="button" onClick={() => setMove({ p, reason: "out" })} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm hover:bg-surface-muted" aria-label={t("Retirer du stock : {name}", { name: p.name })} title={t("Retirer du stock (casse, usage…)")}><ArrowUpFromLine className="size-4" aria-hidden="true" /><span className="hidden lg:inline">{t("Retirer")}</span></button>
+                        <button type="button" onClick={() => setMove({ p, reason: "count" })} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm hover:bg-surface-muted" aria-label={t("Corriger le stock (inventaire) : {name}", { name: p.name })} title={t("Corriger le stock : indiquer combien il en reste vraiment")}><ClipboardCheck className="size-4" aria-hidden="true" /><span className="hidden lg:inline">{t("Corriger")}</span></button>
                       </div>
                     ) : !p.active && canManage ? <RestoreButton id={p.id} onDone={(tp) => { setMsg({ ok: true, text: tp }); router.refresh(); }} /> : null}
                   </li>
@@ -162,8 +163,8 @@ function RestoreButton({ id, onDone }: { id: string; onDone: (tp: string) => voi
   return <Button size="sm" variant="secondary" loading={pending} onClick={() => start(async () => { const r: Res = await restoreProduct(id); onDone(r.message ?? r.error ?? ""); })}>{t("Remettre en vente")}</Button>;
 }
 
-const TITLES = { in: "Réception", out: "Sortie", count: "Inventaire" } as const;
-const HINTS = { in: "Combien en recevez-vous ?", out: "Combien en sortez-vous (casse, usage interne, perte) ?", count: "Combien en comptez-vous en rayon ?" } as const;
+const TITLES = { in: "Ajouter du stock", out: "Retirer du stock", count: "Corriger le stock (inventaire)" } as const;
+const HINTS = { in: "Combien en ajoutez-vous (livraison, production du jour…) ?", out: "Combien en sortez-vous (casse, usage interne, perte) ?", count: "Combien en comptez-vous en rayon ?" } as const;
 
 function MoveDialog({ p, reason: initialReason, onClose, onDone }: { p: ProductView; reason: "in" | "out" | "count"; onClose: () => void; onDone: (tp: string) => void }) {
   const t = useT();
@@ -225,6 +226,8 @@ function ProductDialog({ product, variants, barcode, categories, onClose, onDone
   const [vstate, setVstate] = useState<{ grid: string; rows: VariantRow[] }>(() => ({ grid: product?.sizeGrid ?? "letters", rows: variants.map((v) => ({ id: v.id, size: v.size, color: v.color, barcode: v.barcode ?? "", qty: "", stock: v.stockQty })) }));
   const [file, setFile] = useState<string | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [fit, setFit] = useState<PhotoFit>((product?.photoFit as PhotoFit | undefined) ?? "cover");
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [pending, start] = useTransition();
@@ -302,10 +305,29 @@ function ProductDialog({ product, variants, barcode, categories, onClose, onDone
         </fieldset>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <label htmlFor="pr-photo" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted focus-within:outline-2 focus-within:outline-accent"><ImagePlus className="size-4" aria-hidden="true" />{product?.photoUrl || file ? t("Changer la photo") : t("Ajouter une photo")}</label>
-          <input id="pr-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(e) => { setFile(e.target.files?.[0]?.name ?? null); setRemovePhoto(false); }} />
+          <input id="pr-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(e) => { const f0 = e.target.files?.[0]; setFile(f0?.name ?? null); setPreview(f0 ? URL.createObjectURL(f0) : null); setRemovePhoto(false); }} />
           <span className="text-sm text-muted">{file ?? (product?.photoUrl && !removePhoto ? t("Photo en place") : t("Aucune photo"))}</span>
           {product?.photoUrl && !file && !removePhoto ? <button type="button" className="text-sm font-medium text-danger" onClick={() => setRemovePhoto(true)}>{t("Retirer")}</button> : null}
         </div>
+        {(preview || (product?.photoUrl && !removePhoto)) ? (
+          // Cadrage de la photo sur la boutique : remplie (recadrée, au centre / en haut / en bas) ou entière (rien n'est coupé).
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <input type="hidden" name="photoFit" value={fit} />
+            <span className="size-28 shrink-0 overflow-hidden rounded-xl border border-border bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview ?? product!.photoUrl!} alt="" className={cn("size-full", photoFitClass(fit))} />
+            </span>
+            <div>
+              <p className="text-sm font-medium">{t("Cadrage sur la boutique")}</p>
+              <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label={t("Cadrage sur la boutique")}>
+                {([["contain", "Image entière"], ["cover", "Remplir"], ["cover-top", "Remplir, haut"], ["cover-bottom", "Remplir, bas"]] as const).map(([k, label]) => (
+                  <button key={k} type="button" role="radio" aria-checked={fit === k} onClick={() => setFit(k)} className={cn("h-9 rounded-full border px-3 text-sm", fit === k ? "border-accent bg-accent-soft font-medium text-accent-soft-foreground" : "border-border hover:bg-surface-muted")}>{t(label)}</button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-muted">{t("« Image entière » : rien n'est coupé (idéal pour une canette ou une bouteille).")}</p>
+            </div>
+          </div>
+        ) : null}
         {error ? <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
           {product?.active ? <Button type="button" variant="ghost" className="text-danger sm:mr-auto" icon={<Trash2 className="size-4" aria-hidden="true" />} onClick={() => setConfirm(true)} disabled={pending}>{t("Retirer")}</Button> : <span className="sm:mr-auto" />}

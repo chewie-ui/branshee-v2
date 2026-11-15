@@ -45,6 +45,7 @@ export default async function ShopFrontPage({ params, searchParams }: { params: 
       business={{ name: s.business.name, photoUrl: s.business.photoUrl, city: s.business.city }}
       settings={{ intro: s.settings.intro, pickup: s.settings.pickup, pickupNote: s.settings.pickupNote, delivery: s.settings.delivery, deliveryCents: s.settings.deliveryCents, freeDeliveryFromCents: s.settings.freeDeliveryFromCents, deliveryNote: s.settings.deliveryNote, payOnline: s.canPayOnline, payOnPickup: s.settings.payOnPickup, payTransfer: s.settings.payTransfer }}
       items={s.items}
+      deals={s.deals}
       seller={s.seller}
       tx={publicTexts(locale).shop}
       intl={intlLocale(locale)}

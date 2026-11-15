@@ -12,13 +12,16 @@ import { rateLimit } from "@/server/auth/rate-limit";
 import { stripe } from "@/server/payments";
 import { cancelShopOrderAndRestock, notifyNewOrder, publicShop, shopOrigin, stripeDestination } from "@/server/shop";
 import { priceSelection, promoPrice } from "@/lib/product-options";
+import { computeDiscounts, dealLive, inTarget, toUnits, todayBrussels, type Deal } from "@/lib/deals";
 
 type Result = { ok: true; url: string } | { ok: false; error: string };
 
 const schema = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
   // choices : options choisies (pain, suppléments…) ; le prix est recalculé ici, jamais pris du navigateur.
-  lines: z.array(z.object({ productId: z.uuid(), qty: z.number().int().min(1).max(MAX_SHOP_QTY), choices: z.array(z.string().regex(/^[a-z0-9]{4,16}$/)).max(60).optional().default([]) })).min(1, "Votre panier est vide.").max(50),
+  lines: z.array(z.object({ productId: z.uuid(), qty: z.number().int().min(1).max(MAX_SHOP_QTY), choices: z.array(z.string().regex(/^[a-z0-9]{4,16}$/)).max(60).optional().default([]) })).max(50),
+  // Menus : un produit choisi par emplacement (ex. sandwich + boisson + dessert), au prix fixe du menu.
+  menus: z.array(z.object({ menuId: z.string().regex(/^[a-z0-9]{4,16}$/), qty: z.number().int().min(1).max(MAX_SHOP_QTY), picks: z.array(z.uuid()).min(2).max(8) })).max(20).optional().default([]),
   fulfilment: z.enum(["pickup", "delivery"]),
   payMethod: z.enum(["online", "pickup", "transfer"]),
   name: z.string().trim().min(2, "Indiquez votre nom.").max(120),
@@ -51,8 +54,14 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
   const [recent] = await db.select({ n: sql<number>`count(*)::int` }).from(shopOrders).where(and(eq(shopOrders.businessId, shop.business.id), eq(shopOrders.email, d.email.toLowerCase()), sql`${shopOrders.createdAt} > now() - interval '1 hour'`));
   if ((recent?.n ?? 0) >= 3) return { ok: false, error: "Vous avez déjà passé plusieurs commandes : contactez la boutique." };
   // Quantité totale par produit (pour le stock), toutes options confondues.
+  if (!d.lines.length && !d.menus.length) return { ok: false, error: "Votre panier est vide." };
+  const today = todayBrussels();
+  const menuDefs = new Map((s.deals ?? []).filter((x): x is Extract<Deal, { kind: "menu" }> => x.kind === "menu" && dealLive(x, today)).map((m) => [m.id, m]));
+  for (const m of d.menus) if (!menuDefs.has(m.menuId) || m.picks.length !== menuDefs.get(m.menuId)!.slots.length) return { ok: false, error: "Un menu de votre panier n'est plus proposé. Rechargez la page." };
+  // Quantité totale par produit (stock) : articles seuls + produits choisis dans les menus.
   const qty = new Map<string, number>();
   for (const l of d.lines) qty.set(l.productId, (qty.get(l.productId) ?? 0) + l.qty);
+  for (const m of d.menus) for (const pid of m.picks) qty.set(pid, (qty.get(pid) ?? 0) + m.qty);
   if ([...qty.values()].some((q) => q > MAX_SHOP_QTY)) return { ok: false, error: `${MAX_SHOP_QTY} exemplaires maximum par produit.` };
   const token = randomBytes(18).toString("base64url");
   const order = await db.transaction(async (tx) => {
@@ -75,7 +84,21 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
       const prev = merged.get(key);
       merged.set(key, prev ? { ...prev, qty: prev.qty + l.qty } : { productId: p.id, name, qty: l.qty, unitCents: unit, vatRate: p.vatRate });
     }
-    const lines = [...merged.values()];
+    // Promos « X achetés → Y à −Z % » sur les articles seuls (pas ceux des menus), calculées ici.
+    const units = toUnits([...merged.values()].map((l) => ({ ...l, category: byId.get(l.productId)!.category })));
+    const discounts = computeDiscounts(units, s.deals ?? [], today);
+    // Menus : chaque choix doit appartenir à son emplacement ; prix fixe du menu.
+    const menuLines: ShopLine[] = [];
+    for (const m of d.menus) {
+      const def = menuDefs.get(m.menuId)!;
+      const picked = m.picks.map((pid) => byId.get(pid)!);
+      const bad = def.slots.findIndex((slot, i) => !inTarget(slot.target, picked[i]!));
+      if (bad >= 0) return { error: `Menu « ${def.name} » : « ${picked[bad]!.name} » ne peut pas être choisi pour « ${def.slots[bad]!.label} ». Rechargez la page.` };
+      const name = `${def.name} (${picked.map((p) => p.name).join(", ")})`;
+      const prev = menuLines.find((x) => x.name === name);
+      if (prev) prev.qty += m.qty; else menuLines.push({ productId: "", name, qty: m.qty, unitCents: def.priceCents, vatRate: def.vatRate });
+    }
+    const lines = [...merged.values(), ...menuLines, ...discounts.map((x) => ({ productId: "", name: `Promo : ${x.name}`, qty: 1, unitCents: -x.cents, vatRate: x.vatRate }))];
     const itemsCents = lines.reduce((a, l) => a + l.qty * l.unitCents, 0);
     const delivery = d.fulfilment === "delivery" ? deliveryFee(itemsCents, s) : 0;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${shop.business.id}:shop`}))`);
@@ -100,7 +123,8 @@ export async function placeShopOrder(input: z.input<typeof schema>): Promise<Res
       const session = await st.checkout.sessions.create({
         mode: "payment",
         customer_email: o.email,
-        line_items: [...o.lines.map((l) => ({ quantity: l.qty, price_data: { currency: "eur", unit_amount: l.unitCents, product_data: { name: l.name } } })), ...(o.deliveryCents ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: o.deliveryCents, product_data: { name: "Livraison" } } }] : [])],
+        // Stripe refuse les montants négatifs : avec une promo, une seule ligne au total de la commande.
+        line_items: [...(o.lines.some((l) => l.unitCents < 0) ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: o.itemsCents, product_data: { name: `Commande n° ${o.number} — ${shop.business.name}` } } }] : o.lines.map((l) => ({ quantity: l.qty, price_data: { currency: "eur", unit_amount: l.unitCents, product_data: { name: l.name } } }))), ...(o.deliveryCents ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: o.deliveryCents, product_data: { name: "Livraison" } } }] : [])],
         payment_intent_data: { transfer_data: { destination: dest }, description: `${shop.business.name} — commande n° ${o.number}` },
         metadata: { type: "shop_order", orderId: o.id, businessId: shop.business.id },
         success_url: `${track}?paye=1`,

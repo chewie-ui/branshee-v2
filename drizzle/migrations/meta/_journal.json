@@ -421,6 +421,13 @@
       "when": 1794738193081,
       "tag": "0059_loyalty_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794738660427,
+      "tag": "0060_shop_deals",
+      "breakpoints": true
     }
   ]
 }

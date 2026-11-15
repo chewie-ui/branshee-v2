@@ -33,6 +33,8 @@ export const products = pgTable(
     description: text("description"),
     /** Promo boutique en ligne : prix promo TVAC (prix normal barré), jusqu'à une date (null = sans fin). */
     promoCents: integer("promo_cents"),
+    /** Cadrage de la photo sur la boutique : cover | cover-top | cover-bottom | contain (lib/photo-fit). */
+    photoFit: text("photo_fit").notNull().default("cover"),
     promoUntil: timestamp("promo_until", { withTimezone: true }),
     /** Options à la commande (boutique) : composer, retirer, suppléments payants. Voir lib/product-options. */
     options: jsonb("options").$type<import("@/lib/product-options").OptionGroup[]>().notNull().default([]),

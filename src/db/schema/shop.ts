@@ -20,6 +20,8 @@ export const shopSettings = pgTable("shop_settings", {
   intro: text("intro"),
   /** Apparence de la boutique (couleurs, police, bannière, mise en page) : voir lib/shop-theme. */
   theme: jsonb("theme").$type<Record<string, unknown>>().notNull().default({}),
+  /** Promos (« 1 acheté = 1 offert », « −50 % sur… ») et menus à prix fixe : voir lib/deals. */
+  deals: jsonb("deals").$type<import("@/lib/deals").Deal[]>().notNull().default([]),
   ...timestamps,
 });
 

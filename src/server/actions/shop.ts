@@ -12,6 +12,7 @@ import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { cancelShopOrderAndRestock, shopOrigin, shopRights } from "@/server/shop";
 import { shopThemeSchema } from "@/lib/shop-theme";
+import { dealsSchema } from "@/lib/deals";
 import { savePublicImage } from "@/server/storage";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
@@ -108,4 +109,18 @@ export async function uploadShopBanner(fd: FormData): Promise<{ ok: true; url: s
   if (!(f instanceof File) || f.size === 0) return { ok: false, error: "Choisissez une image." };
   if (f.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };
   try { return { ok: true, url: await savePublicImage(Buffer.from(await f.arrayBuffer())) }; } catch { return { ok: false, error: "Image : JPG, PNG ou WebP." }; }
+}
+
+/** Promos et menus de la boutique (liste complète, validée). */
+export async function saveShopDeals(input: unknown): Promise<Result> {
+  const ctx = await requireContext(undefined, { app: "boutique" });
+  if (ctx.impersonating) return SUPERVISION;
+  if (!shopRights(ctx).manage) return { ok: false, error: "Seul le responsable règle la boutique." };
+  const v = dealsSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Offre invalide." };
+  for (const d of v.data) if (d.startsOn && d.endsOn && d.endsOn < d.startsOn) return { ok: false, error: `« ${d.name} » : la date de fin est avant la date de début.` };
+  await db.insert(shopSettings).values({ businessId: ctx.business.id, deals: v.data }).onConflictDoUpdate({ target: shopSettings.businessId, set: { deals: v.data, updatedAt: new Date() } });
+  refresh();
+  revalidatePath(`/boutique/${ctx.business.slug}`);
+  return { ok: true, message: "Promos et menus enregistrés." };
 }
