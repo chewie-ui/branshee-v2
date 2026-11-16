@@ -3,6 +3,7 @@ import { recordError, trackJob } from "@/server/health";
 import { sendInvoiceReminders } from "@/server/invoice-mailing";
 import { reconcileReferrals } from "@/server/billing";
 import { purgeOldLogs } from "@/server/retention";
+import { indexNowSitemap } from "@/server/indexnow";
 import { reconcileSkydevUsers, sendCreateBusinessNudges, sendSalesFollowUps, sendLowStockAlerts, sendGrantExpiryReminders, sendOnboardingNudges, sendPlanEndedNotices } from "@/server/jobs";
 
 export const dynamic = "force-dynamic";
@@ -30,5 +31,6 @@ export async function POST(req: Request) {
     invoiceReminders: await run("relances factures", sendInvoiceReminders),
     referrals: await run("parrainages", reconcileReferrals),
     retention: await run("durées de conservation", purgeOldLogs),
+    indexNow: await run("IndexNow (Bing)", indexNowSitemap),
   })));
 }

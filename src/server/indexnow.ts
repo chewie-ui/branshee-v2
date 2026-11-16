@@ -21,3 +21,17 @@ export async function indexNow(paths: string[]) {
     signal: AbortSignal.timeout(5000),
   }).catch(() => {});
 }
+
+/**
+ * Signale à Bing (IndexNow) les pages du sitemap : chaque jour celles modifiées depuis 2 jours,
+ * et toutes le lundi (nouvelles pages d'entreprises, de métiers et de villes).
+ */
+export async function indexNowSitemap() {
+  const { default: sitemap } = await import("@/app/sitemap");
+  const all = await sitemap();
+  const since = Date.now() - 2 * 86400_000;
+  const monday = new Date().getUTCDay() === 1;
+  const urls = all.filter((e) => monday || (e.lastModified && new Date(e.lastModified).getTime() > since)).map((e) => e.url);
+  for (let i = 0; i < urls.length; i += 10_000) await indexNow(urls.slice(i, i + 10_000));
+  return urls.length;
+}

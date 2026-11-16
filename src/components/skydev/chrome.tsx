@@ -1,18 +1,35 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { LEGAL, legalAddress } from "@/lib/legal";
 import { alternatePath } from "@/lib/site-alternate";
 import type { SiteLocale } from "@/lib/site-locale";
 import { LocaleGuard } from "./locale-guard";
+import { MenuCloser } from "./menu-closer";
 import "./skydev.css";
 
 type L = { href: string; label: string };
+
+/** Drapeaux des langues du site (SVG : pas d'emoji, rendu identique partout). */
+function Flag({ code }: { code: SiteLocale }) {
+  return code === "fr" ? (
+    <svg viewBox="0 0 3 2" className="flag" aria-hidden="true"><rect width="1" height="2" fill="#002654" /><rect x="1" width="1" height="2" fill="#fff" /><rect x="2" width="1" height="2" fill="#ce1126" /></svg>
+  ) : (
+    <svg viewBox="0 0 60 30" className="flag" aria-hidden="true">
+      <rect width="60" height="30" fill="#012169" />
+      <path d="M0 0l60 30M60 0L0 30" stroke="#fff" strokeWidth="6" />
+      <path d="M0 0l60 30M60 0L0 30" stroke="#c8102e" strokeWidth="2" />
+      <path d="M30 0v30M0 15h60" stroke="#fff" strokeWidth="10" />
+      <path d="M30 0v30M0 15h60" stroke="#c8102e" strokeWidth="6" />
+    </svg>
+  );
+}
+const LANG_NAMES: Record<SiteLocale, string> = { fr: "Français", en: "English" };
 const T: Record<SiteLocale, {
   skip: string; promo: [string, string]; tryIt: string; home: string; mainNav: string; mobileNav: string; nav: L[];
   space: string; demo: string; login: string; signup: [string, string]; tagline: string;
-  cols: { title: string; links: L[] }[]; contact: string; place: string; legal: string; lang: string; langLabel: string;
+  cols: { title: string; links: L[] }[]; contact: string; place: string; legal: string; lang: string; langLabel: string; langChoose: string;
 }> = {
   fr: {
     skip: "Aller au contenu", promo: ["1er mois offert : 0 €", ", sans carte bancaire et sans engagement."], tryIt: "Essayer gratuitement", home: "Skydev, accueil",
@@ -25,7 +42,7 @@ const T: Record<SiteLocale, {
       { title: "Apps", links: [{ href: "/apps", label: "Toutes les apps" }, { href: "/apps/rendez-vous", label: "Rendez-vous en ligne" }, { href: "/apps/factures", label: "Devis et factures" }, { href: "/apps/caisse", label: "Caisse" }, { href: "/apps/site-web", label: "Site web" }, { href: "/logiciel/garage", label: "Logiciel pour garage" }, { href: "/logiciel/kine", label: "Logiciel pour kiné" }] },
       { title: "Skydev", links: [{ href: "/annuaire", label: "Trouver un professionnel" }, { href: "/annuaire/coiffeur/wavre", label: "Coiffeur à Wavre" }, { href: "/annuaire/kine/wavre", label: "Kiné à Wavre" }, { href: "/sur-mesure", label: "Sur mesure" }, { href: "/#tarifs", label: "Tarifs" }, { href: "/connexion", label: "Se connecter" }, { href: "/conditions-utilisation", label: "Conditions" }, { href: "/confidentialite", label: "Confidentialité" }] },
     ],
-    contact: "Contact", place: "Wavre, Belgique", legal: "entreprise personne physique", lang: "English", langLabel: "View this page in English",
+    contact: "Contact", place: "Wavre, Belgique", legal: "entreprise personne physique", lang: "English", langLabel: "View this page in English", langChoose: "Choisir la langue",
   },
   en: {
     skip: "Skip to content", promo: ["First month free: €0", ", no credit card, no commitment."], tryIt: "Try it for free", home: "Skydev, home",
@@ -38,7 +55,7 @@ const T: Record<SiteLocale, {
       { title: "Apps", links: [{ href: "/apps", label: "All apps" }, { href: "/logiciel/garage", label: "Software for garages" }, { href: "/logiciel/kine", label: "Software for physios" }] },
       { title: "Skydev", links: [{ href: "/sur-mesure", label: "Custom work" }, { href: "/#tarifs", label: "Pricing" }, { href: "/connexion", label: "Log in" }, { href: "/conditions-utilisation", label: "Terms (French)" }, { href: "/confidentialite", label: "Privacy (French)" }] },
     ],
-    contact: "Contact", place: "Wavre, Belgium", legal: "sole proprietorship", lang: "Français", langLabel: "Voir cette page en français",
+    contact: "Contact", place: "Wavre, Belgium", legal: "sole proprietorship", lang: "Français", langLabel: "Voir cette page en français", langChoose: "Choose language",
   },
 };
 
@@ -53,6 +70,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
   return (
     <div className="sky" lang={locale}>
       <LocaleGuard locale={locale} />
+      <MenuCloser />
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">{t.skip}</a>
       {!signedIn ? (
         <p className="promo-bar"><b>{t.promo[0]}</b>{t.promo[1]}<Link href={L("/inscription")}>{t.tryIt}</Link></p>
@@ -67,7 +85,16 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
             {t.nav.map((n) => <Link key={n.href} href={L(n.href)}>{n.label}</Link>)}
           </nav>
           <div className="nav-r">
-            <a className="nav-login nav-lang" href={switchHref} hrefLang={other} aria-label={t.langLabel}>{other.toUpperCase()}</a>
+            <details className="lang-pick">
+              <summary aria-label={t.langChoose}><Flag code={locale} /><span className="lang-code">{locale.toUpperCase()}</span><ChevronDown className="lang-chev" aria-hidden="true" /></summary>
+              <div className="lang-menu">
+                {(["fr", "en"] as const).map((l) => (
+                  <a key={l} href={l === locale ? alternatePath(path, l) : l === "en" ? switchHref : alt} hrefLang={l} lang={l} aria-current={l === locale ? "true" : undefined}>
+                    <Flag code={l} />{LANG_NAMES[l]}
+                  </a>
+                ))}
+              </div>
+            </details>
             {signedIn ? (
               <Link className="btn btn-primary btn-sm" href="/app">{t.space}</Link>
             ) : (
