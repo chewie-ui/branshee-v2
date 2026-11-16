@@ -79,7 +79,8 @@ export async function dismissOnboarding() {
 
 /** Photo ou logo de l'établissement (Réglages › Établissement) : la même image que sur la page publique. */
 export async function saveBusinessLogo(fd: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ctx = await requireContext("business.manage");
+  // `write` : comme les autres réglages, refusé quand l'espace est en lecture seule (essai terminé).
+  const ctx = await requireContext("business.manage", { write: true });
   const file = fd.get("photo");
   let photo: string | null;
   if (file instanceof File && file.size > 0) {
