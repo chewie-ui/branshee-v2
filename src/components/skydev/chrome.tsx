@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
 import { BrandMark } from "@/components/brand";
-import { LEGAL, legalAddress } from "@/lib/legal";
+import { LEGAL, SKYDEV_GOOGLE_REVIEW, legalAddress } from "@/lib/legal";
 import { alternatePath } from "@/lib/site-alternate";
 import type { SiteLocale } from "@/lib/site-locale";
 import { LocaleGuard } from "./locale-guard";
@@ -29,7 +29,7 @@ const LANG_NAMES: Record<SiteLocale, string> = { fr: "Français", en: "English" 
 const T: Record<SiteLocale, {
   skip: string; promo: [string, string]; tryIt: string; home: string; mainNav: string; mobileNav: string; nav: L[];
   space: string; demo: string; login: string; signup: [string, string]; tagline: string;
-  cols: { title: string; links: L[] }[]; contact: string; place: string; legal: string; lang: string; langLabel: string; langChoose: string;
+  cols: { title: string; links: L[] }[]; contact: string; place: string; legal: string; lang: string; langLabel: string; langChoose: string; review: string;
 }> = {
   fr: {
     skip: "Aller au contenu", promo: ["1er mois offert : 0 €", ", sans carte bancaire et sans engagement."], tryIt: "Essayer gratuitement", home: "Skydev, accueil",
@@ -42,7 +42,7 @@ const T: Record<SiteLocale, {
       { title: "Apps", links: [{ href: "/apps", label: "Toutes les apps" }, { href: "/apps/rendez-vous", label: "Rendez-vous en ligne" }, { href: "/apps/factures", label: "Devis et factures" }, { href: "/apps/caisse", label: "Caisse" }, { href: "/apps/site-web", label: "Site web" }, { href: "/logiciel/garage", label: "Logiciel pour garage" }, { href: "/logiciel/kine", label: "Logiciel pour kiné" }] },
       { title: "Skydev", links: [{ href: "/annuaire", label: "Trouver un professionnel" }, { href: "/annuaire/coiffeur/wavre", label: "Coiffeur à Wavre" }, { href: "/annuaire/kine/wavre", label: "Kiné à Wavre" }, { href: "/sur-mesure", label: "Sur mesure" }, { href: "/#tarifs", label: "Tarifs" }, { href: "/connexion", label: "Se connecter" }, { href: "/conditions-utilisation", label: "Conditions" }, { href: "/confidentialite", label: "Confidentialité" }] },
     ],
-    contact: "Contact", place: "Wavre, Belgique", legal: "entreprise personne physique", lang: "English", langLabel: "View this page in English", langChoose: "Choisir la langue",
+    contact: "Contact", place: "Wavre, Belgique", legal: "entreprise personne physique", lang: "English", langLabel: "View this page in English", langChoose: "Choisir la langue", review: "Laisser un avis Google ★",
   },
   en: {
     skip: "Skip to content", promo: ["First month free: €0", ", no credit card, no commitment."], tryIt: "Try it for free", home: "Skydev, home",
@@ -55,7 +55,7 @@ const T: Record<SiteLocale, {
       { title: "Apps", links: [{ href: "/apps", label: "All apps" }, { href: "/logiciel/garage", label: "Software for garages" }, { href: "/logiciel/kine", label: "Software for physios" }] },
       { title: "Skydev", links: [{ href: "/sur-mesure", label: "Custom work" }, { href: "/#tarifs", label: "Pricing" }, { href: "/connexion", label: "Log in" }, { href: "/conditions-utilisation", label: "Terms (French)" }, { href: "/confidentialite", label: "Privacy (French)" }] },
     ],
-    contact: "Contact", place: "Wavre, Belgium", legal: "sole proprietorship", lang: "Français", langLabel: "Voir cette page en français", langChoose: "Choose language",
+    contact: "Contact", place: "Wavre, Belgium", legal: "sole proprietorship", lang: "Français", langLabel: "Voir cette page en français", langChoose: "Choose language", review: "Leave a Google review ★",
   },
 };
 
@@ -131,7 +131,7 @@ export function SkydevChrome({ signedIn, children, locale = "fr", path = "/" }: 
           ))}
           <div>
             <h4>{t.contact}</h4>
-            <ul><li><a href="tel:+32477443988">{locale === "en" ? "+32 477 44 39 88" : "0477 44 39 88"}</a></li><li><a href="mailto:info@skydev.be">info@skydev.be</a></li><li>{t.place}</li><li><a href={switchHref} hrefLang={other}>{t.lang}</a></li></ul>
+            <ul><li><a href="tel:+32477443988">{locale === "en" ? "+32 477 44 39 88" : "0477 44 39 88"}</a></li><li><a href="mailto:info@skydev.be">info@skydev.be</a></li><li>{t.place}</li><li><a href={switchHref} hrefLang={other}>{t.lang}</a></li><li><a href={SKYDEV_GOOGLE_REVIEW} target="_blank" rel="noopener noreferrer">{t.review}</a></li></ul>
           </div>
         </div>
         <div className="wrap legal">© {new Date().getFullYear()} Skydev — {LEGAL.owner}, {t.legal} · {legalAddress} · BCE {LEGAL.bce} · TVA {LEGAL.vat}</div>

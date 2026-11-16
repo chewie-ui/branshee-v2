@@ -11,7 +11,9 @@ import { getSessionUser } from "@/server/auth/session";
 import { requireContext } from "@/server/context";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { businessModules } from "@/db/schema";
+import { businessModules, businesses, members } from "@/db/schema";
+import { ReviewAsk } from "@/components/apps/review-ask";
+import { SKYDEV_GOOGLE_REVIEW } from "@/lib/legal";
 import { effectivePlan } from "@/server/plan";
 import { SubscriptionSummary } from "@/components/apps/subscription-summary";
 import { PageScoreCard } from "@/components/directory/page-score-card";
@@ -20,6 +22,12 @@ import { slugify } from "@/lib/slug";
 import { de } from "@/lib/cn";
 import { pageFacts } from "@/server/directory";
 import { makeT } from "@/lib/i18n/app";
+
+/** Demande d'avis due : entreprise créée il y a plus de 14 jours, pas encore faite, « plus tard » écoulé. */
+function reviewAskDue(since: Date, r: { done?: boolean; later?: string } | undefined) {
+  const now = Date.now();
+  return now - since.getTime() > 14 * 86400_000 && !r?.done && (!r?.later || new Date(r.later).getTime() < now);
+}
 
 /** Apps rangées dans « Administration » (patron et admins), pas dans la grille des apps. */
 const ADMIN_APPS = new Set(["employes", "reglages"]);
@@ -57,12 +65,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   ] as const).filter((x) => x.ok).map(({ ok: _ok, ...x }) => x); // eslint-disable-line @typescript-eslint/no-unused-vars
   const firstName = ctx.user.name.split(" ")[0];
   const showPage = ctx.member.isOwner || ctx.can("business.manage");
-  const [plan, mods, apps, facts] = await Promise.all([
+  const [plan, mods, apps, facts, [ask]] = await Promise.all([
     effectivePlan(ctx.business.id),
     db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)),
     visibleApps(ctx),
     showPage ? pageFacts(ctx.business.id) : null,
+    db.select({ prefs: members.prefs, since: businesses.createdAt }).from(members).innerJoin(businesses, eq(businesses.id, members.businessId)).where(eq(members.id, ctx.member.id)),
   ]);
+  // Avis Google sur Skydev : demandé au responsable après 2 semaines d'utilisation, jamais deux fois (« plus tard » = 30 jours).
+  const r = ask?.prefs.reviewAsk;
+  const askReview = (await currentBrand()).id === "skydev" && canEdit && !!ask && reviewAskDue(ask.since, r);
   // Page publique : ce qu'il manque pour bien ressortir dans l'annuaire, et la page « métier à ville » où on la trouve.
   const score = facts ? pageCompleteness(facts) : null;
   const m = facts?.btype ? matchMetier(facts.btype) : null;
@@ -79,6 +91,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
         <p className="mt-1 text-sm text-muted">{ready ? t("Votre espace est prêt. Ouvrez une app pour commencer.") : ctx.user.locale === "en" ? t("Les apps de {business}.", { business: ctx.business.name }) : `Les apps ${de(ctx.business.name)}.`}</p>
       </div>
       {score ? <PageScoreCard items={score.items} percent={score.percent} slug={ctx.business.slug} searchHref={searchHref} searchLabel={searchLabel} locale={ctx.user.locale ?? "fr"} /> : null}
+      {askReview ? <ReviewAsk href={SKYDEV_GOOGLE_REVIEW} /> : null}
       {ctx.can("billing.manage") ? (
         <Link href="/app/parrainage" className="group mx-auto mb-8 flex max-w-3xl items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>

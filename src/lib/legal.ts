@@ -16,6 +16,9 @@ export const LEGAL = {
 /** Même entreprise, dénomination Skydev (skydev.be). */
 export const SKYDEV_LEGAL = { ...LEGAL, trade: "Skydev", email: "info@skydev.be" } as const;
 
+/** Lien direct « laisser un avis » de la fiche Google de Skydev. */
+export const SKYDEV_GOOGLE_REVIEW = "https://g.page/r/CZVsLewkWAcoEBM/review";
+
 export const legalAddress = `${LEGAL.street}, ${LEGAL.city}, ${LEGAL.country}`;
 
 /** Pied de facture Stripe : mentions obligatoires d'une facture belge (identité, adresse, BCE, TVA). */
