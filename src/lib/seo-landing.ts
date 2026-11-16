@@ -26,7 +26,7 @@ export const METIERS: SeoMetier[] = [
       },
       {
         "titre": "Moins d'absences non prévenues",
-        "texte": "Un rappel automatique part la veille par e-mail, SMS ou WhatsApp. Le patient qui ne peut plus venir annule lui-même, et le créneau se libère pour quelqu'un d'autre."
+        "texte": "Un rappel automatique part la veille par e-mail ou WhatsApp. Le patient qui ne peut plus venir annule lui-même, et le créneau se libère pour quelqu'un d'autre."
       },
       {
         "titre": "Le dossier du patient sous la main",
@@ -288,7 +288,7 @@ export const METIERS: SeoMetier[] = [
       },
       {
         "titre": "Des rappels qui évitent les oublis",
-        "texte": "Un rendez-vous pris trois mois à l'avance s'oublie. Le rappel automatique part la veille, par e-mail ou par SMS."
+        "texte": "Un rendez-vous pris trois mois à l'avance s'oublie. Le rappel automatique part la veille, par e-mail ou par WhatsApp."
       }
     ],
     "faq": [

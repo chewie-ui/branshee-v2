@@ -16,7 +16,7 @@ export const APP_FEATURES = [
 ] as const;
 
 /** Interrupteurs « cachés » : désactivés tant qu'ils ne sont pas allumés (comme l'ancien Branshee). */
-export const HIDDEN_FEATURES = [{ key: "sms_notifications", label: "Notifications SMS / WhatsApp" }] as const;
+export const HIDDEN_FEATURES = [{ key: "sms_notifications", label: "Notifications WhatsApp" }] as const;
 
 export type FeatureStatus = "active" | "maintenance" | "error" | "disabled";
 export const STATUS_LABELS: Record<FeatureStatus, string> = { active: "En ligne", maintenance: "En maintenance", error: "Erreur temporaire", disabled: "Désactivée" };

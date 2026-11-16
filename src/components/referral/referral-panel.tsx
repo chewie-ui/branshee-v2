@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { Check, Copy, Gift, Mail, MessageCircle, Share2, Smartphone } from "lucide-react";
+import { Check, Copy, Gift, Mail, MessageCircle, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -54,7 +54,7 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
 
         <ol className="mt-6 grid gap-3 sm:grid-cols-3">
           {[
-            { n: 1, t: t("Partagez votre lien"), d: t("Par WhatsApp, SMS ou email, en un clic.") },
+            { n: 1, t: t("Partagez votre lien"), d: t("Par WhatsApp ou email, en un clic.") },
             { n: 2, t: t("Il essaie gratuitement"), d: t("Puis il s'abonne s'il est convaincu.") },
             { n: 3, t: t("Vous gagnez 29 €"), d: "1 mois offert dès son 2e paiement. Vous êtes prévenu par email." },
           ].map((s) => (
@@ -72,7 +72,6 @@ export function ReferralPanel({ brand, code, link, paying, claimable, claimed, i
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <a className={share} href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" aria-hidden="true" />WhatsApp</a>
-          <a className={share} href={`sms:?&body=${encodeURIComponent(text)}`}><Smartphone className="size-4" aria-hidden="true" />SMS</a>
           <a className={share} href={`mailto:?subject=${encodeURIComponent(`Je te conseille ${brand}`)}&body=${encodeURIComponent(text)}`}><Mail className="size-4" aria-hidden="true" />{t("Email")}</a>
           {canShare ? <button type="button" className={share} onClick={nativeShare}><Share2 className="size-4" aria-hidden="true" />{t("Autre")}</button> : null}
         </div>

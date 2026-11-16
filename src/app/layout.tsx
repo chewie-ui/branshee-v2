@@ -29,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-dvh antialiased">
         {isStaging() ? (
           <div role="status" className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning">
-            Version de test — les emails, SMS et notifications ne partent pas vers les clients.
+            Version de test — les emails, messages WhatsApp et notifications ne partent pas vers les clients.
           </div>
         ) : null}
         {children}

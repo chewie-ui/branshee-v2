@@ -19,7 +19,7 @@ export async function saveSmsSettings(input: { smsReminders: boolean; smsConfirm
   const v = z.object({ smsReminders: z.boolean(), smsConfirmations: z.boolean(), smsAllowOverage: z.boolean(), whatsappReminders: z.boolean(), whatsappConfirmations: z.boolean() }).safeParse(input);
   if (!v.success) return { ok: false, error: "Réglages invalides." };
   await db.update(notificationSettings).set(v.data).where(eq(notificationSettings.businessId, ctx.business.id));
-  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "settings.sms", description: "Réglages SMS / WhatsApp modifiés" });
+  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "settings.sms", description: "Réglages WhatsApp modifiés" });
   revalidatePath("/app/reglages/sms");
   return { ok: true, message: "Réglages enregistrés." };
 }
@@ -35,7 +35,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const amount = z.union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)]).safeParse(amountEuros);
   if (!amount.success) return { ok: false, error: "Montant invalide." };
-  if (!smsConfigured() && !whatsappConfigured()) return { ok: false, error: "Les SMS ne sont pas encore disponibles : aucune recharge n'est nécessaire." };
+  if (!smsConfigured() && !whatsappConfigured()) return { ok: false, error: "WhatsApp n'est pas encore disponible : aucune recharge n'est nécessaire." };
   const s = stripe();
   if (!s) return { ok: false, error: "Paiement non configuré." };
   const owner = await ownerOf(ctx);
@@ -45,7 +45,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
   const session = await s.checkout.sessions.create({
     mode: "payment",
     customer,
-    line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: `Crédit SMS / WhatsApp — ${amount.data} €` } }, quantity: 1, tax_rates: [await vatRate()] }],
+    line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: `Crédit WhatsApp — ${amount.data} €` } }, quantity: 1, tax_rates: [await vatRate()] }],
     // La carte est gardée pour la recharge automatique.
     payment_intent_data: { setup_future_usage: "off_session", metadata: { type: META.smsType(), [META.user()]: ctx.user.id } },
     metadata: { type: META.smsType(), [META.user()]: ctx.user.id, creditCents: String(cents) },
@@ -53,7 +53,7 @@ export async function topUpSms(amountEuros: number): Promise<Result> {
     cancel_url: `${appUrl()}/app/reglages/sms`,
     locale: "fr",
     // Facture Stripe numérotée (comme pour les abonnements), envoyée au pro avec ses coordonnées de facturation.
-    invoice_creation: { enabled: true, invoice_data: { description: process.env.FORCE_BRAND === "skydev" ? "Crédit SMS / WhatsApp Skydev" : "Crédit SMS / WhatsApp Branshee", footer: invoiceFooter, metadata: { type: META.smsType(), [META.user()]: ctx.user.id } } },
+    invoice_creation: { enabled: true, invoice_data: { description: process.env.FORCE_BRAND === "skydev" ? "Crédit WhatsApp Skydev" : "Crédit WhatsApp Branshee", footer: invoiceFooter, metadata: { type: META.smsType(), [META.user()]: ctx.user.id } } },
     // Mentions légales : nom, adresse complète et n° de TVA (entreprises) repris sur la facture.
     custom_text: { submit: { message: `Indiquez le nom et l'adresse complète à mettre sur la facture. Si vous êtes une entreprise assujettie à la TVA, cochez « J'achète en tant qu'entreprise » et ajoutez votre numéro de TVA. ${process.env.FORCE_BRAND === "skydev" ? "En payant, vous acceptez les conditions d'utilisation de Skydev (skydev.be/conditions-utilisation)." : "En payant, vous acceptez les conditions d'utilisation de Branshee (branshee.com/conditions-utilisation)."}` } },
     billing_address_collection: "required",

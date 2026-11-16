@@ -15,7 +15,7 @@ type R = { ok: true; message?: string; url?: string } | { ok: false; error: stri
 const FEATURES: { label: string; pro: string | boolean; pro_plus: string | boolean }[] = [
   { label: "Réservation en ligne illimitée, prestations illimitées", pro: true, pro_plus: true },
   { label: "Rappels automatiques par email", pro: true, pro_plus: true },
-  { label: "SMS inclus par mois", pro: String(LIMITS.smsIncluded.pro), pro_plus: String(LIMITS.smsIncluded.pro_plus) },
+  { label: "Messages WhatsApp inclus par mois", pro: String(LIMITS.smsIncluded.pro), pro_plus: String(LIMITS.smsIncluded.pro_plus) },
   { label: "Collaborateurs inclus", pro: String(LIMITS.collaborators.pro), pro_plus: String(LIMITS.collaborators.pro_plus) },
   { label: "Questions avant réservation", pro: String(LIMITS.formQuestions.pro), pro_plus: String(LIMITS.formQuestions.pro_plus) },
   { label: "Personnalisation de la page, réseaux sociaux", pro: true, pro_plus: true },

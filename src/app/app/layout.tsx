@@ -63,7 +63,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <>
       {ctx.user.isDemo ? (
         <div className="mb-6 flex flex-col gap-3 rounded-xl border border-accent/30 bg-accent-soft p-4 sm:flex-row sm:items-center" role="status">
-          <p className="min-w-0 flex-1 text-sm text-accent-soft-foreground"><b>Mode démo : essayez tout librement.</b> Créez une facture, un rendez-vous, un client… Ce cabinet est fictif et rien n&apos;est conservé : vos essais sont effacés automatiquement et aucun email ni SMS n&apos;est envoyé. Pour commencer pour de vrai, créez votre compte (30 jours gratuits).</p>
+          <p className="min-w-0 flex-1 text-sm text-accent-soft-foreground"><b>Mode démo : essayez tout librement.</b> Créez une facture, un rendez-vous, un client… Ce cabinet est fictif et rien n&apos;est conservé : vos essais sont effacés automatiquement et aucun email ni message WhatsApp n&apos;est envoyé. Pour commencer pour de vrai, créez votre compte (30 jours gratuits).</p>
           <Link href="/inscription?demo=1" className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">Créer mon compte gratuit</Link>
         </div>
       ) : null}

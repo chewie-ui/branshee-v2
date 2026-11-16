@@ -1,8 +1,7 @@
 "use client";
 
-import { useBrandName } from "@/components/brand-context";
 import { useState, useTransition } from "react";
-import { MessageCircle, Smartphone } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Select } from "@/components/ui/field";
@@ -27,10 +26,9 @@ function Switch({ checked, onChange, label, description, disabled }: { checked: 
 
 const eur = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
-export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, smsReady, waReady, isOwner, prices, businessName: bn }: { businessName?: string; initial: Flags; included: number; used: number; balanceCents: number; autoRecharge: { enabled: boolean; thresholdCents: number; amountCents: number }; smsReady: boolean; waReady: boolean; isOwner: boolean; prices: { sms: number; wa: number } }) {
+export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, waReady, isOwner, prices, businessName: bn }: { businessName?: string; initial: Flags; included: number; used: number; balanceCents: number; autoRecharge: { enabled: boolean; thresholdCents: number; amountCents: number }; smsReady?: boolean; waReady: boolean; isOwner: boolean; prices: { sms: number; wa: number } }) {
   const t = useT();
   const businessName = bn ?? t("votre établissement");
-  const brandName = useBrandName();
   const [f, setF] = useState(initial);
   const [ar, setAr] = useState(autoRecharge);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -53,8 +51,8 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
           <p className="mt-1 text-2xl font-semibold tabular-nums">{eur(balanceCents)}</p>
           <p className="text-sm text-muted">{eur(prices.wa)} {t("par message WhatsApp au-delà du forfait")}</p>
           {isOwner ? <p className="text-xs text-muted">{t("Montants TVA comprise.")}</p> : null}
-          {isOwner && !waReady && !smsReady ? <p className="mt-3 text-xs text-muted">{t("La recharge sera disponible dès l'activation de WhatsApp.")}</p> : null}
-          {isOwner && (waReady || smsReady) ? (
+          {isOwner && !waReady ? <p className="mt-3 text-xs text-muted">{t("La recharge sera disponible dès l'activation de WhatsApp.")}</p> : null}
+          {isOwner && waReady ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {[10, 20, 50].map((a) => <Button key={a} size="sm" variant="secondary" loading={pending} onClick={() => run(() => topUpSms(a))}>+ {a} €</Button>)}
             </div>
@@ -63,7 +61,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
       </div>
 
       <Card>
-        <CardHeader title="WhatsApp" description={waReady ? (smsReady ? t("Prioritaire et moins cher que le SMS ; repli SMS puis email.") : t("Envoyé au numéro du client ; si l'envoi est impossible, l'email part à la place.")) : t("Bientôt disponible : cochez dès maintenant, ça démarrera tout seul. En attendant, vos clients reçoivent tout par e-mail.")} />
+        <CardHeader title="WhatsApp" description={waReady ? t("Envoyé au numéro du client ; si l'envoi est impossible, l'email part à la place.") : t("Bientôt disponible : cochez dès maintenant, ça démarrera tout seul. En attendant, vos clients reçoivent tout par e-mail.")} />
         <div className="divide-y divide-border">
           <Switch checked={f.whatsappReminders} onChange={set("whatsappReminders")} label={t("Rappel par WhatsApp")} description={t("Remplace l'email de rappel, au même moment.")} />
           <Switch checked={f.whatsappConfirmations} onChange={set("whatsappConfirmations")} label={t("Confirmation par WhatsApp")} description={t("En plus de l'email de confirmation.")} />
@@ -76,26 +74,13 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
         )}
       </Card>
 
-      {smsReady ? (
-        <Card>
-          <CardHeader title="SMS" description={waReady ? t("Utilisé si WhatsApp n'a pas pu partir ; sinon l'email part à la place.") : t("Envoyés au numéro du client ; si l'envoi est impossible, l'email part à la place.")} />
-          <div className="divide-y divide-border">
-            <Switch checked={f.smsReminders} onChange={set("smsReminders")} label={t("Rappel par SMS")} description={t("Remplace l'email de rappel, au même moment.")} />
-            <Switch checked={f.smsConfirmations} onChange={set("smsConfirmations")} label={t("SMS de confirmation")} description={t("En plus de l'email de confirmation.")} />
-          </div>
-          <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
-            <p className="mb-1 flex items-center gap-2 font-medium"><Smartphone className="size-4" aria-hidden="true" />{t("Aperçu")}</p>
-            <p className="text-muted">{t("Rappel : votre rendez-vous chez")} <span className="text-text">{businessName}</span> est jeudi 12 mars à 10:30. Gérer : {brandName === "Skydev" ? "skydev.be" : "branshee.com"}/r/…</p>
-          </div>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader title={t("Au-delà des messages inclus")} description={`${included} ${t("messages WhatsApp inclus chaque mois.")}`} />
         <Switch checked={f.smsAllowOverage} onChange={set("smsAllowOverage")} label={t("Continuer avec le solde prépayé")} description={t("Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email.")} />
       </Card>
 
-      {isOwner && (waReady || smsReady) ? (
+      {isOwner && waReady ? (
         <Card>
           <CardHeader title={t("Recharge automatique")} description={t("Quand le solde passe sous le seuil, votre carte est débitée du montant choisi.")} />
           <div className="flex flex-wrap items-end gap-4 p-5">

@@ -461,7 +461,7 @@ export const emails = {
       ...render({
         preheader: `Tout le forfait Pro offert jusqu'au ${p.until}`,
         title: `Bonjour ${p.name},`,
-        intro: `Branshee passe à une nouvelle version, plus rapide et plus complète. Pour la découvrir, ${p.businessName} profite du forfait Pro offert pendant 30 jours, jusqu'au ${p.until} : rappels automatiques par email et SMS, réservations illimitées, personnalisation de votre page. Votre page et vos rendez-vous sont repris tels quels.`,
+        intro: `Branshee passe à une nouvelle version, plus rapide et plus complète. Pour la découvrir, ${p.businessName} profite du forfait Pro offert pendant 30 jours, jusqu'au ${p.until} : rappels automatiques par email et WhatsApp, réservations illimitées, personnalisation de votre page. Votre page et vos rendez-vous sont repris tels quels.`,
         details: [
           { label: "Essai gratuit", value: `jusqu'au ${p.until}` },
           { label: "Ensuite", value: "Pro à 23 €/mois TVAC, sans engagement" },

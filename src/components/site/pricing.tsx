@@ -11,7 +11,7 @@ const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
   pro: [
     "Rendez-vous et prestations illimités, 0 % de commission",
     "Page de réservation 24 h/24, sans compte client",
-    `Rappels automatiques par email, ${LIMITS.smsIncluded.pro} SMS ou WhatsApp inclus par mois`,
+    `Rappels automatiques par email et WhatsApp, ${LIMITS.smsIncluded.pro} messages WhatsApp inclus par mois`,
     "Agenda, fiches et dossiers clients, historique complet",
     "Paiement en ligne et politique d'annulation (Stripe)",
     "Page personnalisée : couleurs, polices, galerie, réseaux sociaux",
@@ -25,7 +25,7 @@ const ITEMS: Record<Exclude<Plan, "free">, string[]> = {
     "Journal d'activité de l'équipe",
     "Mon site : un site vitrine publié en un clic",
     "Adresse personnalisée et emails sans mention Branshee",
-    `${LIMITS.smsIncluded.pro_plus} SMS ou WhatsApp inclus par mois · ${LIMITS.formQuestions.pro_plus} questions`,
+    `${LIMITS.smsIncluded.pro_plus} messages WhatsApp inclus par mois · ${LIMITS.formQuestions.pro_plus} questions`,
   ],
 };
 

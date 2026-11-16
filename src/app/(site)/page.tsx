@@ -72,7 +72,7 @@ const FEATURES = [
     tag: "Automatisation",
     title: "Les rendez-vous se gèrent tout seuls. Les absents paient.",
     desc: "Vos clients choisissent leur créneau, reçoivent une confirmation immédiate puis un rappel la veille. Pour les habitués du lapin : carte en garantie ou acompte via Stripe, l'absence devient facturable.",
-    items: ["Confirmations automatiques, rappel par email, SMS ou WhatsApp", "Paiement en ligne, carte en garantie, politique d'annulation", "Questions avant la réservation (première visite, allergies…)", "Synchronisation Google Agenda : jamais de double réservation"],
+    items: ["Confirmations automatiques, rappel par email ou WhatsApp", "Paiement en ligne, carte en garantie, politique d'annulation", "Questions avant la réservation (première visite, allergies…)", "Synchronisation Google Agenda : jamais de double réservation"],
     icon: BellRing,
   },
   {
@@ -86,7 +86,7 @@ const FEATURES = [
 
 const INCLUDED = [
   { icon: CalendarDays, title: "Agenda clair", desc: "Vue jour et semaine, rendez-vous créés en deux clics, créneaux bloqués d'un geste." },
-  { icon: BellRing, title: "Rappels automatiques", desc: "La veille du rendez-vous, par email, SMS ou WhatsApp. Moins d'oublis, moins de trous." },
+  { icon: BellRing, title: "Rappels automatiques", desc: "La veille du rendez-vous, par email ou WhatsApp. Moins d'oublis, moins de trous." },
   { icon: ClipboardList, title: "Dossiers clients", desc: "Fiches, notes de suivi chiffrées, historique complet des visites." },
   { icon: Scissors, title: "Prestations", desc: "Prix, durée fixe ou variable, photo, catégorie, prestations réservées à certains clients." },
   { icon: Users, title: "Cours collectifs", desc: "Séances récurrentes ou ponctuelles, places limitées, liste d'attente." },
@@ -117,13 +117,13 @@ const JOBS = [
 ];
 
 const FAQ = [
-  { q: "Comment fonctionne l'essai gratuit ?", a: "Vous profitez de tout le forfait Pro pendant 30 jours, sans carte bancaire : rendez-vous illimités, rappels automatiques par email et SMS, personnalisation de votre page. À la fin de l'essai, vous choisissez un forfait (Pro à 23 €/mois TVAC, sans engagement) pour que vos clients continuent à réserver. Rien n'est prélevé sans votre accord." },
+  { q: "Comment fonctionne l'essai gratuit ?", a: "Vous profitez de tout le forfait Pro pendant 30 jours, sans carte bancaire : rendez-vous illimités, rappels automatiques par email et WhatsApp, personnalisation de votre page. À la fin de l'essai, vous choisissez un forfait (Pro à 23 €/mois TVAC, sans engagement) pour que vos clients continuent à réserver. Rien n'est prélevé sans votre accord." },
   { q: "Branshee prend-il une commission sur mes réservations ?", a: "Non, jamais. Branshee fonctionne avec un abonnement fixe. Tout ce que paient vos clients vous revient, et vos clients restent vos clients : jamais démarchés, jamais redirigés vers d'autres professionnels." },
   { q: "Que se passe-t-il si je ne m'abonne pas à la fin de l'essai ?", a: "Votre page de réservation en ligne se ferme, mais rien n'est supprimé : vos rendez-vous, votre fichier clients et vos réglages restent consultables. Vous pouvez vous abonner à tout moment, et tout rouvre immédiatement." },
   { q: "Combien de temps faut-il pour être prêt ?", a: "Moins de 10 minutes pour la plupart des professionnels : compte, prestations, horaires, puis partage du lien. Aucune compétence technique nécessaire." },
   { q: "Mes clients doivent-ils créer un compte ou installer une application ?", a: "Non. Ils réservent en 30 secondes depuis leur téléphone ou leur ordinateur, avec leur nom, leur email et leur téléphone. Le compte client est facultatif." },
   { q: "Puis-je intégrer le calendrier sur mon propre site ?", a: "Oui. Copiez une ligne de code (WordPress, Wix, Squarespace, Webflow, site sur mesure) : vos clients réservent sans quitter votre site. Sans site, le forfait Pro+ vous en génère un." },
-  { q: "Comment Branshee réduit-il les rendez-vous manqués ?", a: "Trois mécanismes : un rappel automatique la veille (email, SMS ou WhatsApp), une politique d'annulation que vous choisissez, et le paiement en ligne via Stripe — acompte ou carte en garantie — pour que les absences ne soient plus à votre charge." },
+  { q: "Comment Branshee réduit-il les rendez-vous manqués ?", a: "Trois mécanismes : un rappel automatique la veille (email ou WhatsApp), une politique d'annulation que vous choisissez, et le paiement en ligne via Stripe — acompte ou carte en garantie — pour que les absences ne soient plus à votre charge." },
   { q: "Les dossiers de mes patients sont-ils protégés ?", a: "Oui. Les notes de suivi et les documents sont chiffrés au repos, l'accès se règle par grade au sein de votre équipe, et l'équipe Branshee ne peut voir votre espace qu'avec votre accord explicite." },
   { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement ni frais cachés : résiliation en un clic. Vous gardez l'accès jusqu'à la fin de la période payée, puis votre réservation en ligne se ferme, sans rien perdre : vos données restent là si vous revenez." },
 ];

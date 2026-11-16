@@ -21,7 +21,7 @@ const ROWS: { label: string; value: (p: Plan) => string | boolean }[] = [
   { label: "Confirmation automatique des réservations en ligne", value: (p) => (Number.isFinite(LIMITS.autoConfirmUpTo[p]) ? `${LIMITS.autoConfirmUpTo[p]} / mois, puis à confirmer` : "Illimitée") },
   { label: "Collaborateurs inclus", value: (p) => (p === "free" ? false : `${LIMITS.collaborators[p]} (+${ADDONS.seat.monthly} € TVAC/mois le siège)`) },
   { label: "Questions avant la réservation", value: (p) => String(LIMITS.formQuestions[p]) },
-  { label: "SMS ou WhatsApp inclus par mois", value: (p) => (LIMITS.smsIncluded[p] ? String(LIMITS.smsIncluded[p]) : false) },
+  { label: "Messages WhatsApp inclus par mois", value: (p) => (LIMITS.smsIncluded[p] ? String(LIMITS.smsIncluded[p]) : false) },
   { label: "Historique des rendez-vous visible", value: (p) => (Number.isFinite(LIMITS.historyDays[p]) ? `${LIMITS.historyDays[p]} derniers jours` : "Complet") },
   { label: "Paiement en ligne et politique d'annulation", value: () => true },
   { label: "Dossiers clients chiffrés", value: () => true },

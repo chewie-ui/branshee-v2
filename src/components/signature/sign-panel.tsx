@@ -46,7 +46,7 @@ export function SignPanel({ documentId, defaultEmail, current, canManage, editab
           <>
             <p><span className={cn("rounded px-1.5 py-0.5 text-xs font-medium", current.status === "viewed" ? "bg-accent-soft text-accent" : "bg-surface-muted text-muted")}>{current.status === "viewed" ? t("Ouvert par le client") : "Envoyé"}</span> à {current.email}, le {fmt(current.sentAt)}</p>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" icon={<Copy className="size-4" aria-hidden="true" />} onClick={() => navigator.clipboard?.writeText(current.url).then(() => setMsg({ ok: true, text: t("Lien copié : envoyez-le par WhatsApp ou SMS si vous préférez.") }), () => {})}>{t("Copier le lien")}</Button>
+              <Button size="sm" variant="secondary" icon={<Copy className="size-4" aria-hidden="true" />} onClick={() => navigator.clipboard?.writeText(current.url).then(() => setMsg({ ok: true, text: t("Lien copié : envoyez-le par WhatsApp si vous préférez.") }), () => {})}>{t("Copier le lien")}</Button>
               {canManage ? <Button size="sm" variant="ghost" icon={<X className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => run(() => cancelSignature(documentId))}>{t("Annuler")}</Button> : null}
             </div>
           </>

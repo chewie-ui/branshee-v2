@@ -155,8 +155,8 @@ export async function tryAutoRecharge(userId: string) {
     const amount = w.autoRecharge.amountCents;
     // Facture Stripe (numérotée, envoyée au pro) payée immédiatement avec sa carte, plutôt qu'un simple prélèvement.
     const meta = { type: "sms_autorecharge", userId };
-    const draft = await s.invoices.create({ customer: sub.customer, collection_method: "charge_automatically", default_payment_method: pm, auto_advance: false, pending_invoice_items_behavior: "exclude", default_tax_rates: [await vatRate()], description: `${process.env.FORCE_BRAND === "skydev" ? "Skydev" : "Branshee"} — recharge automatique SMS / WhatsApp`, footer: invoiceFooter, metadata: meta });
-    await s.invoiceItems.create({ customer: sub.customer, invoice: draft.id, amount, currency: "eur", description: `Crédit SMS / WhatsApp — ${(amount / 100).toFixed(2).replace(".", ",")} €`, metadata: meta });
+    const draft = await s.invoices.create({ customer: sub.customer, collection_method: "charge_automatically", default_payment_method: pm, auto_advance: false, pending_invoice_items_behavior: "exclude", default_tax_rates: [await vatRate()], description: `${process.env.FORCE_BRAND === "skydev" ? "Skydev" : "Branshee"} — recharge automatique WhatsApp`, footer: invoiceFooter, metadata: meta });
+    await s.invoiceItems.create({ customer: sub.customer, invoice: draft.id, amount, currency: "eur", description: `Crédit WhatsApp — ${(amount / 100).toFixed(2).replace(".", ",")} €`, metadata: meta });
     await s.invoices.finalizeInvoice(draft.id!);
     const paidInvoice = await s.invoices.pay(draft.id!, { off_session: true, payment_method: pm }).catch(async (e) => {
       // Carte refusée : la facture est annulée (pas de facture impayée qui traîne ni de relance Stripe).
@@ -191,8 +191,8 @@ async function alertLowBalance(userId: string, balance: number, threshold: numbe
   await db.insert(adminMessages).values({
     recipientId: userId,
     type: empty ? "warning" : "info",
-    title: empty ? "Solde SMS / WhatsApp épuisé" : "Solde SMS / WhatsApp bientôt épuisé",
-    body: empty ? "Votre solde SMS / WhatsApp est vide : les prochains rappels partent par email en attendant une recharge." : `Il vous reste ${eur(balance)} € de crédit SMS / WhatsApp. Pensez à recharger.`,
+    title: empty ? "Solde WhatsApp épuisé" : "Solde WhatsApp bientôt épuisé",
+    body: empty ? "Votre solde WhatsApp est vide : les prochains rappels partent par email en attendant une recharge." : `Il vous reste ${eur(balance)} € de crédit WhatsApp. Pensez à recharger.`,
     ctaLabel: "Recharger",
     ctaUrl: "/app/reglages/sms",
   });

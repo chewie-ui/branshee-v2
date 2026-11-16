@@ -3371,4 +3371,7 @@ export const EN: Record<string, string> = {
   "Des messages WhatsApp en plus de ceux inclus dans votre abonnement, achetés quand vous en avez besoin.": "Extra WhatsApp messages on top of those included in your subscription, bought when you need them.",
   "Gérer WhatsApp": "Manage WhatsApp",
   "Paiements, WhatsApp, pays": "Payments, WhatsApp, country",
+  "Lien copié : envoyez-le par WhatsApp si vous préférez.": "Link copied: send it by WhatsApp if you prefer.",
+  "Par WhatsApp ou email, en un clic.": "By WhatsApp or email, in one click.",
+  "Écrire sur WhatsApp": "Message on WhatsApp",
 };

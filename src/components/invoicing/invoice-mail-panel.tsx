@@ -40,7 +40,7 @@ export function InvoiceMailPanel({ documentId, defaultEmail, mailing, remindersO
             </p>
             {mailing.remindersSent ? <p className="text-muted">{mailing.remindersSent} rappel{mailing.remindersSent > 1 ? "s" : ""} automatique{mailing.remindersSent > 1 ? "s" : ""} envoyé{mailing.remindersSent > 1 ? "s" : ""}.</p> : null}
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" icon={<Copy className="size-4" aria-hidden="true" />} onClick={() => navigator.clipboard?.writeText(mailing.url).then(() => setMsg({ ok: true, text: t("Lien copié : envoyez-le par WhatsApp ou SMS si vous préférez.") }), () => {})}>{t("Copier le lien")}</Button>
+              <Button size="sm" variant="secondary" icon={<Copy className="size-4" aria-hidden="true" />} onClick={() => navigator.clipboard?.writeText(mailing.url).then(() => setMsg({ ok: true, text: t("Lien copié : envoyez-le par WhatsApp si vous préférez.") }), () => {})}>{t("Copier le lien")}</Button>
               {canManage && unpaid && !credit && remindersOn ? (
                 mailing.remindersOff ? (
                   <Button size="sm" variant="ghost" icon={<BellRing className="size-4" aria-hidden="true" />} disabled={pending} onClick={() => run(() => setInvoiceReminders(documentId, true))}>{t("Réactiver les rappels")}</Button>
