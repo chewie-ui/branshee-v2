@@ -155,7 +155,8 @@ export async function autoStamps() {
         .where(and(
           // Payée en ligne, ou retirée / livrée (paiement sur place) ; jamais une commande annulée.
           eq(shopOrders.businessId, b.id), ne(shopOrders.status, "cancelled"), or(isNotNull(shopOrders.paidAt), eq(shopOrders.status, "done")),
-          gt(sql`coalesce(${shopOrders.paidAt}, ${shopOrders.updatedAt})`, new Date(now - 7 * 86400_000)),
+          // Date passée en texte : dans un sql`` brut, drizzle ne convertit pas un objet Date (la requête échouait).
+          sql`coalesce(${shopOrders.paidAt}, ${shopOrders.updatedAt}) > ${new Date(now - 7 * 86400_000).toISOString()}::timestamptz`,
           sql`not exists (select 1 from "loyalty_moves" m where m.business_id = ${b.id} and m.ref = 'order:' || ${shopOrders.id})`,
         ))
         .limit(500);
