@@ -16,7 +16,7 @@ import { sendPush } from "@/server/push";
 import { businessHas, effectivePlan } from "@/server/plan";
 import { LIMITS } from "@/lib/plans";
 import { syncAppointmentToGoogle } from "@/server/google";
-import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, chargeAndSend, sendSms, sendWhatsapp, smsFeatureOn, smsText, whatsappConfigured } from "@/server/sms";
+import { WHATSAPP_PRICE_CENTS, chargeAndSend, sendWhatsapp, whatsappConfigured } from "@/server/sms";
 
 /** « lundi 3 mars à 10:00 » dans la langue du client (sans majuscule imposée). */
 function dayAndTime(d: Date, tz: string, locale: Locale) {
@@ -105,7 +105,7 @@ async function toPhone(row: Loaded, kind: "reminder" | "confirmation") {
   if (await isDemoBusiness(row.business.id)) return false;
   const wantWa = kind === "reminder" ? st.whatsappReminders : st.whatsappConfirmations;
   const wantSms = kind === "reminder" ? st.smsReminders : st.smsConfirmations;
-  if (!wantWa && !wantSms) return false;
+  if (!wantWa) return false;
   const plan = (await effectivePlan(row.business.id)).plan;
   if (plan === "free") return false;
   const owner = row.business.ownerId;
@@ -117,11 +117,8 @@ async function toPhone(row: Loaded, kind: "reminder" | "confirmation") {
     const r = await chargeAndSend(owner, plan, st.smsAllowOverage, WHATSAPP_PRICE_CENTS, () => sendWhatsapp(phone, kind, params));
     if (r.sent) return true;
   }
-  if (wantSms && (await smsFeatureOn())) {
-    const body = smsText(kind, { business: row.business.name, date, time, address: row.info.address, link: `${appUrl()}/g/${row.a.manageToken.slice(0, 16)}` });
-    const r = await chargeAndSend(owner, plan, st.smsAllowOverage, SMS_PRICE_CENTS, () => sendSms(phone, body));
-    if (r.sent) return true;
-  }
+  // Skydev n'envoie plus de SMS : WhatsApp, sinon l'email part à la place.
+  void wantSms;
   return false;
 }
 

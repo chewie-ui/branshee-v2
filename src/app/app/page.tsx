@@ -61,7 +61,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     { href: ctx.can("team.view") ? "/app/equipe" : "/app/equipe/grades", label: t("Équipe"), hint: t("Employés, droits par app"), icon: "team", ok: ctx.can("team.view") || ctx.can("grades.view") },
     { href: "/app/reglages/abonnement", label: t("Abonnement"), hint: t("Formule, factures"), icon: "card", ok: ctx.can("billing.manage") },
     { href: "/app/reglages/journal", label: t("Journal"), hint: t("Qui a fait quoi"), icon: "history", ok: ctx.can("logs.view") },
-    { href: "/app/reglages", label: t("Réglages"), hint: t("Paiements, SMS, pays"), icon: "settings", ok: ctx.can("settings.manage") },
+    { href: "/app/reglages", label: t("Réglages"), hint: t("Paiements, WhatsApp, pays"), icon: "settings", ok: ctx.can("settings.manage") },
   ] as const).filter((x) => x.ok).map(({ ok: _ok, ...x }) => x); // eslint-disable-line @typescript-eslint/no-unused-vars
   const firstName = ctx.user.name.split(" ")[0];
   const showPage = ctx.member.isOwner || ctx.can("business.manage");

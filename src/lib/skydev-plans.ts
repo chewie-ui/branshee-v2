@@ -40,7 +40,7 @@ export function tierLabels() {
 export const SKYDEV_FEATURES = [
   "Toutes les apps : RDV, Clients, Site web, Factures, Employés…",
   "Réservation en ligne et rendez-vous illimités",
-  "Rappels automatiques, 30 SMS par mois inclus",
+  "Rappels automatiques, 30 messages WhatsApp par mois inclus",
   "Grades, accès et journal d'activité",
   "Les nouvelles apps incluses dès leur sortie",
 ];

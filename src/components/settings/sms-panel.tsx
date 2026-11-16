@@ -51,7 +51,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
         <Card className="p-5">
           <p className="text-sm text-muted">{t("Solde prépayé")}</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{eur(balanceCents)}</p>
-          <p className="text-sm text-muted">SMS {eur(prices.sms)} · WhatsApp {eur(prices.wa)} au-delà du forfait</p>
+          <p className="text-sm text-muted">{eur(prices.wa)} {t("par message WhatsApp au-delà du forfait")}</p>
           {isOwner ? <p className="text-xs text-muted">{t("Montants TVA comprise.")}</p> : null}
           {isOwner && !waReady && !smsReady ? <p className="mt-3 text-xs text-muted">{t("La recharge sera disponible dès l'activation de WhatsApp.")}</p> : null}
           {isOwner && (waReady || smsReady) ? (
@@ -71,7 +71,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
         {(
           <div className="border-t border-border bg-surface-muted px-5 py-4 text-sm">
             <p className="mb-1 flex items-center gap-2 font-medium"><MessageCircle className="size-4" aria-hidden="true" />{t("Aperçu")}</p>
-            <p className="text-muted">{t("Bonjour Marie, votre rendez-vous chez")} <span className="text-text">{businessName}</span> {t("est confirmé pour le jeudi 12 mars à 10:30. À bientôt !")}</p>
+            <p className="text-muted">{t("Bonjour Marie, votre rendez-vous chez")} <span className="text-text">{businessName}</span> {t("est confirmé le jeudi 12 mars à 10:30. À bientôt !")}</p>
           </div>
         )}
       </Card>
@@ -91,7 +91,7 @@ export function SmsPanel({ initial, included, used, balanceCents, autoRecharge, 
       ) : null}
 
       <Card>
-        <CardHeader title={t("Au-delà des messages inclus")} description={`${included} ${t("messages inclus chaque mois, communs à WhatsApp et aux SMS.")}`} />
+        <CardHeader title={t("Au-delà des messages inclus")} description={`${included} ${t("messages WhatsApp inclus chaque mois.")}`} />
         <Switch checked={f.smsAllowOverage} onChange={set("smsAllowOverage")} label={t("Continuer avec le solde prépayé")} description={t("Les messages suivants sont pris sur le solde prépayé. Sinon : repli sur l'email.")} />
       </Card>
 

@@ -214,7 +214,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
             active={current.customUrlAddon}
             action={canManage ? <Button size="sm" variant={current.customUrlAddon ? "ghost" : "secondary"} disabled={!paid} loading={busy === "domain"} onClick={() => run("domain", () => setCustomUrlAddon(!current.customUrlAddon))}>{current.customUrlAddon ? t("Retirer") : t("Ajouter")}</Button> : null}
           />
-          <AddonRow icon={<MessageSquareText />} title={t("Rappels SMS")} price={t("Packs de crédits")} text={t("Des SMS en plus de ceux inclus dans votre abonnement, achetés quand vous en avez besoin.")} action={<ButtonLink href="/app/reglages/sms" size="sm" variant="secondary">{t("Gérer les SMS")}</ButtonLink>} />
+          <AddonRow icon={<MessageSquareText />} title={t("Rappels WhatsApp")} price={t("Packs de crédits")} text={t("Des messages WhatsApp en plus de ceux inclus dans votre abonnement, achetés quand vous en avez besoin.")} action={<ButtonLink href="/app/reglages/sms" size="sm" variant="secondary">{t("Gérer WhatsApp")}</ButtonLink>} />
         </div>
       </Card>
 

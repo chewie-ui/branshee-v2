@@ -7,10 +7,10 @@ import { SmsPanel } from "@/components/settings/sms-panel";
 import { LIMITS } from "@/lib/plans";
 import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
-import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, smsConfigured, usageThisMonth, whatsappConfigured } from "@/server/sms";
+import { SMS_PRICE_CENTS, WHATSAPP_PRICE_CENTS, usageThisMonth, whatsappConfigured } from "@/server/sms";
 import { appT, appMetadata } from "@/server/app-locale";
 
-export const generateMetadata = appMetadata("SMS et WhatsApp · Réglages");
+export const generateMetadata = appMetadata("WhatsApp · Réglages");
 
 export default async function SmsPage({ searchParams }: { searchParams: Promise<{ recharge?: string }> }) {
   const t = await appT();
@@ -22,7 +22,7 @@ export default async function SmsPage({ searchParams }: { searchParams: Promise<
   ]);
   const usage = await usageThisMonth(b!.ownerId);
   const recharge = (await searchParams).recharge;
-  if (plan.plan === "free") return <UpgradeNotice feature={t("Rappels par SMS et WhatsApp")} required="pro">Le forfait Pro inclut {LIMITS.smsIncluded.pro} SMS par mois (Pro+ : {LIMITS.smsIncluded.pro_plus}), puis un solde prépayé si vous le souhaitez.</UpgradeNotice>;
+  if (plan.plan === "free") return <UpgradeNotice feature={t("Rappels par WhatsApp")} required="pro">{t("Les forfaits payants incluent des messages WhatsApp chaque mois, puis un solde prépayé si vous le souhaitez.")}</UpgradeNotice>;
   return (
     <div className="space-y-4">
       {recharge === "ok" ? <p className="rounded-lg bg-success-soft p-3 text-sm text-success">{t("Solde rechargé, merci !")}</p> : recharge === "erreur" ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-warning">{t("La recharge n'a pas pu être vérifiée. Si vous avez été débité, contactez le support.")}</p> : null}
@@ -32,7 +32,7 @@ export default async function SmsPage({ searchParams }: { searchParams: Promise<
         used={usage.used}
         balanceCents={usage.balanceCents}
         autoRecharge={usage.autoRecharge}
-        smsReady={smsConfigured()}
+        smsReady={false}
         waReady={whatsappConfigured()}
         isOwner={b!.ownerId === ctx.user.id}
         businessName={ctx.business.name}

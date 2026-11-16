@@ -181,7 +181,7 @@ export function SkydevLanding({ signedIn = false }: { signedIn?: boolean }) {
             <article className="cell s3">
               <div className="cell-h"><span className="app-ic"><CalendarDays className="ico" aria-hidden="true" /></span><span className="badge b-ok">Inclus</span></div>
               <h3>Rendez-vous en ligne</h3>
-              <p>Vos clients réservent seuls, 24 h/24. Rappels SMS et email, acompte ou carte en garantie contre les absences, avis Google demandés après la visite.</p>
+              <p>Vos clients réservent seuls, 24 h/24. Rappels WhatsApp et email, acompte ou carte en garantie contre les absences, avis Google demandés après la visite.</p>
               <div className="demo" aria-hidden="true"><div className="slots">{["09:00", "09:30", "10:30", "11:00", "14:00", "14:30", "16:00", "17:30"].map((t) => <span key={t} className={t === "10:30" ? "slot on" : "slot"}>{t}</span>)}</div></div>
             </article>
             <article className="cell s3">
@@ -340,7 +340,7 @@ export function SkydevLanding({ signedIn = false }: { signedIn?: boolean }) {
           <div className="addons">
             <span className="lbl">Options</span>
             <span className="addon">Tél IA <small>forfait de minutes</small></span>
-            <span className="addon">Rappels SMS <small>packs de crédits</small></span>
+            <span className="addon">Rappels WhatsApp <small>packs de crédits</small></span>
             <span className="addon">Votre nom de domaine</span>
           </div>
         </div>

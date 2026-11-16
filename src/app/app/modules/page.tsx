@@ -20,7 +20,7 @@ export default async function Page() {
       description={t("Ajoutez des fonctionnalités à votre établissement.")}
       icon={<Blocks />}
       features={[
-        t("Rappels par SMS et WhatsApp"),
+        t("Rappels par WhatsApp"),
         t("Paiement en ligne et acomptes"),
         t("Téléphone IA qui répond à vos appels"),
         t("Activation en un clic, facturé à l'abonnement"),
