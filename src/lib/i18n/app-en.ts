@@ -3377,4 +3377,10 @@ export const EN: Record<string, string> = {
   "Stripe à connecter": "Stripe not connected yet",
   "Connectez Stripe pour activer le paiement à la réservation": "Connect Stripe to turn on payment at booking",
   "Tant que votre compte Stripe n'est pas connecté, vos clients ne paient pas en ligne : ils laissent seulement leur carte en garantie.": "Until your Stripe account is connected, clients don't pay online: they only leave their card as a guarantee.",
+  "Pendant votre mois offert, ajouter des membres est gratuit.": "During your free month, adding team members is free.",
+  "Ensuite, l'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :": "After that, your subscription counts each team member, with a price that drops with every addition:",
+  "personnes": "people",
+  "personne": "person",
+  "la prochaine personne ajoutée": "next person added",
+  "au prorata.": "prorated.",
 };

@@ -1,0 +1,37 @@
+import Link from "next/link";
+import { currentBrand } from "@/server/brand";
+import { countBilledUsers } from "@/server/billing";
+import { effectivePlan } from "@/server/plan";
+import { skydevPrice, userPrice } from "@/lib/skydev-plans";
+import { appT } from "@/server/app-locale";
+
+/**
+ * Skydev : prix de l'équipe, annoncé avant d'ajouter quelqu'un.
+ * Sans abonnement payé (mois offert), on dit clairement que c'est gratuit maintenant et ce que ça coûtera ensuite.
+ */
+export async function TeamPriceNotice({ businessId }: { businessId: string }) {
+  if ((await currentBrand()).id !== "skydev") return null;
+  const t = await appT();
+  const [users, plan] = await Promise.all([countBilledUsers(businessId), effectivePlan(businessId)]);
+  const subscribed = plan.source === "stripe";
+  const next = userPrice(users + 1);
+  const total = skydevPrice(users).monthly;
+  const link = <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{t("Voir le détail")}</Link>;
+  if (!subscribed) {
+    return (
+      <p className="mb-4 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm" role="status">
+        <span className="font-medium">{t("Pendant votre mois offert, ajouter des membres est gratuit.")}</span>{" "}
+        {t("Ensuite, l'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :")}{" "}
+        <span className="font-medium">{users} {users > 1 ? t("personnes") : t("personne")} = {total} € TVAC {t("par mois")}</span>
+        {", "}{t("la prochaine personne ajoutée")} <span className="font-medium">+{next} €</span>.{" "}
+        {link}
+      </p>
+    );
+  }
+  return (
+    <p className="mb-4 rounded-lg bg-surface-muted px-4 py-3 text-sm text-muted">
+      {t("Votre abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera")} <span className="font-medium text-text">{next} € TVAC {t("par mois")}</span>, {t("au prorata.")}{" "}
+      {link}
+    </p>
+  );
+}

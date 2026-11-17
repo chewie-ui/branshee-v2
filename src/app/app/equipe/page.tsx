@@ -13,9 +13,8 @@ import { Tabs } from "@/components/ui/tabs";
 import { requireContext } from "@/server/context";
 import { JoinRequestButtons } from "@/components/memberships/membership-actions";
 import { CardHeader } from "@/components/ui/card";
+import { TeamPriceNotice } from "@/components/team/team-price-notice";
 import { currentBrand } from "@/server/brand";
-import { countBilledUsers } from "@/server/billing";
-import { userPrice } from "@/lib/skydev-plans";
 import { appMetadata } from "@/server/app-locale";
 import { appT } from "@/server/app-locale";
 
@@ -31,8 +30,6 @@ export default async function TeamPage() {
     .leftJoin(grades, eq(grades.id, members.gradeId))
     .where(and(eq(members.businessId, ctx.business.id), inArray(members.status, ["active", "invited"])))
     .orderBy(asc(members.createdAt));
-  // Skydev : abonnement par personne, au prix dégressif ; on annonce le prix de la prochaine personne.
-  const nextPrice = canManage && (await currentBrand()).id === "skydev" ? userPrice((await countBilledUsers(ctx.business.id)) + 1) : null;
   const requests = canManage ? await db.select().from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "requested"))).orderBy(asc(members.createdAt)) : [];
 
   return (
@@ -43,12 +40,7 @@ export default async function TeamPage() {
         action={canManage ? <ButtonLink href="/app/equipe/ajouter" data-tour="add-member" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Ajouter un membre")}</ButtonLink> : null}
       />
       {ctx.can("grades.view") ? <Tabs items={[{ href: "/app/equipe", label: "Membres" }, { href: "/app/equipe/grades", label: t("Grades et permissions") }]} /> : null}
-      {nextPrice ? (
-        <p className="mb-4 rounded-lg bg-surface-muted px-4 py-3 text-sm text-muted">
-          {t("Votre abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera")} <span className="font-medium text-text">{nextPrice} € TVAC par mois</span>, au prorata.{" "}
-          <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{t("Voir le détail")}</Link>
-        </p>
-      ) : null}
+      {canManage ? <TeamPriceNotice businessId={ctx.business.id} /> : null}
       {requests.length ? (
         <Card className="mb-6">
           <CardHeader title={t("Demandes pour rejoindre l'équipe")} description={`Ces personnes ont un compte ${(await currentBrand()).name} et souhaitent rejoindre votre établissement.`} />

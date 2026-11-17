@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { grades } from "@/db/schema";
 import { AddMemberForm } from "@/components/team/member-forms";
+import { TeamPriceNotice } from "@/components/team/team-price-notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
@@ -18,6 +19,7 @@ export default async function AddMemberPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title={t("Ajouter un membre")} description={t("Un praticien, un associé, un employé…")} />
+      <TeamPriceNotice businessId={ctx.business.id} />
       <AddMemberForm grades={list} defaultGradeId={fallback?.id ?? ""} />
     </div>
   );
