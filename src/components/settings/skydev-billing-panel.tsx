@@ -41,6 +41,10 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
   const [users, setUsers] = useState(teamUsers);
   const price = skydevPrice(users);
+  // Prix réel : l'abonnement se base toujours sur l'équipe actuelle, pas sur la simulation.
+  const teamPrice = skydevPrice(teamUsers);
+  const teamMonthly = interval === "year" ? teamPrice.yearly / 12 : teamPrice.monthly;
+  const simulating = users !== teamUsers;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [, start] = useTransition();
@@ -162,7 +166,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
           </div>
 
           <div className="flex flex-col rounded-xl border border-border-strong p-5">
-            <p className="text-sm text-muted">{price.users} utilisateur{price.users > 1 ? "s" : ""}</p>
+            <p className="text-sm text-muted">{simulating ? `Simulation : ${price.users} utilisateur${price.users > 1 ? "s" : ""}` : `${price.users} utilisateur${price.users > 1 ? "s" : ""}`}</p>
             <p className="mt-1">
               <span className="text-3xl font-semibold tracking-tight tabular-nums">{eur(interval === "year" ? price.yearly / 12 : price.monthly)}</span>
               <span className="text-sm text-muted"> {t("TVAC / mois")}</span>
@@ -176,9 +180,14 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
               {t("Prochaine personne ajoutée :")} <span className="font-medium text-text">{eur(userPrice(price.users + 1))} / mois</span>.
             </p>
             <div className="mt-auto pt-5">
+              {simulating && !paid ? (
+                <p className="mb-3 rounded-lg bg-surface-muted px-3 py-2 text-sm">
+                  Aujourd&apos;hui, pour votre équipe de {teamUsers} personne{teamUsers > 1 ? "s" : ""} : <span className="font-medium">{eur(teamMonthly)} TVAC / mois</span>.
+                </p>
+              ) : null}
               {canManage ? (
                 <Button className="w-full" variant={isCurrent ? "secondary" : "primary"} disabled={isCurrent || !enabled} loading={busy === "plan"} onClick={() => run("plan", () => choosePlan({ plan: "pro_plus", interval }))}>
-                  {isCurrent ? t("Votre abonnement") : paid ? (interval === "year" ? t("Passer à l'annuel") : t("Passer au mensuel")) : `S'abonner pour ${teamUsers} utilisateur${teamUsers > 1 ? "s" : ""}`}
+                  {isCurrent ? t("Votre abonnement") : paid ? (interval === "year" ? t("Passer à l'annuel") : t("Passer au mensuel")) : `S'abonner · ${teamUsers} utilisateur${teamUsers > 1 ? "s" : ""} · ${eur(teamMonthly)} / mois`}
                 </Button>
               ) : (
                 <p className="text-sm text-muted">{t("Seul le titulaire du compte peut gérer l'abonnement.")}</p>
