@@ -132,7 +132,9 @@ export function PaymentsForm({ p }: { p: P }) {
 
             {mode !== "none" && !canCharge ? (
               <p className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm" role="status">
-                {t("Pour encaisser les paiements et les frais, connectez votre compte Stripe ci-dessus (ou renseignez un moyen de reversement plus bas). Sans cela, la réservation reste possible mais rien ne peut être prélevé.")}
+                {mode === "strict"
+                  ? t("Le paiement à la réservation ne marche qu'avec votre compte Stripe connecté ci-dessus (ou un moyen de reversement renseigné plus bas). En attendant, vos clients laissent seulement leur carte en garantie, comme dans « Carte en garantie ».")
+                  : t("Pour encaisser les paiements et les frais, connectez votre compte Stripe ci-dessus (ou renseignez un moyen de reversement plus bas). Sans cela, la réservation reste possible mais rien ne peut être prélevé.")}
               </p>
             ) : null}
           </Section>
