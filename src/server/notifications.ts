@@ -259,7 +259,8 @@ export async function sendDueReminders(now = new Date()) {
         eq(appointments.status, "confirmed"),
         eq(appointments.kind, "appointment"),
         isNull(appointments.reminderSentAt),
-        isNotNull(appointments.contactEmail),
+        // Email ou téléphone : un client sans email reçoit quand même son rappel WhatsApp.
+        or(isNotNull(appointments.contactEmail), isNotNull(appointments.contactPhone)),
         gt(appointments.startsAt, now),
         lte(appointments.startsAt, horizon),
       ),
@@ -281,7 +282,7 @@ export async function sendDueReminders(now = new Date()) {
     if (!claimed.length) continue;
     const row = await load(c.id);
     if (!row) continue;
-    // WhatsApp, puis SMS ; l'email ne part que si aucun des deux n'a pu partir (comme l'ancien).
+    // WhatsApp d'abord ; l'email ne part que si WhatsApp n'a pas pu partir.
     if (await toPhone(row, "reminder")) {
       sent++;
       continue;
