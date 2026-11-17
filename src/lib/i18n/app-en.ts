@@ -3374,5 +3374,7 @@ export const EN: Record<string, string> = {
   "Lien copié : envoyez-le par WhatsApp si vous préférez.": "Link copied: send it by WhatsApp if you prefer.",
   "Par WhatsApp ou email, en un clic.": "By WhatsApp or email, in one click.",
   "Écrire sur WhatsApp": "Message on WhatsApp",
-  "Le paiement à la réservation ne marche qu'avec votre compte Stripe connecté ci-dessus (ou un moyen de reversement renseigné plus bas). En attendant, vos clients laissent seulement leur carte en garantie, comme dans « Carte en garantie ».": "Payment at booking only works once your Stripe account is connected above (or a payout method is set below). Until then, clients only leave their card as a guarantee, as in “Card guarantee”.",
+  "Stripe à connecter": "Stripe not connected yet",
+  "Connectez Stripe pour activer le paiement à la réservation": "Connect Stripe to turn on payment at booking",
+  "Tant que votre compte Stripe n'est pas connecté, vos clients ne paient pas en ligne : ils laissent seulement leur carte en garantie.": "Until your Stripe account is connected, clients don't pay online: they only leave their card as a guarantee.",
 };

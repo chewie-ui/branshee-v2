@@ -3,7 +3,7 @@
 import { useBrandName } from "@/components/brand-context";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, CreditCard } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
@@ -95,6 +95,12 @@ export function PaymentsForm({ p }: { p: P }) {
                   <input type="radio" name="protectionMode" value={m.v} checked={mode === m.v} onChange={() => { setMode(m.v); setPrepay(false); }} className="sr-only" />
                   <span className="block font-medium">{t(m.t)}</span>
                   <span className="mt-1 block text-muted">{t(m.d)}</span>
+                  {m.v === "strict" && !canCharge ? (
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                      <AlertTriangle className="size-3.5" aria-hidden="true" />
+                      {t("Stripe à connecter")}
+                    </span>
+                  ) : null}
                 </label>
               ))}
             </div>
@@ -130,11 +136,20 @@ export function PaymentsForm({ p }: { p: P }) {
               </label>
             ) : null}
 
-            {mode !== "none" && !canCharge ? (
+            {mode === "strict" && !canCharge && p.stripeConfigured ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm sm:flex-row sm:items-center" role="status">
+                <AlertTriangle className="size-5 shrink-0 text-warning" aria-hidden="true" />
+                <p className="flex-1">
+                  <span className="block font-medium">{t("Connectez Stripe pour activer le paiement à la réservation")}</span>
+                  {t("Tant que votre compte Stripe n'est pas connecté, vos clients ne paient pas en ligne : ils laissent seulement leur carte en garantie.")}
+                </p>
+                <ButtonLink href="/app/reglages/paiements/stripe/connecter" prefetch={false} size="sm" icon={<CreditCard className="size-4" aria-hidden="true" />}>
+                  {p.stripe.status === "pending" ? t("Terminer l'inscription Stripe") : t("Connecter Stripe")}
+                </ButtonLink>
+              </div>
+            ) : mode !== "none" && !canCharge ? (
               <p className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm" role="status">
-                {mode === "strict"
-                  ? t("Le paiement à la réservation ne marche qu'avec votre compte Stripe connecté ci-dessus (ou un moyen de reversement renseigné plus bas). En attendant, vos clients laissent seulement leur carte en garantie, comme dans « Carte en garantie ».")
-                  : t("Pour encaisser les paiements et les frais, connectez votre compte Stripe ci-dessus (ou renseignez un moyen de reversement plus bas). Sans cela, la réservation reste possible mais rien ne peut être prélevé.")}
+                {t("Pour encaisser les paiements et les frais, connectez votre compte Stripe ci-dessus (ou renseignez un moyen de reversement plus bas). Sans cela, la réservation reste possible mais rien ne peut être prélevé.")}
               </p>
             ) : null}
           </Section>
