@@ -101,9 +101,9 @@ export function SkydevLanding({ signedIn = false }: { signedIn?: boolean }) {
             </div>
           ) : (
             <div className="hero-cta">
+              <Link className="btn btn-primary btn-lg" href="/inscription">Tester gratuitement maintenant<ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route qui ouvre une session : vraie navigation */}
-              <a className="btn btn-primary btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
-              <Link className="btn btn-ghost btn-lg" href="/inscription">Essayer 1 mois gratuit</Link>
+              <a className="btn btn-ghost btn-lg" href="/demo"><Eye className="ico ico-sm" aria-hidden="true" />Voir la démo, sans inscription</a>
               <p className="hero-note"><b>1 mois offert</b>, sans carte bancaire et sans engagement.</p>
               <p className="hero-note">La démo s&apos;ouvre tout de suite : un cabinet fictif rien que pour vous, avec ses rendez-vous, factures, clients et stock. Essayez tout, rien n&apos;est conservé.</p>
               <p className="hero-note">Vous cherchez un professionnel ? <Link href="/annuaire" className="hero-find">Trouvez-le dans l&apos;annuaire</Link>.</p>

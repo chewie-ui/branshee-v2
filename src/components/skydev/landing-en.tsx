@@ -42,9 +42,9 @@ export function SkydevLandingEn({ signedIn = false }: { signedIn?: boolean }) {
             <p className="lead lead-tight">From a fast showcase website to a full web app or SaaS: designed, built and maintained for you. Based in Belgium, working with clients everywhere, in English or French.</p>
           </div>
           <div className="hero-cta">
-            <Link className="btn btn-primary btn-lg" href="/en#contact">Get a free estimate<ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
-            <Link className="btn btn-ghost btn-lg" href="/en/custom">See all services</Link>
-            <p className="hero-note">Reply within 24 hours · mock-up before you pay · fixed price</p>
+            <Link className="btn btn-primary btn-lg" href={signedIn ? "/app" : "/en/signup"}>{signedIn ? "Open my workspace" : "Try it free now"}<ArrowRight className="ico ico-sm" aria-hidden="true" /></Link>
+            <Link className="btn btn-ghost btn-lg" href="/en#contact">Get a free estimate</Link>
+            <p className="hero-note"><b>1 month free</b>, no credit card, no commitment.</p>
           </div>
         </div>
       </section>
