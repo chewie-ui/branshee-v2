@@ -78,6 +78,7 @@ function Item({ r, canManage, onDone }: { r: Row; canManage: boolean; onDone: (m
 export function InboxList({ items, handled, canManage }: { items: Row[]; handled: Handled[]; canManage: boolean }) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [picked, setPicked] = useState(0);
   const [pending, start] = useTransition();
   const done = (m: { ok: boolean; text: string }) => {
     setMsg(m);
@@ -98,11 +99,18 @@ export function InboxList({ items, handled, canManage }: { items: Row[]; handled
               start(async () => {
                 const r = await uploadToInbox(fd);
                 done(r.ok ? { ok: true, text: r.message } : { ok: false, text: r.error });
-                if (r.ok) form.reset();
+                if (r.ok) {
+                  form.reset();
+                  setPicked(0);
+                }
               });
             }}
           >
-            <input type="file" name="files" multiple accept="application/pdf,.pdf,.xml,text/xml,application/xml" aria-label="Fichiers reçus" className="min-w-0 flex-1 text-sm file:mr-3 file:h-10 file:rounded-lg file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium" />
+            <label className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-border-strong bg-surface px-3 text-sm font-medium hover:bg-surface-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+              Choisir des fichiers
+              <input type="file" name="files" multiple accept="application/pdf,.pdf,.xml,text/xml,application/xml" className="sr-only" onChange={(e) => setPicked(e.target.files?.length ?? 0)} />
+            </label>
+            <span className="min-w-0 flex-1 text-sm text-muted">{picked ? `${picked} fichier${picked > 1 ? "s" : ""} choisi${picked > 1 ? "s" : ""}` : "Aucun fichier choisi"}</span>
             <Button type="submit" loading={pending} icon={<Upload className="size-4" aria-hidden="true" />}>Déposer</Button>
           </form>
         </Card>

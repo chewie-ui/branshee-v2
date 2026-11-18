@@ -17,6 +17,7 @@ import { inboxMatch } from "@/server/care-inbox";
 type Result = { ok: true; message: string } | { ok: false; error: string };
 const RO = { ok: false as const, error: "Mode supervision : lecture seule." };
 const MAX = 10 * 1024 * 1024;
+const TX_LABEL: Record<string, string> = { report: "Rapport", note: "Note", contactreport: "Rapport de contact", result: "Résultat", labresult: "Résultat de laboratoire", prescription: "Prescription", referral: "Demande de prise en charge", sumehr: "Résumé de dossier (Sumehr)", discharge: "Rapport de sortie" };
 
 /** Dépose des documents reçus (PDF, messages Kmehr XML) dans la boîte de réception. */
 export async function uploadToInbox(fd: FormData): Promise<Result> {
@@ -49,7 +50,7 @@ export async function uploadToInbox(fd: FormData): Promise<Result> {
       businessId: ctx.business.id,
       source: "kmehr",
       messageType: k.transactionType ?? "kmehr",
-      title: k.transactionType ? `Message Kmehr : ${k.transactionType}` : name,
+      title: `${TX_LABEL[k.transactionType ?? ""] ?? "Message"}${k.sender.name ? ` de ${k.sender.name}` : ""}`.slice(0, 160),
       senderName: k.sender.name,
       senderInami: k.sender.inami,
       docDate: k.date && /^\d{4}-\d{2}-\d{2}$/.test(k.date) ? k.date : null,
