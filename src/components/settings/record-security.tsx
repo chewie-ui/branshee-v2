@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/field";
 import { saveAutoLock } from "@/server/actions/physio";
 
 /** Sécurité des dossiers patients : verrouillage après inactivité et export du journal des accès. */
-export function RecordSecurity({ minutes, canManage }: { minutes: number | null; canManage: boolean }) {
+export function RecordSecurity({ minutes, canManage, canExportAll = false }: { minutes: number | null; canManage: boolean; canExportAll?: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   return (
@@ -31,6 +31,7 @@ export function RecordSecurity({ minutes, canManage }: { minutes: number | null;
           </Select>
         </label>
         <a href="/app/reglages/journal/acces" download className="inline-flex h-11 items-center gap-2 rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted"><Download className="size-4" aria-hidden="true" />Journal des accès (CSV)</a>
+        {canExportAll ? <a href="/app/clients/export-dossiers" download className="inline-flex h-11 items-center gap-2 rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted"><Download className="size-4" aria-hidden="true" />Tous les dossiers (JSON)</a> : null}
       </div>
       {msg ? <p className="flex items-center gap-1.5 px-5 pb-5 text-sm text-success" role="status"><ShieldCheck className="size-4" aria-hidden="true" />{msg}</p> : null}
     </Card>

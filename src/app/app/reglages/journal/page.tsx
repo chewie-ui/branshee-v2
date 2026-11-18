@@ -19,7 +19,7 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
   const ctx = await requireContext("logs.view");
   const [{ lock } = { lock: null }] = await db.select({ lock: businesses.autoLockMinutes }).from(businesses).where(eq(businesses.id, ctx.business.id));
   // La sécurité des dossiers (verrouillage, journal des accès) reste disponible sur tous les forfaits.
-  if (!(await businessHas(ctx.business.id, "activityLog"))) return <div className="space-y-4"><RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} /><UpgradeNotice feature="Journal d'activité" required="pro_plus">{t("Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.")}</UpgradeNotice></div>;
+  if (!(await businessHas(ctx.business.id, "activityLog"))) return <div className="space-y-4"><RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} canExportAll={ctx.can("records.export") && (ctx.member.isOwner || ctx.can("business.manage"))} /><UpgradeNotice feature="Journal d'activité" required="pro_plus">{t("Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.")}</UpgradeNotice></div>;
   const tz = ctx.business.timezone;
   const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const like = `%${q.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
@@ -32,7 +32,7 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-4">
-      <RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} />
+      <RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} canExportAll={ctx.can("records.export") && (ctx.member.isOwner || ctx.can("business.manage"))} />
       <form role="search" className="max-w-sm">
         <label htmlFor="q" className="sr-only">{t("Rechercher dans le journal")}</label>
         <input id="q" name="q" defaultValue={q} placeholder={t("Rechercher (personne, action…)")} className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm placeholder:text-muted focus-visible:border-accent" />

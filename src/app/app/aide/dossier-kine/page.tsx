@@ -81,7 +81,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>« Archiver le dossier » le rend inactif sans rien supprimer : il reste consultable et réactivable à tout moment. « Fusionner avec une autre fiche » regroupe deux fiches du même patient sans perte (rendez-vous, dossier, documents, factures).</p>
-        <p>« Exporter le dossier complet (JSON) » produit un fichier lisible avec toutes les données du patient, pour une migration ou une demande d&apos;accès. L&apos;export est tracé.</p>
+        <p>« Exporter le dossier complet (JSON) » produit un fichier lisible avec toutes les données du patient, pour une migration ou une demande d&apos;accès. Le responsable du cabinet peut exporter tous les dossiers d&apos;un coup (Réglages, Journal, « Tous les dossiers »). Chaque export est tracé.</p>
       </>
     ),
   },
@@ -106,7 +106,7 @@ export default async function PhysioHelpPage() {
         ))}
         <Card id="format-export" className="scroll-mt-6 space-y-3 p-5 text-[15px] leading-relaxed">
           <h2 className="text-lg font-semibold">7. Format d&apos;export (JSON)</h2>
-          <p>Fichier UTF-8, en clair, champ <code>format</code> = <code>skydev-patient-export</code>, <code>version</code> = 2. Dates au format ISO 8601. Objets :</p>
+          <p>Fichier UTF-8, en clair, champ <code>format</code> = <code>skydev-patient-export</code>, <code>version</code> = 2 (export de tout le cabinet : <code>skydev-practice-export</code>, un tableau <code>patients[]</code> d&apos;objets de même forme). Dates au format ISO 8601. Objets :</p>
           <ul className="list-disc space-y-1 pl-6">
             <li><code>patient</code> : identité (nom, NISS, date de naissance, sexe, langue), mutuelle (nom, n° d&apos;affiliation, <code>ct1</code>, <code>ct2</code>), adresse, prescripteur et généraliste (nom, INAMI), informations générales, date d&apos;archivage.</li>
             <li><code>careTeam[]</code> : rôle (<code>gp</code>, <code>prescriber</code>, <code>specialist</code>, <code>physio</code>, <code>nurse</code>, <code>care_assistant</code>, <code>home_helper</code>, <code>hospital</code>, <code>coordination</code>, <code>other</code>), nom, profession, INAMI, coordonnées.</li>
