@@ -49,7 +49,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   }
   const kind = PATHOLOGY_KINDS.find((k) => k.key === e.pathologyKind)?.label ?? e.pathologyKind;
   const over = e.sessionsPrescribed != null && done > e.sessionsPrescribed;
-  const approvalSoon = e.approvalEnd ? new Date(`${e.approvalEnd}T23:59:59Z`).getTime() - Date.now() < 14 * 86400e3 : false;
+  const approvalSoon = approvalEndsSoon(e.approvalEnd);
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Link href={`/app/clients/${c.id}?onglet=dossier`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />{c.fullName}</Link>
@@ -70,4 +70,9 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
       <CareRecord episodeId={e.id} sections={sections} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
     </div>
   );
+}
+
+/** Accord ou notification qui se termine dans moins de 14 jours (calculé hors rendu). */
+function approvalEndsSoon(end: string | null) {
+  return end ? new Date(`${end}T23:59:59Z`).getTime() - new Date().getTime() < 14 * 86400e3 : false;
 }

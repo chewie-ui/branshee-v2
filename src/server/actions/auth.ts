@@ -151,6 +151,13 @@ export async function logout() {
   redirect("/connexion");
 }
 
+/** Verrouillage après inactivité (dossiers patients) : la session est fermée, retour à la même page après reconnexion. */
+export async function lockSession(next: string) {
+  await destroySession();
+  const suite = safeNext(next);
+  redirect(`/connexion?verrou=1${suite ? `&suite=${encodeURIComponent(suite)}` : ""}`);
+}
+
 
 export type TwoFactorState = { error?: string } | undefined;
 

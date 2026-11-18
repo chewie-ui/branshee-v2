@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { History } from "lucide-react";
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs } from "@/db/schema";
+import { activityLogs, businesses } from "@/db/schema";
+import { RecordSecurity } from "@/components/settings/record-security";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDay, formatTime } from "@/lib/time";
@@ -16,7 +17,9 @@ export const generateMetadata = appMetadata("Journal d'activité · Réglages");
 export default async function ActivityLogPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const t = await appT();
   const ctx = await requireContext("logs.view");
-  if (!(await businessHas(ctx.business.id, "activityLog"))) return <UpgradeNotice feature="Journal d'activité" required="pro_plus">{t("Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.")}</UpgradeNotice>;
+  const [{ lock } = { lock: null }] = await db.select({ lock: businesses.autoLockMinutes }).from(businesses).where(eq(businesses.id, ctx.business.id));
+  // La sécurité des dossiers (verrouillage, journal des accès) reste disponible sur tous les forfaits.
+  if (!(await businessHas(ctx.business.id, "activityLog"))) return <div className="space-y-4"><RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} /><UpgradeNotice feature="Journal d'activité" required="pro_plus">{t("Retrouvez qui a fait quoi dans votre établissement : rendez-vous, horaires, prestations, réglages.")}</UpgradeNotice></div>;
   const tz = ctx.business.timezone;
   const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const like = `%${q.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
@@ -29,6 +32,7 @@ export default async function ActivityLogPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-4">
+      <RecordSecurity minutes={lock} canManage={ctx.can("settings.manage")} />
       <form role="search" className="max-w-sm">
         <label htmlFor="q" className="sr-only">{t("Rechercher dans le journal")}</label>
         <input id="q" name="q" defaultValue={q} placeholder={t("Rechercher (personne, action…)")} className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm placeholder:text-muted focus-visible:border-accent" />

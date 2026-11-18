@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { IdleLock } from "@/components/app/idle-lock";
+import { db } from "@/db";
+import { businesses } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { SpaceUrlFix } from "@/components/space-url-fix";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -59,6 +63,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       .map((i) => (i.href === "/app/clients" ? { ...i, label: clients } : i)),
   })).filter((g) => g.items.length > 0);
 
+  // Verrouillage après inactivité choisi par l'établissement (dossiers patients).
+  const [{ lockMinutes } = { lockMinutes: null }] = await db.select({ lockMinutes: businesses.autoLockMinutes }).from(businesses).where(eq(businesses.id, ctx.business.id));
   const banners = (
     <>
       {ctx.user.isDemo ? (
@@ -68,6 +74,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
       {!ctx.impersonating ? <SupervisionPrompt /> : null}
+      {lockMinutes && !ctx.impersonating ? <IdleLock minutes={lockMinutes} /> : null}
       <AdminMessages messages={adminMessages} />
       <PlanBanner brand={brand.id} plan={plan} canManage={ctx.can("billing.manage")} timezone={ctx.business.timezone} locale={ctx.user.locale ?? "fr"} businessName={ctx.business.name} noTrial={plan.source === "free" && brand.id === "skydev" && !(await hadOwnPlan(ctx.business.id))} />
     </>

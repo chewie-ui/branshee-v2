@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { clientWord } from "@/lib/terminology";
+import { normalizeNiss, validNiss } from "@/lib/niss";
+import { blindIndex } from "@/lib/field-crypto";
 import { formatDay } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
@@ -38,7 +40,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   const where: SQL[] = [eq(customers.businessId, ctx.business.id)];
   if (q) {
     const like = `%${q.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
-    where.push(or(ilike(customers.fullName, like), ilike(customers.email, like), ilike(customers.phone, like), ilike(customers.altName, like), ilike(customers.altEmail, like), ilike(customers.altPhone, like))!);
+    // Un NISS valide tapé dans la recherche retrouve le patient par son empreinte (le NISS n'est jamais en clair en base).
+    const niss = normalizeNiss(q);
+    const byNiss = niss && validNiss(niss) ? eq(customers.nissHash, blindIndex(niss, "niss")) : undefined;
+    where.push(or(ilike(customers.fullName, like), ilike(customers.email, like), ilike(customers.phone, like), ilike(customers.altName, like), ilike(customers.altEmail, like), ilike(customers.altPhone, like), byNiss)!);
   }
   if (periode === "avenir") where.push(sql`exists (select 1 from appointments a where a.customer_id = ${cid} and a.starts_at > now() and a.status <> 'cancelled')`);
   else if (periode) where.push(sql`${last} >= now() - (${Number(periode)} || ' days')::interval and ${last} <= now()`);
