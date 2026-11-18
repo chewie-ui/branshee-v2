@@ -46,6 +46,21 @@ export const customers = pgTable(
     createdManually: boolean("created_manually").notNull().default(false),
     blockedAt: timestamp("blocked_at", { withTimezone: true }),
     blockedReason: text("blocked_reason"),
+    /** Dossier patient (soins) : NISS chiffré + empreinte pour l'unicité et la recherche exacte. */
+    nissEnc: text("niss_enc"),
+    nissHash: text("niss_hash"),
+    birthDate: date("birth_date"),
+    /** M | F | X */
+    sex: text("sex"),
+    /** Mutuelle (organisme assureur) et numéro d'affiliation éventuel. */
+    mutuality: text("mutuality"),
+    mutualityNumber: text("mutuality_number"),
+    prescriberName: text("prescriber_name"),
+    prescriberInami: text("prescriber_inami"),
+    gpName: text("gp_name"),
+    gpInami: text("gp_inami"),
+    /** Dossier archivé (inactif) : toujours consultable et réactivable, jamais supprimé. */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     /** App Marketing : le client ne veut plus recevoir de campagnes (lien de désabonnement). */
     marketingOptOutAt: timestamp("marketing_opt_out_at", { withTimezone: true }),
     legacyId: legacyId(),
@@ -55,6 +70,8 @@ export const customers = pgTable(
     uniqueIndex("customers_business_email_uq").on(t.businessId, sql`lower(${t.email})`).where(sql`${t.email} is not null`),
     index("customers_business_name_idx").on(t.businessId, t.fullName),
     index("customers_user_idx").on(t.userId),
+    // Un seul dossier par patient et par établissement (NISS).
+    uniqueIndex("customers_business_niss_uq").on(t.businessId, t.nissHash).where(sql`${t.nissHash} is not null`),
   ],
 );
 

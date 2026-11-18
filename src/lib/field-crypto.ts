@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
 
 /**
  * Chiffrement des données sensibles en base (dossiers clients, jetons Google…).
@@ -26,4 +26,12 @@ export function decrypt(stored: string | null | undefined): string | null {
   const decipher = createDecipheriv("aes-256-gcm", key(), Buffer.from(iv, "base64url"));
   decipher.setAuthTag(Buffer.from(tag, "base64url"));
   return Buffer.concat([decipher.update(Buffer.from(data, "base64url")), decipher.final()]).toString("utf8");
+}
+
+/**
+ * Empreinte déterministe (HMAC-SHA256, clé dérivée de DATA_ENCRYPTION_KEY) d'une valeur sensible :
+ * permet l'unicité et la recherche exacte (ex. NISS) sans stocker la valeur en clair.
+ */
+export function blindIndex(value: string, purpose: string): string {
+  return createHmac("sha256", key()).update(`${purpose}:${value}`).digest("base64url");
 }

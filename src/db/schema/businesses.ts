@@ -62,6 +62,8 @@ export const businesses = pgTable(
     /** Langues parlées (codes ISO 639-1), surtout utile pour les consultations en ligne. */
     languages: text("languages").array().notNull().default([]),
     timezone: text("timezone").notNull().default("Europe/Brussels"),
+    /** Verrouillage de session après N minutes sans activité (dossiers patients). Null = jamais. */
+    autoLockMinutes: integer("auto_lock_minutes"),
 
     pausedAt: timestamp("paused_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

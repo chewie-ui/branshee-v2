@@ -8,6 +8,10 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { appointmentPayments, appointments, clientShares, customerNotes, customers, members, users } from "@/db/schema";
 import { SharesPanel } from "@/components/customers/shares-panel";
+import { PatientIdentityForm } from "@/components/physio/patient-identity";
+import { EpisodesList } from "@/components/physio/episodes";
+import { isPatientProfession } from "@/lib/terminology";
+import { PATHOLOGY_KINDS, episodesOf, episodesSessionCounts, logRecordAccess } from "@/server/physio";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DossierNotes, type NoteView } from "@/components/customers/dossier";
 import { AltContactsForm, ContactForm, CustomerActions, GeneralNotes, ReassignButton } from "@/components/customers/panels";
@@ -54,6 +58,9 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     .where(and(eq(customers.id, id.data), eq(customers.businessId, ctx.business.id)));
   if (!row) notFound();
   const customer = row.c;
+  const patient = isPatientProfession(ctx.business.businessType);
+  // Dossier patient : chaque ouverture est tracée (journal des accès).
+  await logRecordAccess(ctx, customer.id, "view", tab === "apercu" ? "Fiche" : `Onglet ${tab}`);
 
   const history = await db
     .select({ a: appointments, memberName: members.displayName, pay: appointmentPayments })
@@ -169,6 +176,13 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                 <Link href={`/app/agenda/rdv/${next.a.id}`} className="text-sm font-medium text-accent hover:text-accent-hover">{t("Ouvrir")}</Link>
               </Card>
             ) : null}
+            {patient ? (
+              <PatientIdentityForm
+                customerId={customer.id}
+                canManage={canManage}
+                initial={{ niss: safeDecrypt(customer.nissEnc).text, birthDate: customer.birthDate ?? "", sex: customer.sex ?? "", mutuality: customer.mutuality ?? "", mutualityNumber: customer.mutualityNumber ?? "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", gpName: customer.gpName ?? "", gpInami: customer.gpInami ?? "", archived: !!customer.archivedAt }}
+              />
+            ) : null}
             <GeneralNotes customerId={customer.id} initial={t(general.text)} canManage={canManage} />
             <Card>
               <CardHeader title={t("Derniers rendez-vous")} action={history.length > 5 ? <Link href={`/app/clients/${customer.id}?onglet=rendez-vous`} className="text-sm font-medium text-accent hover:text-accent-hover">{t("Tout voir")}</Link> : null} />
@@ -198,6 +212,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       ) : null}
 
       {tab === "rdv" ? <AppointmentsTab history={history} sp={sp} customerId={customer.id} tz={tz} Row={Row} /> : null}
+
+      {tab === "dossier" && patient ? <EpisodesTab customer={customer} businessId={ctx.business.id} canManage={canManage} /> : null}
 
       {tab === "dossier" ? <DossierTab customerId={customer.id} canManage={canManage} tz={tz} term={term} /> : null}
 
@@ -308,4 +324,16 @@ async function SharesTab({ customerId, canManage, tz, hasAccount, email }: { cus
     seen: !!s.seenAt,
   }));
   return <SharesPanel customerId={customerId} items={items} canManage={canManage} hasAccount={hasAccount} email={email} />;
+}
+
+/** Épisodes de soins (prescriptions) du patient, avec compteur de séances. */
+async function EpisodesTab({ customer, businessId, canManage }: { customer: typeof customers.$inferSelect; businessId: string; canManage: boolean }) {
+  const eps = await episodesOf(businessId, customer.id);
+  const counts = await episodesSessionCounts(eps);
+  const rows = eps.map((e) => ({ id: e.id, title: e.title, kind: e.pathologyKind, kindLabel: PATHOLOGY_KINDS.find((k) => k.key === e.pathologyKind)?.label ?? e.pathologyKind, prescriptionDate: e.prescriptionDate, prescriber: e.prescriberName, done: counts[e.id] ?? 0, prescribed: e.sessionsPrescribed, status: e.status, approvalEnd: e.approvalEnd }));
+  return (
+    <div className="mx-auto mb-4 max-w-3xl">
+      <EpisodesList customerId={customer.id} rows={rows} canManage={canManage} defaults={{ title: "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", prescriptionDate: "", sessionsPrescribed: "", pathologyKind: "courante", nomenclature: "", approvalStart: "", approvalEnd: "" }} />
+    </div>
+  );
 }

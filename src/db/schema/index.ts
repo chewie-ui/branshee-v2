@@ -29,3 +29,4 @@ export * from "./prospects";
 export * from "./connect";
 export * from "./vehicles";
 export * from "./client-shares";
+export * from "./physio";
