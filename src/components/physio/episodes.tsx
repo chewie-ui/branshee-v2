@@ -17,6 +17,9 @@ const KINDS = [
   ["E", "Pathologie lourde (liste E)"],
   ["Fa", "Liste Fa"],
   ["Fb", "Liste Fb"],
+  ["perinatal", "Rééducation périnatale"],
+  ["palliatif", "Patient palliatif"],
+  ["11bis", "Situation 11bis"],
   ["autre", "Autre situation"],
 ] as const;
 const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "");

@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { deleteCareEntry, saveCareEntry } from "@/server/actions/physio";
+import { ICF_COMMON, formatCodes, type CareCode } from "@/lib/care-codes";
 
 export type EntryVersion = { version: number; content: string; deleted: boolean; author: string; at: string; date: string | null; confidential?: boolean; passive?: boolean };
-export type EntryView = { key: string; content: string; date: string | null; author: string; at: string; versions: EntryVersion[]; confidential: boolean; passive: boolean };
+export type EntryView = { key: string; content: string; date: string | null; author: string; at: string; versions: EntryVersion[]; confidential: boolean; passive: boolean; codes: CareCode[] };
 export type SectionView = { key: string; label: string; hint: string; multi: boolean; entries: EntryView[] };
 
 const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "");
@@ -23,7 +24,7 @@ function Editor({ episodeId, section, entry, multi, today, onDone }: { episodeId
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         start(async () => {
-          const r = await saveCareEntry(episodeId, entry?.key ?? null, { section, content: String(fd.get("content") ?? ""), date: String(fd.get("date") ?? ""), confidential: fd.get("confidential") === "on", passive: fd.get("passive") === "on" });
+          const r = await saveCareEntry(episodeId, entry?.key ?? null, { section, content: String(fd.get("content") ?? ""), date: String(fd.get("date") ?? ""), confidential: fd.get("confidential") === "on", passive: fd.get("passive") === "on", codes: String(fd.get("codes") ?? "") });
           if (r.ok) onDone();
           else setError(r.error);
         });
@@ -35,6 +36,9 @@ function Editor({ episodeId, section, entry, multi, today, onDone }: { episodeId
         </Field>
       ) : null}
       <Textarea name="content" rows={6} maxLength={20000} defaultValue={entry?.content} required aria-label="Contenu" />
+      <Field label="Codes (facultatif)" htmlFor={`c-${section}-${entry?.key ?? "new"}`} hint="ICF, ICD-10, ICPC-2 ou SNOMED, séparés par des virgules. Ex. ICF b28015, ICD-10 S93.4">
+        <Input id={`c-${section}-${entry?.key ?? "new"}`} name="codes" list="icf-codes" defaultValue={entry ? formatCodes(entry.codes) : ""} maxLength={400} autoComplete="off" />
+      </Field>
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <label className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" name="confidential" defaultChecked={entry?.confidential} className="size-4 accent-[var(--color-accent)]" />Confidentielle (visible par moi seul, jamais exportée)</label>
         <label className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" name="passive" defaultChecked={entry?.passive} className="size-4 accent-[var(--color-accent)]" />Passive (plus d&apos;actualité, gardée pour les décisions)</label>
@@ -63,6 +67,11 @@ function Entry({ episodeId, section, e, multi, canManage, today }: { episodeId: 
         </p>
       ) : null}
       <p className={`whitespace-pre-line text-sm ${e.passive ? "text-muted" : ""}`}>{e.content}</p>
+      {e.codes.length ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Codes">
+          {e.codes.map((c) => <li key={`${c.scheme}-${c.code}`} className="rounded-md bg-surface-muted px-1.5 py-0.5 text-xs text-muted ring-1 ring-border"><span className="font-semibold text-text">{c.scheme} {c.code}</span>{c.label ? ` · ${c.label}` : ""}</li>)}
+        </ul>
+      ) : null}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span>{e.author} · {e.at}{e.versions.length > 1 ? ` · version ${e.versions.length}` : ""}</span>
         {e.versions.length > 1 ? (
@@ -94,6 +103,7 @@ export function CareRecord({ episodeId, sections, canManage, today }: { episodeI
   const [adding, setAdding] = useState<string | null>(null);
   return (
     <div className="space-y-4">
+      <datalist id="icf-codes">{ICF_COMMON.map((c) => <option key={c.code} value={`ICF ${c.code}`}>{c.label}</option>)}</datalist>
       {sections.map((s, i) => {
         const canAdd = canManage && (s.multi || s.entries.length === 0);
         return (

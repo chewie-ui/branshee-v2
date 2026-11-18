@@ -470,6 +470,13 @@
       "when": 1794993384378,
       "tag": "0066_physio_more",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794993385378,
+      "tag": "0067_physio_measures_inbox",
+      "breakpoints": true
     }
   ]
 }

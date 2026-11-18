@@ -58,6 +58,8 @@ export const members = pgTable(
     showRole: boolean("show_role").notNull().default(false),
     customInfo: jsonb("custom_info").$type<{ label: string; value: string }[]>().notNull().default([]),
     calendarColor: text("calendar_color"),
+    /** N° INAMI du soignant (en-tête des documents de soins, messages Kmehr). */
+    inami: text("inami"),
     /** Jeton du flux iCal personnel (abonnement depuis Google/Apple Agenda). */
     calendarFeedToken: text("calendar_feed_token").unique(),
 

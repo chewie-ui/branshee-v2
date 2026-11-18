@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { careDocuments, customers } from "@/db/schema";
+import { careDocuments, customers, members } from "@/db/schema";
 import { encrypt } from "@/lib/field-crypto";
 import { isCareDocKind } from "@/lib/care-team";
 import { requireContext } from "@/server/context";
@@ -24,7 +24,8 @@ export async function createCareDocument(customerId: string, kind: string, episo
   if (!c) return { ok: false, error: "Fiche introuvable." };
   const e = episodeId && z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
   if (episodeId && (!e || e.customerId !== c.id)) return { ok: false, error: "Épisode introuvable." };
-  const d = await buildDocument(kind, c, e, ctx.user.name);
+  const [me] = await db.select({ inami: members.inami }).from(members).where(eq(members.id, ctx.member.id));
+  const d = await buildDocument(kind, c, e, ctx.user.name, me?.inami ?? null);
   const key = randomUUID();
   await db.insert(careDocuments).values({ businessId: ctx.business.id, customerId: c.id, episodeId: e?.id ?? null, docKey: key, version: 1, kind, title: d.title, recipientName: d.recipientName, recipientInami: d.recipientInami, contentEnc: encrypt(d.content), authorUserId: ctx.user.id, authorName: ctx.user.name });
   await logRecordAccess(ctx, c.id, "edit", `Document créé : ${d.title}`);

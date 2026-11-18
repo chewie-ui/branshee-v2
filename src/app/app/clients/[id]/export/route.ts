@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, careDocuments, careEntries, careEpisodes, careTeamMembers, clientShares, customerNotes, customers, salesDocuments } from "@/db/schema";
+import { appointments, careDocuments, careEntries, careMeasures, careEpisodes, careTeamMembers, clientShares, customerNotes, customers, salesDocuments } from "@/db/schema";
 import { decrypt } from "@/lib/field-crypto";
 import { requireContext } from "@/server/context";
 import { logRecordAccess } from "@/server/physio";
@@ -38,6 +38,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   for (const x of all) if (!owner.has(x.entryKey)) owner.set(x.entryKey, x.authorUserId);
   const hidden = new Set(all.filter((x) => x.confidential && owner.get(x.entryKey) !== ctx.user.id).map((x) => x.entryKey));
   const entries = all.filter((x) => !hidden.has(x.entryKey));
+  const measures = episodes.length ? await db.select().from(careMeasures).where(inArray(careMeasures.episodeId, episodes.map((e) => e.id))).orderBy(asc(careMeasures.measuredOn)) : [];
   const out = {
     format: "skydev-patient-export",
     version: 2,
@@ -57,7 +58,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       id: e.id, title: e.title, prescriber: { name: e.prescriberName, inami: e.prescriberInami }, prescriptionDate: e.prescriptionDate,
       sessionsPrescribed: e.sessionsPrescribed, pathologyKind: e.pathologyKind, nomenclature: e.nomenclature,
       approval: { start: e.approvalStart, end: e.approvalEnd }, status: e.status, closedAt: e.closedAt, createdAt: e.createdAt,
-      entries: entries.filter((x) => x.episodeId === e.id).map((x) => ({ key: x.entryKey, section: x.section, version: x.version, date: x.entryDate, deleted: !!x.deleted, confidential: !!x.confidential, lifecycle: x.passive ? "passive" : "active", content: safe(x.contentEnc), author: x.authorName, at: x.createdAt })),
+      entries: entries.filter((x) => x.episodeId === e.id).map((x) => ({ key: x.entryKey, section: x.section, version: x.version, date: x.entryDate, deleted: !!x.deleted, confidential: !!x.confidential, lifecycle: x.passive ? "passive" : "active", codes: x.codes, content: safe(x.contentEnc), author: x.authorName, at: x.createdAt })),
+      measures: measures.filter((m) => m.episodeId === e.id).map((m) => ({ key: m.measureKey, label: m.label, value: m.value, unit: m.unit, side: m.side, date: m.measuredOn, author: m.authorName, deletedAt: m.deletedAt })),
     })),
     careTeam: team.map((m) => ({ role: m.role, name: m.name, profession: m.profession, inami: m.inami, enterpriseNumber: m.enterpriseNumber, address: m.address, phone: m.phone, email: m.email, iban: m.iban })),
     careDocuments: careDocs.map((d) => ({ key: d.docKey, version: d.version, kind: d.kind, title: d.title, episodeId: d.episodeId, recipient: { name: d.recipientName, inami: d.recipientInami }, status: d.status, validatedAt: d.validatedAt, author: d.authorName, content: safe(d.contentEnc), at: d.createdAt })),

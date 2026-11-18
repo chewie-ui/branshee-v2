@@ -13,7 +13,7 @@ const st = StyleSheet.create({
 });
 
 export type CareDocPdf = {
-  practice: { name: string; author: string; address: string; phone?: string | null; email?: string | null };
+  practice: { name: string; author: string; inami?: string | null; address: string; phone?: string | null; email?: string | null };
   recipient: { name?: string | null; inami?: string | null };
   title: string;
   content: string;
@@ -34,7 +34,7 @@ export async function careDocumentPdf(d: CareDocPdf) {
         <View style={st.row}>
           <View>
             <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 11 }}>{s(d.practice.name)}</Text>
-            <Text style={st.muted}>{s(d.practice.author)}</Text>
+            <Text style={st.muted}>{s(d.practice.author)}{d.practice.inami ? ` · INAMI ${s(d.practice.inami)}` : ""}</Text>
             {d.practice.address ? <Text style={st.muted}>{s(d.practice.address)}</Text> : null}
             {d.practice.phone || d.practice.email ? <Text style={st.muted}>{[d.practice.phone, d.practice.email].filter(Boolean).map(s).join(" · ")}</Text> : null}
           </View>

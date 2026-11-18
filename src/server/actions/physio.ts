@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { activityLogs, businesses, careEntries, careEpisodes, customers } from "@/db/schema";
+import { activityLogs, businesses, careEntries, careEpisodes, careMeasures, customers, members } from "@/db/schema";
 import { blindIndex, encrypt } from "@/lib/field-crypto";
 import { nissFacts, normalizeNiss, validNiss } from "@/lib/niss";
+import { parseCodes } from "@/lib/care-codes";
+import { measureDef } from "@/lib/care-measures";
 import { requireContext, type AppContext } from "@/server/context";
 import { canReadEntry, episodeOf, isCareSection, logRecordAccess } from "@/server/physio";
 
@@ -89,7 +91,7 @@ const episodeSchema = z.object({
   prescriberInami: opt(20),
   prescriptionDate: isoDate.optional().or(z.literal("")),
   sessionsPrescribed: z.preprocess((v) => (v === "" || v == null ? null : Number(v)), z.number().int().min(1).max(500).nullable()),
-  pathologyKind: z.enum(["courante", "E", "Fa", "Fb", "autre"]),
+  pathologyKind: z.enum(["courante", "E", "Fa", "Fb", "perinatal", "palliatif", "11bis", "autre"]),
   nomenclature: opt(60),
   approvalStart: isoDate.optional().or(z.literal("")),
   approvalEnd: isoDate.optional().or(z.literal("")),
@@ -138,6 +140,7 @@ const entrySchema = z.object({
   date: isoDate.optional().or(z.literal("")),
   confidential: z.boolean().optional(),
   passive: z.boolean().optional(),
+  codes: z.string().max(400).optional(),
 });
 
 /**
@@ -157,7 +160,7 @@ export async function saveCareEntry(episodeId: string, entryKey: string | null, 
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"care-entry:" + key}))`);
     const [last] = await tx.select({ version: careEntries.version, section: careEntries.section, episodeId: careEntries.episodeId }).from(careEntries).where(eq(careEntries.entryKey, key)).orderBy(desc(careEntries.version)).limit(1);
     if (last && (last.episodeId !== e.id || last.section !== v.data.section)) throw new Error("Donnée d'un autre dossier.");
-    await tx.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey: key, section: v.data.section, version: (last?.version ?? 0) + 1, contentEnc: encrypt(v.data.content), entryDate: v.data.date || null, confidential: v.data.confidential ? 1 : 0, passive: v.data.passive ? 1 : 0, authorUserId: ctx.user.id, authorName: ctx.user.name });
+    await tx.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey: key, section: v.data.section, version: (last?.version ?? 0) + 1, contentEnc: encrypt(v.data.content), entryDate: v.data.date || null, confidential: v.data.confidential ? 1 : 0, passive: v.data.passive ? 1 : 0, codes: parseCodes(v.data.codes ?? ""), authorUserId: ctx.user.id, authorName: ctx.user.name });
   });
   await db.update(careEpisodes).set({ updatedAt: new Date() }).where(eq(careEpisodes.id, e.id));
   await logRecordAccess(ctx, e.customerId, "edit", `Dossier : ${v.data.section}`);
@@ -174,7 +177,7 @@ export async function deleteCareEntry(episodeId: string, entryKey: string): Prom
   const [last] = await db.select().from(careEntries).where(and(eq(careEntries.entryKey, entryKey), eq(careEntries.episodeId, e.id))).orderBy(desc(careEntries.version)).limit(1);
   if (!last || last.deleted) return { ok: false, error: "Introuvable." };
   if (!(await canReadEntry(entryKey, ctx.user.id))) return { ok: false, error: "Donnée confidentielle : seul son auteur peut la supprimer." };
-  await db.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey, section: last.section, version: last.version + 1, contentEnc: last.contentEnc, entryDate: last.entryDate, deleted: 1, confidential: last.confidential, passive: last.passive, authorUserId: ctx.user.id, authorName: ctx.user.name });
+  await db.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey, section: last.section, version: last.version + 1, contentEnc: last.contentEnc, entryDate: last.entryDate, deleted: 1, confidential: last.confidential, passive: last.passive, codes: last.codes, authorUserId: ctx.user.id, authorName: ctx.user.name });
   await logRecordAccess(ctx, e.customerId, "edit", `Dossier : suppression (${last.section})`);
   revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
   return { ok: true, message: "Supprimé du dossier (conservé dans l'historique)." };
@@ -187,4 +190,59 @@ export async function saveAutoLock(minutes: number | null): Promise<Result> {
   await db.update(businesses).set({ autoLockMinutes: minutes }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app");
   return { ok: true, message: minutes ? `Verrouillage après ${minutes} min d'inactivité.` : "Verrouillage automatique désactivé." };
+}
+
+const measureSchema = z.object({
+  measureKey: z.string(),
+  detail: z.string().trim().max(80).optional(),
+  value: z.string().trim().min(1, "Indiquez la valeur.").max(20),
+  unit: z.string().trim().max(12).optional(),
+  side: z.enum(["", "G", "D"]).optional(),
+  date: isoDate,
+});
+
+/** Ajoute une mesure (EVA, amplitude, force…) à l'épisode. */
+export async function addCareMeasure(episodeId: string, input: unknown): Promise<Result> {
+  const ctx = await requireContext("records.manage", { app: "clients" });
+  if (ctx.impersonating) return RO;
+  const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
+  if (!e) return { ok: false, error: "Épisode introuvable." };
+  const v = measureSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Mesure invalide." };
+  const def = measureDef(v.data.measureKey);
+  if (!def) return { ok: false, error: "Paramètre inconnu." };
+  if (def.key === "autre" && !v.data.detail) return { ok: false, error: "Nommez la mesure." };
+  const value = v.data.value.replace(",", ".");
+  if (def.min != null) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < def.min || n > def.max!) return { ok: false, error: `Valeur attendue entre ${def.min} et ${def.max} ${def.unit}.` };
+  }
+  const label = v.data.detail ? (def.key === "autre" ? v.data.detail : `${def.label} — ${v.data.detail}`) : def.label;
+  await db.insert(careMeasures).values({ businessId: ctx.business.id, episodeId: e.id, measureKey: def.key, label, value, unit: def.key === "autre" ? v.data.unit || null : def.unit, side: v.data.side || null, measuredOn: v.data.date, authorUserId: ctx.user.id, authorName: ctx.user.name });
+  await logRecordAccess(ctx, e.customerId, "edit", `Mesure : ${label}`);
+  revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
+  return { ok: true, message: "Mesure ajoutée." };
+}
+
+/** Supprime une mesure : elle reste en base, marquée supprimée (auteur, date). */
+export async function deleteCareMeasure(episodeId: string, measureId: string): Promise<Result> {
+  const ctx = await requireContext("records.manage", { app: "clients" });
+  if (ctx.impersonating) return RO;
+  const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
+  if (!e || !z.uuid().safeParse(measureId).success) return { ok: false, error: "Introuvable." };
+  const r = await db.update(careMeasures).set({ deletedAt: new Date(), deletedByName: ctx.user.name }).where(and(eq(careMeasures.id, measureId), eq(careMeasures.episodeId, e.id), sql`${careMeasures.deletedAt} is null`)).returning({ label: careMeasures.label });
+  if (!r.length) return { ok: false, error: "Introuvable." };
+  await logRecordAccess(ctx, e.customerId, "edit", `Mesure supprimée : ${r[0]!.label}`);
+  revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
+  return { ok: true, message: "Mesure supprimée (conservée dans l'historique)." };
+}
+
+/** N° INAMI du soignant connecté (en-tête des documents, messages Kmehr). */
+export async function saveMyInami(value: string): Promise<Result> {
+  const ctx = await requireContext(undefined, { write: true });
+  const v = value.trim();
+  if (v && !/^[0-9][0-9 .-]{7,18}$/.test(v)) return { ok: false, error: "N° INAMI invalide (11 chiffres, ex. 5-12345-67-890)." };
+  await db.update(members).set({ inami: v || null }).where(eq(members.id, ctx.member.id));
+  revalidatePath("/app/clients");
+  return { ok: true, message: v ? "N° INAMI enregistré." : "N° INAMI retiré." };
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Download, FileUp, Search, UserPlus } from "lucide-react";
+import { Download, FileUp, Inbox, Search, UserPlus } from "lucide-react";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -37,7 +37,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   const sexe = patient && ["F", "M", "X"].includes(sp.sexe ?? "") ? sp.sexe! : "";
   const age = patient && ["mineurs", "adultes", "seniors"].includes(sp.age ?? "") ? sp.age! : "";
   const dossier = patient && ["actifs", "archives"].includes(sp.dossier ?? "") ? sp.dossier! : "";
-  const pathologie = patient && ["courante", "E", "Fa", "Fb", "autre"].includes(sp.pathologie ?? "") ? sp.pathologie! : "";
+  const pathologie = patient && ["courante", "E", "Fa", "Fb", "perinatal", "palliatif", "11bis", "autre"].includes(sp.pathologie ?? "") ? sp.pathologie! : "";
   const prescripteur = patient ? (sp.prescripteur ?? "").trim().slice(0, 80) : "";
 
   // Dernier rendez-vous de chaque fiche (statut, membre, date) et nombre total, en une requête.
@@ -93,12 +93,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   const filtered = !!(q || periode || statut || sexe || age || dossier || pathologie || prescripteur);
   // Skydev : import depuis un autre logiciel (CSV / Excel).
   const canImport = ctx.can("customers.manage") && (await currentBrand()).id === "skydev";
+  const inboxCount = patient && ctx.can("records.view") ? ((await db.execute<{ n: number }>(sql`select count(*)::int as n from care_inbox where business_id = ${ctx.business.id} and status = 'pending'`))[0]?.n ?? 0) : null;
   return (
     <>
       <PageHeader
         title={clientWord(ctx.business.businessType, { plural: true, capitalize: true })}
         description={filtered ? `${rows.length} résultat${rows.length > 1 ? "s" : ""}` : `${rows.length}${rows.length === 300 ? "+" : ""} ${rows.length > 1 ? terms : term}`}
-        action={ctx.can("customers.manage") ? <div className="flex flex-wrap gap-2">{canImport ? <ButtonLink href="/app/clients/importer" variant="ghost" icon={<FileUp className="size-4" aria-hidden="true" />}>Importer</ButtonLink> : null}{canImport ? <a href="/app/clients/export" download className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted hover:bg-surface-muted hover:text-text"><Download className="size-4" aria-hidden="true" />Exporter</a> : null}<ButtonLink href="/app/clients?nouveau=1" variant="secondary" icon={<UserPlus className="size-4" aria-hidden="true" />}>Ajouter un {term}</ButtonLink></div> : null}
+        action={ctx.can("customers.manage") || inboxCount != null ? <div className="flex flex-wrap gap-2">{inboxCount != null ? <ButtonLink href="/app/clients/reception" variant="ghost" icon={<Inbox className="size-4" aria-hidden="true" />}>Boîte de réception{inboxCount ? ` (${inboxCount})` : ""}</ButtonLink> : null}{canImport ? <ButtonLink href="/app/clients/importer" variant="ghost" icon={<FileUp className="size-4" aria-hidden="true" />}>Importer</ButtonLink> : null}{canImport ? <a href="/app/clients/export" download className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted hover:bg-surface-muted hover:text-text"><Download className="size-4" aria-hidden="true" />Exporter</a> : null}{ctx.can("customers.manage") ? <ButtonLink href="/app/clients?nouveau=1" variant="secondary" icon={<UserPlus className="size-4" aria-hidden="true" />}>Ajouter un {term}</ButtonLink> : null}</div> : null}
       />
       {sp.nouveau && ctx.can("customers.manage") ? <NewCustomerForm key="new" term={term} initialOpen /> : null}
 
@@ -134,6 +135,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
               <option value="E">Liste E</option>
               <option value="Fa">Liste Fa</option>
               <option value="Fb">Liste Fb</option>
+              <option value="perinatal">Périnatal</option>
+              <option value="palliatif">Palliatif</option>
+              <option value="11bis">Situation 11bis</option>
               <option value="autre">Autre situation</option>
             </Select>
             <Select name="sexe" defaultValue={sexe} className="w-auto" aria-label="Sexe">

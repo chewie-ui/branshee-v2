@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Copy, Eye, FileText, Lock, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, Eye, FileCode2, FileText, Lock, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { CARE_DOC_KINDS, documentGaps } from "@/lib/care-team";
 import { createCareDocument, deleteCareDocumentDraft, newCareDocumentVersion, saveCareDocument, validateCareDocument } from "@/server/actions/care-documents";
+import { saveMyInami } from "@/server/actions/physio";
 
 export type DocVersion = { version: number; status: string; author: string; at: string };
 export type DocView = { key: string; kind: string; kindLabel: string; title: string; recipientName: string; recipientInami: string; content: string; status: string; version: number; author: string; at: string; episode: string | null; versions: DocVersion[] };
@@ -74,6 +75,7 @@ function Editor({ customerId, d, canManage, canExport, onChange }: { customerId:
             Valider et imprimer
           </Button>
         ) : null}
+        {canExport && locked ? <a href={`${pdf}/kmehr`} download className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted"><FileCode2 className="size-4" aria-hidden="true" />Kmehr (XML)</a> : null}
         {canManage && locked ? <Button type="button" size="sm" variant="secondary" loading={pending} icon={<Copy className="size-4" aria-hidden="true" />} onClick={() => run(() => newCareDocumentVersion(d.key))}>Nouvelle version</Button> : null}
         {canManage && !locked ? <Button type="button" size="sm" variant="ghost" loading={pending} icon={<Trash2 className="size-4" aria-hidden="true" />} onClick={() => run(() => deleteCareDocumentDraft(d.key))}>Supprimer le brouillon</Button> : null}
       </div>
@@ -93,8 +95,42 @@ function Editor({ customerId, d, canManage, canExport, onChange }: { customerId:
   );
 }
 
+/** N° INAMI du soignant connecté : repris en en-tête et en signature des documents. */
+function MyInami({ initial }: { initial: string }) {
+  const [edit, setEdit] = useState(!initial);
+  const [value, setValue] = useState(initial);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  if (!edit)
+    return (
+      <p className="px-5 pb-4 text-sm text-muted">
+        Votre n° INAMI : <span className="font-medium text-text">{value}</span>{" "}
+        <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => setEdit(true)}>Modifier</button>
+      </p>
+    );
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2 px-5 pb-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => {
+          const r = await saveMyInami(value);
+          setMsg(r.ok ? { ok: true, text: r.message } : { ok: false, text: r.error });
+          if (r.ok && value.trim()) setEdit(false);
+        });
+      }}
+    >
+      <Field label="Votre n° INAMI (en-tête des documents)" htmlFor="my-inami" className="min-w-56 flex-1">
+        <Input id="my-inami" value={value} onChange={(e) => setValue(e.target.value)} placeholder="5-12345-67-890" inputMode="numeric" maxLength={20} />
+      </Field>
+      <Button type="submit" size="sm" variant="secondary" loading={pending}>Enregistrer</Button>
+      {msg ? <p className={`w-full text-sm ${msg.ok ? "text-success" : "text-danger"}`} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+    </form>
+  );
+}
+
 /** Documents INAMI du patient : générés depuis un modèle, modifiables, verrouillés une fois validés, versionnés. */
-export function CareDocuments({ customerId, docs, episodes, canManage, canExport, defaultEpisode }: { customerId: string; docs: DocView[]; episodes: EpisodeOpt[]; canManage: boolean; canExport: boolean; defaultEpisode?: string }) {
+export function CareDocuments({ customerId, docs, episodes, canManage, canExport, defaultEpisode, myInami }: { customerId: string; docs: DocView[]; episodes: EpisodeOpt[]; canManage: boolean; canExport: boolean; defaultEpisode?: string; myInami: string }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -106,6 +142,7 @@ export function CareDocuments({ customerId, docs, episodes, canManage, canExport
   return (
     <Card id="documents">
       <CardHeader title="Documents INAMI" description="Rapports, demandes et notifications pré-remplis depuis le dossier. Un document validé est verrouillé ; le modifier crée une nouvelle version." action={canManage && !creating ? <Button size="sm" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setCreating(true)}>Nouveau document</Button> : null} />
+      {canManage ? <MyInami initial={myInami} /> : null}
       {creating ? (
         <form
           className="space-y-4 border-b border-border p-5 pt-0"

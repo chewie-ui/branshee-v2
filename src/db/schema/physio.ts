@@ -1,4 +1,4 @@
-import { date, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id } from "./_shared";
 import { customers } from "./appointments";
 import { businesses } from "./businesses";
@@ -63,6 +63,8 @@ export const careEntries = pgTable(
     confidential: integer("confidential").notNull().default(0),
     /** Statut Kmehr : 0 = active, 1 = passive (plus en cours mais pertinente pour les décisions). */
     passive: integer("passive").notNull().default(0),
+    /** Codes standardisés liés à la donnée (ICF, ICD-10, ICPC-2, SNOMED CT…), texte libre toujours permis. */
+    codes: jsonb("codes").$type<{ scheme: string; code: string; label?: string }[]>().notNull().default([]),
     authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
     authorName: text("author_name").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -150,4 +152,68 @@ export const careDocuments = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("care_documents_customer_idx").on(t.customerId, t.createdAt), uniqueIndex("care_documents_key_version_uq").on(t.docKey, t.version)],
+);
+
+/**
+ * Mesures de l'examen et du suivi (EVA, amplitudes, force…). Jamais modifiées : une correction ajoute une mesure
+ * et marque l'ancienne supprimée (conservée), pour garder l'historique.
+ */
+export const careMeasures = pgTable(
+  "care_measures",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    episodeId: uuid("episode_id")
+      .notNull()
+      .references(() => careEpisodes.id, { onDelete: "cascade" }),
+    measureKey: text("measure_key").notNull(),
+    label: text("label").notNull(),
+    value: text("value").notNull(),
+    unit: text("unit"),
+    /** G | D | null */
+    side: text("side"),
+    measuredOn: date("measured_on").notNull(),
+    authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    authorName: text("author_name").notNull().default(""),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByName: text("deleted_by_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("care_measures_episode_idx").on(t.episodeId, t.measuredOn)],
+);
+
+/**
+ * Boîte de réception des documents reçus (import manuel PDF / Kmehr, plus tard eHealthBox) : un utilisateur autorisé
+ * confirme le patient avant l'intégration au dossier. status : pending | integrated | rejected
+ */
+export const careInbox = pgTable(
+  "care_inbox",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    source: text("source").notNull().default("upload"),
+    messageType: text("message_type").notNull().default("document"),
+    title: text("title").notNull(),
+    senderName: text("sender_name"),
+    senderInami: text("sender_inami"),
+    docDate: date("doc_date"),
+    patientName: text("patient_name"),
+    patientBirthDate: date("patient_birth_date"),
+    patientNissEnc: text("patient_niss_enc"),
+    patientNissHash: text("patient_niss_hash"),
+    contentEnc: text("content_enc"),
+    filePath: text("file_path"),
+    fileName: text("file_name"),
+    fileSize: integer("file_size"),
+    status: text("status").notNull().default("pending"),
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    handledByName: text("handled_by_name"),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("care_inbox_business_idx").on(t.businessId, t.status, t.createdAt)],
 );

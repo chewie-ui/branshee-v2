@@ -8,12 +8,13 @@ import { customers } from "@/db/schema";
 import { Card } from "@/components/ui/card";
 import { CareRecord, type SectionView } from "@/components/physio/care-record";
 import { EpisodeActions } from "@/components/physio/episode-actions";
+import { CareMeasures } from "@/components/physio/care-measures";
 import { formatDay, zoned } from "@/lib/time";
 import { formatNiss } from "@/lib/niss";
 import { decrypt } from "@/lib/field-crypto";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
-import { CARE_SECTIONS, PATHOLOGY_KINDS, currentEntries, entryHistory, episodeOf, logRecordAccess, sessionsDone } from "@/server/physio";
+import { CARE_SECTIONS, PATHOLOGY_KINDS, currentEntries, entryHistory, episodeOf, logRecordAccess, measuresOf, sessionsDone } from "@/server/physio";
 
 export const generateMetadata = () => appMetadata("Épisode de soins");
 
@@ -31,7 +32,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   const tz = ctx.business.timezone;
   const canManage = ctx.can("records.manage");
   const canExport = ctx.can("records.export");
-  const [entries, done] = await Promise.all([currentEntries(e.id, ctx.user.id), sessionsDone(e)]);
+  const [entries, done, measures] = await Promise.all([currentEntries(e.id, ctx.user.id), sessionsDone(e), measuresOf(e.id)]);
   const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
   const histories = await Promise.all(entries.filter((x) => x.versions > 1).map(async (x) => [x.key, await entryHistory(ctx.business.id, x.key)] as const));
   const hist = new Map(histories);
@@ -40,7 +41,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
     label: s.label,
     hint: s.hint,
     multi: s.multi,
-    entries: entries.filter((x) => x.section === s.key).map((x) => ({ key: x.key, content: x.content, date: x.date, author: x.author, at: stamp(x.at), confidential: x.confidential, passive: x.passive, versions: (hist.get(x.key) ?? []).map((v) => ({ ...v, at: stamp(v.at) })) })),
+    entries: entries.filter((x) => x.section === s.key).map((x) => ({ key: x.key, content: x.content, date: x.date, author: x.author, at: stamp(x.at), confidential: x.confidential, passive: x.passive, codes: x.codes, versions: (hist.get(x.key) ?? []).map((v) => ({ ...v, at: stamp(v.at) })) })),
   }));
   let niss = "";
   try {
@@ -68,6 +69,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
       </Card>
       {over ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">Plus de séances que prescrites : une nouvelle prescription ou une demande de séances supplémentaires est nécessaire.</p> : null}
       <EpisodeActions canExport={canExport} customerId={c.id} episodeId={e.id} closed={e.status === "closed"} canManage={canManage} form={{ title: e.title, prescriberName: e.prescriberName ?? "", prescriberInami: e.prescriberInami ?? "", prescriptionDate: e.prescriptionDate ?? "", sessionsPrescribed: e.sessionsPrescribed != null ? String(e.sessionsPrescribed) : "", pathologyKind: e.pathologyKind, nomenclature: e.nomenclature ?? "", approvalStart: e.approvalStart ?? "", approvalEnd: e.approvalEnd ?? "" }} />
+      <CareMeasures episodeId={e.id} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} measures={measures.map((m) => ({ id: m.id, key: m.measureKey, label: m.label, value: m.value, unit: m.unit ?? "", side: m.side ?? "", date: m.measuredOn, author: m.authorName, deleted: m.deletedAt ? `supprimée par ${m.deletedByName ?? "?"} le ${stamp(m.deletedAt)}` : null }))} />
       <CareRecord episodeId={e.id} sections={sections} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
     </div>
   );

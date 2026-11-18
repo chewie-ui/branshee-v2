@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { businesses } from "@/db/schema";
+import { businesses, members } from "@/db/schema";
 import { todayIso } from "@/lib/invoicing";
 import { careDocumentPdf } from "@/server/care-document-pdf";
 import { documentContent, documentVersions } from "@/server/care-documents";
@@ -18,9 +18,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!d || d.customerId !== id) return new Response("Introuvable", { status: 404 });
   const [b] = await db.select().from(businesses).where(and(eq(businesses.id, ctx.business.id)));
   if (!b) return new Response("Introuvable", { status: 404 });
+  const [author] = d.authorUserId ? await db.select({ inami: members.inami }).from(members).where(and(eq(members.userId, d.authorUserId), eq(members.businessId, ctx.business.id))) : [];
   const date = d.validatedAt ? todayIso(ctx.business.timezone, d.validatedAt) : todayIso(ctx.business.timezone);
   const buf = await careDocumentPdf({
-    practice: { name: b.name, author: d.authorName || ctx.user.name, address: [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", "), phone: b.phone, email: b.email },
+    practice: { name: b.name, author: d.authorName || ctx.user.name, inami: author?.inami ?? null, address: [b.address, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", "), phone: b.phone, email: b.email },
     recipient: { name: d.recipientName, inami: d.recipientInami },
     title: d.title,
     content: documentContent(d),

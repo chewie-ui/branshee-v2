@@ -5,7 +5,7 @@ import { careDocuments, careEpisodes, careTeamMembers, customers } from "@/db/sc
 import { decrypt } from "@/lib/field-crypto";
 import { formatNiss } from "@/lib/niss";
 import { TO_FILL, careDocLabel, type CareDocKind } from "@/lib/care-team";
-import { PATHOLOGY_KINDS, currentEntries, sessionsDone, type CareEntryView } from "@/server/physio";
+import { PATHOLOGY_KINDS, currentEntries, measuresOf, sessionsDone, type CareEntryView } from "@/server/physio";
 
 const safe = (v: string | null) => {
   try {
@@ -66,7 +66,19 @@ function episodeBlock(e: Episode, done: number) {
  * Pré-remplit un document INAMI depuis le dossier (identité, prescription, contenu du dossier kiné).
  * Les données confidentielles ne sont jamais reprises ; ce qui manque est marqué « [à compléter] ».
  */
-export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode | null, author: string): Promise<{ title: string; recipientName: string | null; recipientInami: string | null; content: string }> {
+/** Évolution des mesures d'un épisode, une ligne par paramètre : « Douleur (EVA) : 7/10 (01/11) → 3/10 (15/11) ». */
+export async function measuresSummary(episodeId: string) {
+  const ms = (await measuresOf(episodeId)).filter((m) => !m.deletedAt);
+  const groups = new Map<string, typeof ms>();
+  for (const m of ms) {
+    const k = `${m.label}${m.side ? ` (${m.side === "G" ? "gauche" : "droit"})` : ""}`;
+    groups.set(k, [...(groups.get(k) ?? []), m]);
+  }
+  const fmt = (m: (typeof ms)[number]) => `${m.value}${m.unit && !m.unit.startsWith("/") ? " " : ""}${m.unit ?? ""} (${day(m.measuredOn).slice(0, 5)})`;
+  return [...groups.entries()].map(([k, list]) => `${k} : ${list.length > 1 ? `${fmt(list[0]!)} → ${fmt(list[list.length - 1]!)}` : fmt(list[0]!)}`);
+}
+
+export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode | null, author: string, authorInami: string | null = null): Promise<{ title: string; recipientName: string | null; recipientInami: string | null; content: string }> {
   const entries = e ? await currentEntries(e.id) : [];
   const done = e ? await sessionsDone(e) : 0;
   const prescriber = { name: e?.prescriberName ?? c.prescriberName ?? null, inami: e?.prescriberInami ?? c.prescriberInami ?? null };
@@ -74,7 +86,14 @@ export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode |
   const title = e ? `${label} — ${e.title}` : label;
   const P = patientBlock(c);
   const E = e ? episodeBlock(e, done) : "";
-  const sign = `\n${author}`;
+  const sign = `\n${author}${authorInami ? `\nKinésithérapeute, INAMI ${authorInami}` : ""}`;
+  const measures = e ? await measuresSummary(e.id) : [];
+  // Les mesures complètent l'examen ; si l'examen est vide (ou confidentiel), elles suffisent à le remplir.
+  const withMeasures = (text: string) => {
+    if (!measures.length) return text;
+    const list = `Mesures :\n${measures.join("\n")}`;
+    return text === TO_FILL ? list : `${text}\n${list}`;
+  };
   switch (kind) {
     case "rapport_prescripteur":
       return {
@@ -85,7 +104,7 @@ export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode |
           `Cher Confrère,\n\nVoici le rapport ${e?.status === "closed" ? "de fin de traitement" : "intermédiaire"} concernant votre patient(e).`,
           P, E,
           "DIAGNOSTIC KINÉ", join(pick(entries, "diagnostic")),
-          "EXAMEN", join(pick(entries, "examen")),
+          "EXAMEN", withMeasures(join(pick(entries, "examen"))),
           "TRAITEMENT", join(pick(entries, "plan")),
           "ÉVOLUTION", join(pick(entries, "evaluation"), true),
           "CONCLUSION", e?.status === "closed" ? join(pick(entries, "cloture")) : TO_FILL,
@@ -118,7 +137,7 @@ export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode |
         content: [
           "Demande de séances supplémentaires de kinésithérapie.",
           P, E,
-          "JUSTIFICATION", `Diagnostic : ${lastOf(pick(entries, "diagnostic"))}\nDernière évaluation : ${lastOf(pick(entries, "evaluation"))}`,
+          "JUSTIFICATION", `Diagnostic : ${lastOf(pick(entries, "diagnostic"))}\nDernière évaluation : ${lastOf(pick(entries, "evaluation"))}${measures.length ? `\nMesures :\n${measures.join("\n")}` : ""}`,
           "OBJECTIFS RESTANTS", lastOf(pick(entries, "plan")),
           "SÉANCES DEMANDÉES", `Nombre de séances supplémentaires : ${TO_FILL}\nFréquence : ${TO_FILL}`,
           `Je reste à votre disposition pour tout renseignement.${sign}`,
@@ -160,7 +179,7 @@ export async function buildDocument(kind: CareDocKind, c: Customer, e: Episode |
           "Rapport de bilan kinésithérapeutique.",
           P, E,
           "ANAMNÈSE", join(pick(entries, "anamnese")),
-          "EXAMEN", join(pick(entries, "examen")),
+          "EXAMEN", withMeasures(join(pick(entries, "examen"))),
           "DIAGNOSTIC KINÉ", join(pick(entries, "diagnostic")),
           "PROPOSITION DE TRAITEMENT", join(pick(entries, "plan")),
           `Confraternellement,${sign}`,

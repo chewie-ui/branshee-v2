@@ -35,6 +35,8 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>Chaque épisode suit le déroulé : anamnèse, examen kinésithérapeutique, diagnostic kiné, plan de traitement, évaluations, séances et consignes, clôture.</p>
+        <p>Les sections « Concertations multidisciplinaires » et « Hospitalisations » gardent la trace des échanges avec les autres soignants et des séjours à l&apos;hôpital. Sous chaque donnée, le champ « Codes » accepte des codes ICF (ex. <code>ICF b28015</code>), ICD-10, ICPC-2 ou SNOMED ; le texte libre reste toujours possible.</p>
+        <p>La carte « Mesures » enregistre EVA, amplitudes, force (MRC), périmètres et tests (6 minutes, TUG) avec le côté et la date : un tableau montre l&apos;évolution, reprise automatiquement dans les rapports.</p>
         <p>Rien n&apos;est jamais écrasé : chaque modification crée une nouvelle version, avec son auteur et sa date ; une suppression est une version « supprimée ». L&apos;historique s&apos;ouvre sous chaque donnée.</p>
         <p><strong>Confidentielle</strong> : la donnée n&apos;est visible que par son auteur et n&apos;est jamais reprise dans un export, un document ou un partage. <strong>Passive</strong> : la donnée n&apos;est plus d&apos;actualité mais reste utile aux décisions (statut Kmehr « passive ») ; elle n&apos;est plus reprise dans les nouveaux documents.</p>
       </>
@@ -47,7 +49,18 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
       <>
         <p>Onglet Dossier, « Documents INAMI », « Nouveau document » : rapport au prescripteur, rapport écrit (continuité des soins), demande de séances supplémentaires, notification Fa / Fb, demande d&apos;accord liste E, rapport de bilan, historique des pathologies, courrier libre.</p>
         <p>Le document est pré-rempli depuis la fiche et le dossier ; ce qui manque est marqué « [à compléter] ». Avant validation, Skydev signale les rubriques obligatoires absentes ou vides (sans bloquer).</p>
+        <p>Indiquez une fois votre n° INAMI dans la carte « Documents INAMI » : il figure en en-tête et en signature. Un document validé s&apos;exporte aussi au format Kmehr (XML), le standard belge d&apos;échange, pour l&apos;envoi électronique.</p>
         <p>« Valider et imprimer » verrouille le document. Pour le corriger, « Nouvelle version » : la version validée reste intacte et consultable. Les notifications Fa / Fb et les demandes E accompagnent le formulaire officiel de la mutuelle, elles ne le remplacent pas.</p>
+      </>
+    ),
+  },
+  {
+    id: "reception",
+    title: "4 bis. Boîte de réception",
+    body: (
+      <>
+        <p>Patients, « Boîte de réception » : déposez les rapports reçus (PDF) ou les messages Kmehr (XML). Pour un message Kmehr, Skydev lit le patient et reconnaît sa fiche par le NISS (ou nom et date de naissance).</p>
+        <p>Rien n&apos;entre dans un dossier sans votre confirmation. Si l&apos;identité ne correspond pas (NISS d&apos;un autre patient, nom ou date différents), l&apos;intégration est bloquée jusqu&apos;à confirmation explicite. Pour un patient inconnu, « Créer la fiche du patient » la crée depuis le message. Les documents intégrés apparaissent dans le dossier de suivi du patient.</p>
       </>
     ),
   },
@@ -97,7 +110,7 @@ export default async function PhysioHelpPage() {
           <ul className="list-disc space-y-1 pl-6">
             <li><code>patient</code> : identité (nom, NISS, date de naissance, sexe, langue), mutuelle (nom, n° d&apos;affiliation, <code>ct1</code>, <code>ct2</code>), adresse, prescripteur et généraliste (nom, INAMI), informations générales, date d&apos;archivage.</li>
             <li><code>careTeam[]</code> : rôle (<code>gp</code>, <code>prescriber</code>, <code>specialist</code>, <code>physio</code>, <code>nurse</code>, <code>care_assistant</code>, <code>home_helper</code>, <code>hospital</code>, <code>coordination</code>, <code>other</code>), nom, profession, INAMI, coordonnées.</li>
-            <li><code>careEpisodes[]</code> : prescription (date, prescripteur, séances prescrites), <code>pathologyKind</code> (<code>courante</code>, <code>E</code>, <code>Fa</code>, <code>Fb</code>, <code>autre</code>), accord (début, fin), statut, et <code>entries[]</code> : toutes les versions de chaque donnée (<code>key</code> commun aux versions, <code>section</code> : <code>anamnese</code>, <code>examen</code>, <code>diagnostic</code>, <code>plan</code>, <code>evaluation</code>, <code>acte</code>, <code>cloture</code>, <code>version</code>, <code>deleted</code>, <code>lifecycle</code> active / passive, contenu, auteur, date).</li>
+            <li><code>careEpisodes[]</code> : prescription (date, prescripteur, séances prescrites), <code>pathologyKind</code> (<code>courante</code>, <code>E</code>, <code>Fa</code>, <code>Fb</code>, <code>autre</code>), accord (début, fin), statut, et <code>entries[]</code> : toutes les versions de chaque donnée (<code>key</code> commun aux versions, <code>section</code> : <code>anamnese</code>, <code>examen</code>, <code>diagnostic</code>, <code>plan</code>, <code>evaluation</code>, <code>acte</code>, <code>cloture</code>, <code>version</code>, <code>deleted</code>, <code>lifecycle</code> active / passive, <code>codes</code> [&#123;scheme, code&#125;], contenu, auteur, date) et <code>measures[]</code> (paramètre, valeur, unité, côté, date, suppression éventuelle).</li>
             <li><code>careDocuments[]</code> : toutes les versions des documents INAMI (type, titre, destinataire, statut brouillon / validé, contenu).</li>
             <li><code>appointments[]</code>, <code>notes[]</code>, <code>invoices[]</code>, <code>sharedWithPatient[]</code>.</li>
           </ul>

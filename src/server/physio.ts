@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, lte, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, careEntries, careEpisodes, recordAccessLogs } from "@/db/schema";
+import { appointments, careEntries, careEpisodes, careMeasures, recordAccessLogs } from "@/db/schema";
 import { decrypt } from "@/lib/field-crypto";
 import type { AppContext } from "@/server/context";
 
@@ -12,7 +12,9 @@ export const CARE_SECTIONS = [
   { key: "diagnostic", label: "Diagnostic kiné", hint: "Interprétation : déficiences, sévérité, facteurs personnels et environnementaux, attentes du patient, indication du traitement.", multi: false },
   { key: "plan", label: "Plan de traitement", hint: "Objectifs, soins prévus, fréquence et durée, cadre réglementaire.", multi: false },
   { key: "evaluation", label: "Évaluations", hint: "Évolution du patient, son avis, conclusion (poursuite, adaptation, arrêt).", multi: true },
-  { key: "acte", label: "Séances et consignes", hint: "Actes réalisés, consignes données au patient, concertations.", multi: true },
+  { key: "acte", label: "Séances et consignes", hint: "Actes réalisés (code de nomenclature), consignes données au patient.", multi: true },
+  { key: "concertation", label: "Concertations multidisciplinaires", hint: "Date, participants et disciplines, type de contact, contenu, conclusion.", multi: true },
+  { key: "hospitalisation", label: "Hospitalisations", hint: "Entrée et sortie (date, heure), service, hôpital, motif.", multi: true },
   { key: "cloture", label: "Clôture", hint: "Raison de l'arrêt, participation du patient, suite proposée, conseils.", multi: false },
 ] as const;
 export type CareSection = (typeof CARE_SECTIONS)[number]["key"];
@@ -23,6 +25,9 @@ export const PATHOLOGY_KINDS = [
   { key: "E", label: "Pathologie lourde (liste E)" },
   { key: "Fa", label: "Liste Fa" },
   { key: "Fb", label: "Liste Fb" },
+  { key: "perinatal", label: "Rééducation périnatale" },
+  { key: "palliatif", label: "Patient palliatif" },
+  { key: "11bis", label: "Situation 11bis" },
   { key: "autre", label: "Autre situation" },
 ] as const;
 
@@ -60,7 +65,7 @@ export async function sessionsDone(e: typeof careEpisodes.$inferSelect) {
   return rows.length;
 }
 
-export type CareEntryView = { key: string; section: CareSection; version: number; content: string; date: string | null; author: string; at: Date; versions: number; confidential: boolean; passive: boolean; mine: boolean };
+export type CareEntryView = { key: string; section: CareSection; version: number; content: string; date: string | null; author: string; at: Date; versions: number; confidential: boolean; passive: boolean; mine: boolean; codes: { scheme: string; code: string; label?: string }[] };
 
 /**
  * Dernière version de chaque donnée du dossier (les supprimées sont exclues, l'historique reste en base).
@@ -77,7 +82,7 @@ export async function currentEntries(episodeId: string, viewerId: string | null 
   }
   return [...latest.values()]
     .filter((r) => !r.deleted && isCareSection(r.section) && (!r.confidential || (viewerId != null && confidentialOwner(rows, r.entryKey) === viewerId)))
-    .map((r) => ({ key: r.entryKey, section: r.section as CareSection, version: r.version, content: safe(r.contentEnc), date: r.entryDate, author: r.authorName, at: r.createdAt, versions: count.get(r.entryKey) ?? 1, confidential: !!r.confidential, passive: !!r.passive, mine: viewerId != null && r.authorUserId === viewerId }))
+    .map((r) => ({ key: r.entryKey, section: r.section as CareSection, version: r.version, content: safe(r.contentEnc), date: r.entryDate, author: r.authorName, at: r.createdAt, versions: count.get(r.entryKey) ?? 1, confidential: !!r.confidential, passive: !!r.passive, mine: viewerId != null && r.authorUserId === viewerId, codes: r.codes ?? [] }))
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || a.at.getTime() - b.at.getTime());
 }
 
@@ -98,10 +103,15 @@ export async function canReadEntry(entryKey: string, userId: string) {
 /** Historique complet d'une donnée (toutes ses versions, la plus récente d'abord). */
 export async function entryHistory(businessId: string, entryKey: string) {
   const rows = await db.select().from(careEntries).where(and(eq(careEntries.businessId, businessId), eq(careEntries.entryKey, entryKey))).orderBy(desc(careEntries.version));
-  return rows.map((r) => ({ version: r.version, content: safe(r.contentEnc), deleted: !!r.deleted, author: r.authorName, at: r.createdAt, date: r.entryDate, confidential: !!r.confidential, passive: !!r.passive }));
+  return rows.map((r) => ({ version: r.version, content: safe(r.contentEnc), deleted: !!r.deleted, author: r.authorName, at: r.createdAt, date: r.entryDate, confidential: !!r.confidential, passive: !!r.passive, codes: r.codes ?? [] }));
 }
 
 export async function episodesSessionCounts(episodes: (typeof careEpisodes.$inferSelect)[]) {
   return Object.fromEntries(await Promise.all(episodes.map(async (e) => [e.id, await sessionsDone(e)] as const)));
 }
 
+
+/** Mesures d'un épisode (les supprimées incluses, marquées). */
+export async function measuresOf(episodeId: string) {
+  return db.select().from(careMeasures).where(eq(careMeasures.episodeId, episodeId)).orderBy(asc(careMeasures.measuredOn), asc(careMeasures.createdAt));
+}

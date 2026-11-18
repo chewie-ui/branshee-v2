@@ -385,7 +385,7 @@ async function CareTeamCard({ ctx, customerId, canManage }: { ctx: AppContext; c
 
 async function DocumentsTab({ ctx, customerId, canManage, canExport }: { ctx: AppContext; customerId: string; canManage: boolean; canExport: boolean }) {
   const tz = ctx.business.timezone;
-  const [docs, eps] = await Promise.all([latestDocuments(ctx.business.id, customerId), episodesOf(ctx.business.id, customerId)]);
+  const [docs, eps, [me]] = await Promise.all([latestDocuments(ctx.business.id, customerId), episodesOf(ctx.business.id, customerId), db.select({ inami: members.inami }).from(members).where(eq(members.id, ctx.member.id))]);
   const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
   const views = await Promise.all(
     docs.map(async (d) => ({
@@ -396,7 +396,7 @@ async function DocumentsTab({ ctx, customerId, canManage, canExport }: { ctx: Ap
   );
   return (
     <div className="mx-auto mb-4 max-w-3xl">
-      <CareDocuments customerId={customerId} docs={views} episodes={eps.map((e) => ({ id: e.id, title: e.title }))} canManage={canManage} canExport={canExport} />
+      <CareDocuments customerId={customerId} docs={views} episodes={eps.map((e) => ({ id: e.id, title: e.title }))} canManage={canManage} canExport={canExport} myInami={me?.inami ?? ""} />
     </div>
   );
 }
