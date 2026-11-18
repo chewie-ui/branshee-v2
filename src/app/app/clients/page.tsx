@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Download, FileUp, Inbox, Search, UserPlus } from "lucide-react";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { customers } from "@/db/schema";
+import { customers, members } from "@/db/schema";
 import { CustomersTable } from "@/components/customers/customers-table";
 import { NewCustomerForm } from "@/components/customers/panels";
 import { ButtonLink } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Clients");
 
-type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string; sexe?: string; age?: string; dossier?: string; pathologie?: string; prescripteur?: string }>;
+type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string; sexe?: string; age?: string; dossier?: string; pathologie?: string; prescripteur?: string; praticien?: string }>;
 
 export default async function CustomersPage({ searchParams }: { searchParams: SearchParams }) {
   const t = await appT();
@@ -39,6 +39,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   const dossier = patient && ["actifs", "archives"].includes(sp.dossier ?? "") ? sp.dossier! : "";
   const pathologie = patient && ["courante", "E", "Fa", "Fb", "perinatal", "palliatif", "11bis", "autre"].includes(sp.pathologie ?? "") ? sp.pathologie! : "";
   const prescripteur = patient ? (sp.prescripteur ?? "").trim().slice(0, 80) : "";
+  const team = patient ? await db.select({ id: members.id, name: members.displayName }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.isActive, true))).orderBy(members.displayName) : [];
+  const praticien = team.some((m) => m.id === sp.praticien) ? sp.praticien! : "";
 
   // Dernier rendez-vous de chaque fiche (statut, membre, date) et nombre total, en une requête.
   // Colonne qualifiée en clair : dans un select sur une seule table, Drizzle écrit « "id" », ambigu dans les sous-requêtes.
@@ -63,6 +65,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   if (dossier === "actifs") where.push(sql`${customers.archivedAt} is null`);
   else if (dossier === "archives") where.push(sql`${customers.archivedAt} is not null`);
   if (pathologie) where.push(sql`exists (select 1 from care_episodes e where e.customer_id = ${cid} and e.status = 'open' and e.pathology_kind = ${pathologie})`);
+  if (praticien) where.push(sql`exists (select 1 from appointments a where a.customer_id = ${cid} and a.member_id = ${praticien})`);
   if (prescripteur) {
     const pl = `%${prescripteur.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
     where.push(sql`(${customers.prescriberName} ilike ${pl} or exists (select 1 from care_episodes e where e.customer_id = ${cid} and e.prescriber_name ilike ${pl}))`);
@@ -90,7 +93,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
     .orderBy(sql`${last} desc nulls last`, customers.fullName)
     .limit(300);
 
-  const filtered = !!(q || periode || statut || sexe || age || dossier || pathologie || prescripteur);
+  const filtered = !!(q || periode || statut || sexe || age || dossier || pathologie || prescripteur || praticien);
   // Skydev : import depuis un autre logiciel (CSV / Excel).
   const canImport = ctx.can("customers.manage") && (await currentBrand()).id === "skydev";
   const inboxCount = patient && ctx.can("records.view") ? ((await db.execute<{ n: number }>(sql`select count(*)::int as n from care_inbox where business_id = ${ctx.business.id} and status = 'pending'`))[0]?.n ?? 0) : null;
@@ -152,6 +155,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
               <option value="adultes">18 à 64 ans</option>
               <option value="seniors">65 ans et plus</option>
             </Select>
+            {team.length > 1 ? (
+              <Select name="praticien" defaultValue={praticien} className="w-auto" aria-label="Kiné">
+                <option value="">Tous les kinés</option>
+                {team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </Select>
+            ) : null}
             <Input name="prescripteur" defaultValue={prescripteur} placeholder="Prescripteur" className="w-44" aria-label="Prescripteur" />
           </>
         ) : null}
