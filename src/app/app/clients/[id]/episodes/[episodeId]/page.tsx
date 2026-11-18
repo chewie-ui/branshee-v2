@@ -20,7 +20,7 @@ export const generateMetadata = () => appMetadata("Épisode de soins");
 const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
 
 export default async function EpisodePage({ params }: { params: Promise<{ id: string; episodeId: string }> }) {
-  const ctx = await requireContext("customers.view");
+  const ctx = await requireContext("records.view");
   const { id, episodeId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(episodeId)) notFound();
   const e = await episodeOf(ctx.business.id, episodeId);
@@ -29,8 +29,9 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   if (!c) notFound();
   await logRecordAccess(ctx, c.id, "view", `Épisode « ${e.title} »`);
   const tz = ctx.business.timezone;
-  const canManage = ctx.can("customers.manage");
-  const [entries, done] = await Promise.all([currentEntries(e.id), sessionsDone(e)]);
+  const canManage = ctx.can("records.manage");
+  const canExport = ctx.can("records.export");
+  const [entries, done] = await Promise.all([currentEntries(e.id, ctx.user.id), sessionsDone(e)]);
   const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
   const histories = await Promise.all(entries.filter((x) => x.versions > 1).map(async (x) => [x.key, await entryHistory(ctx.business.id, x.key)] as const));
   const hist = new Map(histories);
@@ -39,7 +40,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
     label: s.label,
     hint: s.hint,
     multi: s.multi,
-    entries: entries.filter((x) => x.section === s.key).map((x) => ({ key: x.key, content: x.content, date: x.date, author: x.author, at: stamp(x.at), versions: (hist.get(x.key) ?? []).map((v) => ({ ...v, at: stamp(v.at) })) })),
+    entries: entries.filter((x) => x.section === s.key).map((x) => ({ key: x.key, content: x.content, date: x.date, author: x.author, at: stamp(x.at), confidential: x.confidential, passive: x.passive, versions: (hist.get(x.key) ?? []).map((v) => ({ ...v, at: stamp(v.at) })) })),
   }));
   let niss = "";
   try {
@@ -66,7 +67,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         <div><p className="text-muted">Accord / notification</p><p className={`mt-1 font-medium ${approvalSoon ? "text-warning" : ""}`}>{e.approvalStart || e.approvalEnd ? `${day(e.approvalStart)} → ${day(e.approvalEnd)}` : "—"}</p></div>
       </Card>
       {over ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">Plus de séances que prescrites : une nouvelle prescription ou une demande de séances supplémentaires est nécessaire.</p> : null}
-      <EpisodeActions customerId={c.id} episodeId={e.id} closed={e.status === "closed"} canManage={canManage} form={{ title: e.title, prescriberName: e.prescriberName ?? "", prescriberInami: e.prescriberInami ?? "", prescriptionDate: e.prescriptionDate ?? "", sessionsPrescribed: e.sessionsPrescribed != null ? String(e.sessionsPrescribed) : "", pathologyKind: e.pathologyKind, nomenclature: e.nomenclature ?? "", approvalStart: e.approvalStart ?? "", approvalEnd: e.approvalEnd ?? "" }} />
+      <EpisodeActions canExport={canExport} customerId={c.id} episodeId={e.id} closed={e.status === "closed"} canManage={canManage} form={{ title: e.title, prescriberName: e.prescriberName ?? "", prescriberInami: e.prescriberInami ?? "", prescriptionDate: e.prescriptionDate ?? "", sessionsPrescribed: e.sessionsPrescribed != null ? String(e.sessionsPrescribed) : "", pathologyKind: e.pathologyKind, nomenclature: e.nomenclature ?? "", approvalStart: e.approvalStart ?? "", approvalEnd: e.approvalEnd ?? "" }} />
       <CareRecord episodeId={e.id} sections={sections} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
     </div>
   );

@@ -10,7 +10,7 @@ import { CARE_SECTIONS, PATHOLOGY_KINDS, currentEntries, episodeOf, logRecordAcc
 
 /** Rapport écrit au prescripteur (PDF), pré-rempli depuis le dossier kiné de l'épisode. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; episodeId: string }> }) {
-  const ctx = await requireContext("customers.view");
+  const ctx = await requireContext("records.export");
   const { id, episodeId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(episodeId)) return new Response("Introuvable", { status: 404 });
   const e = await episodeOf(ctx.business.id, episodeId);

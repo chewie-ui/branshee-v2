@@ -59,6 +59,10 @@ export const customers = pgTable(
     prescriberInami: text("prescriber_inami"),
     gpName: text("gp_name"),
     gpInami: text("gp_inami"),
+    /** Codes titulaire CT1/CT2 de l'assurance soins de santé, langue du patient (fr | nl | de | en). */
+    ct1: text("ct1"),
+    ct2: text("ct2"),
+    language: text("language"),
     /** Dossier archivé (inactif) : toujours consultable et réactivable, jamais supprimé. */
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     /** App Marketing : le client ne veut plus recevoir de campagnes (lien de désabonnement). */

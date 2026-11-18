@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { History, Pencil, Plus, Trash2 } from "lucide-react";
+import { EyeOff, History, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { deleteCareEntry, saveCareEntry } from "@/server/actions/physio";
 
-export type EntryVersion = { version: number; content: string; deleted: boolean; author: string; at: string; date: string | null };
-export type EntryView = { key: string; content: string; date: string | null; author: string; at: string; versions: EntryVersion[] };
+export type EntryVersion = { version: number; content: string; deleted: boolean; author: string; at: string; date: string | null; confidential?: boolean; passive?: boolean };
+export type EntryView = { key: string; content: string; date: string | null; author: string; at: string; versions: EntryVersion[]; confidential: boolean; passive: boolean };
 export type SectionView = { key: string; label: string; hint: string; multi: boolean; entries: EntryView[] };
 
 const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "");
@@ -23,7 +23,7 @@ function Editor({ episodeId, section, entry, multi, today, onDone }: { episodeId
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         start(async () => {
-          const r = await saveCareEntry(episodeId, entry?.key ?? null, { section, content: String(fd.get("content") ?? ""), date: String(fd.get("date") ?? "") });
+          const r = await saveCareEntry(episodeId, entry?.key ?? null, { section, content: String(fd.get("content") ?? ""), date: String(fd.get("date") ?? ""), confidential: fd.get("confidential") === "on", passive: fd.get("passive") === "on" });
           if (r.ok) onDone();
           else setError(r.error);
         });
@@ -35,6 +35,10 @@ function Editor({ episodeId, section, entry, multi, today, onDone }: { episodeId
         </Field>
       ) : null}
       <Textarea name="content" rows={6} maxLength={20000} defaultValue={entry?.content} required aria-label="Contenu" />
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <label className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" name="confidential" defaultChecked={entry?.confidential} className="size-4 accent-[var(--color-accent)]" />Confidentielle (visible par moi seul, jamais exportée)</label>
+        <label className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" name="passive" defaultChecked={entry?.passive} className="size-4 accent-[var(--color-accent)]" />Passive (plus d&apos;actualité, gardée pour les décisions)</label>
+      </div>
       {entry ? <p className="text-xs text-muted">La version actuelle reste dans l&apos;historique : rien n&apos;est écrasé.</p> : null}
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <div className="flex gap-2">
@@ -50,9 +54,15 @@ function Entry({ episodeId, section, e, multi, canManage, today }: { episodeId: 
   const [pending, start] = useTransition();
   if (editing) return <Editor episodeId={episodeId} section={section} entry={e} multi={multi} today={today} onDone={() => setEditing(false)} />;
   return (
-    <div className="rounded-lg border border-border p-4">
-      {multi && e.date ? <p className="mb-1 text-xs font-semibold text-muted">{day(e.date)}</p> : null}
-      <p className="whitespace-pre-line text-sm">{e.content}</p>
+    <div className={`rounded-lg border border-border p-4 ${e.passive ? "bg-surface-muted/60" : ""}`}>
+      {(multi && e.date) || e.confidential || e.passive ? (
+        <p className="mb-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
+          {multi && e.date ? <span>{day(e.date)}</span> : null}
+          {e.confidential ? <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-1.5 py-0.5 text-accent-soft-foreground"><EyeOff className="size-3" aria-hidden="true" />Confidentielle</span> : null}
+          {e.passive ? <span className="rounded-md bg-surface px-1.5 py-0.5 ring-1 ring-border">Passive</span> : null}
+        </p>
+      ) : null}
+      <p className={`whitespace-pre-line text-sm ${e.passive ? "text-muted" : ""}`}>{e.content}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span>{e.author} · {e.at}{e.versions.length > 1 ? ` · version ${e.versions.length}` : ""}</span>
         {e.versions.length > 1 ? (

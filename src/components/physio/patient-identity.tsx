@@ -8,7 +8,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { formatNiss, validNiss } from "@/lib/niss";
 import { savePatientIdentity, setArchived } from "@/server/actions/physio";
 
-export type PatientIdentity = { niss: string; birthDate: string; sex: string; mutuality: string; mutualityNumber: string; prescriberName: string; prescriberInami: string; gpName: string; gpInami: string; archived: boolean };
+export type PatientIdentity = { niss: string; birthDate: string; sex: string; mutuality: string; mutualityNumber: string; prescriberName: string; prescriberInami: string; gpName: string; gpInami: string; ct1: string; ct2: string; language: string; archived: boolean };
 
 const MUTUALITIES = ["Mutualité chrétienne (MC)", "Solidaris", "Partenamut", "Mutualité libérale", "Mutualités Libres (Helan, Partena…)", "Mutualité neutre", "CAAMI / HZIV", "HR Rail", "Autre"];
 
@@ -57,6 +57,23 @@ export function PatientIdentityForm({ customerId, initial, canManage }: { custom
           <Field label="N° d'affiliation (facultatif)" htmlFor="pi-mutn">
             <Input id="pi-mutn" name="mutualityNumber" defaultValue={initial.mutualityNumber} maxLength={40} />
           </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="CT1" htmlFor="pi-ct1">
+              <Input id="pi-ct1" name="ct1" defaultValue={initial.ct1} maxLength={3} inputMode="numeric" pattern="\d{0,3}" />
+            </Field>
+            <Field label="CT2" htmlFor="pi-ct2">
+              <Input id="pi-ct2" name="ct2" defaultValue={initial.ct2} maxLength={3} inputMode="numeric" pattern="\d{0,3}" />
+            </Field>
+            <Field label="Langue" htmlFor="pi-lang">
+              <Select id="pi-lang" name="language" defaultValue={initial.language}>
+                <option value="">—</option>
+                <option value="fr">FR</option>
+                <option value="nl">NL</option>
+                <option value="de">DE</option>
+                <option value="en">EN</option>
+              </Select>
+            </Field>
+          </div>
           <Field label="Médecin prescripteur" htmlFor="pi-presc">
             <Input id="pi-presc" name="prescriberName" defaultValue={initial.prescriberName} maxLength={120} placeholder="Dr Dupont" />
           </Field>

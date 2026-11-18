@@ -7,6 +7,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { grades } from "@/db/schema";
 import { GradeForm } from "@/components/team/grade-form";
+import { withDefaults } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
 import { currentBrand } from "@/server/brand";
@@ -30,7 +31,7 @@ export default async function EditGradePage({ params }: { params: Promise<{ id: 
         Grades
       </Link>
       <PageHeader title={g.name} />
-      <GradeForm id={g.id} name={g.name} permissions={g.permissions} isBuiltIn={g.isBuiltIn} apps={apps} appAccess={g.appAccess ?? null} />
+      <GradeForm id={g.id} name={g.name} permissions={withDefaults(g.permissions)} isBuiltIn={g.isBuiltIn} apps={apps} appAccess={g.appAccess ?? null} />
     </div>
   );
 }

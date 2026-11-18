@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
-import { clientWord } from "@/lib/terminology";
+import { clientWord, isPatientProfession } from "@/lib/terminology";
 import { normalizeNiss, validNiss } from "@/lib/niss";
 import { blindIndex } from "@/lib/field-crypto";
 import { formatDay } from "@/lib/time";
@@ -20,7 +20,7 @@ import { appT } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Clients");
 
-type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string }>;
+type SearchParams = Promise<{ q?: string; periode?: string; statut?: string; nouveau?: string; sexe?: string; age?: string; dossier?: string; pathologie?: string; prescripteur?: string }>;
 
 export default async function CustomersPage({ searchParams }: { searchParams: SearchParams }) {
   const t = await appT();
@@ -32,6 +32,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
   const tz = ctx.business.timezone;
   const term = clientWord(ctx.business.businessType);
   const terms = clientWord(ctx.business.businessType, { plural: true });
+  // Dossier de soins (kinés…) : grille de sélection des patients.
+  const patient = isPatientProfession(ctx.business.businessType);
+  const sexe = patient && ["F", "M", "X"].includes(sp.sexe ?? "") ? sp.sexe! : "";
+  const age = patient && ["mineurs", "adultes", "seniors"].includes(sp.age ?? "") ? sp.age! : "";
+  const dossier = patient && ["actifs", "archives"].includes(sp.dossier ?? "") ? sp.dossier! : "";
+  const pathologie = patient && ["courante", "E", "Fa", "Fb", "autre"].includes(sp.pathologie ?? "") ? sp.pathologie! : "";
+  const prescripteur = patient ? (sp.prescripteur ?? "").trim().slice(0, 80) : "";
 
   // Dernier rendez-vous de chaque fiche (statut, membre, date) et nombre total, en une requête.
   // Colonne qualifiée en clair : dans un select sur une seule table, Drizzle écrit « "id" », ambigu dans les sous-requêtes.
@@ -43,7 +50,22 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
     // Un NISS valide tapé dans la recherche retrouve le patient par son empreinte (le NISS n'est jamais en clair en base).
     const niss = normalizeNiss(q);
     const byNiss = niss && validNiss(niss) ? eq(customers.nissHash, blindIndex(niss, "niss")) : undefined;
-    where.push(or(ilike(customers.fullName, like), ilike(customers.email, like), ilike(customers.phone, like), ilike(customers.altName, like), ilike(customers.altEmail, like), ilike(customers.altPhone, like), byNiss)!);
+    // Date de naissance (jj/mm/aaaa ou aaaa-mm-jj) et adresse : recherche des dossiers patients.
+    const dm = q.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/) ?? null;
+    const iso = dm ? `${dm[3]}-${dm[2]!.padStart(2, "0")}-${dm[1]!.padStart(2, "0")}` : /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : null;
+    const byBirth = iso ? eq(customers.birthDate, iso) : undefined;
+    where.push(or(ilike(customers.fullName, like), ilike(customers.email, like), ilike(customers.phone, like), ilike(customers.altName, like), ilike(customers.altEmail, like), ilike(customers.altPhone, like), ilike(customers.street, like), ilike(customers.city, like), ilike(customers.postalCode, like), byNiss, byBirth)!);
+  }
+  if (sexe) where.push(eq(customers.sex, sexe));
+  if (age === "mineurs") where.push(sql`${customers.birthDate} > (current_date - interval '18 years')`);
+  else if (age === "adultes") where.push(sql`${customers.birthDate} <= (current_date - interval '18 years') and ${customers.birthDate} > (current_date - interval '65 years')`);
+  else if (age === "seniors") where.push(sql`${customers.birthDate} <= (current_date - interval '65 years')`);
+  if (dossier === "actifs") where.push(sql`${customers.archivedAt} is null`);
+  else if (dossier === "archives") where.push(sql`${customers.archivedAt} is not null`);
+  if (pathologie) where.push(sql`exists (select 1 from care_episodes e where e.customer_id = ${cid} and e.status = 'open' and e.pathology_kind = ${pathologie})`);
+  if (prescripteur) {
+    const pl = `%${prescripteur.replace(/[%_\\]/g, (c) => "\\" + c)}%`;
+    where.push(sql`(${customers.prescriberName} ilike ${pl} or exists (select 1 from care_episodes e where e.customer_id = ${cid} and e.prescriber_name ilike ${pl}))`);
   }
   if (periode === "avenir") where.push(sql`exists (select 1 from appointments a where a.customer_id = ${cid} and a.starts_at > now() and a.status <> 'cancelled')`);
   else if (periode) where.push(sql`${last} >= now() - (${Number(periode)} || ' days')::interval and ${last} <= now()`);
@@ -68,7 +90,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
     .orderBy(sql`${last} desc nulls last`, customers.fullName)
     .limit(300);
 
-  const filtered = !!(q || periode || statut);
+  const filtered = !!(q || periode || statut || sexe || age || dossier || pathologie || prescripteur);
   // Skydev : import depuis un autre logiciel (CSV / Excel).
   const canImport = ctx.can("customers.manage") && (await currentBrand()).id === "skydev";
   return (
@@ -83,7 +105,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
       <form className="mb-4 flex flex-wrap gap-2" role="search">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <Input name="q" defaultValue={q} placeholder={t("Nom, email ou téléphone")} className="pl-9" aria-label={`Rechercher un ${term}`} />
+          <Input name="q" defaultValue={q} placeholder={patient ? "Nom, NISS, date de naissance, adresse…" : t("Nom, email ou téléphone")} className="pl-9" aria-label={`Rechercher un ${term}`} />
         </div>
         <Select name="periode" defaultValue={periode} className="w-auto" aria-label={t("Période")}>
           <option value="">{t("Toutes les dates")}</option>
@@ -99,6 +121,36 @@ export default async function CustomersPage({ searchParams }: { searchParams: Se
           <option value="noshow">{t("Au moins une absence")}</option>
           <option value="blocked">Bloqués</option>
         </Select>
+        {patient ? (
+          <>
+            <Select name="dossier" defaultValue={dossier} className="w-auto" aria-label="Dossier">
+              <option value="">Tous les dossiers</option>
+              <option value="actifs">Dossiers actifs</option>
+              <option value="archives">Dossiers archivés</option>
+            </Select>
+            <Select name="pathologie" defaultValue={pathologie} className="w-auto" aria-label="Pathologie en cours">
+              <option value="">Toutes situations</option>
+              <option value="courante">Pathologie courante</option>
+              <option value="E">Liste E</option>
+              <option value="Fa">Liste Fa</option>
+              <option value="Fb">Liste Fb</option>
+              <option value="autre">Autre situation</option>
+            </Select>
+            <Select name="sexe" defaultValue={sexe} className="w-auto" aria-label="Sexe">
+              <option value="">Tous sexes</option>
+              <option value="F">Femmes</option>
+              <option value="M">Hommes</option>
+              <option value="X">X</option>
+            </Select>
+            <Select name="age" defaultValue={age} className="w-auto" aria-label="Âge">
+              <option value="">Tous âges</option>
+              <option value="mineurs">Moins de 18 ans</option>
+              <option value="adultes">18 à 64 ans</option>
+              <option value="seniors">65 ans et plus</option>
+            </Select>
+            <Input name="prescripteur" defaultValue={prescripteur} placeholder="Prescripteur" className="w-44" aria-label="Prescripteur" />
+          </>
+        ) : null}
         <button type="submit" className="h-10 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Filtrer</button>
       </form>
 

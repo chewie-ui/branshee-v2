@@ -6,6 +6,7 @@
 export const PERMISSIONS = {
   appointments: { label: "Rendez-vous", actions: { view: "Voir l'agenda", manage: "Créer et modifier", cancel: "Annuler et supprimer" } },
   customers: { label: "Clients", actions: { view: "Voir les fiches", manage: "Modifier les fiches et dossiers" } },
+  records: { label: "Dossier de soins", actions: { view: "Lire les dossiers de soins", manage: "Écrire dans les dossiers de soins", export: "Exporter et imprimer les dossiers" } },
   services: { label: "Prestations", actions: { view: "Voir", manage: "Créer et modifier" } },
   groupSessions: { label: "Cours collectifs", actions: { view: "Voir", manage: "Créer et modifier" } },
   availability: {
@@ -59,6 +60,7 @@ export const BUILT_IN_GRADES: { name: string; permissions: Permissions }[] = [
       ...NO_PERMISSIONS,
       appointments: { view: true, manage: true, cancel: false },
       customers: { view: true, manage: true },
+      records: { view: true, manage: true, export: true },
       services: { view: true, manage: false },
       groupSessions: { view: true, manage: false },
       availability: { manageShared: false, manageOwnSchedule: true, manageOthersSchedule: false, manageOwnTimeOff: true, manageOthersTimeOff: false },
@@ -72,5 +74,15 @@ export function can(perms: Permissions | null | undefined, key: PermissionKey, i
   if (!perms) return false;
   const [domain, action] = key.split(".") as [PermissionDomain, string];
   const group = perms[domain] as Record<string, boolean> | undefined;
+  // Grades créés avant l'arrivée du dossier de soins : on reprend les droits sur les fiches clients.
+  if (!group && domain === "records") return can(perms, action === "view" ? "customers.view" : "customers.manage");
   return group?.[action] === true;
+}
+
+/** Complète un grade enregistré avant l'ajout d'un domaine (ex. dossier de soins repris des droits « Clients »). */
+export function withDefaults(perms: Permissions): Permissions {
+  const p = perms as Partial<Permissions>;
+  if (p.records) return perms;
+  const c = p.customers;
+  return { ...perms, records: { view: !!c?.view, manage: !!c?.manage, export: !!c?.manage } };
 }

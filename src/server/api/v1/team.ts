@@ -120,13 +120,13 @@ async function update(r: ApiRequest) {
 
 /* ── Grades ── */
 
-const ICONS: Record<string, string> = { appointments: "calendar-outline", customers: "people-outline", services: "pricetags-outline", groupSessions: "people-circle-outline", availability: "time-outline", forms: "document-text-outline", customization: "color-palette-outline", settings: "settings-outline", team: "person-add-outline", grades: "ribbon-outline", logs: "list-outline", billing: "card-outline", business: "business-outline" };
+const ICONS: Record<string, string> = { appointments: "calendar-outline", customers: "people-outline", records: "medkit-outline", services: "pricetags-outline", groupSessions: "people-circle-outline", availability: "time-outline", forms: "document-text-outline", customization: "color-palette-outline", settings: "settings-outline", team: "person-add-outline", grades: "ribbon-outline", logs: "list-outline", billing: "card-outline", business: "business-outline" };
 
 function schema() {
   return {
     zones: Object.entries(PERMISSIONS).map(([zone, def]) => ({ zone, label: def.label, description: "", icon: ICONS[zone] ?? "ellipse-outline", keys: Object.entries(def.actions).map(([key, label]) => ({ key, label })) })),
     groups: [
-      { title: "Au quotidien", description: "Agenda, clients et cours.", zones: ["appointments", "customers", "groupSessions", "availability"] },
+      { title: "Au quotidien", description: "Agenda, clients et cours.", zones: ["appointments", "customers", "records", "groupSessions", "availability"] },
       { title: "Votre offre", description: "Prestations, formulaire et page de réservation.", zones: ["services", "forms", "customization"] },
       { title: "Gestion", description: "Équipe, réglages et abonnement.", zones: ["team", "grades", "logs", "settings", "billing", "business"] },
     ],

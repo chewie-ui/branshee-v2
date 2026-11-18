@@ -9,7 +9,7 @@ import { activityLogs, businesses, careEntries, careEpisodes, customers } from "
 import { blindIndex, encrypt } from "@/lib/field-crypto";
 import { nissFacts, normalizeNiss, validNiss } from "@/lib/niss";
 import { requireContext, type AppContext } from "@/server/context";
-import { episodeOf, isCareSection, logRecordAccess } from "@/server/physio";
+import { canReadEntry, episodeOf, isCareSection, logRecordAccess } from "@/server/physio";
 
 type Result = { ok: true; message: string; id?: string } | { ok: false; error: string };
 const RO = { ok: false as const, error: "Mode supervision : lecture seule." };
@@ -32,6 +32,9 @@ const identitySchema = z.object({
   prescriberInami: opt(20),
   gpName: opt(120),
   gpInami: opt(20),
+  ct1: z.string().trim().regex(/^\d{0,3}$/, "CT1 : 3 chiffres.").optional().transform((v) => (v ? v : null)),
+  ct2: z.string().trim().regex(/^\d{0,3}$/, "CT2 : 3 chiffres.").optional().transform((v) => (v ? v : null)),
+  language: z.enum(["", "fr", "nl", "de", "en"]).optional().transform((v) => (v ? v : null)),
 });
 
 /** Identité du patient (dossier de soins) : NISS chiffré, unique dans l'établissement, date de naissance, mutuelle, médecins. */
@@ -41,7 +44,7 @@ export async function savePatientIdentity(customerId: string, input: unknown): P
   const c = await ownCustomer(ctx, customerId);
   if (!c) return { ok: false, error: "Fiche introuvable." };
   const v = identitySchema.safeParse(input);
-  if (!v.success) return { ok: false, error: "Vérifiez les champs." };
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
   const d = v.data;
   let nissEnc: string | null = null;
   let nissHash: string | null = null;
@@ -60,7 +63,7 @@ export async function savePatientIdentity(customerId: string, input: unknown): P
   }
   await db
     .update(customers)
-    .set({ nissEnc, nissHash, birthDate, sex, mutuality: d.mutuality, mutualityNumber: d.mutualityNumber, prescriberName: d.prescriberName, prescriberInami: d.prescriberInami, gpName: d.gpName, gpInami: d.gpInami, updatedAt: new Date() })
+    .set({ nissEnc, nissHash, birthDate, sex, mutuality: d.mutuality, mutualityNumber: d.mutualityNumber, prescriberName: d.prescriberName, prescriberInami: d.prescriberInami, gpName: d.gpName, gpInami: d.gpInami, ct1: d.ct1, ct2: d.ct2, language: d.language, updatedAt: new Date() })
     .where(eq(customers.id, c.id));
   await logRecordAccess(ctx, c.id, "edit", "Identité patient");
   await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "customer.identity", description: `Identité patient modifiée : ${c.fullName}` });
@@ -94,7 +97,7 @@ const episodeSchema = z.object({
 
 /** Nouvel épisode de soins (une prescription) ou modification de ses données administratives. */
 export async function saveEpisode(customerId: string, episodeId: string | null, input: unknown): Promise<Result> {
-  const ctx = await requireContext("customers.manage", { app: "clients" });
+  const ctx = await requireContext("records.manage", { app: "clients" });
   if (ctx.impersonating) return RO;
   const c = await ownCustomer(ctx, customerId);
   if (!c) return { ok: false, error: "Fiche introuvable." };
@@ -119,7 +122,7 @@ export async function saveEpisode(customerId: string, episodeId: string | null, 
 
 /** Clôturer ou rouvrir un épisode. */
 export async function setEpisodeClosed(episodeId: string, closed: boolean): Promise<Result> {
-  const ctx = await requireContext("customers.manage", { app: "clients" });
+  const ctx = await requireContext("records.manage", { app: "clients" });
   if (ctx.impersonating) return RO;
   const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
   if (!e) return { ok: false, error: "Épisode introuvable." };
@@ -133,6 +136,8 @@ const entrySchema = z.object({
   section: z.string(),
   content: z.string().trim().min(1, "Le contenu est vide.").max(20000),
   date: isoDate.optional().or(z.literal("")),
+  confidential: z.boolean().optional(),
+  passive: z.boolean().optional(),
 });
 
 /**
@@ -140,18 +145,19 @@ const entrySchema = z.object({
  * (auteur, date), l'historique complet reste consultable.
  */
 export async function saveCareEntry(episodeId: string, entryKey: string | null, input: unknown): Promise<Result> {
-  const ctx = await requireContext("customers.manage", { app: "clients" });
+  const ctx = await requireContext("records.manage", { app: "clients" });
   if (ctx.impersonating) return RO;
   const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
   if (!e) return { ok: false, error: "Épisode introuvable." };
   const v = entrySchema.safeParse(input);
   if (!v.success || !isCareSection(v.data.section)) return { ok: false, error: v.success ? "Section inconnue." : (v.error.issues[0]?.message ?? "Contenu invalide.") };
   const key = entryKey && z.uuid().safeParse(entryKey).success ? entryKey : randomUUID();
+  if (entryKey && !(await canReadEntry(key, ctx.user.id))) return { ok: false, error: "Donnée confidentielle : seul son auteur peut la modifier." };
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"care-entry:" + key}))`);
     const [last] = await tx.select({ version: careEntries.version, section: careEntries.section, episodeId: careEntries.episodeId }).from(careEntries).where(eq(careEntries.entryKey, key)).orderBy(desc(careEntries.version)).limit(1);
     if (last && (last.episodeId !== e.id || last.section !== v.data.section)) throw new Error("Donnée d'un autre dossier.");
-    await tx.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey: key, section: v.data.section, version: (last?.version ?? 0) + 1, contentEnc: encrypt(v.data.content), entryDate: v.data.date || null, authorUserId: ctx.user.id, authorName: ctx.user.name });
+    await tx.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey: key, section: v.data.section, version: (last?.version ?? 0) + 1, contentEnc: encrypt(v.data.content), entryDate: v.data.date || null, confidential: v.data.confidential ? 1 : 0, passive: v.data.passive ? 1 : 0, authorUserId: ctx.user.id, authorName: ctx.user.name });
   });
   await db.update(careEpisodes).set({ updatedAt: new Date() }).where(eq(careEpisodes.id, e.id));
   await logRecordAccess(ctx, e.customerId, "edit", `Dossier : ${v.data.section}`);
@@ -161,13 +167,14 @@ export async function saveCareEntry(episodeId: string, entryKey: string | null, 
 
 /** Supprime une donnée : une version « supprimée » est ajoutée, l'historique reste en base. */
 export async function deleteCareEntry(episodeId: string, entryKey: string): Promise<Result> {
-  const ctx = await requireContext("customers.manage", { app: "clients" });
+  const ctx = await requireContext("records.manage", { app: "clients" });
   if (ctx.impersonating) return RO;
   const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
   if (!e || !z.uuid().safeParse(entryKey).success) return { ok: false, error: "Introuvable." };
   const [last] = await db.select().from(careEntries).where(and(eq(careEntries.entryKey, entryKey), eq(careEntries.episodeId, e.id))).orderBy(desc(careEntries.version)).limit(1);
   if (!last || last.deleted) return { ok: false, error: "Introuvable." };
-  await db.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey, section: last.section, version: last.version + 1, contentEnc: last.contentEnc, entryDate: last.entryDate, deleted: 1, authorUserId: ctx.user.id, authorName: ctx.user.name });
+  if (!(await canReadEntry(entryKey, ctx.user.id))) return { ok: false, error: "Donnée confidentielle : seul son auteur peut la supprimer." };
+  await db.insert(careEntries).values({ businessId: ctx.business.id, episodeId: e.id, entryKey, section: last.section, version: last.version + 1, contentEnc: last.contentEnc, entryDate: last.entryDate, deleted: 1, confidential: last.confidential, passive: last.passive, authorUserId: ctx.user.id, authorName: ctx.user.name });
   await logRecordAccess(ctx, e.customerId, "edit", `Dossier : suppression (${last.section})`);
   revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
   return { ok: true, message: "Supprimé du dossier (conservé dans l'historique)." };

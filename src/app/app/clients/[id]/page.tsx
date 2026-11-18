@@ -10,8 +10,13 @@ import { appointmentPayments, appointments, clientShares, customerNotes, custome
 import { SharesPanel } from "@/components/customers/shares-panel";
 import { PatientIdentityForm } from "@/components/physio/patient-identity";
 import { EpisodesList } from "@/components/physio/episodes";
+import { CareTeam } from "@/components/physio/care-team";
+import { CareDocuments } from "@/components/physio/care-documents";
+import { careDocLabel } from "@/lib/care-team";
+import { careTeamOf, documentContent, documentVersions, latestDocuments } from "@/server/care-documents";
 import { isPatientProfession } from "@/lib/terminology";
-import { PATHOLOGY_KINDS, episodesOf, episodesSessionCounts, logRecordAccess } from "@/server/physio";
+import { PATHOLOGY_KINDS, currentEntries, episodesOf, episodesSessionCounts, logRecordAccess } from "@/server/physio";
+import type { AppContext } from "@/server/context";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DossierNotes, type NoteView } from "@/components/customers/dossier";
 import { AltContactsForm, ContactForm, CustomerActions, GeneralNotes, ReassignButton } from "@/components/customers/panels";
@@ -50,6 +55,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const term = clientWord(ctx.business.businessType);
   const Terms = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
   const canManage = ctx.can("customers.manage");
+  const records = { view: ctx.can("records.view"), manage: ctx.can("records.manage"), export: ctx.can("records.export") };
 
   const [row] = await db
     .select({ c: customers, account: users.email })
@@ -153,6 +159,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </p>
       ) : null}
 
+      {patient && records.view && (tab === "apercu" || tab === "dossier") ? <Synthesis ctx={ctx} customerId={customer.id} archived={!!customer.archivedAt} narrow={tab === "dossier"} /> : null}
+
       {activity && tab === "tout" ? <CustomerActivity a={activity} customerId={customer.id} /> : null}
 
       {tab === "apercu" ? (
@@ -180,9 +188,10 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               <PatientIdentityForm
                 customerId={customer.id}
                 canManage={canManage}
-                initial={{ niss: safeDecrypt(customer.nissEnc).text, birthDate: customer.birthDate ?? "", sex: customer.sex ?? "", mutuality: customer.mutuality ?? "", mutualityNumber: customer.mutualityNumber ?? "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", gpName: customer.gpName ?? "", gpInami: customer.gpInami ?? "", archived: !!customer.archivedAt }}
+                initial={{ niss: safeDecrypt(customer.nissEnc).text, birthDate: customer.birthDate ?? "", sex: customer.sex ?? "", mutuality: customer.mutuality ?? "", mutualityNumber: customer.mutualityNumber ?? "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", gpName: customer.gpName ?? "", gpInami: customer.gpInami ?? "", ct1: customer.ct1 ?? "", ct2: customer.ct2 ?? "", language: customer.language ?? "", archived: !!customer.archivedAt }}
               />
             ) : null}
+            {patient ? <CareTeamCard ctx={ctx} customerId={customer.id} canManage={canManage} /> : null}
             <GeneralNotes customerId={customer.id} initial={t(general.text)} canManage={canManage} />
             <Card>
               <CardHeader title={t("Derniers rendez-vous")} action={history.length > 5 ? <Link href={`/app/clients/${customer.id}?onglet=rendez-vous`} className="text-sm font-medium text-accent hover:text-accent-hover">{t("Tout voir")}</Link> : null} />
@@ -196,7 +205,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                 <AltContactsForm customerId={customer.id} c={{ altName: customer.altName ?? "", altEmail: customer.altEmail ?? "", altPhone: customer.altPhone ?? "" }} />
                 {(await currentBrand()).id === "skydev" && ctx.can("invoices.manage") ? <CustomerBillingForm customerId={customer.id} initial={{ company: customer.companyName ?? "", vatNumber: customer.vatNumber ?? "", street: customer.street ?? "", postalCode: customer.postalCode ?? "", city: customer.city ?? "", country: customer.country ?? "" }} /> : null}
                 <CustomerActions customerId={customer.id} name={customer.fullName} blocked={!!customer.blockedAt} blockedReason={customer.blockedReason ?? ""} term={term} />
-                <ButtonLink href={`/app/clients/${customer.id}/export`} prefetch={false} variant="secondary" className="w-full" icon={<Download className="size-4" aria-hidden="true" />}>{t("Exporter le dossier complet (JSON)")}</ButtonLink>
+                {records.export ? <ButtonLink href={`/app/clients/${customer.id}/export`} prefetch={false} variant="secondary" className="w-full" icon={<Download className="size-4" aria-hidden="true" />}>{t("Exporter le dossier complet (JSON)")}</ButtonLink> : null}
               </>
             ) : (
               <Card>
@@ -214,7 +223,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
       {tab === "rdv" ? <AppointmentsTab history={history} sp={sp} customerId={customer.id} tz={tz} Row={Row} /> : null}
 
-      {tab === "dossier" && patient ? <EpisodesTab customer={customer} businessId={ctx.business.id} canManage={canManage} /> : null}
+      {tab === "dossier" && patient && records.view ? <EpisodesTab customer={customer} businessId={ctx.business.id} canManage={records.manage} /> : null}
+      {tab === "dossier" && patient && records.view ? <DocumentsTab ctx={ctx} customerId={customer.id} canManage={records.manage} canExport={records.export} /> : null}
 
       {tab === "dossier" ? <DossierTab customerId={customer.id} canManage={canManage} tz={tz} term={term} /> : null}
 
@@ -335,6 +345,58 @@ async function EpisodesTab({ customer, businessId, canManage }: { customer: type
   return (
     <div className="mx-auto mb-4 max-w-3xl">
       <EpisodesList customerId={customer.id} rows={rows} canManage={canManage} defaults={{ title: "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", prescriptionDate: "", sessionsPrescribed: "", pathologyKind: "courante", nomenclature: "", approvalStart: "", approvalEnd: "" }} />
+    </div>
+  );
+}
+
+/** Synthèse à l'ouverture du dossier : épisodes en cours, compteur de séances, accord / notification, dernière évaluation. */
+async function Synthesis({ ctx, customerId, archived, narrow }: { ctx: AppContext; customerId: string; archived: boolean; narrow: boolean }) {
+  const eps = (await episodesOf(ctx.business.id, customerId)).filter((e) => e.status === "open");
+  if (!eps.length && !archived) return null;
+  const counts = await episodesSessionCounts(eps);
+  const lastEval = Object.fromEntries(await Promise.all(eps.map(async (e) => [e.id, (await currentEntries(e.id, ctx.user.id)).filter((x) => x.section === "evaluation" && !x.passive).at(-1)?.content ?? null] as const)));
+  const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
+  return (
+    <Card className={cn("mb-6 divide-y divide-border", narrow && "mx-auto max-w-3xl")} aria-label="Synthèse du dossier">
+      {archived ? <p className="px-5 py-3 text-sm font-medium text-warning">Dossier archivé (inactif) : consultable, réactivable depuis l&apos;identité du patient.</p> : null}
+      {eps.map((e) => {
+        const done = counts[e.id] ?? 0;
+        const over = e.sessionsPrescribed != null && done > e.sessionsPrescribed;
+        const special = e.pathologyKind !== "courante";
+        return (
+          <Link key={e.id} href={`/app/clients/${customerId}/episodes/${e.id}`} className="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3 text-sm hover:bg-surface-muted">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{e.title}</span>
+              <span className="block truncate text-muted">{PATHOLOGY_KINDS.find((k) => k.key === e.pathologyKind)?.label ?? e.pathologyKind}{lastEval[e.id] ? ` · dernière évaluation : ${lastEval[e.id]!.slice(0, 90)}` : ""}</span>
+            </span>
+            {special ? <span className="text-muted">{e.pathologyKind === "E" ? "Accord" : "Notification"} : <span className="font-medium text-text">{day(e.approvalStart)} → {day(e.approvalEnd)}</span></span> : null}
+            <span className={`rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums ${over ? "bg-danger-soft text-danger" : "bg-accent-soft text-accent-soft-foreground"}`}>{done}{e.sessionsPrescribed != null ? ` / ${e.sessionsPrescribed}` : ""} séance{done > 1 ? "s" : ""}</span>
+          </Link>
+        );
+      })}
+    </Card>
+  );
+}
+
+async function CareTeamCard({ ctx, customerId, canManage }: { ctx: AppContext; customerId: string; canManage: boolean }) {
+  const rows = await careTeamOf(ctx.business.id, customerId);
+  return <CareTeam customerId={customerId} canManage={canManage} members={rows.map((m) => ({ id: m.id, role: m.role, name: m.name, profession: m.profession ?? "", inami: m.inami ?? "", enterpriseNumber: m.enterpriseNumber ?? "", address: m.address ?? "", phone: m.phone ?? "", email: m.email ?? "", iban: m.iban ?? "" }))} />;
+}
+
+async function DocumentsTab({ ctx, customerId, canManage, canExport }: { ctx: AppContext; customerId: string; canManage: boolean; canExport: boolean }) {
+  const tz = ctx.business.timezone;
+  const [docs, eps] = await Promise.all([latestDocuments(ctx.business.id, customerId), episodesOf(ctx.business.id, customerId)]);
+  const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
+  const views = await Promise.all(
+    docs.map(async (d) => ({
+      key: d.docKey, kind: d.kind, kindLabel: careDocLabel(d.kind), title: d.title, recipientName: d.recipientName ?? "", recipientInami: d.recipientInami ?? "", content: documentContent(d), status: d.status, version: d.version, author: d.authorName, at: stamp(d.validatedAt ?? d.updatedAt),
+      episode: eps.find((e) => e.id === d.episodeId)?.title ?? null,
+      versions: d.versions > 1 ? (await documentVersions(ctx.business.id, d.docKey)).map((v) => ({ version: v.version, status: v.status, author: v.authorName, at: stamp(v.validatedAt ?? v.updatedAt) })) : [],
+    })),
+  );
+  return (
+    <div className="mx-auto mb-4 max-w-3xl">
+      <CareDocuments customerId={customerId} docs={views} episodes={eps.map((e) => ({ id: e.id, title: e.title }))} canManage={canManage} canExport={canExport} />
     </div>
   );
 }

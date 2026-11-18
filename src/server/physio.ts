@@ -60,10 +60,14 @@ export async function sessionsDone(e: typeof careEpisodes.$inferSelect) {
   return rows.length;
 }
 
-export type CareEntryView = { key: string; section: CareSection; version: number; content: string; date: string | null; author: string; at: Date; versions: number };
+export type CareEntryView = { key: string; section: CareSection; version: number; content: string; date: string | null; author: string; at: Date; versions: number; confidential: boolean; passive: boolean; mine: boolean };
 
-/** Dernière version de chaque donnée du dossier (les supprimées sont exclues, l'historique reste en base). */
-export async function currentEntries(episodeId: string): Promise<CareEntryView[]> {
+/**
+ * Dernière version de chaque donnée du dossier (les supprimées sont exclues, l'historique reste en base).
+ * Les données confidentielles ne sont rendues qu'à leur auteur (`viewerId`) ; sans lecteur, elles sont exclues
+ * (documents destinés à des tiers).
+ */
+export async function currentEntries(episodeId: string, viewerId: string | null = null): Promise<CareEntryView[]> {
   const rows = await db.select().from(careEntries).where(eq(careEntries.episodeId, episodeId)).orderBy(asc(careEntries.entryKey), desc(careEntries.version));
   const latest = new Map<string, typeof rows[number]>();
   const count = new Map<string, number>();
@@ -72,15 +76,29 @@ export async function currentEntries(episodeId: string): Promise<CareEntryView[]
     if (!latest.has(r.entryKey)) latest.set(r.entryKey, r);
   }
   return [...latest.values()]
-    .filter((r) => !r.deleted && isCareSection(r.section))
-    .map((r) => ({ key: r.entryKey, section: r.section as CareSection, version: r.version, content: safe(r.contentEnc), date: r.entryDate, author: r.authorName, at: r.createdAt, versions: count.get(r.entryKey) ?? 1 }))
+    .filter((r) => !r.deleted && isCareSection(r.section) && (!r.confidential || (viewerId != null && confidentialOwner(rows, r.entryKey) === viewerId)))
+    .map((r) => ({ key: r.entryKey, section: r.section as CareSection, version: r.version, content: safe(r.contentEnc), date: r.entryDate, author: r.authorName, at: r.createdAt, versions: count.get(r.entryKey) ?? 1, confidential: !!r.confidential, passive: !!r.passive, mine: viewerId != null && r.authorUserId === viewerId }))
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || a.at.getTime() - b.at.getTime());
+}
+
+/** Auteur d'une donnée confidentielle = auteur de sa première version (seul à pouvoir la lire). */
+function confidentialOwner(rows: { entryKey: string; version: number; authorUserId: string | null }[], key: string) {
+  let first: { version: number; authorUserId: string | null } | null = null;
+  for (const r of rows) if (r.entryKey === key && (!first || r.version < first.version)) first = r;
+  return first?.authorUserId ?? null;
+}
+
+/** Une donnée confidentielle est-elle lisible par cet utilisateur ? */
+export async function canReadEntry(entryKey: string, userId: string) {
+  const rows = await db.select({ entryKey: careEntries.entryKey, version: careEntries.version, authorUserId: careEntries.authorUserId, confidential: careEntries.confidential }).from(careEntries).where(eq(careEntries.entryKey, entryKey));
+  if (!rows.some((r) => r.confidential)) return true;
+  return confidentialOwner(rows, entryKey) === userId;
 }
 
 /** Historique complet d'une donnée (toutes ses versions, la plus récente d'abord). */
 export async function entryHistory(businessId: string, entryKey: string) {
   const rows = await db.select().from(careEntries).where(and(eq(careEntries.businessId, businessId), eq(careEntries.entryKey, entryKey))).orderBy(desc(careEntries.version));
-  return rows.map((r) => ({ version: r.version, content: safe(r.contentEnc), deleted: !!r.deleted, author: r.authorName, at: r.createdAt, date: r.entryDate }));
+  return rows.map((r) => ({ version: r.version, content: safe(r.contentEnc), deleted: !!r.deleted, author: r.authorName, at: r.createdAt, date: r.entryDate, confidential: !!r.confidential, passive: !!r.passive }));
 }
 
 export async function episodesSessionCounts(episodes: (typeof careEpisodes.$inferSelect)[]) {

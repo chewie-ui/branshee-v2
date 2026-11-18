@@ -59,6 +59,10 @@ export const careEntries = pgTable(
     contentEnc: text("content_enc"),
     entryDate: date("entry_date"),
     deleted: integer("deleted").notNull().default(0),
+    /** Donnée confidentielle : visible par son auteur seulement, jamais exportée ni partagée. */
+    confidential: integer("confidential").notNull().default(0),
+    /** Statut Kmehr : 0 = active, 1 = passive (plus en cours mais pertinente pour les décisions). */
+    passive: integer("passive").notNull().default(0),
     authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
     authorName: text("author_name").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -83,4 +87,67 @@ export const recordAccessLogs = pgTable(
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("record_access_business_idx").on(t.businessId, t.at), index("record_access_customer_idx").on(t.customerId, t.at)],
+);
+
+/**
+ * Équipe de soins d'un patient : médecin généraliste, prescripteur, spécialistes, infirmier, aide familiale…
+ * role : gp | prescriber | specialist | physio | nurse | care_assistant | home_helper | hospital | coordination | other
+ */
+export const careTeamMembers = pgTable(
+  "care_team_members",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    name: text("name").notNull(),
+    profession: text("profession"),
+    inami: text("inami"),
+    enterpriseNumber: text("enterprise_number"),
+    address: text("address"),
+    phone: text("phone"),
+    email: text("email"),
+    iban: text("iban"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("care_team_customer_idx").on(t.customerId)],
+);
+
+/**
+ * Documents INAMI d'un patient (rapport au prescripteur, demande de séances supplémentaires, notifications…),
+ * générés depuis un modèle puis modifiables. Une fois validé (imprimé ou envoyé), un document est verrouillé :
+ * le modifier crée une nouvelle version. `docKey` relie les versions d'un même document.
+ */
+export const careDocuments = pgTable(
+  "care_documents",
+  {
+    id: id(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    episodeId: uuid("episode_id").references(() => careEpisodes.id, { onDelete: "set null" }),
+    docKey: uuid("doc_key").notNull(),
+    version: integer("version").notNull(),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    recipientName: text("recipient_name"),
+    recipientInami: text("recipient_inami"),
+    contentEnc: text("content_enc"),
+    /** draft | validated */
+    status: text("status").notNull().default("draft"),
+    validatedAt: timestamp("validated_at", { withTimezone: true }),
+    authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    authorName: text("author_name").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("care_documents_customer_idx").on(t.customerId, t.createdAt), uniqueIndex("care_documents_key_version_uq").on(t.docKey, t.version)],
 );
