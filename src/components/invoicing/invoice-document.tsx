@@ -13,6 +13,8 @@ export type DocView = {
   notes?: string | null;
   lines: SalesLine[];
   related?: { number: string | null; issueDate: string } | null;
+  paidDate?: string | null;
+  paidMethod?: string | null;
 };
 
 const s = (v: unknown) => (v == null ? "" : String(v));
@@ -131,13 +133,15 @@ export function InvoiceDocument({ doc, seller, client, qr }: { doc: DocView; sel
             </>
           )}
           <div className="flex justify-between rounded-lg px-3 py-2 text-[15px] font-semibold text-white" style={{ background: color }}>
-            <span>{isCredit ? "Total crédité" : isQuote ? "Total" : "Total à payer"}{fr ? "" : " TVAC"}</span>
+            <span>{isCredit ? "Total crédité" : isQuote ? "Total" : doc.status === "paid" ? "Total payé" : "Total à payer"}{fr ? "" : " TVAC"}</span>
             <span className="tabular-nums">{money(fr ? t.ht : t.ttc)}</span>
           </div>
         </div>
       </div>
 
-      {!isQuote && !isCredit ? (
+      {!isQuote && !isCredit && doc.status === "paid" ? (
+        <p className="mt-7 rounded-xl bg-[#f0fdf4] p-4 font-medium text-[#166534]">Facture acquittée{doc.paidDate ? ` le ${fdate(doc.paidDate)}` : ""}{doc.paidMethod ? ` · ${doc.paidMethod}` : ""}. Rien à payer.</p>
+      ) : !isQuote && !isCredit ? (
         <div className="mt-7 flex items-center justify-between gap-6 rounded-xl bg-[#f4f4f5] p-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-1">
             <dt className="text-[#52525b]">À payer avant le</dt><dd className="font-medium">{fdate(doc.dueDate)}</dd>

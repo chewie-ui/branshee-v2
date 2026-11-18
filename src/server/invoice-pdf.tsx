@@ -107,13 +107,17 @@ export async function invoicePdf({ doc, seller, client, qr }: { doc: DocView; se
               </>
             )}
             <View style={[st.row, { marginTop: 5, backgroundColor: color, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8 }]}>
-              <Text style={{ color: "#fff", fontFamily: "Helvetica-Bold", fontSize: 11 }}>{isCredit ? "Total crédité" : isQuote ? "Total" : "Total à payer"}{fr ? "" : " TVAC"}</Text>
+              <Text style={{ color: "#fff", fontFamily: "Helvetica-Bold", fontSize: 11 }}>{isCredit ? "Total crédité" : isQuote ? "Total" : doc.status === "paid" ? "Total payé" : "Total à payer"}{fr ? "" : " TVAC"}</Text>
               <Text style={{ color: "#fff", fontFamily: "Helvetica-Bold", fontSize: 11 }}>{m(fr ? t.ht : t.ttc)}</Text>
             </View>
           </View>
         </View>
 
-        {!isQuote && !isCredit ? (
+        {!isQuote && !isCredit && doc.status === "paid" ? (
+          <View style={{ marginTop: 18, backgroundColor: "#f0fdf4", borderRadius: 8, padding: 10 }} wrap={false}>
+            <Text style={{ fontFamily: "Helvetica-Bold", color: "#166534" }}>{`Facture acquittée${doc.paidDate ? ` le ${fdate(doc.paidDate)}` : ""}${doc.paidMethod ? ` · ${s(doc.paidMethod)}` : ""}. Rien à payer.`}</Text>
+          </View>
+        ) : !isQuote && !isCredit ? (
           <View style={[st.row, { marginTop: 18, backgroundColor: "#f4f4f5", borderRadius: 8, padding: 10, alignItems: "center" }]} wrap={false}>
             <View>
               {[["À payer avant le", fdate(doc.dueDate)], ["IBAN", ibanFmt(s(seller.iban)) || "—"], ...(seller.bic ? [["BIC", s(seller.bic)]] : []), ["Communication", s(doc.comm) || "Attribuée à l'émission"], ["Bénéficiaire", dname]].map(([a, b]) => (
