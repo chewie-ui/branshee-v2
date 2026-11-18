@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import "server-only";
+import { autoInvoiceOrder } from "@/server/order-invoice";
 import { emitWebhook } from "@/server/connect";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -99,7 +100,7 @@ export async function completeShopPayment(session: { id: string; payment_status:
   const id = session.metadata.orderId;
   if (!id) return false;
   const done = await db.update(shopOrders).set({ status: "new", paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "pending_payment"))).returning({ id: shopOrders.id });
-  if (done.length) { await notifyNewOrder(id); await stampShopOrder(id).catch(() => 0); }
+  if (done.length) { await notifyNewOrder(id); await stampShopOrder(id).catch(() => 0); await autoInvoiceOrder(id); }
   else {
     // Payé trop tard (commande déjà annulée, stock remis en vente) : le responsable doit rembourser ou honorer.
     const [o] = await db.select().from(shopOrders).where(and(eq(shopOrders.id, id), eq(shopOrders.stripeSessionId, session.id), eq(shopOrders.status, "cancelled")));

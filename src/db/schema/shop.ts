@@ -54,6 +54,8 @@ export const shopOrders = pgTable(
     totalCents: integer("total_cents").notNull(),
     token: text("token").notNull(),
     stripeSessionId: text("stripe_session_id"),
+    /** Facture émise pour cette commande (automatique à la livraison, ou demandée par le client). */
+    invoiceId: uuid("invoice_id"),
     ...timestamps,
   },
   (t) => [uniqueIndex("shop_orders_number_uq").on(t.businessId, t.number), uniqueIndex("shop_orders_token_uq").on(t.token), index("shop_orders_business_idx").on(t.businessId, t.createdAt)],

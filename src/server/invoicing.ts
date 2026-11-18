@@ -133,3 +133,13 @@ export async function dashboardStats(businessId: string, year: number, today: st
     overdue: open.filter((d) => d.dueDate && d.dueDate < today),
   };
 }
+
+/** Copie figée du client sur une facture émise. */
+export function clientSnapshot(c: typeof customers.$inferSelect) {
+  return { name: c.companyName || c.fullName, contact: c.companyName ? c.fullName : "", email: c.email ?? "", phone: c.phone ?? "", vat: c.vatNumber ?? "", street: c.street ?? "", zip: c.postalCode ?? "", city: c.city ?? "", country: c.country ?? "" };
+}
+
+/** Copie figée du vendeur sur une facture émise. */
+export function sellerSnapshot(s: Awaited<ReturnType<typeof getSellerSettings>>) {
+  return { legalName: s.legalName, tradeName: s.tradeName, legalForm: s.legalForm, street: s.street, zip: s.zip, city: s.city, country: s.country, bce: s.bce, vatNumber: s.vatNumber, email: s.email, phone: s.phone, website: s.website, iban: s.iban, bic: s.bic, vatRegime: s.vatRegime, footerNote: s.footerNote, color: s.color };
+}

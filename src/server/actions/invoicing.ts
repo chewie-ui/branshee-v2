@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { activityLogs, appointments, customers, invoiceProducts, invoiceSettings, salesDocuments, type SalesLine } from "@/db/schema";
 import { addDays, bceValid, cleanLines, clientMissing, formatNumber, ibanValid, money, newLine, num, settingsMissing, structComm, todayIso, totals, type DocType } from "@/lib/invoicing";
 import { requireContext, type AppContext } from "@/server/context";
-import { getDocument, getSellerSettings } from "@/server/invoicing";
+import { clientSnapshot, getDocument, getSellerSettings, sellerSnapshot } from "@/server/invoicing";
 import { signedSignature } from "@/server/signatures";
 
 type Result = { ok: true; id?: string; message?: string } | { ok: false; error: string; fieldErrors?: Record<string, string> };
@@ -43,9 +43,6 @@ const docSchema = z.object({
 });
 export type DocInput = z.input<typeof docSchema>;
 
-function clientSnapshot(c: typeof customers.$inferSelect) {
-  return { name: c.companyName || c.fullName, contact: c.companyName ? c.fullName : "", email: c.email ?? "", phone: c.phone ?? "", vat: c.vatNumber ?? "", street: c.street ?? "", zip: c.postalCode ?? "", city: c.city ?? "", country: c.country ?? "" };
-}
 
 const billingOf = (c: typeof customers.$inferSelect) => ({ name: c.fullName, company: c.companyName, vatNumber: c.vatNumber, street: c.street, postalCode: c.postalCode, city: c.city });
 
@@ -135,9 +132,6 @@ export async function saveDocument(input: DocInput): Promise<Result> {
   return { ok: true, id: row!.id, message: "Brouillon enregistré." };
 }
 
-function sellerSnapshot(s: Awaited<ReturnType<typeof getSellerSettings>>) {
-  return { legalName: s.legalName, tradeName: s.tradeName, legalForm: s.legalForm, street: s.street, zip: s.zip, city: s.city, country: s.country, bce: s.bce, vatNumber: s.vatNumber, email: s.email, phone: s.phone, website: s.website, iban: s.iban, bic: s.bic, vatRegime: s.vatRegime, footerNote: s.footerNote, color: s.color };
-}
 
 /**
  * Émet une facture ou une note de crédit : numéro définitif continu (par type et par année), date chronologique,

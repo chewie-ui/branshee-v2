@@ -13,6 +13,7 @@ import { emails } from "@/server/email/templates";
 import { cancelShopOrderAndRestock, shopOrigin, shopRights } from "@/server/shop";
 import { shopThemeSchema } from "@/lib/shop-theme";
 import { stampShopOrder, undoOrderStamp } from "@/server/loyalty";
+import { autoInvoiceOrder, creditOrderInvoice } from "@/server/order-invoice";
 import { dealsSchema } from "@/lib/deals";
 import { savePublicImage } from "@/server/storage";
 
@@ -75,6 +76,7 @@ export async function markShopOrderPaid(id: string): Promise<Result> {
   const done = await db.update(shopOrders).set({ paidAt: new Date(), updatedAt: new Date() }).where(and(eq(shopOrders.id, id), eq(shopOrders.businessId, ctx.business.id), isNull(shopOrders.paidAt), inArray(shopOrders.status, ["new", "ready", "shipped", "done"]))).returning({ n: shopOrders.number });
   if (!done.length) return { ok: false, error: "Commande introuvable, annulée ou déjà encaissée." };
   await stampShopOrder(id).catch(() => 0);
+  await autoInvoiceOrder(id);
   refresh();
   return { ok: true, message: `Commande n° ${done[0]!.n} encaissée.` };
 }
@@ -88,7 +90,9 @@ export async function cancelShopOrder(id: string): Promise<Result> {
   if (!o) return { ok: false, error: "Commande introuvable." };
   await cancelShopOrderAndRestock(o.id, ctx.member.id);
   await undoOrderStamp(ctx.business.id, o.id).catch(() => {});
+  const credited = await creditOrderInvoice(o.id).catch((e) => { console.error("[order-credit]", o.id, e); return null; });
   refresh();
+  if (credited) return { ok: true, message: `Commande annulée, stock rendu, note de crédit émise pour la facture.${o.paidAt && o.payMethod === "online" ? " Remboursez le client depuis votre compte Stripe." : ""}` };
   return { ok: true, message: o.paidAt && o.payMethod === "online" ? "Commande annulée, stock rendu. Remboursez le client depuis votre compte Stripe." : "Commande annulée, stock rendu." };
 }
 

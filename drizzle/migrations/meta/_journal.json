@@ -442,6 +442,13 @@
       "when": 1794993380378,
       "tag": "0062_vat_exempt",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794993381378,
+      "tag": "0063_order_invoice",
+      "breakpoints": true
     }
   ]
 }
