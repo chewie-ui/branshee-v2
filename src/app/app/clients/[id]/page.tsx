@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, CalendarPlus, Mail, MessageCircle, Phone, Search } from "lucide-react";
+import { ArrowLeft, CalendarDays, CalendarPlus, Download, Mail, MessageCircle, Phone, Search } from "lucide-react";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { z } from "@/lib/zod";
@@ -196,6 +196,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                 <AltContactsForm customerId={customer.id} c={{ altName: customer.altName ?? "", altEmail: customer.altEmail ?? "", altPhone: customer.altPhone ?? "" }} />
                 {(await currentBrand()).id === "skydev" && ctx.can("invoices.manage") ? <CustomerBillingForm customerId={customer.id} initial={{ company: customer.companyName ?? "", vatNumber: customer.vatNumber ?? "", street: customer.street ?? "", postalCode: customer.postalCode ?? "", city: customer.city ?? "", country: customer.country ?? "" }} /> : null}
                 <CustomerActions customerId={customer.id} name={customer.fullName} blocked={!!customer.blockedAt} blockedReason={customer.blockedReason ?? ""} term={term} />
+                <ButtonLink href={`/app/clients/${customer.id}/export`} prefetch={false} variant="secondary" className="w-full" icon={<Download className="size-4" aria-hidden="true" />}>{t("Exporter le dossier complet (JSON)")}</ButtonLink>
               </>
             ) : (
               <Card>

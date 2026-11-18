@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { activityLogs, appointments, customerNotes, customers } from "@/db/schema";
+import { activityLogs, appointments, customerNotes, customers, loyaltyCards } from "@/db/schema";
 import { decrypt, encrypt } from "@/lib/field-crypto";
 import { clientWord } from "@/lib/terminology";
 import { requireContext, type AppContext } from "@/server/context";
@@ -180,8 +180,28 @@ export async function mergeCustomers(targetId: string, sourceId: string): Promis
 
   const info = [decrypt(target.generalInfoEnc), decrypt(source.generalInfoEnc)].filter(Boolean).join("\n\n");
   await db.transaction(async (tx) => {
-    await tx.update(appointments).set({ customerId: target.id }).where(eq(appointments.customerId, source.id));
-    await tx.update(customerNotes).set({ customerId: target.id }).where(eq(customerNotes.customerId, source.id));
+    // Fusion sans perte : tout ce qui pointe vers la fiche supprimée (RDV, notes, dossier kiné, factures,
+    // documents partagés, journal des accès…) est rattaché à la fiche gardée, y compris les tables futures.
+    const fks = await tx.execute<{ table_name: string; column_name: string }>(sql`
+      select kcu.table_name, kcu.column_name
+      from information_schema.referential_constraints rc
+      join information_schema.key_column_usage kcu on kcu.constraint_name = rc.constraint_name and kcu.constraint_schema = rc.constraint_schema
+      join information_schema.constraint_column_usage ccu on ccu.constraint_name = rc.unique_constraint_name and ccu.constraint_schema = rc.unique_constraint_schema
+      where ccu.table_name = 'customers' and ccu.column_name = 'id' and kcu.table_schema = 'public'`);
+    for (const fk of fks) {
+      if (fk.table_name === "loyalty_cards") {
+        // Une carte par client : les tampons de la fiche supprimée s'ajoutent à la carte gardée.
+        const [keep] = await tx.select().from(loyaltyCards).where(eq(loyaltyCards.customerId, target.id));
+        const [drop] = await tx.select().from(loyaltyCards).where(eq(loyaltyCards.customerId, source.id));
+        if (drop && keep) {
+          await tx.update(loyaltyCards).set({ stamps: keep.stamps + drop.stamps, updatedAt: new Date() }).where(eq(loyaltyCards.id, keep.id));
+          await tx.execute(sql`update loyalty_moves set card_id = ${keep.id} where card_id = ${drop.id}`);
+          await tx.delete(loyaltyCards).where(eq(loyaltyCards.id, drop.id));
+        } else if (drop) await tx.update(loyaltyCards).set({ customerId: target.id }).where(eq(loyaltyCards.id, drop.id));
+        continue;
+      }
+      await tx.execute(sql`update ${sql.identifier(fk.table_name)} set ${sql.identifier(fk.column_name)} = ${target.id} where ${sql.identifier(fk.column_name)} = ${source.id}`);
+    }
     // L'email de la fiche supprimée peut devenir un contact alternatif.
     await tx.delete(customers).where(eq(customers.id, source.id));
     await tx
@@ -196,6 +216,20 @@ export async function mergeCustomers(targetId: string, sourceId: string): Promis
         generalInfoEnc: encrypt(info),
         blockedAt: target.blockedAt ?? source.blockedAt,
         blockedReason: target.blockedReason ?? source.blockedReason,
+        // Dossier patient : on garde ce que la fiche gardée a, sinon on reprend celui de l'autre.
+        nissEnc: target.nissEnc ?? source.nissEnc,
+        nissHash: target.nissHash ?? source.nissHash,
+        birthDate: target.birthDate ?? source.birthDate,
+        sex: target.sex ?? source.sex,
+        mutuality: target.mutuality ?? source.mutuality,
+        mutualityNumber: target.mutualityNumber ?? source.mutualityNumber,
+        prescriberName: target.prescriberName ?? source.prescriberName,
+        prescriberInami: target.prescriberInami ?? source.prescriberInami,
+        gpName: target.gpName ?? source.gpName,
+        gpInami: target.gpInami ?? source.gpInami,
+        street: target.street ?? source.street,
+        postalCode: target.postalCode ?? source.postalCode,
+        city: target.city ?? source.city,
       })
       .where(eq(customers.id, target.id));
   });
