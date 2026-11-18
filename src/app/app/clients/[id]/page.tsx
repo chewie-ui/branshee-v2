@@ -6,7 +6,8 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { format } from "date-fns";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { appointmentPayments, appointments, customerNotes, customers, members, users } from "@/db/schema";
+import { appointmentPayments, appointments, clientShares, customerNotes, customers, members, users } from "@/db/schema";
+import { SharesPanel } from "@/components/customers/shares-panel";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DossierNotes, type NoteView } from "@/components/customers/dossier";
 import { AltContactsForm, ContactForm, CustomerActions, GeneralNotes, ReassignButton } from "@/components/customers/panels";
@@ -40,7 +41,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   if (!id.success) notFound();
   const sp = await searchParams;
   const skydev = (await currentBrand()).id === "skydev";
-  const tab = sp.onglet === "rendez-vous" ? "rdv" : sp.onglet === "dossier" ? "dossier" : sp.onglet === "tout" && skydev ? "tout" : "apercu";
+  const tab = sp.onglet === "rendez-vous" ? "rdv" : sp.onglet === "dossier" ? "dossier" : sp.onglet === "partage" ? "partage" : sp.onglet === "tout" && skydev ? "tout" : "apercu";
   const tz = ctx.business.timezone;
   const term = clientWord(ctx.business.businessType);
   const Terms = clientWord(ctx.business.businessType, { plural: true, capitalize: true });
@@ -99,6 +100,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     { key: "apercu", label: t("Aperçu"), href: `/app/clients/${customer.id}` },
     { key: "rdv", label: `Rendez-vous (${history.length})`, href: `/app/clients/${customer.id}?onglet=rendez-vous` },
     { key: "dossier", label: "Dossier", href: `/app/clients/${customer.id}?onglet=dossier` },
+    { key: "partage", label: t("Partagé avec le client"), href: `/app/clients/${customer.id}?onglet=partage` },
     ...(skydev && activityTab ? [{ key: "tout", label: activityTab, href: `/app/clients/${customer.id}?onglet=tout` }] : []),
   ];
 
@@ -198,6 +200,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       {tab === "rdv" ? <AppointmentsTab history={history} sp={sp} customerId={customer.id} tz={tz} Row={Row} /> : null}
 
       {tab === "dossier" ? <DossierTab customerId={customer.id} canManage={canManage} tz={tz} term={term} /> : null}
+
+      {tab === "partage" ? <SharesTab customerId={customer.id} canManage={canManage} tz={tz} hasAccount={!!customer.userId} email={customer.email} /> : null}
     </>
   );
 }
@@ -287,4 +291,21 @@ async function AppointmentsTab({ history, sp, customerId, tz, Row }: { history: 
       </Card>
     </div>
   );
+}
+
+/** Notes et fichiers partagés avec le client (visibles dans son espace client). */
+async function SharesTab({ customerId, canManage, tz, hasAccount, email }: { customerId: string; canManage: boolean; tz: string; hasAccount: boolean; email: string | null }) {
+  const rows = await db.select().from(clientShares).where(eq(clientShares.customerId, customerId)).orderBy(desc(clientShares.createdAt));
+  const items = rows.map((s) => ({
+    id: s.id,
+    kind: s.kind === "file" ? ("file" as const) : ("note" as const),
+    title: s.title,
+    body: s.kind === "note" ? safeDecrypt(s.bodyEnc).text : null,
+    fileName: s.fileName,
+    size: s.sizeBytes,
+    author: s.authorName,
+    when: `${formatDay(s.createdAt, tz, "d MMM yyyy")} · ${format(zoned(s.createdAt, tz), "HH:mm")}`,
+    seen: !!s.seenAt,
+  }));
+  return <SharesPanel customerId={customerId} items={items} canManage={canManage} hasAccount={hasAccount} email={email} />;
 }

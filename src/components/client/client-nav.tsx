@@ -7,8 +7,10 @@ import { cn } from "@/lib/cn";
 const ITEMS = [
   { href: "/espace-client", label: "Accueil" },
   { href: "/espace-client/rendez-vous", label: "Rendez-vous" },
+  { href: "/espace-client/documents", label: "Documents" },
   { href: "/espace-client/fidelite", label: "Fidélité" },
   { href: "/espace-client/commandes", label: "Commandes" },
+  { href: "/espace-client/factures", label: "Factures" },
   { href: "/espace-client/avis", label: "Mes avis" },
   { href: "/espace-client/parametres", label: "Paramètres" },
 ];

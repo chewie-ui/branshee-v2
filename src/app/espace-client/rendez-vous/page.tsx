@@ -44,6 +44,9 @@ export default async function MyAppointments() {
   );
   // Mes pros : les établissements où j'ai déjà eu rendez-vous (pour reprendre RDV en un clic).
   const mine = [...new Map(list.filter((a) => !a.business.pausedAt).map((a) => [a.business.id, a.business])).values()].slice(0, 9);
+  // Suivi par pro : séances honorées et prochain rendez-vous.
+  const doneCount = (bid: string) => list.filter((a) => a.business.id === bid && a.status === "confirmed" && !a.noShow && a.endsAt <= now).length;
+  const nextOf = (bid: string) => upcoming.find((a) => a.business.id === bid);
 
   return (
     <div className="space-y-8">
@@ -95,13 +98,19 @@ export default async function MyAppointments() {
 
       {mine.length ? (
         <section className="space-y-3" aria-labelledby="mes-pros">
-          <h2 id="mes-pros" className="text-lg font-semibold">Mes pros</h2>
+          <h2 id="mes-pros" className="text-lg font-semibold">Mes suivis</h2>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mine.map((b) => (
               <li key={b.id}>
                 <Card className="flex items-center gap-3 p-4">
                   <Avatar name={b.name} src={b.photoUrl} />
-                  <Link href={appPagePath(b.slug)} className="min-w-0 flex-1 truncate font-medium hover:text-accent">{b.name}</Link>
+                  <div className="min-w-0 flex-1">
+                    <Link href={appPagePath(b.slug)} className="block truncate font-medium hover:text-accent">{b.name}</Link>
+                    <p className="text-xs text-muted">
+                      {(() => { const n = doneCount(b.id); return `${n} séance${n > 1 ? "s" : ""} faite${n > 1 ? "s" : ""}`; })()}
+                      {(() => { const nx = nextOf(b.id); return nx ? ` · prochain RDV le ${formatDay(nx.startsAt, b.timezone, "d MMM")} à ${formatTime(nx.startsAt, b.timezone)}` : ""; })()}
+                    </p>
+                  </div>
                   <ButtonLink href={appPagePath(b.slug)} size="sm" variant="secondary" icon={<RotateCcw className="size-4" aria-hidden="true" />}>Réserver</ButtonLink>
                 </Card>
               </li>

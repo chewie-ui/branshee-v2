@@ -1,8 +1,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appointments, businesses, customers, members, reviews, shopOrders, users } from "@/db/schema";
+import { appointments, businesses, clientShares, customers, members, reviews, salesDocuments, shopOrders, users } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
 
 /**
@@ -60,6 +60,7 @@ export async function listClientAppointments(userId: string) {
       id: appointments.id,
       token: appointments.manageToken,
       status: appointments.status,
+      noShow: appointments.noShow,
       startsAt: appointments.startsAt,
       endsAt: appointments.endsAt,
       serviceName: appointments.serviceName,
@@ -111,3 +112,49 @@ export async function listMyOrders(email: string) {
     .limit(60);
 }
 
+
+/**
+ * Factures et notes de crédit émises au client, chez tous les pros, depuis toujours.
+ * Fiches rattachées à son compte (email vérifié) ; brouillons et devis exclus.
+ */
+export async function listMyInvoices(userId: string) {
+  return db
+    .select({ id: salesDocuments.id, docType: salesDocuments.docType, status: salesDocuments.status, number: salesDocuments.number, issueDate: salesDocuments.issueDate, dueDate: salesDocuments.dueDate, ttcCents: salesDocuments.ttcCents, business: { name: businesses.name, photoUrl: businesses.photoUrl } })
+    .from(salesDocuments)
+    .innerJoin(customers, eq(customers.id, salesDocuments.customerId))
+    .innerJoin(businesses, eq(businesses.id, salesDocuments.businessId))
+    .where(and(eq(customers.userId, userId), inArray(salesDocuments.docType, ["invoice", "credit"]), isNotNull(salesDocuments.number), ne(salesDocuments.status, "draft"), isNull(businesses.deletedAt)))
+    .orderBy(desc(salesDocuments.issueDate), desc(salesDocuments.seq));
+}
+
+/** Une facture du client (même contrôle que la liste), pour le PDF. */
+export async function myInvoice(userId: string, id: string) {
+  const [d] = await db
+    .select({ d: salesDocuments })
+    .from(salesDocuments)
+    .innerJoin(customers, eq(customers.id, salesDocuments.customerId))
+    .where(and(eq(salesDocuments.id, id), eq(customers.userId, userId), inArray(salesDocuments.docType, ["invoice", "credit"]), isNotNull(salesDocuments.number), ne(salesDocuments.status, "draft")));
+  return d?.d ?? null;
+}
+
+/** Notes et fichiers que les pros ont partagés avec le client (fiches rattachées à son compte). */
+export async function listMyShares(userId: string) {
+  return db
+    .select({ s: clientShares, business: { name: businesses.name, photoUrl: businesses.photoUrl, timezone: businesses.timezone } })
+    .from(clientShares)
+    .innerJoin(customers, eq(customers.id, clientShares.customerId))
+    .innerJoin(businesses, eq(businesses.id, clientShares.businessId))
+    .where(and(eq(customers.userId, userId), isNull(businesses.deletedAt)))
+    .orderBy(desc(clientShares.createdAt))
+    .limit(300);
+}
+
+export async function myShare(userId: string, id: string) {
+  const [r] = await db.select({ s: clientShares }).from(clientShares).innerJoin(customers, eq(customers.id, clientShares.customerId)).where(and(eq(clientShares.id, id), eq(customers.userId, userId)));
+  return r?.s ?? null;
+}
+
+/** Le client a vu ses partages : le pro voit « vu par le client ». */
+export async function markSharesSeen(ids: string[]) {
+  if (ids.length) await db.update(clientShares).set({ seenAt: new Date() }).where(and(inArray(clientShares.id, ids), isNull(clientShares.seenAt)));
+}

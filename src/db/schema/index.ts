@@ -28,3 +28,4 @@ export * from "./health";
 export * from "./prospects";
 export * from "./connect";
 export * from "./vehicles";
+export * from "./client-shares";

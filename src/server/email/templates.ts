@@ -789,4 +789,17 @@ export const emails = {
       }),
     };
   },
+  /** Le pro a partagé une note ou un fichier dans l'espace client : rien du contenu dans l'email (peut être une donnée de santé). */
+  clientShare(p: { businessName: string; name: string | null; url: string }) {
+    return {
+      subject: `${p.businessName} a partagé un document avec vous`,
+      ...render({
+        preheader: "À retrouver dans votre espace client.",
+        title: "Nouveau document pour vous",
+        intro: `${p.name ? `Bonjour ${p.name}, ` : ""}${p.businessName} a ajouté une note ou un fichier pour vous dans votre espace client. Par discrétion, son contenu n'est pas recopié dans cet email.`,
+        cta: { label: "Ouvrir mon espace", url: p.url },
+        footer: p.businessName,
+      }),
+    };
+  },
 };
