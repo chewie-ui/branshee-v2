@@ -1,4 +1,4 @@
-import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, type DocType, type SalesLine } from "@/lib/invoicing";
+import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, type DocType, type SalesLine, noVat, vatMention } from "@/lib/invoicing";
 
 export type DocParty = { [k: string]: string | number | undefined };
 export type DocView = {
@@ -22,7 +22,7 @@ const s = (v: unknown) => (v == null ? "" : String(v));
  * Rendue telle quelle dans l'aperçu, la fiche et la page d'impression (PDF).
  */
 export function InvoiceDocument({ doc, seller, client, qr }: { doc: DocView; seller: DocParty; client: DocParty | null; qr?: string | null }) {
-  const fr = s(seller.vatRegime || "franchise") === "franchise";
+  const fr = noVat(s(seller.vatRegime));
   const t = totals(doc.lines, fr ? "franchise" : "assujetti");
   const isQuote = doc.docType === "quote";
   const isCredit = doc.docType === "credit";
@@ -39,7 +39,8 @@ export function InvoiceDocument({ doc, seller, client, qr }: { doc: DocView; sel
   const rows = doc.lines.filter((l) => l.desc || num(l.price));
   const legal: string[] = [];
   if (isCredit && doc.related?.number) legal.push(`Note de crédit relative à la facture n° ${doc.related.number} du ${fdate(doc.related.issueDate)}.`);
-  if (fr) legal.push(isQuote ? "Régime particulier de franchise des petites entreprises — prix sans TVA." : "Régime particulier de franchise des petites entreprises.");
+  const mention = vatMention(s(seller.vatRegime), isQuote);
+  if (mention) legal.push(mention);
   const foot = [dname, s(seller.legalForm), seller.bce ? `N° d'entreprise ${bceFmt(s(seller.bce))}` : "", seller.vatNumber && !fr ? `TVA ${s(seller.vatNumber)}` : "", seller.iban ? `IBAN ${ibanFmt(s(seller.iban))}` : ""].filter(Boolean).join(" · ");
   const cell = "px-3 py-2.5 align-top";
 

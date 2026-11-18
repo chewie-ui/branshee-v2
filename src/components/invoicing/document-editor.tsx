@@ -49,7 +49,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const [pending, start] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [newClient, setNewClient] = useState(false);
-  const fr = seller.vatRegime === "franchise";
+  const fr = seller.vatRegime !== "assujetti";
   const isQuote = doc.docType === "quote";
   const isCredit = doc.docType === "credit";
   const tv = useMemo(() => totals(doc.lines, fr ? "franchise" : "assujetti"), [doc.lines, fr]);

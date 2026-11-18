@@ -3383,4 +3383,6 @@ export const EN: Record<string, string> = {
   "personne": "person",
   "la prochaine personne ajoutée": "next person added",
   "au prorata.": "prorated.",
+  "Exonéré (soins de santé, art. 44)": "Exempt (healthcare, art. 44)",
+  "Kinés, médecins, paramédicaux : pas de TVA sur les soins, mention d'exonération ajoutée.": "Physios, doctors, paramedics: no VAT on care, exemption notice added.",
 };

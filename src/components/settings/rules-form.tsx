@@ -12,6 +12,7 @@ type R = {
   bufferBeforeMin: number;
   bufferAfterMin: number;
   minLeadMin: number | null;
+  cancelCutoffHours: number | null;
   horizonDays: number | null;
   autoConfirm: boolean;
   phoneRequired: boolean;
@@ -41,6 +42,16 @@ const HORIZONS = [
   { v: "90", l: "3 mois" },
   { v: "180", l: "6 mois" },
   { v: "365", l: "1 an" },
+];
+const CUTOFFS = [
+  { v: "none", l: "Jusqu'au dernier moment" },
+  { v: "1", l: "Jusqu'à 1 heure avant" },
+  { v: "2", l: "Jusqu'à 2 heures avant" },
+  { v: "6", l: "Jusqu'à 6 heures avant" },
+  { v: "12", l: "Jusqu'à 12 heures avant" },
+  { v: "24", l: "Jusqu'à 24 heures avant" },
+  { v: "48", l: "Jusqu'à 48 heures avant" },
+  { v: "72", l: "Jusqu'à 72 heures avant" },
 ];
 const BUFFERS = [0, 5, 10, 15, 20, 30, 45, 60];
 
@@ -134,6 +145,11 @@ export function RulesForm({ r, showBuffers = true }: { r: R; showBuffers?: boole
                 )}
               </div>
             </div>
+            <Field label={t("Annulation et déplacement en ligne")} htmlFor="cancelCutoff" error={err.cancelCutoffHours} hint={t("Passé ce délai, le client ne peut plus annuler ni déplacer lui-même : il doit vous contacter.")}>
+              <Select id="cancelCutoff" name="cancelCutoffHours" defaultValue={r.cancelCutoffHours == null ? "none" : CUTOFFS.some((o) => o.v === String(r.cancelCutoffHours)) ? String(r.cancelCutoffHours) : "24"} className="sm:max-w-xs">
+                {CUTOFFS.map((o) => <option key={o.v} value={o.v}>{t(o.l)}</option>)}
+              </Select>
+            </Field>
             <Toggle name="autoConfirm" defaultChecked={r.autoConfirm} label={t("Confirmer automatiquement les réservations")} description={t("Décoché : chaque réservation arrive en « demande à valider ».")} />
             <Toggle name="phoneRequired" defaultChecked={r.phoneRequired} label={t("Téléphone obligatoire")} description={t("Le client doit laisser un numéro pour réserver.")} />
             <Toggle name="waitlistEnabled" defaultChecked={r.waitlistEnabled} label={t("Liste d'attente")} description={t("Sur un jour complet, le client peut laisser son email : il est prévenu automatiquement si une place se libère.")} />

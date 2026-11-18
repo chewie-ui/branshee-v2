@@ -22,7 +22,7 @@ export default async function PrintTicket({ params }: { params: Promise<{ id: st
   const seller = await getSellerSettings(ctx.business.id);
   const t = cartTotals(s.lines, s.discountCents);
   // Ticket sans aucune TVA (vendu en franchise) : mention de franchise au lieu du détail de TVA.
-  const franchise = s.vatCents === 0 && seller.vatRegime === "franchise";
+  const franchise = s.vatCents === 0 && seller.vatRegime !== "assujetti";
   const when = new Intl.DateTimeFormat("fr-BE", { timeZone: ctx.business.timezone || "Europe/Brussels", dateStyle: "short", timeStyle: "short" }).format(s.createdAt);
   return (
     <div className="min-h-dvh bg-surface-muted py-6 print:bg-white print:py-0">
@@ -46,7 +46,7 @@ export default async function PrintTicket({ params }: { params: Promise<{ id: st
         {franchise ? (
           <>
             <p className="flex justify-between text-[14px] font-bold"><span>TOTAL</span><span>{eur(s.totalCents)}</span></p>
-            <p className="text-[10px]">Petite entreprise soumise au régime de franchise de la TVA. TVA non applicable.</p>
+            <p className="text-[10px]">{seller.vatRegime === "exempt" ? "Exonération de TVA — article 44 du Code de la TVA." : "Petite entreprise soumise au régime de franchise de la TVA. TVA non applicable."}</p>
           </>
         ) : (
           <>

@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { and, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLogs, appointments } from "@/db/schema";
-import { getAppointmentByToken } from "@/server/manage";
+import { getAppointmentByToken, lockedMessage, onlineChangeLocked } from "@/server/manage";
 import { notifyCancelledByCustomer, notifyRescheduledByCustomer } from "@/server/notifications";
 import { getAvailableSlots } from "@/server/availability";
 import { applyCustomerCancellation } from "@/server/payments";
@@ -20,6 +20,7 @@ export async function cancelByToken(token: string): Promise<{ ok: boolean; error
   if (!row) return { ok: false, error: "Rendez-vous introuvable." };
   if (row.a.status === "cancelled") return { ok: true };
   if (row.a.startsAt <= new Date()) return { ok: false, error: "Ce rendez-vous est déjà passé ; contactez l'établissement." };
+  if (onlineChangeLocked(row)) return { ok: false, error: lockedMessage(row) };
 
   const updated = await db
     .update(appointments)
@@ -41,7 +42,7 @@ export async function cancelByToken(token: string): Promise<{ ok: boolean; error
 async function reschedulable(token: string) {
   const row = await getAppointmentByToken(token);
   if (!row || row.a.status === "cancelled" || row.a.groupSessionId || !row.a.serviceId || !row.a.memberId) return null;
-  if (row.a.startsAt <= new Date()) return null;
+  if (row.a.startsAt <= new Date() || onlineChangeLocked(row)) return null;
   const [svc] = await db.select({ id: services.id, kind: services.kind, isActive: services.isActive }).from(services).where(eq(services.id, row.a.serviceId));
   if (!svc || svc.kind !== "individual" || !svc.isActive) return null;
   return row;

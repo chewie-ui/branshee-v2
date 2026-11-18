@@ -63,6 +63,7 @@ const rulesSchema = z.object({
   bufferAfterMin: z.coerce.number().int().min(0).max(240),
   minLeadMin: nullableInt(0, 60 * 24 * 14),
   horizonDays: nullableInt(1, 730),
+  cancelCutoffHours: nullableInt(1, 168),
   autoConfirm: z.boolean(),
   phoneRequired: z.boolean(),
   fvEnabled: z.boolean(),
@@ -86,6 +87,7 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
     // Délai personnalisé saisi en heures (« 3,5 » → 210 min).
     minLeadMin: fd.has("minLeadHours") ? String(Math.round(Number(str(fd, "minLeadHours").replace(",", ".")) * 60)) : str(fd, "minLeadMin"),
     horizonDays: str(fd, "horizonDays"),
+    cancelCutoffHours: str(fd, "cancelCutoffHours"),
     autoConfirm: fd.get("autoConfirm") === "on",
     phoneRequired: fd.get("phoneRequired") === "on",
     fvEnabled: fd.get("fvEnabled") === "on",
@@ -114,6 +116,7 @@ export async function saveBookingRules(_prev: SettingsState, fd: FormData): Prom
       bufferAfterMin: v.bufferAfterMin,
       minLeadMin: v.minLeadMin,
       horizonDays: v.horizonDays,
+      cancelCutoffHours: v.cancelCutoffHours,
       autoConfirm: v.autoConfirm,
       phoneRequired: v.phoneRequired,
       firstVisitQuestion: { enabled: v.fvEnabled, question: v.fvQuestion, newLabel: v.fvNew, existingLabel: v.fvExisting },

@@ -9,7 +9,7 @@ import { users } from "./users";
  * App Factures (reprise de « Comptoir ») : factures, notes de crédit et devis d'un établissement
  * envers ses propres clients. Rien à voir avec l'abonnement Skydev/Branshee (tables billing).
  */
-export const vatRegimeEnum = pgEnum("vat_regime", ["franchise", "assujetti"]);
+export const vatRegimeEnum = pgEnum("vat_regime", ["franchise", "assujetti", "exempt"]);
 export const salesDocTypeEnum = pgEnum("sales_doc_type", ["invoice", "credit", "quote"]);
 export const salesDocStatusEnum = pgEnum("sales_doc_status", ["draft", "sent", "paid", "cancelled", "accepted", "refused", "invoiced"]);
 

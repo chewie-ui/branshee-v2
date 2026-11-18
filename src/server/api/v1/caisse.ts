@@ -41,7 +41,7 @@ async function register() {
   return {
     open: true,
     canManage,
-    franchise: seller.vatRegime === "franchise",
+    franchise: seller.vatRegime !== "assujetti",
     session: { id: session.id, openedAt: session.openedAt.toISOString(), openingCashCents: session.openingCashCents, expectedCashCents: session.openingCashCents + t.cash - t.refundedCash, totals: t },
     products: list.filter((p) => !p.isModel).map((p) => ({ id: p.id, name: p.name, category: p.category, barcode: p.barcode, priceCents: p.priceCents, vatRate: p.vatRate, trackStock: p.trackStock, stockQty: p.stockQty, photoUrl: p.photoUrl, size: p.size, color: p.color })),
   };

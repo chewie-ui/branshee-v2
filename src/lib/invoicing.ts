@@ -7,7 +7,15 @@ import type { PartySnapshot, SalesLine } from "@/db/schema/invoicing";
 export type { SalesLine, PartySnapshot };
 export type DocType = "invoice" | "credit" | "quote";
 export type DocStatus = "draft" | "sent" | "paid" | "cancelled" | "accepted" | "refused" | "invoiced";
-export type VatRegime = "franchise" | "assujetti";
+export type VatRegime = "franchise" | "assujetti" | "exempt";
+/** Pas de TVA sur les factures : franchise des petites entreprises ou exonération (art. 44, soins de santé). */
+export const noVat = (regime: string | null | undefined) => (regime || "franchise") !== "assujetti";
+/** Mention légale imposée quand la facture est sans TVA. */
+export function vatMention(regime: string | null | undefined, quote = false) {
+  if ((regime || "franchise") === "exempt") return "Exonération de TVA — article 44, § 1er, du Code de la TVA.";
+  if (noVat(regime)) return quote ? "Régime particulier de franchise des petites entreprises — prix sans TVA." : "Régime particulier de franchise des petites entreprises.";
+  return null;
+}
 
 export const FRANCHISE_LIMIT = 25000;
 export const UNITS = ["forfait", "heure", "jour", "séance", "mois", "pièce", "page"] as const;
@@ -39,7 +47,7 @@ export type Totals = { ht: number; tva: number; ttc: number; vatRows: { rate: nu
 
 /** Totaux d'un document. En franchise, aucune TVA n'est facturée (total = hors TVA). */
 export function totals(lines: SalesLine[], regime: VatRegime): Totals {
-  const fr = regime === "franchise";
+  const fr = noVat(regime);
   let ht = 0;
   const vat: Record<number, number> = {};
   for (const l of lines) {

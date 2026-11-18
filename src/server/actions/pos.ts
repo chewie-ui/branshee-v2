@@ -92,7 +92,7 @@ export async function sell(input: z.input<typeof saleSchema>): Promise<Result> {
     }
   }
   // Franchise de TVA : aucune TVA sur le ticket (mention de franchise à l'impression), comme sur les factures.
-  if ((await getSellerSettings(ctx.business.id)).vatRegime === "franchise") for (const l of lines) l.vatRate = 0;
+  if ((await getSellerSettings(ctx.business.id)).vatRegime !== "assujetti") for (const l of lines) l.vatRate = 0;
   const grossAll = lines.reduce((a, l) => a + l.qty * l.unitCents, 0);
   if ((d.discountCents ?? 0) > grossAll) return { ok: false, error: "La remise dépasse le montant du ticket." };
   // Stock suivi : on ne vend pas plus que ce qui est en stock (corrigez d'abord le stock si le chiffre est faux).

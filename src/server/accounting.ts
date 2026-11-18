@@ -13,7 +13,7 @@ const c = (euros: number) => Math.round(euros * 100);
  * boutique en ligne (commandes confirmées), dépenses, sur une période (AAAA-MM-JJ inclus).
  * Chaque facture utilise le régime de TVA figé sur le document au moment de son émission.
  */
-export async function accountingFor(businessId: string, from: string, to: string, regime: "franchise" | "assujetti", tz: string) {
+export async function accountingFor(businessId: string, from: string, to: string, regime: "franchise" | "assujetti" | "exempt", tz: string) {
   const inPeriod = (col: AnyColumn) => sql`(${col} at time zone ${tz})::date between ${from}::date and ${to}::date`;
   const [docs, pos, refunds, shop, exp] = await Promise.all([
     db
@@ -39,7 +39,7 @@ export async function accountingFor(businessId: string, from: string, to: string
   let invoicesHt = 0, invoicesVat = 0, credits = 0, creditsVat = 0;
   for (const d of docs) {
     const sign = d.docType === "credit" ? -1 : 1;
-    const docRegime = d.seller?.vatRegime === "assujetti" || d.seller?.vatRegime === "franchise" ? d.seller.vatRegime : regime;
+    const docRegime = d.seller?.vatRegime === "assujetti" || d.seller?.vatRegime === "franchise" || d.seller?.vatRegime === "exempt" ? d.seller.vatRegime : regime;
     const t = totals(d.lines as SalesLine[], docRegime);
     // Document sans lignes (ancienne note de crédit, import) : ses montants enregistrés font foi, comme dans l'export.
     if (!(d.lines as SalesLine[]).length) invoiceRows.push({ rate: docRegime === "assujetti" && d.ht ? Math.round((d.vat / d.ht) * 100) : 0, base: sign * d.ht, vat: docRegime === "assujetti" ? sign * d.vat : 0 });
@@ -89,7 +89,7 @@ export async function receivables(businessId: string, today: string) {
 }
 
 /** Recettes et dépenses HTVA des 12 derniers mois (mêmes règles que la déclaration, mois par mois). */
-export async function monthlySeries(businessId: string, today: string, regime: "franchise" | "assujetti", tz: string) {
+export async function monthlySeries(businessId: string, today: string, regime: "franchise" | "assujetti" | "exempt", tz: string) {
   const d = new Date(`${today.slice(0, 7)}-15T12:00:00Z`);
   const months: string[] = [];
   for (let i = 11; i >= 0; i--) { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() - i); months.push(x.toISOString().slice(0, 7)); }

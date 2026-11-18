@@ -21,7 +21,7 @@ export default async function PosPage() {
   return (
     <>
       <h1 className="sr-only">{t("Caisse")}</h1>
-      <PosRegister products={list.filter((p) => !p.isModel).map((p) => ({ ...p, costCents: null }))} expectedCash={session.openingCashCents + tot.cash - tot.refundedCash} franchise={seller.vatRegime === "franchise"} sessionInfo={`Ouverte à ${since} · ${tot.tickets} ticket${tot.tickets > 1 ? "s" : ""}`} />
+      <PosRegister products={list.filter((p) => !p.isModel).map((p) => ({ ...p, costCents: null }))} expectedCash={session.openingCashCents + tot.cash - tot.refundedCash} franchise={seller.vatRegime !== "assujetti"} sessionInfo={`Ouverte à ${since} · ${tot.tickets} ticket${tot.tickets > 1 ? "s" : ""}`} />
     </>
   );
 }

@@ -104,6 +104,8 @@ export const bookingSettings = pgTable("booking_settings", {
   minLeadMin: integer("min_lead_min"),
   /** Réservable jusqu'à N jours à l'avance (null = illimité). */
   horizonDays: integer("horizon_days"),
+  /** Annulation ou déplacement en ligne impossible moins de N heures avant le RDV (null = jusqu'au dernier moment). */
+  cancelCutoffHours: integer("cancel_cutoff_hours"),
   autoConfirm: boolean("auto_confirm").notNull().default(true),
   waitlistEnabled: boolean("waitlist_enabled").notNull().default(false),
   allowOverbooking: boolean("allow_overbooking").notNull().default(false),

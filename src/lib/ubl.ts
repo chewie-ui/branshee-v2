@@ -2,7 +2,7 @@
  * Factures électroniques Peppol (UBL 2.1, Peppol BIS Billing 3.0) : obligatoires en Belgique entre entreprises
  * assujetties depuis le 1er janvier 2026. Génère le XML à partir d'une facture émise (pur, testé).
  */
-import { r2, totals, type SalesLine } from "./invoicing";
+import { noVat, r2, totals, type SalesLine } from "./invoicing";
 
 type Party = { [k: string]: string | number | undefined };
 export type UblInput = {
@@ -75,14 +75,14 @@ function party(p: Party, role: "AccountingSupplierParty" | "AccountingCustomerPa
 }
 
 export function buildUbl(i: UblInput) {
-  const franchise = s(i.seller.vatRegime || "franchise") === "franchise";
+  const franchise = noVat(s(i.seller.vatRegime));
   const t = totals(i.lines, franchise ? "franchise" : "assujetti");
   const credit = i.docType === "credit";
   const root = credit ? "CreditNote" : "Invoice";
   const ns = credit ? "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2" : "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
   const sellerName = s(i.seller.legalName) || s(i.seller.tradeName);
   const cat = (rate: number) => (franchise ? "E" : rate === 0 ? "Z" : "S");
-  const exemption = franchise ? `<cbc:TaxExemptionReason>Régime particulier de franchise des petites entreprises</cbc:TaxExemptionReason>` : "";
+  const exemption = franchise ? `<cbc:TaxExemptionReason>${s(i.seller.vatRegime) === "exempt" ? "Exonération de TVA, article 44 du Code de la TVA" : "Régime particulier de franchise des petites entreprises"}</cbc:TaxExemptionReason>` : "";
   const subtotals = franchise
     ? `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${a(t.ht)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount><cac:TaxCategory><cbc:ID>E</cbc:ID><cbc:Percent>0</cbc:Percent>${exemption}<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`
     : t.vatRows.map((r) => `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${a(r.base)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">${a(r.amt)}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>${cat(r.rate)}</cbc:ID><cbc:Percent>${r.rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join("");

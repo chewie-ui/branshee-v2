@@ -41,6 +41,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   ];
   const max = Math.max(1, ...stats.monthsCents);
   const franchise = seller.vatRegime === "franchise";
+  const withoutVat = seller.vatRegime !== "assujetti";
   const pct = Math.min(100, Math.round((stats.revenueCents / 100 / FRANCHISE_LIMIT) * 100));
   const latest = docs.filter((d) => d.number).slice(0, 5);
 
@@ -82,7 +83,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { icon: TrendingUp, label: `Chiffre d'affaires ${year}`, value: moneyCents(stats.revenueCents), sub: `${stats.invoiceCount} facture${stats.invoiceCount > 1 ? "s" : ""} émise${stats.invoiceCount > 1 ? "s" : ""}${franchise ? "" : " · hors TVA"}` },
+          { icon: TrendingUp, label: `Chiffre d'affaires ${year}`, value: moneyCents(stats.revenueCents), sub: `${stats.invoiceCount} facture${stats.invoiceCount > 1 ? "s" : ""} émise${stats.invoiceCount > 1 ? "s" : ""}${withoutVat ? "" : " · hors TVA"}` },
           { icon: Wallet, label: `Encaissé ${year}`, value: moneyCents(stats.paidCents), sub: `${stats.paidCount} paiement${stats.paidCount > 1 ? "s" : ""} reçu${stats.paidCount > 1 ? "s" : ""}` },
           { icon: Clock, label: t("À encaisser"), value: moneyCents(stats.openCents), sub: stats.overdue.length ? `dont ${stats.overdue.length} en retard` : `${stats.openCount} facture${stats.openCount > 1 ? "s" : ""} en attente` },
         ].map((k) => (
@@ -97,7 +98,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           <Card>
-            <CardHeader title={`Chiffre d'affaires par mois${franchise ? "" : " (HTVA)"}`} />
+            <CardHeader title={`Chiffre d'affaires par mois${withoutVat ? "" : " (HTVA)"}`} />
             <div className="p-5">
               <div className="flex h-48 items-end gap-1.5 sm:gap-2" role="img" aria-label={`Chiffre d'affaires par mois en ${year}`}>
                 {stats.monthsCents.map((c, i) => (

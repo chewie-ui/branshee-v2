@@ -43,7 +43,7 @@ async function list(r: ApiRequest) {
     year,
     years,
     today,
-    franchise: seller.vatRegime === "franchise",
+    franchise: seller.vatRegime !== "assujetti",
     canManage: ctx.can("invoices.manage"),
     categories: EXPENSE_CATEGORIES,
     expenses: rows.map((e) => ({ id: e.id, date: e.date, supplier: e.supplier, category: e.category, description: e.description, amountCents: e.amountCents, vatCents: e.vatCents, proofName: e.proofName, proofType: e.proofType, hasProof: !!e.proofRef })),

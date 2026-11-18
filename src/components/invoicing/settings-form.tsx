@@ -78,8 +78,8 @@ export function InvoiceSettingsForm({ initial, saved, canManage }: { initial: Se
       <Card id="tva" className={cn("scroll-mt-24 transition-shadow duration-500", flash && "ring-4 ring-accent ring-offset-2 ring-offset-background")}>
         <CardHeader title="TVA" description={t("En franchise (chiffre d'affaires sous 25 000 €/an), vos factures ne mentionnent pas de TVA.")} />
         <div className="space-y-4 p-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t("Régime TVA")}>
-            {([["franchise", t("Franchise des petites entreprises"), t("Pas de TVA sur vos factures, mention légale ajoutée.")], ["assujetti", t("Assujetti à la TVA"), t("TVA par ligne (21, 12, 6 ou 0 %), totaux HTVA et TVAC.")]] as const).map(([k, tv, d]) => (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t("Régime TVA")}>
+            {([["franchise", t("Franchise des petites entreprises"), t("Pas de TVA sur vos factures, mention légale ajoutée.")], ["assujetti", t("Assujetti à la TVA"), t("TVA par ligne (21, 12, 6 ou 0 %), totaux HTVA et TVAC.")], ["exempt", t("Exonéré (soins de santé, art. 44)"), t("Kinés, médecins, paramédicaux : pas de TVA sur les soins, mention d'exonération ajoutée.")]] as const).map(([k, tv, d]) => (
               <button key={k} type="button" role="radio" aria-checked={v.vatRegime === k} disabled={!canManage} onClick={() => set("vatRegime", k)} className={cn("rounded-xl border p-4 text-left transition-colors", v.vatRegime === k ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border hover:border-border-strong")}>
                 <span className="block text-sm font-semibold">{tv}</span>
                 <span className="mt-0.5 block text-sm text-muted">{d}</span>

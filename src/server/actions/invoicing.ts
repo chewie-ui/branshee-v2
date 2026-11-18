@@ -362,7 +362,7 @@ const settingsSchema = z.object({
   website: z.string().trim().max(200),
   iban: z.string().trim().max(40),
   bic: z.string().trim().max(15),
-  vatRegime: z.enum(["franchise", "assujetti"]),
+  vatRegime: z.enum(["franchise", "assujetti", "exempt"]),
   paymentDays: z.coerce.number().int().min(0).max(120),
   prefix: z.string().trim().max(10).regex(/^[A-Za-z0-9]*$/, "Lettres et chiffres uniquement."),
   defaultNotes: z.string().max(500),

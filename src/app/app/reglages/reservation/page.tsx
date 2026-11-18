@@ -43,7 +43,7 @@ export async function BookingRules() {
     <div className="space-y-4">
       {!advanced ? <UpgradeNotice feature="Battements et durée des créneaux" required="pro">Sans abonnement, l&apos;intervalle des créneaux et les battements restent ceux d&apos;origine ; le reste se règle librement.</UpgradeNotice> : null}
       <TeamBookingCard team={team.map((m) => ({ ...m, services: servicesOf(m.id) }))} choice={teamChoiceOf(s!.teamChoice)} pageUrl={pageUrl} />
-      <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} showBuffers={await featureOn("buffer_time")} />
+      <RulesForm r={{ slotMode: s!.slotMode, slotIntervalMin: s!.slotIntervalMin, bufferBeforeMin: s!.bufferBeforeMin, bufferAfterMin: s!.bufferAfterMin, minLeadMin: s!.minLeadMin, horizonDays: s!.horizonDays, cancelCutoffHours: s!.cancelCutoffHours, autoConfirm: s!.autoConfirm, phoneRequired: s!.phoneRequired, firstVisitQuestion: s!.firstVisitQuestion, allowOverbooking: s!.allowOverbooking, waitlistEnabled: s!.waitlistEnabled, smartGrouping: s!.smartGrouping }} showBuffers={await featureOn("buffer_time")} />
     </div>
   );
 }

@@ -34,7 +34,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         year={year}
         years={years}
         today={today}
-        franchise={seller.vatRegime === "franchise"}
+        franchise={seller.vatRegime !== "assujetti"}
         canManage={ctx.can("invoices.manage")}
         rows={rows.map((r) => ({ id: r.id, date: r.date, supplier: r.supplier, category: r.category, description: r.description, amountCents: r.amountCents, vatCents: r.vatCents, proofName: r.proofName, hasProof: !!r.proofRef }))}
       />

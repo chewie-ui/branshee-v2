@@ -18,7 +18,7 @@ import { Brand } from "@/components/brand";
 import { businessBrand } from "@/server/brand";
 import { ButtonLink } from "@/components/ui/button";
 import { formatTime } from "@/lib/time";
-import { getAppointmentByToken } from "@/server/manage";
+import { getAppointmentByToken, onlineChangeLocked } from "@/server/manage";
 import { createT, getMessages, intlLocale } from "@/i18n";
 import { I18nProvider } from "@/i18n/client";
 import { resolvePublicLocale } from "@/i18n/server";
@@ -50,7 +50,9 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
   const money = new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "EUR" });
   const euros = (c: number) => money.format(c / 100);
   const acc = ps?.accepted;
-  const canMove = a.status !== "cancelled" && !past && !a.groupSessionId && !!a.serviceId && !!a.memberId;
+  // Délai fixé par le pro : passé ce cap, ni annulation ni déplacement en ligne (revérifié côté serveur).
+  const locked = a.status !== "cancelled" && !past && onlineChangeLocked(row);
+  const canMove = a.status !== "cancelled" && !past && !locked && !a.groupSessionId && !!a.serviceId && !!a.memberId;
 
   const state =
     a.status === "cancelled"
@@ -135,7 +137,20 @@ export default async function ManageAppointmentPage({ params, searchParams }: { 
             <div className="mt-6 space-y-3">
               <AddToCalendar token={token} title={`${a.serviceName ?? t("manage.appointment")} — ${b.name}`} start={a.startsAt} end={a.endsAt} location={address || null} details={memberName ? t("common.with", { name: memberName }) : null} labels={{ add: t("manage.addToCalendar"), google: t("manage.googleCalendar"), apple: t("manage.appleCalendar"), other: t("manage.otherCalendar") }} />
               {canMove ? <RescheduleWidget token={token} today={today} defaultOpen={sp.deplacer === "1"} /> : null}
-              <CancelButton token={token} />
+              {locked ? (
+                <p className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm" role="status">
+                  {t("manage.lockedText", { hours: String(row.cancelCutoffHours) })}{" "}
+                  {b.phone ? (() => {
+                    const [before, after] = t("manage.lockedContactPhone", { name: b.name, phone: "\u0000" }).split("\u0000");
+                    return <>{before}<a className="font-medium underline" href={`tel:${b.phone.replace(/[^+0-9]/g, "")}`}>{b.phone}</a>{after}</>;
+                  })() : t("manage.lockedContact", { name: b.name })}
+                </p>
+              ) : (
+                <>
+                  <CancelButton token={token} />
+                  {row.cancelCutoffHours ? <p className="text-center text-xs text-muted">{t("manage.cutoffNote", { hours: String(row.cancelCutoffHours) })}</p> : null}
+                </>
+              )}
             </div>
           ) : null}
 

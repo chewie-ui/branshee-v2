@@ -15,7 +15,7 @@ export default async function Page() {
   return (
     <>
       <PageHeader title={t("Catalogue")} description={t("Vos prestations et produits habituels, prêts à ajouter à une facture ou un devis.")} />
-      <CatalogManager items={cat.products} services={cat.services} franchise={seller.vatRegime === "franchise"} canManage={ctx.can("invoices.manage")} />
+      <CatalogManager items={cat.products} services={cat.services} franchise={seller.vatRegime !== "assujetti"} canManage={ctx.can("invoices.manage")} />
     </>
   );
 }

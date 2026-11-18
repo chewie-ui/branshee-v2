@@ -95,7 +95,7 @@ async function detail(r: ApiRequest) {
     db.select().from(invoiceMailings).where(and(eq(invoiceMailings.businessId, ctx.business.id), eq(invoiceMailings.documentId, d.id))),
     getSellerSettings(ctx.business.id),
   ]);
-  const regime = (d.seller?.vatRegime as "franchise" | "assujetti" | undefined) ?? settings.vatRegime;
+  const regime = (d.seller?.vatRegime as "franchise" | "assujetti" | "exempt" | undefined) ?? settings.vatRegime;
   return {
     document: docDto(d, todayIso(ctx.business.timezone)),
     vatRows: totals(d.lines, regime).vatRows,
@@ -224,7 +224,7 @@ export const facturesRoutes: Route[] = [
         await saveInvoiceSettings({
           legalName: String(pick("legalName") ?? ""), tradeName: String(pick("tradeName") ?? ""), legalForm: String(pick("legalForm") ?? ""), street: String(pick("street") ?? ""), zip: String(pick("zip") ?? ""), city: String(pick("city") ?? ""), country: String(pick("country") ?? ""),
           bce: String(pick("bce") ?? ""), vatNumber: String(pick("vatNumber") ?? ""), email: String(pick("email") ?? ""), phone: String(pick("phone") ?? ""), website: String(pick("website") ?? ""), iban: String(pick("iban") ?? ""), bic: String(pick("bic") ?? ""),
-          vatRegime: pick("vatRegime") === "assujetti" ? "assujetti" : "franchise", paymentDays: Number(pick("paymentDays")) || 0, prefix: String(pick("prefix") ?? ""), defaultNotes: String(pick("defaultNotes") ?? ""), footerNote: String(pick("footerNote") ?? ""), color: String(pick("color") ?? "#4f46e5"),
+          vatRegime: pick("vatRegime") === "assujetti" ? "assujetti" : pick("vatRegime") === "exempt" ? "exempt" : "franchise", paymentDays: Number(pick("paymentDays")) || 0, prefix: String(pick("prefix") ?? ""), defaultNotes: String(pick("defaultNotes") ?? ""), footerNote: String(pick("footerNote") ?? ""), color: String(pick("color") ?? "#4f46e5"),
         }),
       );
       return settingsGet();
