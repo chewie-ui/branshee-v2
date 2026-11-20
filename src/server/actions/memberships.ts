@@ -105,6 +105,7 @@ export async function decideJoinRequest(memberId: string, accept: boolean): Prom
   if (!m) return { ok: false, error: "Demande introuvable." };
   if (accept) {
     const seats = await collaboratorUsage(ctx.business.id);
+    if (seats.used >= seats.max && seats.trial) return { ok: false, error: "Pendant l'essai gratuit, on ne peut pas ajouter de membre. Pour ajouter une personne, abonnez-vous (Réglages › Abonnement) : chaque membre de l'équipe est facturé." };
     if (seats.used >= seats.max) return { ok: false, error: seats.max === 0 ? "Sans abonnement, pas de collaborateurs : choisissez le forfait Pro." : "Plus de place de collaborateur : ajoutez un siège dans Réglages › Abonnement." };
     const [grade] = await db.select({ id: grades.id }).from(grades).where(and(eq(grades.businessId, ctx.business.id), eq(grades.name, "Collaborateur")));
     await db.update(members).set({ status: "active", joinedAt: new Date(), gradeId: grade?.id ?? null, isBookable: true }).where(eq(members.id, m.id));

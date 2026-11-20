@@ -19,12 +19,12 @@ export async function TeamPriceNotice({ businessId }: { businessId: string }) {
   const next = q.next;
   // Accès offert par l'équipe Skydev (hors essai) : rien à payer, pas de message de prix.
   if (plan.source === "granted" && !plan.isTrial) return null;
-  const link = <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{t("Voir le détail")}</Link>;
+  const link = <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{subscribed ? t("Voir le détail") : t("S'abonner")}</Link>;
   if (!subscribed) {
     return (
       <p className="mb-4 rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm" role="status">
-        <span className="font-medium">{t("Pendant votre mois offert, ajouter des membres est gratuit.")}</span>{" "}
-        {t("Ensuite, l'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :")}{" "}
+        <span className="font-medium">{plan.isTrial ? t("Pendant l'essai gratuit, on ne peut pas ajouter de membre : pour ajouter une personne, abonnez-vous.") : t("Pour ajouter une personne, abonnez-vous.")}</span>{" "}
+        {t("L'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :")}{" "}
         <span className="font-medium">{users} {users > 1 ? t("personnes") : t("personne")} = {total} € TVAC {t("par mois")}</span>
         {", "}{t("la prochaine personne ajoutée")} <span className="font-medium">{next ? `+${next} €` : t("offerte")}</span>.{" "}
         {link}

@@ -3754,4 +3754,9 @@ export const EN: Record<string, string> = {
   "Les nouvelles apps incluses dès leur sortie": "New apps included as soon as they launch",
   "Une IA répond à vos appels manqués et vous envoie le résumé. 100 minutes par mois incluses.": "An AI answers your missed calls and sends you the summary. 100 minutes a month included.",
   "Votre page sur votre-nom.skydev.be, activée tout de suite (et bientôt sur votre propre adresse, ex. votre-cabinet.be).": "Your page on your-name.skydev.be, live right away (and soon on your own address, e.g. your-practice.be).",
+  "Pendant l'essai gratuit, on ne peut pas ajouter de membre : pour ajouter une personne, abonnez-vous.": "During the free trial, you can't add members: to add someone, subscribe.",
+  "Pour ajouter une personne, abonnez-vous.": "To add someone, subscribe.",
+  "L'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :": "The subscription counts each team member, with a price that drops with each addition:",
+  "S'abonner": "Subscribe",
+  "Pendant l'essai gratuit, on ne peut pas ajouter de membre. Pour ajouter une personne, abonnez-vous (Réglages › Abonnement) : chaque membre de l'équipe est facturé.": "During the free trial, you can't add members. To add someone, subscribe (Settings › Subscription): each team member is billed.",
 };

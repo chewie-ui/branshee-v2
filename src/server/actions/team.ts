@@ -47,6 +47,7 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
   const v = parsed.data;
   const seats = await collaboratorUsage(ctx.business.id);
   if (seats.used >= seats.max) {
+    if (seats.trial) return { error: "Pendant l'essai gratuit, on ne peut pas ajouter de membre. Pour ajouter une personne, abonnez-vous (Réglages › Abonnement) : chaque membre de l'équipe est facturé." };
     return { error: seats.max === 0 ? "Sans abonnement, pas de collaborateurs : choisissez le forfait Pro (Réglages › Abonnement)." : `Votre forfait inclut ${seats.max} collaborateur${seats.max > 1 ? "s" : ""}. Ajoutez un siège ou passez au forfait supérieur (Réglages › Abonnement).` };
   }
 

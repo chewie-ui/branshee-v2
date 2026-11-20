@@ -95,8 +95,11 @@ export async function collaboratorUsage(businessId: string) {
     .where(and(eq(members.businessId, businessId), eq(members.isOwner, false), inArray(members.status, ["active", "invited"]), eq(members.isActive, true)));
   // Abonnement Skydev par utilisateur : pas de limite, chaque personne ajoutée est facturée (prix dégressif).
   // Utilisateurs offerts par l'équipe Skydev : au moins autant de personnes en plus du propriétaire.
-  const max = p.source === "stripe" && p.billedUsers != null ? MAX_USERS - 1 : p.plan === "free" ? collaboratorLimit(p.plan, p.extraSeats) : Math.max(collaboratorLimit(p.plan, p.extraSeats), p.offeredUsers);
-  return { used: n, max, plan: p.plan, perUser: p.source === "stripe" && p.billedUsers != null };
+  // Essai gratuit (mois offert) : personne en plus, sauf les utilisateurs offerts par l'équipe Skydev.
+  // Pour ajouter quelqu'un, il faut s'abonner : chaque personne de l'équipe est alors facturée.
+  const trial = p.isTrial && p.source !== "stripe";
+  const max = p.source === "stripe" && p.billedUsers != null ? MAX_USERS - 1 : trial ? p.offeredUsers : p.plan === "free" ? collaboratorLimit(p.plan, p.extraSeats) : Math.max(collaboratorLimit(p.plan, p.extraSeats), p.offeredUsers);
+  return { used: n, max, plan: p.plan, perUser: p.source === "stripe" && p.billedUsers != null, trial };
 }
 
 /** RDV en ligne reçus ce mois-ci (pour la confirmation automatique du forfait gratuit). */
