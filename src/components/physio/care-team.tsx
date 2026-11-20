@@ -65,7 +65,7 @@ export function CareTeam({ customerId, members, canManage }: { customerId: strin
   return (
     <Card>
       <CardHeader title="Équipe de soins" description="Les autres soignants du patient : leurs coordonnées servent aux rapports et courriers." action={canManage && editing !== "new" ? <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setEditing("new")}>Ajouter</Button> : null} />
-      <div className="space-y-3 px-5 pb-5">
+      <div className="space-y-3 p-5">
         {editing === "new" ? <MemberForm customerId={customerId} m={null} onDone={done} /> : null}
         {members.length === 0 && editing !== "new" ? <p className="flex items-center gap-2 text-sm text-muted"><Users className="size-4" aria-hidden="true" />Aucun soignant ajouté.</p> : null}
         <ul className="divide-y divide-border">

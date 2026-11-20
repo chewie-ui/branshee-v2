@@ -62,7 +62,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
           <Card>
             <CardHeader title={t("Aide à la déclaration TVA")} description={t("À recopier dans Intervat (vérifiez avec votre comptable)")} />
             <table className="w-full text-sm">
-              <thead><tr className="border-y border-border text-left text-xs text-muted"><th className="px-5 py-2">Grille</th><th className="px-2 py-2">Opérations</th><th className="px-5 py-2 text-right">{t("Montant")}</th></tr></thead>
+              <thead><tr className="border-b border-border text-left text-xs text-muted"><th className="px-5 py-3">Grille</th><th className="px-2 py-3">Opérations</th><th className="px-5 py-3 text-right">{t("Montant")}</th></tr></thead>
               <tbody className="divide-y divide-border">
                 {a.sales.length === 0 ? <tr><td colSpan={3} className="px-5 py-4 text-muted">{t("Aucune vente sur la période.")}</td></tr> : null}
                 {a.sales.map((r) => <tr key={r.rate}><td className="px-5 py-2 font-mono">{GRID[r.rate] ?? "—"}</td><td className="px-2 py-2">Ventes à {r.rate} % (base HTVA)</td><td className="px-5 py-2 text-right tabular-nums">{eur(r.base)}</td></tr>)}

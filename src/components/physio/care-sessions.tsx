@@ -45,7 +45,7 @@ export function CareSessions({ episodeId, sessions, place, category, defaultCode
         action={canManage && missing && defaultCode ? <Button size="sm" variant="secondary" loading={pending} icon={<Wand2 className="size-4" aria-hidden="true" />} onClick={() => run(() => applyDefaultSessionCode(episodeId))}>Code {defaultCode} pour les {missing} sans code</Button> : null}
       />
       {conventioned == null ? (
-        <div className="mx-5 mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-surface-muted px-4 py-3 text-sm">
+        <div className="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-surface-muted px-4 py-3 text-sm">
           <span className="min-w-0 flex-1">Êtes-vous conventionné INAMI ? Les remboursements affichés en dépendent.</span>
           {canSettings ? (
             <>
@@ -56,9 +56,9 @@ export function CareSessions({ episodeId, sessions, place, category, defaultCode
         </div>
       ) : null}
       {sessions.length === 0 ? (
-        <p className="flex items-center gap-2 px-5 pb-5 text-sm text-muted"><Receipt className="size-4" aria-hidden="true" />Aucune séance honorée depuis la prescription.</p>
+        <p className="flex items-center gap-2 p-5 text-sm text-muted"><Receipt className="size-4" aria-hidden="true" />Aucune séance honorée depuis la prescription.</p>
       ) : (
-        <div className="overflow-x-auto px-5 pb-5">
+        <div className="overflow-x-auto p-5">
           <table className="w-full min-w-[40rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted">

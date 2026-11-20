@@ -109,7 +109,7 @@ export function CareRecord({ episodeId, sections, canManage, today }: { episodeI
         return (
           <Card key={s.key} id={s.key}>
             <CardHeader title={`${i + 1}. ${s.label}`} description={s.hint} action={canAdd && adding !== s.key ? <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setAdding(s.key)}>{s.multi ? "Ajouter" : "Remplir"}</Button> : null} />
-            <div className="space-y-3 px-5 pb-5">
+            <div className="space-y-3 p-5">
               {adding === s.key ? <Editor episodeId={episodeId} section={s.key} entry={null} multi={s.multi} today={today} onDone={() => setAdding(null)} /> : null}
               {s.entries.length === 0 && adding !== s.key ? <p className="text-sm text-muted">Pas encore rempli.</p> : null}
               {[...s.entries].reverse().map((e) => <Entry key={e.key} episodeId={episodeId} section={s.key} e={e} multi={s.multi} canManage={canManage} today={today} />)}

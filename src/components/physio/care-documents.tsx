@@ -103,14 +103,14 @@ function MyInami({ initial }: { initial: string }) {
   const [pending, start] = useTransition();
   if (!edit)
     return (
-      <p className="px-5 pb-4 text-sm text-muted">
+      <p className="border-b border-border px-5 py-4 text-sm text-muted">
         Votre n° INAMI : <span className="font-medium text-text">{value}</span>{" "}
         <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => setEdit(true)}>Modifier</button>
       </p>
     );
   return (
     <form
-      className="flex flex-wrap items-end gap-2 px-5 pb-4"
+      className="flex flex-wrap items-end gap-2 border-b border-border px-5 py-4"
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
@@ -145,7 +145,7 @@ export function CareDocuments({ customerId, docs, episodes, canManage, canExport
       {canManage ? <MyInami initial={myInami} /> : null}
       {creating ? (
         <form
-          className="space-y-4 border-b border-border p-5 pt-0"
+          className="space-y-4 border-b border-border p-5"
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);
@@ -179,7 +179,7 @@ export function CareDocuments({ customerId, docs, episodes, canManage, canExport
           </div>
         </form>
       ) : null}
-      {docs.length === 0 && !creating ? <p className="flex items-center gap-2 px-5 pb-5 text-sm text-muted"><FileText className="size-4" aria-hidden="true" />Aucun document pour l&apos;instant.</p> : null}
+      {docs.length === 0 && !creating ? <p className="flex items-center gap-2 p-5 text-sm text-muted"><FileText className="size-4" aria-hidden="true" />Aucun document pour l&apos;instant.</p> : null}
       <ul className="divide-y divide-border">
         {docs.map((d) => (
           <li key={d.key}>

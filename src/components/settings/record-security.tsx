@@ -13,7 +13,7 @@ export function RecordSecurity({ minutes, canManage, canExportAll = false }: { m
   return (
     <Card>
       <CardHeader title="Sécurité des dossiers patients" description="Chaque ouverture, modification, impression et export d'un dossier est enregistré avec la personne et l'heure." />
-      <div className="flex flex-col gap-4 p-5 pt-0 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
         <label className="block text-sm font-medium" htmlFor="autolock">
           Verrouiller la session après
           <Select

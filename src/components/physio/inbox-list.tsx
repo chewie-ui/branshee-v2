@@ -91,7 +91,7 @@ export function InboxList({ items, handled, canManage }: { items: Row[]; handled
         <Card>
           <CardHeader title="Déposer des documents reçus" description="PDF ou messages Kmehr (XML), 10 Mo maximum par fichier. L'identité du patient d'un message Kmehr est lue automatiquement." />
           <form
-            className="flex flex-wrap items-center gap-3 p-5 pt-0"
+            className="flex flex-wrap items-center gap-3 p-5"
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
@@ -118,7 +118,7 @@ export function InboxList({ items, handled, canManage }: { items: Row[]; handled
       {msg ? <p className={`text-sm ${msg.ok ? "text-success" : "text-danger"}`} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
       <Card>
         <CardHeader title={`En attente (${items.length})`} action={canManage && sure > 1 ? <Button size="sm" variant="secondary" loading={pending} icon={<CheckCheck className="size-4" aria-hidden="true" />} onClick={() => start(async () => { const r = await integrateMatchedInbox(); done(r.ok ? { ok: true, text: r.message } : { ok: false, text: r.error }); })}>Intégrer les {sure} reconnus par NISS</Button> : null} />
-        {items.length ? <ul className="divide-y divide-border">{items.map((r) => <Item key={r.id} r={r} canManage={canManage} onDone={done} />)}</ul> : <p className="flex items-center gap-2 px-5 pb-5 text-sm text-muted"><Inbox className="size-4" aria-hidden="true" />Rien en attente.</p>}
+        {items.length ? <ul className="divide-y divide-border">{items.map((r) => <Item key={r.id} r={r} canManage={canManage} onDone={done} />)}</ul> : <p className="flex items-center gap-2 p-5 text-sm text-muted"><Inbox className="size-4" aria-hidden="true" />Rien en attente.</p>}
       </Card>
       {handled.length ? (
         <Card>

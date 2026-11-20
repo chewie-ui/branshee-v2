@@ -105,12 +105,12 @@ export function EpisodesList({ customerId, rows, canManage, defaults }: { custom
     <Card>
       <CardHeader title="Épisodes de soins" description="Une prescription = un épisode : dossier structuré (anamnèse, examen, plan, évaluations, clôture) et compteur de séances." action={canManage && !open ? <Button size="sm" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>Nouvel épisode</Button> : null} />
       {open ? (
-        <div className="border-b border-border p-5 pt-0">
+        <div className="border-b border-border p-5">
           <EpisodeEditor customerId={customerId} episodeId={null} initial={defaults} onDone={(id) => router.push(`/app/clients/${customerId}/episodes/${id}`)} />
         </div>
       ) : null}
       {rows.length === 0 && !open ? (
-        <p className="flex items-center gap-2 px-5 pb-5 text-sm text-muted"><ClipboardList className="size-4" aria-hidden="true" />Aucun épisode pour l&apos;instant.</p>
+        <p className="flex items-center gap-2 p-5 text-sm text-muted"><ClipboardList className="size-4" aria-hidden="true" />Aucun épisode pour l&apos;instant.</p>
       ) : (
         <ul className="divide-y divide-border">
           {rows.map((e) => {

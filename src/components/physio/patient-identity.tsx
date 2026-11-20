@@ -22,7 +22,7 @@ export function PatientIdentityForm({ customerId, initial, canManage }: { custom
     <Card>
       <CardHeader title="Identité du patient" description="Données administratives du dossier de soins. Le NISS est chiffré et ne peut exister que sur une seule fiche." action={initial.archived ? <span className="rounded-md bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">Dossier archivé</span> : null} />
       <form
-        className="space-y-4 p-5 pt-0"
+        className="space-y-4 p-5"
         onSubmit={(e) => {
           e.preventDefault();
           const fd = Object.fromEntries(new FormData(e.currentTarget));

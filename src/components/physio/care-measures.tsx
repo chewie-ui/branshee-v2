@@ -29,7 +29,7 @@ export function CareMeasures({ episodeId, measures, canManage, today }: { episod
       <CardHeader title="Mesures" description="EVA, amplitudes, force, périmètres, tests : l'évolution se lit d'une date à l'autre." action={canManage && !open ? <Button size="sm" variant="secondary" icon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>Ajouter</Button> : null} />
       {open ? (
         <form
-          className="space-y-4 border-b border-border p-5 pt-0"
+          className="space-y-4 border-b border-border p-5"
           onSubmit={(e) => {
             e.preventDefault();
             const fd = Object.fromEntries(new FormData(e.currentTarget));
@@ -71,9 +71,9 @@ export function CareMeasures({ episodeId, measures, canManage, today }: { episod
         </form>
       ) : null}
       {rows.length === 0 ? (
-        <p className="flex items-center gap-2 px-5 pb-5 text-sm text-muted"><Ruler className="size-4" aria-hidden="true" />Aucune mesure pour l&apos;instant.</p>
+        <p className="flex items-center gap-2 p-5 text-sm text-muted"><Ruler className="size-4" aria-hidden="true" />Aucune mesure pour l&apos;instant.</p>
       ) : (
-        <div className="overflow-x-auto px-5 pb-5">
+        <div className="overflow-x-auto p-5">
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted">

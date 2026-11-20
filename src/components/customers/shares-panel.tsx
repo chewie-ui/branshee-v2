@@ -31,7 +31,7 @@ export function SharesPanel({ customerId, items, canManage, hasAccount, email }:
         {canManage ? (
           <form
             ref={formRef}
-            className="space-y-3 p-5 pt-0"
+            className="space-y-3 p-5"
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
