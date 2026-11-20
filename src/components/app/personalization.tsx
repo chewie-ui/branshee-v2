@@ -221,7 +221,7 @@ export function NotificationBell({ align = "right", className }: { align?: "left
         {unread ? <span className="absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-4 font-semibold text-accent-foreground" aria-hidden="true">{unread > 9 ? "9+" : unread}</span> : null}
       </button>
       {open ? (
-        <div className={cn("absolute top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-surface shadow-xl", align === "right" ? "right-0" : "left-0")} role="dialog" aria-label={t("Notifications")}>
+        <div className={cn("fixed inset-x-4 top-16 z-50 overflow-hidden rounded-xl border border-border bg-surface shadow-xl sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 sm:w-[22rem]", align === "right" ? "sm:right-0" : "sm:left-0")} role="dialog" aria-label={t("Notifications")}>
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">{t("Notifications")}</p>
             {unread ? (

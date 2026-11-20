@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { appNotifications, businesses } from "@/db/schema";
 
@@ -14,6 +14,8 @@ export async function recordAppNotifications(userIds: string[], n: { kind: strin
     const ids = [...new Set(userIds.filter(Boolean))];
     if (!ids.length) return;
     await db.insert(appNotifications).values(ids.map((userId) => ({ userId, kind: n.kind, title: n.title, body: n.body, url: n.url ?? null, businessId: n.businessId ?? null })));
+    // On ne garde que 60 jours (noms de clients et de prestations : pas plus que nécessaire).
+    await db.delete(appNotifications).where(and(inArray(appNotifications.userId, ids), lt(appNotifications.createdAt, new Date(Date.now() - 60 * 86400000))));
   } catch (e) {
     console.error("[app-notifications]", e instanceof Error ? e.message : e);
   }
