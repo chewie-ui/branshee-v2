@@ -182,7 +182,7 @@ export function PlanningBoard({ monday, today, members, shifts, absences = [], c
                       <span className="flex items-center gap-2.5">
                         <Avatar name={m.name} size="sm" />
                         <span className="min-w-0">
-                          <span className="block truncate font-medium">{m.name}{m.isMe ? <span className="font-normal text-muted"> (vous)</span> : null}</span>
+                          <span className="block truncate font-medium">{m.name}{m.isMe ? <span className="font-normal text-muted"> {t("(vous)")}</span> : null}</span>
                           {m.role ? <span className="block truncate text-xs text-muted">{m.role}</span> : null}
                         </span>
                       </span>

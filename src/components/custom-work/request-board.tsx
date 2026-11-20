@@ -35,7 +35,7 @@ export function RequestBoard({ requests, apps, canRequest, features, defaultApp 
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">{t("Sur mesure")}</h1>
-        <p className="mt-1 max-w-2xl text-muted">Une modif dans n&apos;importe quelle app (« dans RDV, je voudrais… »), ou une app entièrement nouvelle pour votre métier : décrivez-la. Vous recevez un prix fixe ; une fois accepté, on le construit rien que pour vous, dans vos apps.</p>
+        <p className="mt-1 max-w-2xl text-muted">{t("Une modif dans n'importe quelle app (« dans RDV, je voudrais… »), ou une app entièrement nouvelle pour votre métier : décrivez-la. Vous recevez un prix fixe ; une fois accepté, on le construit rien que pour vous, dans vos apps.")}</p>
       </div>
       {msg ? <p className={cn("max-w-3xl rounded-lg px-3 py-2 text-sm", msg.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger")} role={msg.ok ? "status" : "alert"}>{t(msg.text)}</p> : null}
       {canRequest ? (

@@ -53,7 +53,7 @@ export function HistoryTable({ rows, canDelete }: { rows: Row[]; canDelete: bool
               ) : null}
               <th className="px-4 py-2.5 font-medium">Nom</th>
               <th className="px-4 py-2.5 font-medium">Prestation</th>
-              <th className="px-4 py-2.5 font-medium">Avec</th>
+              <th className="px-4 py-2.5 font-medium">{t("Avec")}</th>
               <th className="px-4 py-2.5 font-medium">Date</th>
               <th className="px-4 py-2.5 font-medium">Statut</th>
             </tr>

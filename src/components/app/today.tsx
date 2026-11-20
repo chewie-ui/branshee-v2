@@ -114,8 +114,8 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
         <Card className="mb-6 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-semibold">Bien démarrer sur {(await currentBrand()).name}</h2>
-              <p className="text-sm text-muted">{doneCount} sur {steps.length} étapes terminées</p>
+              <h2 className="font-semibold">{t("Bien démarrer sur {brand}", { brand: (await currentBrand()).name })}</h2>
+              <p className="text-sm text-muted">{t("{done} sur {total} étapes terminées", { done: doneCount, total: steps.length })}</p>
             </div>
             <DismissOnboarding />
           </div>

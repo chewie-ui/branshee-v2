@@ -142,7 +142,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
                 {users !== teamUsers ? (
                   <span className="text-sm text-muted">Simulation. Vous payez pour les {teamUsers} personne{teamUsers > 1 ? "s" : ""} de votre équipe ; le prix suit quand vous en ajoutez dans Équipe. <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => setUsers(teamUsers)}>Revenir à {teamUsers}</button></span>
                 ) : (
-                  <span className="text-sm text-muted">{teamUsers === 1 ? t("Vous seul pour l'instant") : `Votre équipe actuelle`}</span>
+                  <span className="text-sm text-muted">{teamUsers === 1 ? t("Vous seul pour l'instant") : t("Votre équipe actuelle")}</span>
                 )}
               </div>
             </div>
@@ -172,7 +172,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
             )}
             <ul className="space-y-2 text-sm">
               {SKYDEV_FEATURES.map((f) => (
-                <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{f}</li>
+                <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{t(f)}</li>
               ))}
             </ul>
           </div>
@@ -221,17 +221,17 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
           {lockedReason ? <p className="bg-surface-muted px-5 py-3 text-sm text-muted">{lockedReason}</p> : null}
           <AddonRow
             icon={<PhoneCall />}
-            title={SKYDEV_ADDONS.tel_ia.label}
+            title={t(SKYDEV_ADDONS.tel_ia.label)}
             price={`${eur(SKYDEV_ADDONS.tel_ia.monthly)} TVAC / mois`}
-            text={SKYDEV_ADDONS.tel_ia.description}
+            text={t(SKYDEV_ADDONS.tel_ia.description)}
             active={telIa}
             action={canManage ? <Button size="sm" variant={telIa ? "ghost" : "primary"} disabled={!paid} loading={busy === "tel"} onClick={() => run("tel", () => setModuleAddon("tel_ia", !telIa))}>{telIa ? t("Retirer") : t("Ajouter")}</Button> : null}
           />
           <AddonRow
             icon={<Globe />}
-            title={SKYDEV_ADDONS.domain.label}
+            title={t(SKYDEV_ADDONS.domain.label)}
             price={`${eur(SKYDEV_ADDONS.domain.monthly)} TVAC / mois`}
-            text={SKYDEV_ADDONS.domain.description}
+            text={t(SKYDEV_ADDONS.domain.description)}
             active={current.customUrlAddon}
             action={canManage ? <Button size="sm" variant={current.customUrlAddon ? "ghost" : "secondary"} disabled={!paid} loading={busy === "domain"} onClick={() => run("domain", () => setCustomUrlAddon(!current.customUrlAddon))}>{current.customUrlAddon ? t("Retirer") : t("Ajouter")}</Button> : null}
           />

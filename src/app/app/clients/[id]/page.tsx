@@ -135,7 +135,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             {customer.blockedAt ? <Badge tone="danger">Bloqué</Badge> : null}
           </h1>
           <p className="text-sm text-muted">
-            {history.length} rendez-vous · fiche créée le {formatDay(customer.createdAt, tz, "d MMMM yyyy", t.locale)}
+            {t("{n} rendez-vous · fiche créée le {date}", { n: history.length, date: formatDay(customer.createdAt, tz, "d MMMM yyyy", t.locale) })}
             {row.account ? ` · a un compte ${(await currentBrand()).name}` : ""}
           </p>
         </div>
@@ -171,7 +171,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             <Card className="grid grid-cols-2 divide-border sm:grid-cols-4 sm:divide-x">
               {[["Terminés", done], ["Annulés", cancelled], ["Absences", noShows], ["Encaissé", formatPrice(paid)]].map(([l, v]) => (
                 <div key={l} className="p-4">
-                  <p className="text-sm text-muted">{l}</p>
+                  <p className="text-sm text-muted">{t(String(l))}</p>
                   <p className="mt-1 text-2xl font-semibold tabular-nums">{v}</p>
                 </div>
               ))}

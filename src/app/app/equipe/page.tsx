@@ -64,7 +64,7 @@ export default async function TeamPage() {
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {m.displayName}
-                    {m.id === ctx.member.id ? <span className="text-sm font-normal text-muted">(vous)</span> : null}
+                    {m.id === ctx.member.id ? <span className="text-sm font-normal text-muted">{t("(vous)")}</span> : null}
                   </p>
                   <p className="truncate text-sm text-muted">{m.roleLabel ?? (m.inviteEmail && !m.userId ? m.inviteEmail : "—")}</p>
                 </div>

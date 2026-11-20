@@ -42,7 +42,7 @@ export function NoShowControl({ id, noShow, reason }: { id: string; noShow: bool
     });
   return (
     <fieldset disabled={pending} className="space-y-2">
-      <legend className="text-sm font-medium">Présence</legend>
+      <legend className="text-sm font-medium">{t("Présence")}</legend>
       <div className="flex flex-wrap gap-2">
         {[
           { label: "Venu", active: !noShow, onClick: () => set(false, null) },

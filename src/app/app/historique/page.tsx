@@ -89,7 +89,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
         <Select name="statut" defaultValue={statut} aria-label="Statut" className="w-auto">
           <option value="">{t("Tous les statuts")}</option>
           <option value="confirme">{t("Confirmés (à venir)")}</option>
-          <option value="termine">Terminés</option>
+          <option value="termine">{t("Terminés")}</option>
           <option value="attente">{t("En attente")}</option>
           <option value="annule">Annulés</option>
           <option value="absent">Absences</option>
