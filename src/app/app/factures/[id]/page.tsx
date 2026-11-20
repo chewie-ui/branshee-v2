@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { docSeller } from "@/lib/invoicing";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CircleAlert, Info } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -31,7 +32,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   // Document émis : les copies figées font foi. Brouillon : les infos actuelles.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { saved: _saved, ...current } = settings;
-  const seller: DocParty = d.seller ?? current;
+  const seller: DocParty = docSeller(d, current);
   const c = customers.find((x) => x.id === d.customerId);
   const client: DocParty | null = d.client ?? (c ? { name: c.company || c.name, contact: c.company ? c.name : "", street: c.street ?? "", zip: c.postalCode ?? "", city: c.city ?? "", country: c.country ?? "", vat: c.vatNumber ?? "", email: c.email ?? "" } : null);
   const state = docState(d, today);

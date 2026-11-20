@@ -1,4 +1,4 @@
-import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, type DocType, type SalesLine, noVat, vatMention } from "@/lib/invoicing";
+import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, type DocType, type SalesLine, noVat, vatMention, isReverseCharge } from "@/lib/invoicing";
 
 export type DocParty = { [k: string]: string | number | undefined };
 export type DocView = {
@@ -43,7 +43,7 @@ export function InvoiceDocument({ doc, seller, client, qr }: { doc: DocView; sel
   if (isCredit && doc.related?.number) legal.push(`Note de crédit relative à la facture n° ${doc.related.number} du ${fdate(doc.related.issueDate)}.`);
   const mention = vatMention(s(seller.vatRegime), isQuote);
   if (mention) legal.push(mention);
-  const foot = [dname, s(seller.legalForm), seller.bce ? `N° d'entreprise ${bceFmt(s(seller.bce))}` : "", seller.vatNumber && !fr ? `TVA ${s(seller.vatNumber)}` : "", seller.iban ? `IBAN ${ibanFmt(s(seller.iban))}` : ""].filter(Boolean).join(" · ");
+  const foot = [dname, s(seller.legalForm), seller.bce ? `N° d'entreprise ${bceFmt(s(seller.bce))}` : "", seller.vatNumber && (!fr || isReverseCharge(s(seller.vatRegime))) ? `TVA ${s(seller.vatNumber)}` : "", seller.iban ? `IBAN ${ibanFmt(s(seller.iban))}` : ""].filter(Boolean).join(" · ");
   const cell = "px-3 py-2.5 align-top";
 
   return (
@@ -58,7 +58,7 @@ export function InvoiceDocument({ doc, seller, client, qr }: { doc: DocView; sel
           {seller.tradeName && seller.legalName && seller.tradeName !== seller.legalName ? <p className="text-[#52525b]">{s(seller.legalName)}</p> : null}
           <p className="text-[#52525b]">{addr(seller).length ? addr(seller).map((l) => <span key={l} className="block">{l}</span>) : "Votre adresse"}</p>
           {seller.bce ? <p className="text-[#52525b]">N° d&apos;entreprise : {bceFmt(s(seller.bce))}</p> : null}
-          {seller.vatNumber && !fr ? <p className="text-[#52525b]">TVA : {s(seller.vatNumber)}</p> : null}
+          {seller.vatNumber && (!fr || isReverseCharge(s(seller.vatRegime))) ? <p className="text-[#52525b]">TVA : {s(seller.vatNumber)}</p> : null}
           <p className="text-[#52525b]">{[s(seller.email), s(seller.phone)].filter(Boolean).join(" · ")}</p>
         </div>
         <div className="text-right">

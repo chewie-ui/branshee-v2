@@ -40,6 +40,7 @@ const docSchema = z.object({
   lines: z.array(lineSchema).max(200),
   relatedId: uuid.nullable().optional(),
   appointmentId: uuid.nullable().optional(),
+  vatOverride: z.enum(["autoliquidation", "intracom"]).nullable().optional(),
 });
 export type DocInput = z.input<typeof docSchema>;
 
@@ -78,9 +79,13 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     const cm = clientMissing(billingOf(customer));
     if (cm.length && v.docType === "invoice") return { ok: false, error: `Fiche client de ${customer.fullName} incomplète : ajoutez ${cm.join(", ")} (app Clients), puis recommencez.` };
   }
-  const t = totals(lines, seller.vatRegime);
+  // Autoliquidation : seulement pour un assujetti, et le client doit avoir un n° de TVA.
+  const override = seller.vatRegime === "assujetti" ? (v.vatOverride ?? null) : null;
+  if (override && customer && !customer.vatNumber?.trim()) return { ok: false, error: `Autoliquidation : ajoutez le n° de TVA de ${customer.fullName} (fiche client, Facturation).` };
+  const t = totals(lines, override ?? seller.vatRegime);
   const values = {
     customerId: customer?.id ?? null,
+    vatOverride: override,
     issueDate: v.issueDate,
     serviceDate: v.docType === "invoice" ? (v.serviceDate ?? v.issueDate) : null,
     dueDate: v.docType === "invoice" ? (v.dueDate ?? addDays(v.issueDate, seller.paymentDays)) : null,
@@ -91,7 +96,7 @@ export async function saveDocument(input: DocInput): Promise<Result> {
     vatCents: Math.round(t.tva * 100),
     ttcCents: Math.round(t.ttc * 100),
     // Un devis enregistré garde une copie du client et du vendeur, comme une facture émise.
-    ...(v.docType === "quote" && customer ? { client: clientSnapshot(customer), seller: sellerSnapshot(seller) } : {}),
+    ...(v.docType === "quote" && customer ? { client: clientSnapshot(customer), seller: { ...sellerSnapshot(seller), ...(override ? { vatRegime: override } : {}) } } : {}),
     updatedAt: new Date(),
   };
 
@@ -154,7 +159,9 @@ export async function issueDocument(id: string): Promise<Result> {
   if (!lines.some((l) => l.desc.trim())) return { ok: false, error: "Ajoutez au moins une prestation avec une description." };
   if (lines.some((l) => l.desc.trim() && num(l.qty) <= 0)) return { ok: false, error: "Chaque ligne doit avoir une quantité supérieure à 0." };
   if (d.docType === "invoice" && d.dueDate && d.dueDate < d.issueDate) return { ok: false, error: "L'échéance ne peut pas être avant la date d'émission." };
-  const t = totals(lines, seller.vatRegime);
+  const override = seller.vatRegime === "assujetti" && (d.vatOverride === "autoliquidation" || d.vatOverride === "intracom") ? d.vatOverride : null;
+  if (override && !customer.vatNumber?.trim()) return { ok: false, error: `Autoliquidation : ajoutez le n° de TVA de ${customer.fullName} (fiche client, Facturation).` };
+  const t = totals(lines, override ?? seller.vatRegime);
   if (t.ht === 0) return { ok: false, error: "Le montant total est de 0 €. Vérifiez les prix." };
   if (t.ht < 0) return { ok: false, error: "Le total est négatif : pour rembourser, faites une note de crédit sur la facture." };
   const year = Number(d.issueDate.slice(0, 4));
@@ -179,7 +186,7 @@ export async function issueDocument(id: string): Promise<Result> {
         seq,
         number,
         comm: type === "invoice" ? structComm(year, seq, type) : null,
-        seller: sellerSnapshot(seller),
+        seller: { ...sellerSnapshot(seller), ...(override ? { vatRegime: override } : {}) },
         client: clientSnapshot(customer),
         lines,
         htCents: Math.round(t.ht * 100),

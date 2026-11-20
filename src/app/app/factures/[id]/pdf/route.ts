@@ -1,5 +1,6 @@
 import type { DocParty } from "@/components/invoicing/invoice-document";
 import { requireContext } from "@/server/context";
+import { docSeller } from "@/lib/invoicing";
 import { invoicePdf, pdfFileName } from "@/server/invoice-pdf";
 import { customerOptions, getDocument, getSellerSettings, paymentQr, relatedDocuments } from "@/server/invoicing";
 
@@ -13,6 +14,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { saved: _saved, ...current } = settings;
   const c = customers.find((x) => x.id === d.customerId);
   const client: DocParty | null = d.client ?? (c ? { name: c.company || c.name, contact: c.company ? c.name : "", street: c.street ?? "", zip: c.postalCode ?? "", city: c.city ?? "", country: c.country ?? "", vat: c.vatNumber ?? "" } : null);
-  const buf = await invoicePdf({ doc: { ...d, related: rel.linked }, seller: d.seller ?? current, client, qr });
+  const buf = await invoicePdf({ doc: { ...d, related: rel.linked }, seller: docSeller(d, current), client, qr });
   return new Response(new Uint8Array(buf), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(pdfFileName(d))}`, "Cache-Control": "private, no-store" } });
 }

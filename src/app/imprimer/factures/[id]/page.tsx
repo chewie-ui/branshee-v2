@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { docSeller } from "@/lib/invoicing";
 import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-document";
 import { PrintToolbar } from "@/components/invoicing/print-toolbar";
 import { docTitle } from "@/lib/invoicing";
@@ -30,7 +31,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <style>{`@page { size: A4; margin: 0; } @media print { html, body { background: #fff; } }`}</style>
       <PrintToolbar />
       <div className="mx-auto w-[794px] shadow-lg print:shadow-none">
-        <InvoiceDocument doc={{ ...d, related: rel.linked }} seller={d.seller ?? current} client={client} qr={qr} />
+        <InvoiceDocument doc={{ ...d, related: rel.linked }} seller={docSeller(d, current)} client={client} qr={qr} />
       </div>
     </div>
   );

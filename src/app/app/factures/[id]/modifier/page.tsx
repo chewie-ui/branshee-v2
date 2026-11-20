@@ -18,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <DocumentEditor
       {...p}
-      initial={{ id: d.id, docType: d.docType, status: d.status, number: d.number, customerId: d.customerId, issueDate: d.issueDate, serviceDate: d.serviceDate, dueDate: d.dueDate, validUntil: d.validUntil, notes: d.notes, lines: d.lines, relatedId: d.relatedId, related: rel.linked, appointmentId: d.appointmentId }}
+      initial={{ id: d.id, docType: d.docType, status: d.status, number: d.number, customerId: d.customerId, issueDate: d.issueDate, serviceDate: d.serviceDate, dueDate: d.dueDate, validUntil: d.validUntil, notes: d.notes, lines: d.lines, relatedId: d.relatedId, related: rel.linked, appointmentId: d.appointmentId, vatOverride: d.vatOverride }}
     />
   );
 }

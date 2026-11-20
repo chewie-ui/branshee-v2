@@ -9,7 +9,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
-import { addDays, clientMissing, money, newLine, num, totals, UNITS, VAT_RATES, type DocType, type SalesLine } from "@/lib/invoicing";
+import { addDays, clientMissing, money, REVERSE_CHARGE, newLine, num, totals, UNITS, VAT_RATES, type DocType, type SalesLine } from "@/lib/invoicing";
 import { issueDocument, saveBillingClient, saveCustomerBilling, saveDocument } from "@/server/actions/invoicing";
 import type { CustomerOption } from "@/server/invoicing";
 import { InvoiceDocument, type DocParty } from "@/components/invoicing/invoice-document";
@@ -34,6 +34,7 @@ export type EditorDoc = {
   relatedId?: string | null;
   related?: { number: string | null; issueDate: string } | null;
   appointmentId?: string | null;
+  vatOverride?: string | null;
 };
 
 const clientParty = (c: CustomerOption | undefined): DocParty | null =>
@@ -49,7 +50,9 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const [pending, start] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [newClient, setNewClient] = useState(false);
-  const fr = seller.vatRegime !== "assujetti";
+  // Autoliquidation choisie sur ce document (assujetti seulement) : facture sans TVA, avec la mention légale.
+  const override = seller.vatRegime === "assujetti" && doc.vatOverride ? doc.vatOverride : null;
+  const fr = seller.vatRegime !== "assujetti" || !!override;
   const isQuote = doc.docType === "quote";
   const isCredit = doc.docType === "credit";
   const tv = useMemo(() => totals(doc.lines, fr ? "franchise" : "assujetti"), [doc.lines, fr]);
@@ -63,7 +66,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
   const title = isQuote ? (doc.number ? `Devis ${doc.number}` : t("Nouveau devis")) : isCredit ? t("Note de crédit") : doc.id ? t("Brouillon de facture") : t("Nouvelle facture");
   const back = doc.id ? `/app/factures/${doc.id}` : isQuote ? "/app/factures/devis" : "/app/factures/liste";
 
-  const payload = () => ({ id: doc.id, docType: doc.docType, customerId: doc.customerId, issueDate: doc.issueDate, serviceDate: doc.serviceDate, dueDate: doc.dueDate, validUntil: doc.validUntil, notes: doc.notes, lines: doc.lines, relatedId: doc.relatedId ?? null, appointmentId: doc.appointmentId ?? null });
+  const payload = () => ({ id: doc.id, docType: doc.docType, customerId: doc.customerId, issueDate: doc.issueDate, serviceDate: doc.serviceDate, dueDate: doc.dueDate, validUntil: doc.validUntil, notes: doc.notes, lines: doc.lines, relatedId: doc.relatedId ?? null, appointmentId: doc.appointmentId ?? null, vatOverride: (override as "autoliquidation" | "intracom" | null) ?? null });
 
   function save(then?: "issue") {
     setError(null);
@@ -162,6 +165,14 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                     </Field>
                   </>
                 )}
+                {seller.vatRegime === "assujetti" ? (
+                  <Field label={t("TVA")} htmlFor="e-vat" className="sm:col-span-2" hint={override ? t("Facture sans TVA avec la mention d'autoliquidation. Le client doit avoir un n° de TVA.") : undefined}>
+                    <Select id="e-vat" value={doc.vatOverride ?? ""} onChange={(e) => set({ vatOverride: e.target.value || null })}>
+                      <option value="">{t("TVA normale (taux par ligne)")}</option>
+                      {Object.entries(REVERSE_CHARGE).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}
+                    </Select>
+                  </Field>
+                ) : null}
               </div>
               {!isCredit ? (
                 <div className="flex flex-wrap gap-2" aria-label={t("Délais rapides")}>
@@ -251,7 +262,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
                 )}
                 <div className="flex justify-between border-tv border-border pt-2 text-base font-semibold"><span>Total{fr ? "" : " TVAC"}</span><span className="tabular-nums">{money(fr ? tv.ht : tv.ttc)}</span></div>
                 <p className="text-right text-xs text-muted">
-                  {fr ? t("Franchise : pas de TVA facturée") : t("Assujetti à la TVA")} ·{" "}
+                  {override ? t("Autoliquidation : pas de TVA facturée") : fr ? t("Franchise : pas de TVA facturée") : t("Assujetti à la TVA")} ·{" "}
                   <Link href="/app/factures/reglages?voir=tva#tva" className="font-medium text-accent hover:text-accent-hover">{t("Modifier")}</Link>
                 </p>
               </div>
@@ -272,7 +283,7 @@ export function DocumentEditor({ initial, customers: initialCustomers, catalog, 
           <div className="xl:sticky xl:top-6">
             <p className="mb-2 text-sm font-medium text-muted">{t("Aperçu")}</p>
             <A4Frame>
-              <InvoiceDocument doc={{ ...doc, number: doc.number }} seller={seller} client={clientParty(client)} />
+              <InvoiceDocument doc={{ ...doc, number: doc.number }} seller={override ? { ...seller, vatRegime: override } : seller} client={clientParty(client)} />
             </A4Frame>
           </div>
         </div>

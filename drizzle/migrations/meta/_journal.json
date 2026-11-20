@@ -484,6 +484,13 @@
       "when": 1794993386378,
       "tag": "0068_inami_nomenclature",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794993387378,
+      "tag": "0069_reverse_charge",
+      "breakpoints": true
     }
   ]
 }

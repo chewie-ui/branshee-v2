@@ -8,11 +8,21 @@ export type { SalesLine, PartySnapshot };
 export type DocType = "invoice" | "credit" | "quote";
 export type DocStatus = "draft" | "sent" | "paid" | "cancelled" | "accepted" | "refused" | "invoiced";
 export type VatRegime = "franchise" | "assujetti" | "exempt";
+/** Régime appliqué à un document : celui du vendeur, ou une autoliquidation choisie sur la facture. */
+export type DocVatRegime = VatRegime | "autoliquidation" | "intracom";
+/** Autoliquidation : l'assujetti facture sans TVA, c'est le client (assujetti) qui la déclare. */
+export const REVERSE_CHARGE = {
+  autoliquidation: "Autoliquidation — travaux immobiliers pour un client assujetti (cocontractant)",
+  intracom: "Autoliquidation — client assujetti dans un autre pays de l'UE",
+} as const;
+export const isReverseCharge = (regime: string | null | undefined) => regime === "autoliquidation" || regime === "intracom";
 /** Pas de TVA sur les factures : franchise des petites entreprises ou exonération (art. 44, soins de santé). */
 export const noVat = (regime: string | null | undefined) => (regime || "franchise") !== "assujetti";
 /** Mention légale imposée quand la facture est sans TVA. */
 export function vatMention(regime: string | null | undefined, quote = false) {
   if ((regime || "franchise") === "exempt") return "Exonération de TVA — article 44, § 1er, du Code de la TVA.";
+  if (regime === "autoliquidation") return "Autoliquidation — TVA due par le cocontractant (article 51, § 2, alinéa 1er, 5°, du Code de la TVA et article 20 de l'arrêté royal n° 1).";
+  if (regime === "intracom") return "Autoliquidation — TVA due par le preneur (article 21, § 2, du Code de la TVA ; article 196 de la directive 2006/112/CE).";
   if (noVat(regime)) return quote ? "Régime particulier de franchise des petites entreprises — prix sans TVA." : "Régime particulier de franchise des petites entreprises.";
   return null;
 }
@@ -46,7 +56,7 @@ export const daysBetween = (a: string, b: string) => Math.round((new Date(b + "T
 export type Totals = { ht: number; tva: number; ttc: number; vatRows: { rate: number; base: number; amt: number }[] };
 
 /** Totaux d'un document. En franchise, aucune TVA n'est facturée (total = hors TVA). */
-export function totals(lines: SalesLine[], regime: VatRegime): Totals {
+export function totals(lines: SalesLine[], regime: DocVatRegime | string): Totals {
   const fr = noVat(regime);
   let ht = 0;
   const vat: Record<number, number> = {};
@@ -212,4 +222,10 @@ export function mailText(d: { docType: DocType; number: string | null; ttc: numb
   if (reminder)
     return `Bonjour,\n\nSauf erreur de notre part, la facture ${d.number} de ${money(d.ttc)}, échue le ${fdate(d.dueDate)}, n'a pas encore été réglée.\n\nMerci d'effectuer le virement sur le compte ${ibanFmt(iban)} avec la communication ${d.comm ?? ""}.\nSi le paiement a été fait entre-temps, merci de ne pas tenir compte de ce message.\n\nBien à vous,\n${seller}`;
   return `Bonjour,\n\nVous trouverez en pièce jointe la facture ${d.number} d'un montant de ${money(d.ttc)}, à régler avant le ${fdate(d.dueDate)}.\n\nCompte : ${ibanFmt(iban)}\nCommunication : ${d.comm ?? ""}\n\nMerci pour votre confiance.\n${seller}`;
+}
+
+/** Vendeur à afficher : copie figée d'un document émis, sinon réglages actuels avec l'autoliquidation du brouillon. */
+export function docSeller<T extends Record<string, unknown>>(d: { seller?: unknown; vatOverride?: string | null }, current: T): T {
+  if (d.seller) return d.seller as T;
+  return isReverseCharge(d.vatOverride) ? { ...current, vatRegime: d.vatOverride } : current;
 }

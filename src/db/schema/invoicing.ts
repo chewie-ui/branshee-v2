@@ -64,6 +64,8 @@ export const salesDocuments = pgTable(
     seller: jsonb("seller").$type<PartySnapshot>(),
     issueDate: date("issue_date").notNull(),
     serviceDate: date("service_date"),
+    /** Autoliquidation (assujetti seulement) : « autoliquidation » (travaux immobiliers) ou « intracom » (client UE). */
+    vatOverride: text("vat_override"),
     dueDate: date("due_date"),
     validUntil: date("valid_until"),
     /** Communication structurée belge (+++123/4567/89012+++). */

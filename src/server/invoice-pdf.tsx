@@ -1,7 +1,7 @@
 import "server-only";
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import type { DocParty, DocView } from "@/components/invoicing/invoice-document";
-import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, noVat, vatMention } from "@/lib/invoicing";
+import { bceFmt, docTitle, fdate, ibanFmt, money, num, totals, noVat, vatMention, isReverseCharge } from "@/lib/invoicing";
 
 /**
  * Vrai fichier PDF (A4, texte sélectionnable) d'une facture, note de crédit ou devis : même contenu et mêmes
@@ -37,7 +37,7 @@ export async function invoicePdf({ doc, seller, client, qr }: { doc: DocView; se
   if (isCredit && doc.related?.number) legal.push(`Note de crédit relative à la facture n° ${doc.related.number} du ${fdate(doc.related.issueDate)}.`);
   const mention = vatMention(s(seller.vatRegime), isQuote);
   if (mention) legal.push(mention);
-  const foot = [dname, s(seller.legalForm), seller.bce ? `N° d'entreprise ${bceFmt(s(seller.bce))}` : "", seller.vatNumber && !fr ? `TVA ${s(seller.vatNumber)}` : "", seller.iban ? `IBAN ${ibanFmt(s(seller.iban))}` : ""].filter(Boolean).join(" · ");
+  const foot = [dname, s(seller.legalForm), seller.bce ? `N° d'entreprise ${bceFmt(s(seller.bce))}` : "", seller.vatNumber && (!fr || isReverseCharge(s(seller.vatRegime))) ? `TVA ${s(seller.vatNumber)}` : "", seller.iban ? `IBAN ${ibanFmt(s(seller.iban))}` : ""].filter(Boolean).join(" · ");
   const w = fr ? ["46%", "10%", "14%", "15%", "15%"] : ["38%", "9%", "12%", "14%", "10%", "17%"];
 
   const pdf = (
@@ -51,7 +51,7 @@ export async function invoicePdf({ doc, seller, client, qr }: { doc: DocView; se
             {seller.tradeName && seller.legalName && seller.tradeName !== seller.legalName ? <Text style={st.muted}>{s(seller.legalName)}</Text> : null}
             {addr(seller).map((l) => <Text key={l} style={st.muted}>{l}</Text>)}
             {seller.bce ? <Text style={st.muted}>N° d&apos;entreprise : {bceFmt(s(seller.bce))}</Text> : null}
-            {seller.vatNumber && !fr ? <Text style={st.muted}>TVA : {s(seller.vatNumber)}</Text> : null}
+            {seller.vatNumber && (!fr || isReverseCharge(s(seller.vatRegime))) ? <Text style={st.muted}>TVA : {s(seller.vatNumber)}</Text> : null}
             <Text style={st.muted}>{[s(seller.email), s(seller.phone)].filter(Boolean).join(" · ")}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
