@@ -201,7 +201,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           <div className="min-w-0 space-y-6">
             {canManage ? (
               <>
-                <ContactForm customerId={customer.id} hasAccount={!!customer.userId} c={{ firstName: customer.firstName ?? (customer.lastName ? "" : customer.fullName), lastName: customer.lastName ?? "", email: customer.email ?? "", phone: customer.phone ?? "" }} />
+                <ContactForm customerId={customer.id} term={term} hasAccount={!!customer.userId} c={{ firstName: customer.firstName ?? (customer.lastName ? "" : customer.fullName), lastName: customer.lastName ?? "", email: customer.email ?? "", phone: customer.phone ?? "" }} />
                 <AltContactsForm customerId={customer.id} c={{ altName: customer.altName ?? "", altEmail: customer.altEmail ?? "", altPhone: customer.altPhone ?? "" }} />
                 {(await currentBrand()).id === "skydev" && ctx.can("invoices.manage") ? <CustomerBillingForm customerId={customer.id} initial={{ company: customer.companyName ?? "", vatNumber: customer.vatNumber ?? "", street: customer.street ?? "", postalCode: customer.postalCode ?? "", city: customer.city ?? "", country: customer.country ?? "" }} /> : null}
                 <CustomerActions customerId={customer.id} name={customer.fullName} blocked={!!customer.blockedAt} blockedReason={customer.blockedReason ?? ""} term={term} />

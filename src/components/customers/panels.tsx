@@ -24,7 +24,7 @@ import {
 
 const Saved = ({ state }: { state: CustomerState }) => (state?.ok ? <span className="text-sm text-success" role="status">{"Enregistré."}</span> : state?.error ? <span className="text-sm text-danger" role="alert">{state.error}</span> : null);
 
-export function ContactForm({ customerId, c, hasAccount = false }: { customerId: string; c: { firstName: string; lastName: string; email: string; phone: string }; hasAccount?: boolean }) {
+export function ContactForm({ customerId, c, hasAccount = false, term = "client" }: { customerId: string; c: { firstName: string; lastName: string; email: string; phone: string }; hasAccount?: boolean; term?: string }) {
   const t = useT();
   const brandName = useBrandName();
   const [state, action, pending] = useActionState<CustomerState, FormData>(saveContact.bind(null, customerId), undefined);
@@ -35,7 +35,7 @@ export function ContactForm({ customerId, c, hasAccount = false }: { customerId:
         title={t("Coordonnées")}
         description={
           hasAccount
-            ? `Ce patient a un compte ${brandName} : ces coordonnées ne concernent que votre fiche. Son compte, son email de connexion et ses autres rendez-vous ne changent pas.`
+            ? `Ce ${term} a un compte ${brandName} : ces coordonnées ne concernent que votre fiche. Son compte, son email de connexion et ses autres rendez-vous ne changent pas.`
             : t("L'email et le téléphone rattachent les futurs rendez-vous à cette fiche. Ils ne concernent que votre établissement.")
         }
       />
