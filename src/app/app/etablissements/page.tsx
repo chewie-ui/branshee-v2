@@ -7,6 +7,7 @@ import { requireContext } from "@/server/context";
 import { listMemberships } from "@/server/memberships";
 import { appMetadata } from "@/server/app-locale";
 import { appT } from "@/server/app-locale";
+import { currentBrand } from "@/server/brand";
 
 export const generateMetadata = appMetadata("Mes établissements");
 
@@ -19,7 +20,7 @@ export default async function BusinessesPage() {
       <PageHeader title={t("Mes établissements")} description={t("Ceux que vous gérez ou dont vous faites partie.")} action={<ButtonLink href="/bienvenue" icon={<Plus className="size-4" aria-hidden="true" />}>{t("Créer un établissement")}</ButtonLink>} />
       <div className="mx-auto max-w-3xl space-y-6">
         <MyBusinesses rows={rows} userId={ctx.user.id} />
-        <InvitationsAndJoin rows={rows} />
+        <InvitationsAndJoin rows={rows} brandName={(await currentBrand()).name} />
       </div>
     </>
   );

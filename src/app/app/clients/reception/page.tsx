@@ -10,6 +10,8 @@ import { decrypt } from "@/lib/field-crypto";
 import { formatNiss } from "@/lib/niss";
 import { formatDay, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { notFound } from "next/navigation";
+import { isPatientProfession } from "@/lib/terminology";
 import { inboxMatch } from "@/server/care-inbox";
 import { appMetadata } from "@/server/app-locale";
 
@@ -26,6 +28,8 @@ const safe = (v: string | null) => {
 /** Documents reçus en attente d'intégration au dossier d'un patient. */
 export default async function InboxPage() {
   const ctx = await requireContext("records.view", { app: "clients" });
+  // Réservé aux métiers de santé (dossier de soins).
+  if (!isPatientProfession(ctx.business.businessType)) notFound();
   const tz = ctx.business.timezone;
   const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
   const [items, handled] = await Promise.all([

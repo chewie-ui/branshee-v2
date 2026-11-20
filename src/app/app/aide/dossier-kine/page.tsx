@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
+import { notFound } from "next/navigation";
+import { isPatientProfession } from "@/lib/terminology";
 import { appMetadata } from "@/server/app-locale";
 
 export const generateMetadata = appMetadata("Aide : dossier kiné");
@@ -90,7 +92,8 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
 
 /** Aide en ligne du dossier kiné (ouvrable dans un nouvel onglet sans fermer le dossier en cours) et format d'export. */
 export default async function PhysioHelpPage() {
-  await requireContext("records.view");
+  const ctx = await requireContext("records.view");
+  if (!isPatientProfession(ctx.business.businessType)) notFound();
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/app/aide" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text"><ArrowLeft className="size-4" aria-hidden="true" />Aide et support</Link>
