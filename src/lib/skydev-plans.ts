@@ -56,3 +56,39 @@ export const SKYDEV_ADDONS: Record<SkydevAddonKey, { label: string; monthly: num
 /** Clé de module (table `modules`) des options qui sont des apps. */
 export const MODULE_ADDONS = ["tel_ia"] as const;
 export type ModuleAddon = (typeof MODULE_ADDONS)[number];
+
+/**
+ * Conditions propres à un établissement, fixées par le super-admin :
+ * - `offered` : utilisateurs offerts en plus du titulaire (qui paie 1 utilisateur) : non facturés ;
+ *   avec un accès offert, c'est aussi le nombre de personnes qu'on peut ajouter à l'équipe.
+ * - `first` / `extra` : prix TVAC par mois du 1er utilisateur facturé et de chaque utilisateur en plus
+ *   (null = prix public dégressif). `extra` null = même prix que `first`.
+ */
+export type UserPricing = { offered: number; first: number | null; extra: number | null };
+export const PUBLIC_PRICING: UserPricing = { offered: 0, first: null, extra: null };
+
+/** Prix mensuel TVAC du n-ième utilisateur facturé selon les conditions de l'établissement. */
+export function priceOfUser(n: number, p: UserPricing = PUBLIC_PRICING) {
+  if (p.first == null) return userPrice(n);
+  return n <= 1 ? p.first : (p.extra ?? p.first);
+}
+
+/** Utilisateurs facturés pour une équipe de `team` personnes (au moins 1). */
+export const billedFor = (team: number, p: UserPricing = PUBLIC_PRICING) => Math.min(Math.max(Math.round(team) - Math.max(p.offered, 0), 1), MAX_USERS);
+
+/** Prix de l'équipe : utilisateurs facturés, offerts, total mensuel et annuel, et coût de la prochaine personne ajoutée. */
+export function teamQuote(team: number, p: UserPricing = PUBLIC_PRICING) {
+  const n = Math.min(Math.max(Math.round(team) || 1, 1), MAX_USERS);
+  const billed = billedFor(n, p);
+  const lines = Array.from({ length: billed }, (_, i) => priceOfUser(i + 1, p));
+  const monthly = Math.round(lines.reduce((a, b) => a + b, 0) * 100) / 100;
+  const nextBilled = billedFor(n + 1, p);
+  return { users: n, billed, offered: n - billed, lines, monthly, yearly: Math.round(monthly * YEARLY_MONTHS * 100) / 100, perUser: monthly / n, next: nextBilled > billed ? priceOfUser(nextBilled, p) : 0 };
+}
+
+/** Conditions à partir des colonnes de la base (centimes). */
+export const pricingFrom = (row: { offeredUsers?: number | null; userPriceCents?: number | null; extraUserPriceCents?: number | null } | null | undefined): UserPricing => ({
+  offered: row?.offeredUsers ?? 0,
+  first: row?.userPriceCents != null ? row.userPriceCents / 100 : null,
+  extra: row?.extraUserPriceCents != null ? row.extraUserPriceCents / 100 : null,
+});

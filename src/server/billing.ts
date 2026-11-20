@@ -7,7 +7,7 @@ import { LIMITS, PLANS, collaboratorLimit, type Plan } from "@/lib/plans";
 import { stripe } from "@/server/payments";
 import { invoiceFooter } from "@/lib/legal";
 import type { BrandId } from "@/lib/brand";
-import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLAN, type ModuleAddon } from "@/lib/skydev-plans";
+import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_PLAN, YEARLY_MONTHS, billedFor, pricingFrom, type ModuleAddon, type UserPricing } from "@/lib/skydev-plans";
 import { sendEmail } from "@/server/email/mailer";
 import { REFERRAL_MIN_PAYMENTS } from "@/lib/referral";
 import { emails } from "@/server/email/templates";
@@ -30,6 +30,8 @@ const planKey = (plan: Exclude<Plan, "free">, interval: Interval) => `STRIPE_PRI
 const skydevKey = (interval: Interval) => `STRIPE_PRICE_SKYDEV_${interval === "year" ? "YEARLY" : "MONTHLY"}`;
 export const skydevPriceFor = (interval: Interval) => env(skydevKey(interval)) ?? env(skydevKey("month"));
 export const isSkydevPrice = (priceId: string | null | undefined) => !!priceId && (env(skydevKey("month")) === priceId || env(skydevKey("year")) === priceId);
+/** Ligne d'abonnement Skydev par utilisateur : prix public, ou prix personnalisé créé pour un établissement. */
+export const isSkydevItemPrice = (price: { id: string; metadata?: Record<string, string> | null } | null | undefined) => !!price && (isSkydevPrice(price.id) || price.metadata?.skydev_users === "1");
 
 export function priceFor(plan: Exclude<Plan, "free">, interval: Interval, brand: BrandId = "branshee") {
   if (brand === "skydev") return skydevPriceFor(interval);
@@ -87,6 +89,48 @@ export async function lockedProPrice(cents: number): Promise<string | null> {
   return created.id;
 }
 
+/**
+ * Prix Stripe personnalisé par utilisateur (TVAC, centimes) pour un établissement : 1er utilisateur à `first`,
+ * chacun en plus à `extra` (paliers gradués). Retrouvé par sa clé, sinon créé une fois sur le produit Skydev.
+ * Annuel = 10 mois payés, comme le prix public.
+ */
+export async function skydevCustomPrice(first: number, extra: number | null, interval: Interval): Promise<string | null> {
+  const s = stripe();
+  const base = skydevPriceFor("month");
+  if (!s || !base) return null;
+  const k = interval === "year" ? YEARLY_MONTHS : 1;
+  const a = first * k, b = (extra ?? first) * k;
+  const lookup = `skydev_ttc_users_${interval}_${a}_${b}`;
+  const found = (await s.prices.list({ lookup_keys: [lookup], limit: 1 })).data[0];
+  if (found) return found.id;
+  const ref = await s.prices.retrieve(base);
+  const product = typeof ref.product === "string" ? ref.product : ref.product.id;
+  const label = `${(first / 100).toFixed(2).replace(".", ",")} €${b !== a ? ` puis ${((extra ?? first) / 100).toFixed(2).replace(".", ",")} €` : ""} par utilisateur`;
+  const metadata = { branshee_plan: SKYDEV_PLAN, branshee_interval: interval, skydev_users: "1", custom: "1" };
+  const created =
+    a === b
+      ? await s.prices.create({ currency: "eur", unit_amount: a, recurring: { interval, usage_type: "licensed" }, tax_behavior: "inclusive", lookup_key: lookup, product, nickname: `Skydev — ${label}`, metadata })
+      : await s.prices.create({ currency: "eur", billing_scheme: "tiered", tiers_mode: "graduated", tiers: [{ up_to: 1, unit_amount: a }, { up_to: "inf", unit_amount: b }], recurring: { interval, usage_type: "licensed" }, tax_behavior: "inclusive", lookup_key: lookup, product, nickname: `Skydev — ${label}`, metadata });
+  return created.id;
+}
+
+/** Conditions de l'établissement (utilisateurs offerts, prix par utilisateur). */
+export async function businessPricing(businessId: string): Promise<UserPricing> {
+  const [row] = await db.select({ offeredUsers: businessPlans.offeredUsers, userPriceCents: businessPlans.userPriceCents, extraUserPriceCents: businessPlans.extraUserPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
+  return pricingFrom(row);
+}
+
+/** Prix Stripe de l'abonnement Skydev pour cet établissement : personnalisé s'il en a un, sinon le prix public. */
+export async function skydevPriceForBusiness(businessId: string, interval: Interval) {
+  const p = await businessPricing(businessId);
+  return p.first != null ? skydevCustomPrice(Math.round(p.first * 100), p.extra != null ? Math.round(p.extra * 100) : null, interval) : skydevPriceFor(interval);
+}
+
+/** Quantité facturée : équipe moins les utilisateurs offerts, au moins 1. */
+export async function billableUsers(businessId: string) {
+  return billedFor(await countBilledUsers(businessId), await businessPricing(businessId));
+}
+
 export const billingEnabled = (brand: BrandId = "branshee") => !!stripe() && !!priceFor("pro", "month", brand);
 
 /** Utilisateurs facturés sur Skydev : propriétaire et membres actifs ou invités (pas les demandes en attente). */
@@ -106,9 +150,9 @@ export async function syncSkydevUsers(businessId: string) {
   if (!row?.sub || row.billed == null) return;
   const sub = await s.subscriptions.retrieve(row.sub).catch(() => null);
   if (!sub || !["active", "trialing", "past_due"].includes(sub.status)) return;
-  const item = sub.items.data.find((i) => isSkydevPrice(i.price.id));
+  const item = sub.items.data.find((i) => isSkydevItemPrice(i.price));
   if (!item) return;
-  const users = Math.min(await countBilledUsers(businessId), MAX_USERS);
+  const users = await billableUsers(businessId);
   if (item.quantity === users) return;
   await s.subscriptionItems.update(item.id, { quantity: users, proration_behavior: "create_prorations" });
   await syncSubscription(await s.subscriptions.retrieve(sub.id));
@@ -182,7 +226,7 @@ export async function syncSubscription(sub: Stripe.Subscription) {
     const id = item.price.id;
     const found = planFromStripePrice(item.price);
     if (found) base = found;
-    if (isSkydevPrice(id)) billedUsers = item.quantity ?? 1;
+    if (isSkydevItemPrice(item.price)) billedUsers = item.quantity ?? 1;
     if (isAddonPrice("seat", id)) seats = item.quantity ?? 0;
     if (isAddonPrice("customUrl", id)) customUrl = true;
     const mod = moduleFromPrice(id);

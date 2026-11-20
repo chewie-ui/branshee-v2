@@ -8,7 +8,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { eur, excludingVat, type Plan } from "@/lib/plans";
-import { SKYDEV_ADDONS, SKYDEV_FEATURES, SKYDEV_NAME, USER_TIERS, skydevPrice, tierLabels, userPrice } from "@/lib/skydev-plans";
+import { PUBLIC_PRICING, SKYDEV_ADDONS, SKYDEV_FEATURES, SKYDEV_NAME, USER_TIERS, teamQuote, tierLabels, type UserPricing } from "@/lib/skydev-plans";
 import { cancelPlan, choosePlan, openBillingPortal, resumePlan, setCustomUrlAddon, setModuleAddon } from "@/server/actions/billing";
 import { useT } from "@/components/app-locale";
 
@@ -36,13 +36,15 @@ const daysLeft = (iso: string) => Math.max(1, Math.ceil((new Date(iso).getTime()
  * Abonnement Skydev : un seul abonnement pour toutes les apps, payé par utilisateur (prix dégressif), et des options
  * sur le même abonnement. `teamUsers` = personnes de l'équipe aujourd'hui (base de l'abonnement).
  */
-export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: { current: SkydevCurrent; enabled: boolean; canManage: boolean; teamUsers: number }) {
+export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pricing = PUBLIC_PRICING }: { current: SkydevCurrent; enabled: boolean; canManage: boolean; teamUsers: number; pricing?: UserPricing }) {
   const t = useT();
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
   const [users, setUsers] = useState(teamUsers);
-  const price = skydevPrice(users);
+  // Conditions de l'établissement : utilisateurs offerts et prix personnalisé (sinon prix public dégressif).
+  const custom = pricing.first != null;
+  const price = teamQuote(users, pricing);
   // Prix réel : l'abonnement se base toujours sur l'équipe actuelle, pas sur la simulation.
-  const teamPrice = skydevPrice(teamUsers);
+  const teamPrice = teamQuote(teamUsers, pricing);
   const teamMonthly = interval === "year" ? teamPrice.yearly / 12 : teamPrice.monthly;
   const simulating = users !== teamUsers;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -90,7 +92,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
                     ? `Votre abonnement reste actif jusqu'au ${fmtDate(current.periodEnd)}, puis s'arrête.`
                     : current.status === "past_due"
                       ? t("Le dernier paiement n'est pas passé : mettez à jour votre carte pour garder vos apps.")
-                      : `${current.billedUsers ? `${current.billedUsers} utilisateur${current.billedUsers > 1 ? "s" : ""} · ${eur(skydevPrice(current.billedUsers)[current.interval === "year" ? "yearly" : "monthly"])} TVAC ${current.interval === "year" ? t("par an") : t("par mois")}` : current.interval === "year" ? t("Annuel") : t("Mensuel")}${current.periodEnd ? `, prochain renouvellement le ${fmtDate(current.periodEnd)}` : ""}.`
+                      : `${current.billedUsers ? `${current.billedUsers} utilisateur${current.billedUsers > 1 ? "s" : ""} facturé${current.billedUsers > 1 ? "s" : ""}${pricing.offered ? ` (+ ${pricing.offered} offert${pricing.offered > 1 ? "s" : ""})` : ""} · ${eur(teamQuote(current.billedUsers, { ...pricing, offered: 0 })[current.interval === "year" ? "yearly" : "monthly"])} TVAC ${current.interval === "year" ? t("par an") : t("par mois")}` : current.interval === "year" ? t("Annuel") : t("Mensuel")}${current.periodEnd ? `, prochain renouvellement le ${fmtDate(current.periodEnd)}` : ""}.`
                   : current.source === "granted"
                     ? current.grantedUntil
                       ? `Accès offert jusqu'au ${fmtDate(current.grantedUntil)}.`
@@ -116,7 +118,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
       <Card>
         <CardHeader
           title={paid ? t("Votre tarif") : t("Un abonnement pour toutes les apps")}
-          description={t("Vous payez par personne de l'équipe, et chaque personne ajoutée coûte moins cher que la précédente. Sans engagement, résiliable en un clic.")}
+          description={custom ? t("Vous payez par personne de l'équipe, à votre tarif personnalisé. Sans engagement, résiliable en un clic.") : t("Vous payez par personne de l'équipe, et chaque personne ajoutée coûte moins cher que la précédente. Sans engagement, résiliable en un clic.")}
         />
         <div className="grid gap-6 p-5 lg:grid-cols-[1fr_minmax(0,320px)]">
           <div className="space-y-5">
@@ -145,10 +147,19 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
               </div>
             </div>
 
+            {pricing.offered ? (
+              <p className="rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-sm text-success">{pricing.offered} utilisateur{pricing.offered > 1 ? "s" : ""} offert{pricing.offered > 1 ? "s" : ""} par l&apos;équipe Skydev : {pricing.offered > 1 ? "ils ne sont" : "il n'est"} pas facturé{pricing.offered > 1 ? "s" : ""}.</p>
+            ) : null}
+            {custom ? (
+              <ol className="grid grid-cols-2 gap-2 text-sm">
+                <li className="rounded-lg border border-accent bg-accent-soft px-3 py-2 text-accent-soft-foreground"><span className="block text-xs">{t("1er utilisateur")}</span><span className="font-semibold tabular-nums">{eur(pricing.first!)}</span></li>
+                <li className={cn("rounded-lg border px-3 py-2", price.billed > 1 ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border text-muted")}><span className="block text-xs">{t("Chaque utilisateur en plus")}</span><span className="font-semibold tabular-nums">{eur(pricing.extra ?? pricing.first!)}</span>{price.billed > 2 ? <span className="text-xs"> × {price.billed - 1}</span> : null}</li>
+              </ol>
+            ) : (
             <ol className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
               {tierLabels().map((tp, i) => {
-                const used = i < USER_TIERS.length - 1 ? users > i : users >= USER_TIERS.length;
-                const count = i < USER_TIERS.length - 1 ? (users > i ? 1 : 0) : Math.max(0, users - (USER_TIERS.length - 1));
+                const used = i < USER_TIERS.length - 1 ? price.billed > i : price.billed >= USER_TIERS.length;
+                const count = i < USER_TIERS.length - 1 ? (price.billed > i ? 1 : 0) : Math.max(0, price.billed - (USER_TIERS.length - 1));
                 return (
                   <li key={tp.label} className={cn("rounded-lg border px-3 py-2", used ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border text-muted")}>
                     <span className="block text-xs">{t(tp.label)}</span>
@@ -158,6 +169,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
                 );
               })}
             </ol>
+            )}
             <ul className="space-y-2 text-sm">
               {SKYDEV_FEATURES.map((f) => (
                 <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{f}</li>
@@ -166,7 +178,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
           </div>
 
           <div className="flex flex-col rounded-xl border border-border-strong p-5">
-            <p className="text-sm text-muted">{simulating ? `Simulation : ${price.users} utilisateur${price.users > 1 ? "s" : ""}` : `${price.users} utilisateur${price.users > 1 ? "s" : ""}`}</p>
+            <p className="text-sm text-muted">{simulating ? "Simulation : " : ""}{price.users} utilisateur{price.users > 1 ? "s" : ""}{price.offered ? ` dont ${price.offered} offert${price.offered > 1 ? "s" : ""}` : ""}</p>
             <p className="mt-1">
               <span className="text-3xl font-semibold tracking-tight tabular-nums">{eur(interval === "year" ? price.yearly / 12 : price.monthly)}</span>
               <span className="text-sm text-muted"> {t("TVAC / mois")}</span>
@@ -177,7 +189,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers }: {
             </p>
             {price.users > 1 ? <p className="mt-2 text-sm text-muted">Soit {eur(price.perUser)} par personne en moyenne.</p> : null}
             <p className="mt-3 text-sm text-muted">
-              {t("Prochaine personne ajoutée :")} <span className="font-medium text-text">{eur(userPrice(price.users + 1))} / mois</span>.
+              {t("Prochaine personne ajoutée :")} <span className="font-medium text-text">{price.next ? `${eur(price.next)} / mois` : t("offerte")}</span>.
             </p>
             <div className="mt-auto pt-5">
               {simulating && !paid ? (

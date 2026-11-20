@@ -9,7 +9,9 @@ import { db } from "@/db";
 import { activityLogs, appointments, bookingPageSettings, businesses, members, services, subscriptions, users } from "@/db/schema";
 import { AdminEmbedCode } from "@/components/admin/embed-code";
 import { resolveTheme } from "@/lib/booking-theme";
-import { GrantPlanForm, LockedPriceForm, PauseToggle } from "@/components/admin/admin-actions";
+import { GrantPlanForm, LockedPriceForm, PauseToggle, UserPricingForm } from "@/components/admin/admin-actions";
+import { countBilledUsers } from "@/server/billing";
+import { pricingFrom, teamQuote } from "@/lib/skydev-plans";
 import { businessPlans } from "@/db/schema";
 import { BusinessInfoForm, TypeToDelete } from "@/components/admin/platform";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +53,12 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
   ]);
 
   const eff = await effectivePlan(b.id);
-  const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, b.id));
+  const [lock] = await db.select({ cents: businessPlans.lockedPriceCents, offeredUsers: businessPlans.offeredUsers, userPriceCents: businessPlans.userPriceCents, extraUserPriceCents: businessPlans.extraUserPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, b.id));
+  const isSkydev = (b.brand ?? (await currentBrand()).id) === "skydev";
+  const pricing = pricingFrom(lock);
+  const teamSize = await countBilledUsers(b.id);
+  const quote = teamQuote(teamSize, pricing);
+  const eur = (n: number) => `${n.toFixed(2).replace(".", ",").replace(",00", "")} €`;
   const granted = eff.source === "granted" ? eff.grantedUntil : null;
   const plan = eff.plan;
 
@@ -102,16 +109,28 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
         <Card>
           <CardHeader title="Forfait" description={`Actuel : ${PLAN[plan]}${eff.source === "granted" ? (granted ? (granted.getUTCFullYear() >= 2099 ? " (offert à vie)" : ` (offert jusqu'au ${formatDay(granted, tz, "d MMMM yyyy")})`) : " (offert)") : eff.source === "stripe" ? " (Stripe)" : eff.source === "account" ? " (ancien abonnement du compte)" : ""}`} />
           <div className="p-5">
-            <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} suggested={format(zoned(addYears(new Date(), 1), tz), "yyyy-MM-dd")} skydev={(b.brand ?? (await currentBrand()).id) === "skydev"} />
+            <GrantPlanForm businessId={b.id} plan={plan} until={granted ? format(zoned(granted, tz), "yyyy-MM-dd") : ""} suggested={format(zoned(addYears(new Date(), 1), tz), "yyyy-MM-dd")} skydev={isSkydev} />
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title="Tarif garanti à vie" description={lock?.cents ? `Pro à ${(lock.cents / 100).toFixed(2).replace(".", ",")} €/mois TVAC, à vie, au lieu du prix public.` : "Aucun : le prix public s'applique."} />
-          <div className="p-5">
-            <LockedPriceForm businessId={b.id} cents={lock?.cents ?? null} />
-          </div>
-        </Card>
+        {isSkydev ? (
+          <Card>
+            <CardHeader
+              title="Utilisateurs et prix"
+              description={`Équipe actuelle : ${teamSize} personne${teamSize > 1 ? "s" : ""} · ${eff.source === "granted" ? "accès offert : rien n'est facturé" : `${quote.billed} facturé${quote.billed > 1 ? "s" : ""}${quote.offered ? `, ${quote.offered} offert${quote.offered > 1 ? "s" : ""}` : ""} · ${eur(quote.monthly)} TVAC / mois`}${pricing.first != null ? " (prix personnalisé)" : ""}.`}
+            />
+            <div className="p-5">
+              <UserPricingForm businessId={b.id} teamSize={teamSize} offered={pricing.offered} first={pricing.first} extra={pricing.extra} granted={eff.source === "granted"} />
+            </div>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader title="Tarif garanti à vie" description={lock?.cents ? `Pro à ${(lock.cents / 100).toFixed(2).replace(".", ",")} €/mois TVAC, à vie, au lieu du prix public.` : "Aucun : le prix public s'applique."} />
+            <div className="p-5">
+              <LockedPriceForm businessId={b.id} cents={lock?.cents ?? null} />
+            </div>
+          </Card>
+        )}
 
         {!b.deletedAt ? (
           <Card>

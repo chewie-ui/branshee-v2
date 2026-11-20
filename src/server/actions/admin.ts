@@ -7,7 +7,8 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, businessPlans, businesses, notificationSettings, sessions, users } from "@/db/schema";
 import { requireSuperadmin } from "@/server/admin";
-import { lockedProPrice, planFromStripePrice, syncSubscription } from "@/server/billing";
+import { billableUsers, isSkydevItemPrice, lockedProPrice, planFromStripePrice, skydevPriceForBusiness, syncSubscription } from "@/server/billing";
+import { MAX_USERS } from "@/lib/skydev-plans";
 import { stripe } from "@/server/payments";
 
 type Result = { ok: boolean; error?: string; message?: string };
@@ -82,6 +83,57 @@ export async function setLockedPrice(businessId: string, euros: number | null): 
   await db.insert(activityLogs).values({ businessId: id, userId: admin.id, actorName: "Équipe Branshee", action: "admin.locked-price", description: cents ? `Tarif Pro garanti à vie : ${label}/mois TVAC` : "Tarif garanti à vie retiré" });
   revalidatePath("/admin", "layout");
   return { ok: true, message: cents ? `Tarif garanti enregistré : ${label}/mois TVAC, à vie.${applied}` : "Tarif garanti retiré : le prix normal s'appliquera aux prochains abonnements (un abonnement en cours garde son prix)." };
+}
+
+/**
+ * Skydev : utilisateurs offerts et prix par utilisateur d'un établissement.
+ * - `offered` : utilisateurs offerts en plus du titulaire (qui paie 1 utilisateur) ; avec un accès offert,
+ *   il peut ajouter au moins ce nombre de personnes à son équipe.
+ * - `first` / `extra` : prix TVAC par mois du 1er utilisateur facturé et de chacun en plus (null = prix public dégressif).
+ * Un abonnement en cours passe tout de suite au nouveau nombre d'utilisateurs (au prorata) et au nouveau prix
+ * dès la prochaine facture.
+ */
+export async function setUserPricing(businessId: string, input: { offered: number; first: number | null; extra: number | null }): Promise<Result> {
+  const admin = await requireSuperadmin();
+  const id = z.uuid().parse(businessId);
+  const offered = Math.round(Number(input.offered) || 0);
+  if (offered < 0 || offered > MAX_USERS) return { ok: false, error: `Indiquez entre 0 et ${MAX_USERS} utilisateurs offerts.` };
+  const toCents = (v: number | null) => (v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v) * 100));
+  const first = toCents(input.first);
+  const extra = first == null ? null : toCents(input.extra);
+  for (const c of [first, extra]) if (c != null && (c < 0 || c > 100000)) return { ok: false, error: "Indiquez un prix entre 0 € et 1 000 € par utilisateur." };
+  if (input.extra != null && first == null) return { ok: false, error: "Indiquez d'abord le prix du 1er utilisateur." };
+  const [b] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, id));
+  if (!b) return { ok: false, error: "Établissement introuvable." };
+  const set = { offeredUsers: offered, userPriceCents: first, extraUserPriceCents: extra === first ? null : extra };
+  await db.insert(businessPlans).values({ businessId: id, ...set }).onConflictDoUpdate({ target: businessPlans.businessId, set });
+
+  // Abonnement Skydev en cours : prix et nombre d'utilisateurs mis à jour.
+  let applied = "";
+  const [cur] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, id));
+  const s = stripe();
+  if (s && cur?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(cur.status)) {
+    const sub = await s.subscriptions.retrieve(cur.stripeSubscriptionId).catch(() => null);
+    const item = sub?.items.data.find((i) => isSkydevItemPrice(i.price));
+    if (sub && item) {
+      const interval = item.price.recurring?.interval === "year" ? "year" : "month";
+      const price = await skydevPriceForBusiness(id, interval);
+      const quantity = await billableUsers(id);
+      if (price && (price !== item.price.id || quantity !== item.quantity)) {
+        // Prix : dès la prochaine facture (pas de rattrapage) ; nombre d'utilisateurs : au prorata.
+        const updated = await s.subscriptions.update(sub.id, { items: [{ id: item.id, price, quantity }], proration_behavior: price !== item.price.id ? "none" : "create_prorations" });
+        await syncSubscription(updated);
+        applied = " L'abonnement en cours est mis à jour.";
+      }
+    }
+  }
+  const eurs = (c: number | null) => (c == null ? "" : `${(c / 100).toFixed(2).replace(".", ",")} €`);
+  const priceText = first == null ? "prix public dégressif" : extra != null && extra !== first ? `${eurs(first)} le 1er utilisateur, puis ${eurs(extra)} par utilisateur` : `${eurs(first)} par utilisateur`;
+  const description = `Utilisateurs offerts : ${offered} · ${priceText} (TVAC / mois)`;
+  await db.insert(activityLogs).values({ businessId: id, userId: admin.id, actorName: "Équipe Skydev", action: "admin.user-pricing", description });
+  revalidatePath("/admin", "layout");
+  revalidatePath("/app", "layout");
+  return { ok: true, message: `Enregistré. ${description}.${applied}` };
 }
 
 /** Désactive un compte (connexion impossible, sessions fermées) ou le réactive. */

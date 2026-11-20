@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { businessPlans, promoCodes, users } from "@/db/schema";
 import { BillingPanel, ReferralCard } from "@/components/settings/billing-panel";
 import { referralStatus } from "@/server/referral-status";
-import { activeCampaign, billingEnabled, countBilledUsers, describePromo } from "@/server/billing";
+import { activeCampaign, billingEnabled, businessPricing, countBilledUsers, describePromo } from "@/server/billing";
 import { requireContext } from "@/server/context";
 import { effectivePlan } from "@/server/plan";
 
@@ -43,7 +43,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   // Offre affichée = celle de la marque de l'établissement (c'est aussi elle qui fixe les prix).
   const brand = businessBrand(ctx.business);
   if (brand === "skydev") {
-    const [mods, teamUsers] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id)]);
+    const [mods, teamUsers, pricing] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id), businessPricing(ctx.business.id)]);
     const sp = await searchParams;
     const notice = NOTICES[sp.paiement ?? ""];
     return (
@@ -61,6 +61,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           canManage={canManage}
           enabled={billingEnabled("skydev")}
           teamUsers={teamUsers}
+          pricing={pricing}
           current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key), billedUsers: current.billedUsers }}
         />
       </div>

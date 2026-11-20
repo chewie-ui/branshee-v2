@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled } from "@/server/actions/admin";
+import { grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
+import { MAX_USERS, teamQuote, tierLabels } from "@/lib/skydev-plans";
 
 export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
   const [confirm, setConfirm] = useState(false);
@@ -106,6 +107,88 @@ export function LockedPriceForm({ businessId, cents }: { businessId: string; cen
         <Button type="submit" loading={pending}>{cents ? "Modifier le tarif garanti" : "Garantir ce tarif à vie"}</Button>
         {cents ? <Button type="button" variant="ghost" disabled={pending} onClick={() => run(null)}>Retirer</Button> : null}
       </div>
+    </form>
+  );
+}
+
+const toNum = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
+const fmt = (n: number) => `${n.toFixed(2).replace(".", ",").replace(",00", "")} €`;
+
+/**
+ * Skydev : utilisateurs offerts et prix par utilisateur (super-admin). Aperçu en direct du prix de l'équipe
+ * et d'une équipe plus grande, avant d'enregistrer.
+ */
+export function UserPricingForm({ businessId, teamSize, offered, first, extra, granted }: { businessId: string; teamSize: number; offered: number; first: number | null; extra: number | null; granted: boolean }) {
+  const [pending, start] = useTransition();
+  const [nOffered, setOffered] = useState(String(offered));
+  const [custom, setCustom] = useState(first != null);
+  const [vFirst, setFirst] = useState(first != null ? String(first).replace(".", ",") : "29");
+  const [vExtra, setExtra] = useState(extra != null ? String(extra).replace(".", ",") : first != null ? String(first).replace(".", ",") : "15");
+  const [sim, setSim] = useState(Math.max(teamSize, 3));
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const pricing = { offered: Math.max(0, Math.round(Number(nOffered) || 0)), first: custom ? toNum(vFirst) : null, extra: custom ? toNum(vExtra) : null };
+  const valid = (!custom || (pricing.first != null && !Number.isNaN(pricing.first))) && pricing.offered <= MAX_USERS;
+  const now = teamQuote(teamSize, pricing);
+  const simQ = teamQuote(sim, pricing);
+  const line = (q: ReturnType<typeof teamQuote>) => `${q.billed} facturé${q.billed > 1 ? "s" : ""}${q.offered ? ` + ${q.offered} offert${q.offered > 1 ? "s" : ""}` : ""} = ${fmt(q.monthly)} TVAC / mois`;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!valid) return;
+        start(async () => {
+          const r = await setUserPricing(businessId, pricing);
+          setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Enregistré.") : (r.error ?? "Erreur.") });
+        });
+      }}
+      className="space-y-5"
+    >
+      <Field label="Utilisateurs offerts" htmlFor="offered-users" hint={granted ? "Avec l'accès offert, il peut ajouter au moins ce nombre de personnes à son équipe." : "Le titulaire paie 1 utilisateur ; ces personnes ne sont pas facturées. Pour tout offrir, utilisez l'accès offert ci-dessus."}>
+        <div className="flex items-center gap-2">
+          <Input id="offered-users" type="number" inputMode="numeric" min={0} max={MAX_USERS} value={nOffered} onChange={(e) => setOffered(e.target.value)} className="w-28" />
+          <span className="text-sm text-muted">utilisateur{pricing.offered > 1 ? "s" : ""} en plus du titulaire</span>
+        </div>
+      </Field>
+
+      <fieldset className="space-y-3">
+        <legend className="mb-2 text-sm font-medium">Prix par utilisateur</legend>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-accent">
+          <input type="radio" name="pricing-mode" className="mt-1 size-4 accent-[var(--accent)]" checked={!custom} onChange={() => setCustom(false)} />
+          <span className="text-sm"><span className="font-medium">Prix public dégressif</span><span className="block text-muted">{tierLabels().map((t) => `${t.label} ${t.price} €`).join(" · ")}</span></span>
+        </label>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-accent">
+          <input type="radio" name="pricing-mode" className="mt-1 size-4 accent-[var(--accent)]" checked={custom} onChange={() => setCustom(true)} />
+          <span className="text-sm"><span className="font-medium">Prix personnalisé</span><span className="block text-muted">Le 1er utilisateur facturé à un prix, chaque utilisateur en plus à un autre (ou le même).</span></span>
+        </label>
+        {custom ? (
+          <div className="grid gap-4 pl-1 sm:grid-cols-2">
+            <Field label="1er utilisateur" htmlFor="price-first">
+              <div className="flex items-center gap-2">
+                <Input id="price-first" inputMode="decimal" value={vFirst} onChange={(e) => setFirst(e.target.value)} className="w-28" />
+                <span className="text-sm text-muted">€ / mois TVAC</span>
+              </div>
+            </Field>
+            <Field label="Chaque utilisateur en plus" htmlFor="price-extra">
+              <div className="flex items-center gap-2">
+                <Input id="price-extra" inputMode="decimal" value={vExtra} onChange={(e) => setExtra(e.target.value)} className="w-28" />
+                <span className="text-sm text-muted">€ / mois TVAC</span>
+              </div>
+            </Field>
+          </div>
+        ) : null}
+      </fieldset>
+
+      <div className="space-y-2 rounded-lg bg-surface-muted p-4 text-sm" aria-live="polite">
+        <p><span className="font-medium">Équipe actuelle ({teamSize}) :</span> {granted ? "accès offert, rien n'est facturé pour l'instant. Si l'établissement s'abonne : " : ""}{valid ? line(now) : "—"}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="sim-users" className="font-medium">Avec</label>
+          <Input id="sim-users" type="number" min={1} max={MAX_USERS} value={sim} onChange={(e) => setSim(Math.min(Math.max(Number(e.target.value) || 1, 1), MAX_USERS))} className="h-9 w-20" />
+          <span>personnes : {valid ? line(simQ) : "—"}</span>
+        </div>
+        <p className="text-muted">Annuel : 10 mois payés, 2 offerts. Un abonnement en cours suit tout de suite (nombre d&apos;utilisateurs au prorata, nouveau prix à la prochaine facture).</p>
+      </div>
+      {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+      <Button type="submit" loading={pending} disabled={!valid}>Enregistrer</Button>
     </form>
   );
 }

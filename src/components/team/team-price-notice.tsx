@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { currentBrand } from "@/server/brand";
-import { countBilledUsers } from "@/server/billing";
+import { businessPricing, countBilledUsers } from "@/server/billing";
 import { effectivePlan } from "@/server/plan";
-import { skydevPrice, userPrice } from "@/lib/skydev-plans";
+import { teamQuote } from "@/lib/skydev-plans";
 import { appT } from "@/server/app-locale";
 
 /**
@@ -12,10 +12,13 @@ import { appT } from "@/server/app-locale";
 export async function TeamPriceNotice({ businessId }: { businessId: string }) {
   if ((await currentBrand()).id !== "skydev") return null;
   const t = await appT();
-  const [users, plan] = await Promise.all([countBilledUsers(businessId), effectivePlan(businessId)]);
+  const [users, plan, pricing] = await Promise.all([countBilledUsers(businessId), effectivePlan(businessId), businessPricing(businessId)]);
   const subscribed = plan.source === "stripe";
-  const next = userPrice(users + 1);
-  const total = skydevPrice(users).monthly;
+  const q = teamQuote(users, pricing);
+  const total = q.monthly;
+  const next = q.next;
+  // Accès offert par l'équipe Skydev (hors essai) : rien à payer, pas de message de prix.
+  if (plan.source === "granted" && !plan.isTrial) return null;
   const link = <Link href="/app/reglages/abonnement" className="font-medium text-accent hover:text-accent-hover">{t("Voir le détail")}</Link>;
   if (!subscribed) {
     return (
@@ -23,14 +26,14 @@ export async function TeamPriceNotice({ businessId }: { businessId: string }) {
         <span className="font-medium">{t("Pendant votre mois offert, ajouter des membres est gratuit.")}</span>{" "}
         {t("Ensuite, l'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :")}{" "}
         <span className="font-medium">{users} {users > 1 ? t("personnes") : t("personne")} = {total} € TVAC {t("par mois")}</span>
-        {", "}{t("la prochaine personne ajoutée")} <span className="font-medium">+{next} €</span>.{" "}
+        {", "}{t("la prochaine personne ajoutée")} <span className="font-medium">{next ? `+${next} €` : t("offerte")}</span>.{" "}
         {link}
       </p>
     );
   }
   return (
     <p className="mb-4 rounded-lg bg-surface-muted px-4 py-3 text-sm text-muted">
-      {t("Votre abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera")} <span className="font-medium text-text">{next} € TVAC {t("par mois")}</span>, {t("au prorata.")}{" "}
+      {t("Votre abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout. La prochaine personne ajoutée coûtera")} <span className="font-medium text-text">{next ? `${next} € TVAC ${t("par mois")}` : t("rien (utilisateur offert)")}</span>, {t("au prorata.")}{" "}
       {link}
     </p>
   );

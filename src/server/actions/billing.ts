@@ -8,9 +8,9 @@ import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
 import { REFERRAL_MONTH_CENTS } from "@/lib/referral";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, countBilledUsers, describePromo, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, billableUsers, businessPricing, describePromo, skydevPriceForBusiness, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
-import { MAX_USERS, MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, skydevPrice, type ModuleAddon } from "@/lib/skydev-plans";
+import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, teamQuote, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { effectivePlan } from "@/server/plan";
@@ -50,12 +50,14 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (!billingEnabled(brand)) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   // Skydev : un seul abonnement (toutes les apps), facturé au nombre d'utilisateurs de l'équipe.
   const plan = brand === "skydev" ? SKYDEV_PLAN : parsed.data.plan;
-  const users = brand === "skydev" ? Math.min(await countBilledUsers(ctx.business.id), MAX_USERS) : 1;
+  // Skydev : équipe moins les utilisateurs offerts par l'équipe Skydev (au moins 1).
+  const users = brand === "skydev" ? await billableUsers(ctx.business.id) : 1;
   // Tarif garanti à vie (Pro, Branshee) : toujours le prix mensuel bloqué, jamais le prix public.
   const [lock] = await db.select({ cents: businessPlans.lockedPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, ctx.business.id));
   const locked = brand === "branshee" && plan === "pro" && lock?.cents ? lock.cents : null;
   const interval = locked ? "month" : parsed.data.interval;
-  const price = locked ? await lockedProPrice(locked) : priceFor(plan, interval, brand);
+  // Skydev : prix par utilisateur personnalisé (fixé par le super-admin) s'il y en a un, sinon le prix public dégressif.
+  const price = locked ? await lockedProPrice(locked) : brand === "skydev" ? await skydevPriceForBusiness(ctx.business.id, interval) : priceFor(plan, interval, brand);
   if (!price) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   const planName = brand === "skydev" ? SKYDEV_NAME : plan === "pro" ? "Pro" : "Pro+";
   const s = stripe()!;
@@ -66,7 +68,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     const baseItem = live.items.data.find((i) => planFromStripePrice(i.price));
     if (!baseItem) return { ok: false, error: "Abonnement introuvable : contactez le support." };
     // Jamais de passage d'une famille de prix à l'autre (Branshee ↔ Skydev) sur un abonnement en cours.
-    const family = planFromPrice(baseItem.price.id)?.brand ?? (baseItem.price.metadata?.branshee_plan ? "branshee" : null);
+    const family = planFromPrice(baseItem.price.id)?.brand ?? (baseItem.price.metadata?.skydev_users === "1" ? "skydev" : baseItem.price.metadata?.branshee_plan ? "branshee" : null);
     if (family && family !== brand) return { ok: false, error: "Cet abonnement ne peut pas être changé ici : contactez le support." };
     const updated = await s.subscriptions.update(live.id, { items: [{ id: baseItem.id, price, quantity: users }], default_tax_rates: [await vatRate()], proration_behavior: "create_prorations", cancel_at_period_end: false, metadata: { ...live.metadata, [META.business()]: ctx.business.id, [META.user()]: ctx.user.id, plan, brand } });
     await syncSubscription(updated);
@@ -107,7 +109,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
       // Annuel + pourcentage : la remise vaut un mois, pas une année entière (comme l'ancien).
       const coupon = await s.coupons.create(
         promo.discountType === "percent" && interval === "year"
-          ? { duration: "once", amount_off: Math.round(((brand === "skydev" ? skydevPrice(users).monthly * 100 : monthlyPriceCents(plan)) * promo.discountValue) / 100), currency: "eur" }
+          ? { duration: "once", amount_off: Math.round(((brand === "skydev" ? teamQuote(users, { ...(await businessPricing(ctx.business.id)), offered: 0 }).monthly * 100 : monthlyPriceCents(plan)) * promo.discountValue) / 100), currency: "eur" }
           : promo.discountType === "percent"
             ? { duration: "once", percent_off: Math.min(promo.discountValue, 99) }
             : { duration: "once", amount_off: promo.discountValue, currency: "eur" },

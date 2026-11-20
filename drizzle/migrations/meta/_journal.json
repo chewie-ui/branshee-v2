@@ -491,6 +491,13 @@
       "when": 1794993387378,
       "tag": "0069_reverse_charge",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1795200000000,
+      "tag": "0070_user_pricing",
+      "breakpoints": true
     }
   ]
 }

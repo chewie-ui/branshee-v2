@@ -66,6 +66,11 @@ export const businessPlans = pgTable("business_plans", {
   lockedPriceCents: integer("locked_price_cents"),
   /** Abonnement Skydev facturé par utilisateur (prix dégressif) : nombre d'utilisateurs facturés. Null = forfait classique. */
   billedUsers: integer("billed_users"),
+  /** Utilisateurs offerts par le super-admin en plus du titulaire (non facturés ; avec un accès offert, places d'équipe permises). */
+  offeredUsers: integer("offered_users").notNull().default(0),
+  /** Prix par utilisateur fixé par le super-admin (TVAC, centimes, par mois) : 1er utilisateur facturé, puis chacun en plus. Null = prix public. */
+  userPriceCents: integer("user_price_cents"),
+  extraUserPriceCents: integer("extra_user_price_cents"),
   /** Relance avant la fin d'un accès offert : échéance couverte et palier (1 = J-7, 2 = J-1, 3 = terminé). */
   grantReminder: jsonb("grant_reminder").$type<{ sentFor?: string; stage?: number }>().notNull().default({}),
   ...timestamps,

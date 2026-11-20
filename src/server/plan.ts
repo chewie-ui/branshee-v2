@@ -21,9 +21,11 @@ export type EffectivePlan = {
   stripeSubscriptionId: string | null;
   /** Abonnement Skydev par utilisateur : nombre d'utilisateurs facturés (null = forfait classique). */
   billedUsers: number | null;
+  /** Utilisateurs offerts par l'équipe Skydev, en plus du titulaire (non facturés ; avec un accès offert, places d'équipe permises). */
+  offeredUsers: number;
 };
 
-const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, isTrial: false, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null, billedUsers: null };
+const FREE: EffectivePlan = { plan: "free", source: "free", status: "active", periodEnd: null, cancelAtPeriodEnd: false, grantedUntil: null, isTrial: false, extraSeats: 0, customUrlAddon: false, stripeSubscriptionId: null, billedUsers: null, offeredUsers: 0 };
 
 /**
  * Forfait effectif d'un établissement. Un accès offert expiré ne débloque jamais rien ;
@@ -33,7 +35,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   const now = new Date();
   const [row] = await db.select().from(businessPlans).where(eq(businessPlans.businessId, businessId));
   if (row && row.plan !== "free") {
-    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, isTrial: row.isTrial, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status, billedUsers: row.billedUsers };
+    const base = { periodEnd: row.periodEnd, cancelAtPeriodEnd: row.cancelAtPeriodEnd, grantedUntil: row.grantedUntil, isTrial: row.isTrial, extraSeats: row.extraSeats, customUrlAddon: row.customUrlAddon, stripeSubscriptionId: row.stripeSubscriptionId, status: row.status, billedUsers: row.billedUsers, offeredUsers: row.offeredUsers };
     if (row.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(row.status)) return { ...base, plan: row.plan, source: "stripe" };
     if (!row.stripeSubscriptionId && (!row.grantedUntil || row.grantedUntil > now) && row.status === "active") return { ...base, plan: row.plan, source: "granted" };
   }
@@ -43,7 +45,7 @@ export const effectivePlan = cache(async (businessId: string): Promise<Effective
   if (sub && sub.plan !== "free" && ["active", "trialing", "past_due"].includes(sub.status)) {
     const grantExpired = sub.grantedUntil && sub.grantedUntil <= now;
     if (!grantExpired || sub.stripeSubscriptionId) {
-      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, isTrial: false, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId, billedUsers: null };
+      return { plan: sub.plan, source: "account", status: sub.status, periodEnd: sub.currentPeriodEnd, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, grantedUntil: sub.grantedUntil, isTrial: false, extraSeats: sub.extraSeats, customUrlAddon: row?.customUrlAddon ?? false, stripeSubscriptionId: sub.stripeSubscriptionId, billedUsers: null, offeredUsers: row?.offeredUsers ?? 0 };
     }
   }
   return { ...FREE, extraSeats: row?.extraSeats ?? 0, customUrlAddon: row?.customUrlAddon ?? false };
@@ -92,7 +94,8 @@ export async function collaboratorUsage(businessId: string) {
     .from(members)
     .where(and(eq(members.businessId, businessId), eq(members.isOwner, false), inArray(members.status, ["active", "invited"]), eq(members.isActive, true)));
   // Abonnement Skydev par utilisateur : pas de limite, chaque personne ajoutée est facturée (prix dégressif).
-  const max = p.source === "stripe" && p.billedUsers != null ? MAX_USERS - 1 : collaboratorLimit(p.plan, p.extraSeats);
+  // Utilisateurs offerts par l'équipe Skydev : au moins autant de personnes en plus du propriétaire.
+  const max = p.source === "stripe" && p.billedUsers != null ? MAX_USERS - 1 : p.plan === "free" ? collaboratorLimit(p.plan, p.extraSeats) : Math.max(collaboratorLimit(p.plan, p.extraSeats), p.offeredUsers);
   return { used: n, max, plan: p.plan, perUser: p.source === "stripe" && p.billedUsers != null };
 }
 
