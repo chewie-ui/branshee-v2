@@ -58,6 +58,19 @@ export function DayClickLayer({ day, startHour, hourPx, lanes, canManage }: { da
     return p.toString();
   };
 
+  // Fin de la sélection : au relâchement, ou dès qu'on constate que le bouton n'est plus enfoncé
+  // (relâché hors de la fenêtre, capture perdue) — sinon la plage suivait la souris jusqu'en bas de la journée.
+  const finish = (clientX: number) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || !sel || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width - 8);
+    // Simple clic : seulement l'heure de début (le formulaire propose la durée habituelle).
+    setMenu({ ...(d.moved ? sel : { from: d.anchor, to: d.anchor, lane: d.lane }), x });
+    if (!d.moved) setSel(null);
+  };
+
   const top = (min: number) => ((min - startHour * 60) / 60) * hourPx;
   const shown = menu ?? sel;
   const laneW = 100 / lanes.length;
@@ -79,20 +92,15 @@ export function DayClickLayer({ day, startHour, hourPx, lanes, canManage }: { da
       onPointerMove={(e) => {
         const d = drag.current;
         if (!d) return;
+        if (e.pointerType === "mouse" && e.buttons === 0) return finish(e.clientX);
         if (Math.abs(e.clientY - d.y) > 6) d.moved = true;
         if (!d.moved) return;
         const at = minuteAt(e.clientY, "round");
         setSel(at > d.anchor ? { from: d.anchor, to: Math.max(at, d.anchor + STEP), lane: d.lane } : { from: at, to: d.anchor + STEP, lane: d.lane });
       }}
-      onPointerUp={(e) => {
-        const d = drag.current;
-        drag.current = null;
-        if (!d || !sel) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width - 8);
-        // Simple clic : seulement l'heure de début (le formulaire propose la durée habituelle).
-        setMenu({ ...(d.moved ? sel : { from: d.anchor, to: d.anchor, lane: d.lane }), x });
-        if (!d.moved) setSel(null);
+      onPointerUp={(e) => finish(e.clientX)}
+      onLostPointerCapture={(e) => {
+        if (drag.current) finish(e.clientX);
       }}
       onPointerCancel={() => {
         drag.current = null;
