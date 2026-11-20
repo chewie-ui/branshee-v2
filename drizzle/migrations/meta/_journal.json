@@ -498,6 +498,13 @@
       "when": 1795200000000,
       "tag": "0070_user_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795200100000,
+      "tag": "0071_personnalisation",
+      "breakpoints": true
     }
   ]
 }

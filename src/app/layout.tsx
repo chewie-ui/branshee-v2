@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { isStaging } from "@/lib/staging";
 import { currentBrand } from "@/server/brand";
+import { EARLY_PREFS_SCRIPT } from "@/lib/ui-prefs";
 
 const base = (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
@@ -25,7 +26,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr">
+    // suppressHydrationWarning : la personnalisation de l'espace pro (thème, curseur…) est posée sur <html> avant l'affichage.
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: EARLY_PREFS_SCRIPT }} />
+      </head>
       <body className="min-h-dvh antialiased">
         {isStaging() ? (
           <div role="status" className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning">

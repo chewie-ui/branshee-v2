@@ -13,6 +13,7 @@ export const SETTINGS_SECTIONS = [
   { href: "/app/reglages/paiements", label: "Paiements", ready: true },
   { href: "/app/reglages/integrations", label: "Intégrations", ready: true },
   { href: "/app/reglages/abonnement", label: "Abonnement", ready: true },
+  { href: "/app/reglages/personnalisation", label: "Personnalisation", ready: true },
   { href: "/app/reglages/journal", label: "Journal d'activité", ready: true },
 ];
 
@@ -22,7 +23,7 @@ export function SettingsNav({ extra = [], hide = [] }: { extra?: { href: string;
   const pathname = useSpacePath();
   return (
     <nav aria-label={t("Sections des réglages")} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:px-0">
-      {[...SETTINGS_SECTIONS.slice(0, -2), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-2)].filter((s) => !hide.includes(s.href)).map((s) =>
+      {[...SETTINGS_SECTIONS.slice(0, -3), ...extra.map((e) => ({ ...e, ready: true })), ...SETTINGS_SECTIONS.slice(-3)].filter((s) => !hide.includes(s.href)).map((s) =>
         s.ready ? (
           <Link
             key={s.href}

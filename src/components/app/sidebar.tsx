@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NotificationBell } from "@/components/app/personalization";
 import { useSpacePath } from "@/lib/use-space-path";
 import { useEffect, useState } from "react";
 import { CalendarHeart, Check, ChevronsUpDown, Building2, Gift, LifeBuoy, LogOut, Menu, Plus, Search, Settings, Shield, Wand2, X } from "lucide-react";
@@ -131,9 +132,12 @@ function SidebarContent({ brand, groups, footer, business, businesses, user, pen
   return (
     <div className={drawer ? "flex min-h-full flex-col" : "flex h-full flex-col"}>
       <div className="space-y-3 p-3">
-        <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label={t("Accueil")}>
-          <Brand brand={brand} small />
-        </Link>
+        <div className="flex items-center justify-between gap-2">
+          <Link href="/app" className="flex h-9 items-center rounded-lg px-1" aria-label={t("Accueil")}>
+            <Brand brand={brand} small />
+          </Link>
+          {!drawer ? <NotificationBell align="left" /> : null}
+        </div>
         <BusinessSwitcher current={business} all={businesses} brand={brand} />
         {switcher ? (
           <button type="button" onClick={openSwitcher} className="flex h-10 w-full items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 text-sm text-muted transition-colors hover:border-border-strong hover:text-text focus-visible:outline-2 focus-visible:outline-accent">
@@ -234,6 +238,7 @@ export function HomeTopBar({ brand, business, businesses, user, footer, supportU
             </Link>
           ) : null}
           {user.isSuperadmin ? <Link href="/admin" className={iconBtn} aria-label={t("Administration de la plateforme")}><Shield className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden lg:inline">Admin</span></Link> : null}
+          <NotificationBell />
           {settings ? <Link href={settings.href} className={iconBtn} aria-label={t("Réglages")}><Settings className="size-5 sm:size-4" aria-hidden="true" /><span className="hidden sm:inline">{t("Réglages")}</span></Link> : null}
           {help ? (
             <Link href={help.href} className={iconBtn} aria-label={supportUnread ? t("Aide et support, {n} message(s) non lu(s)", { n: supportUnread }) : t("Aide et support")}>
@@ -279,6 +284,7 @@ export function Sidebar(props: Props) {
           <Menu className="size-5" aria-hidden="true" />
         </button>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{props.business.name}</span>
+        <NotificationBell className="size-11" />
         {props.switcher ? <button type="button" onClick={openSwitcher} className="-mr-2 flex size-11 items-center justify-center rounded-lg text-text hover:bg-surface-muted" aria-label={t("Aller à une app")}><Search className="size-5" aria-hidden="true" /></button> : null}
       </div>
 

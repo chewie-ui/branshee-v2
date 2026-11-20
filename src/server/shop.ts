@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import "server-only";
+import { ownerOf, recordAppNotifications } from "@/server/app-notifications";
 import { autoInvoiceOrder } from "@/server/order-invoice";
 import { emitWebhook } from "@/server/connect";
 import { and, asc, desc, eq, isNull, lt, sql } from "drizzle-orm";
@@ -69,6 +70,8 @@ export async function notifyNewOrder(orderId: string) {
   await sendEmail({ to: o.email, ...emails.shopOrderConfirm({ shopName, number: o.number, total: eur(o.totalCents), lines: o.lines.map((l) => `${l.qty} × ${l.name}`), pay: o.payMethod, fulfilment: o.fulfilment, url: `${shopOrigin()}/commande/${o.token}` }), template: "shop_order_confirm", businessId: o.businessId }).catch(() => {});
   const [owner] = await db.select({ email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(and(eq(members.businessId, o.businessId), eq(members.isOwner, true)));
   if (owner) await sendEmail({ to: owner.email, ...emails.shopOrderNew({ shopName, number: o.number, total: eur(o.totalCents), name: o.name, url: `${shopOrigin()}/app/boutique` }), template: "shop_order_new", businessId: o.businessId }).catch(() => {});
+  const ownerId = await ownerOf(o.businessId);
+  if (ownerId) await recordAppNotifications([ownerId], { kind: "order", title: `Nouvelle commande n° ${o.number}`, body: `${o.name} · ${eur(o.totalCents)}`, url: "/app/boutique", businessId: o.businessId });
 }
 
 /** Annule une commande et rend le stock réservé (une seule fois, même appelée deux fois). */

@@ -3,6 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { pushTokens } from "@/db/schema";
 import { isStaging } from "@/lib/staging";
+import { recordAppNotifications } from "@/server/app-notifications";
 
 /**
  * Notifications push de l'application (service Expo : il relaie vers APNs et FCM, aucun certificat côté serveur).
@@ -12,6 +13,10 @@ const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const EXPO_TOKEN = /^Expo(nent)?PushToken\[[^\]]+\]$/;
 
 export async function sendPush(userIds: string | string[], msg: { title: string; body: string; data?: Record<string, unknown> }): Promise<{ sent: number }> {
+  // Même événement dans l'espace pro (cloche, bulle, notification de l'ordinateur, son).
+  const d = msg.data ?? {};
+  const kind = typeof d.type === "string" ? d.type : "info";
+  if (kind !== "test") await recordAppNotifications(Array.isArray(userIds) ? userIds : [userIds], { kind, title: msg.title, body: msg.body, url: typeof d.bookingId === "string" ? `/app/agenda/rdv/${d.bookingId}` : null, businessId: typeof d.companyId === "string" ? d.companyId : null });
   if (isStaging()) return { sent: 0 };
   try {
     const ids = [...new Set(Array.isArray(userIds) ? userIds : [userIds])].filter(Boolean);

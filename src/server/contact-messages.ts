@@ -1,4 +1,5 @@
 import "server-only";
+import { ownerOf, recordAppNotifications } from "@/server/app-notifications";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, contactMessages, customers, users } from "@/db/schema";
@@ -32,6 +33,8 @@ export async function recordContact(businessId: string, input: ContactInput, sou
   if (!biz.demo) {
     const mail = emails.siteContact({ businessName: biz.name, name: input.name, email: email ?? (input.phone ? `tél. ${input.phone}` : "sans email"), message: [input.subject ? `Sujet : ${input.subject}` : null, input.message, input.phone ? `Téléphone : ${input.phone}` : null].filter(Boolean).join("\n\n") });
     await sendEmail({ to: biz.ownerEmail, ...mail, template: "site_contact", replyTo: email, businessId }).catch(() => false);
+    const ownerId = await ownerOf(businessId);
+    if (ownerId) await recordAppNotifications([ownerId], { kind: "message", title: "Nouveau message depuis votre site", body: `${input.name.trim()} · ${input.message.slice(0, 80)}`, url: "/app/clients/messages", businessId });
     await emitWebhook(businessId, "contact.created", { id: msg!.id, name: input.name, email, phone: input.phone, subject: input.subject, message: input.message, pageUrl: input.pageUrl, customerId, createdAt: msg!.createdAt.toISOString() });
   }
   return { id: msg!.id, customerId };

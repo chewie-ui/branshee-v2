@@ -29,6 +29,8 @@ import { AssistantPanel } from "@/components/assistant/assistant-panel";
 import { assistantAllowed, assistantEnabled } from "@/server/assistant";
 import { AppLocaleProvider } from "@/components/app-locale";
 import { makeT } from "@/lib/i18n/app";
+import { PersonalizationProvider } from "@/components/app/personalization";
+import { cleanPrefs } from "@/lib/ui-prefs";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const hidden = await hiddenNavHrefs();
   const visible = (item: { permission?: Parameters<typeof ctx.can>[0] }) => !item.permission || ctx.can(item.permission);
   const brand = await currentBrand();
+  // Personnalisation de l'utilisateur (thème, curseur…), appliquée sur <html> par PersonalizationProvider.
+  const prefs = cleanPrefs((await getSessionUser())?.user.uiPrefs);
   const [pending, adminMessages, unread, plan] = await Promise.all([
     ctx.can("appointments.manage") ? listPendingRequests(ctx.business.id).then((l) => l.length) : Promise.resolve(0),
     activeAdminMessages(ctx.user.id),
@@ -110,6 +114,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     return (
       <BrandNameProvider name={brand.name}>
         <AppLocaleProvider locale={locale}>
+        <PersonalizationProvider initial={prefs}>
         <div lang={locale} className="contents">
         <SpaceUrlFix />
         {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
@@ -121,12 +126,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <RegisterServiceWorker />
         <GuidedTour />
         </div>
+        </PersonalizationProvider>
         </AppLocaleProvider>
       </BrandNameProvider>
     );
   }
 
   return (
+    <PersonalizationProvider initial={prefs}>
     <div className="min-h-dvh">
       {ctx.impersonating ? <ImpersonationBar name={ctx.user.name} /> : null}
       <Sidebar brand={brand.id} groups={groups} footer={NAV_FOOTER.filter(visible)} business={ctx.business} businesses={ctx.businesses} user={ctx.user} pendingCount={pending} supportUnread={unread} />
@@ -139,5 +146,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </main>
     </div>
+    </PersonalizationProvider>
   );
 }

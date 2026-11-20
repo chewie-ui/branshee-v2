@@ -51,6 +51,8 @@ export const users = pgTable(
     signupIntent: text("signup_intent", { enum: ["pro", "client"] }),
     /** Relances déjà envoyées : palier « bien démarrer » (J+1 = 1, J+3 = 2) et « créez votre établissement ». */
     nudges: jsonb("nudges").$type<{ onboardingStage?: number; createBusinessAt?: string }>().notNull().default({}),
+    /** Personnalisation de l'espace pro (thème, curseur, notifications, sons) : voir src/lib/ui-prefs.ts. */
+    uiPrefs: jsonb("ui_prefs").$type<Record<string, unknown>>().notNull().default({}),
 
     /** Origine de l'inscription (UTM, gclid, page d'atterrissage…). */
     acquisition: jsonb("acquisition").$type<{
@@ -145,3 +147,25 @@ export const googleCalendarConnections = pgTable("google_calendar_connections", 
   scope: text("scope"),
   ...timestamps,
 });
+
+/**
+ * Notifications dans l'espace pro (cloche, bulle, notification de l'ordinateur, son) : mêmes événements que
+ * les notifications de l'application mobile (nouveau rendez-vous, annulation, demande…).
+ */
+export const appNotifications = pgTable(
+  "app_notifications",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id"),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    url: text("url"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("app_notifications_user_idx").on(t.userId, t.createdAt)],
+);

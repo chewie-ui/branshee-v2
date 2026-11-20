@@ -2,6 +2,8 @@
 @import "@fontsource-variable/inter";
 /* Logo Skydev : le nom « skydev » s'écrit toujours en Sora 700 (chargée seulement là où elle sert). */
 @import "@fontsource/sora/700.css";
+/* Curseurs de la personnalisation (Réglages › Personnalisation). */
+@import "./cursors.css";
 
 /*
  * Design tokens Branshee — une seule source pour toutes les couleurs.
@@ -16,11 +18,21 @@
   --border-strong: #d4d4d8;
   --text: #18181b;
   --text-muted: #52525b;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  /* Couleur d'accent : valeurs claires (--acc-l*) et sombres (--acc-d*), indigo par défaut. */
+  --acc-l: #4f46e5;
+  --acc-l-hover: #4338ca;
+  --acc-l-soft: #eef2ff;
+  --acc-l-soft-fg: #3730a3;
+  --acc-d: #a5b4fc;
+  --acc-d-hover: #c7d2fe;
+  --acc-d-fg: #1e1b4b;
+  --acc-d-soft: #262b52;
+  --acc-d-soft-fg: #c7d2fe;
+  --accent: var(--acc-l);
+  --accent-hover: var(--acc-l-hover);
   --accent-foreground: #ffffff;
-  --accent-soft: #eef2ff;
-  --accent-soft-foreground: #3730a3;
+  --accent-soft: var(--acc-l-soft);
+  --accent-soft-foreground: var(--acc-l-soft-fg);
   --danger: #b91c1c;
   --danger-soft: #fef2f2;
   --success: #15803d;
@@ -49,6 +61,72 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/*
+ * Personnalisation de l'espace pro (attributs posés sur <html>, voir src/lib/ui-prefs.ts).
+ * Thème sombre — contrastes vérifiés sur surface #151821 : text 16:1 · text-muted 7.4:1 · accents ≥ 8:1.
+ */
+:root[data-accent="blue"] { --acc-l: #1d4ed8; --acc-l-hover: #1e40af; --acc-l-soft: #eff6ff; --acc-l-soft-fg: #1e3a8a; --acc-d: #93c5fd; --acc-d-hover: #bfdbfe; --acc-d-fg: #172554; --acc-d-soft: #1b2a4a; --acc-d-soft-fg: #bfdbfe; }
+:root[data-accent="violet"] { --acc-l: #7c3aed; --acc-l-hover: #6d28d9; --acc-l-soft: #f5f3ff; --acc-l-soft-fg: #5b21b6; --acc-d: #c4b5fd; --acc-d-hover: #ddd6fe; --acc-d-fg: #2e1065; --acc-d-soft: #2c2350; --acc-d-soft-fg: #ddd6fe; }
+:root[data-accent="green"] { --acc-l: #047857; --acc-l-hover: #065f46; --acc-l-soft: #ecfdf5; --acc-l-soft-fg: #065f46; --acc-d: #6ee7b7; --acc-d-hover: #a7f3d0; --acc-d-fg: #022c22; --acc-d-soft: #12302a; --acc-d-soft-fg: #a7f3d0; }
+:root[data-accent="rose"] { --acc-l: #be123c; --acc-l-hover: #9f1239; --acc-l-soft: #fff1f2; --acc-l-soft-fg: #881337; --acc-d: #fda4af; --acc-d-hover: #fecdd3; --acc-d-fg: #4c0519; --acc-d-soft: #3a1a24; --acc-d-soft-fg: #fecdd3; }
+:root[data-accent="orange"] { --acc-l: #c2410c; --acc-l-hover: #9a3412; --acc-l-soft: #fff7ed; --acc-l-soft-fg: #7c2d12; --acc-d: #fdba74; --acc-d-hover: #fed7aa; --acc-d-fg: #431407; --acc-d-soft: #3a2416; --acc-d-soft-fg: #fed7aa; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0d0f15;
+  --surface: #151821;
+  --surface-muted: #1c202b;
+  --border: #2a2f3c;
+  --border-strong: #3b4252;
+  --text: #f4f4f6;
+  --text-muted: #a8aebd;
+  --accent: var(--acc-d);
+  --accent-hover: var(--acc-d-hover);
+  --accent-foreground: var(--acc-d-fg);
+  --accent-soft: var(--acc-d-soft);
+  --accent-soft-foreground: var(--acc-d-soft-fg);
+  --danger: #f87171;
+  --danger-soft: #3a1719;
+  --success: #4ade80;
+  --success-soft: #122a1b;
+  --warning: #fbbf24;
+  --warning-soft: #33270c;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    color-scheme: dark;
+    --background: #0d0f15;
+    --surface: #151821;
+    --surface-muted: #1c202b;
+    --border: #2a2f3c;
+    --border-strong: #3b4252;
+    --text: #f4f4f6;
+    --text-muted: #a8aebd;
+    --accent: var(--acc-d);
+    --accent-hover: var(--acc-d-hover);
+    --accent-foreground: var(--acc-d-fg);
+    --accent-soft: var(--acc-d-soft);
+    --accent-soft-foreground: var(--acc-d-soft-fg);
+    --danger: #f87171;
+    --danger-soft: #3a1719;
+    --success: #4ade80;
+    --success-soft: #122a1b;
+    --warning: #fbbf24;
+    --warning-soft: #33270c;
+  }
+}
+
+/* Confort : texte plus grand (toutes les tailles sont en rem) et animations réduites. */
+:root[data-text="large"] { font-size: 112.5%; }
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 html {
