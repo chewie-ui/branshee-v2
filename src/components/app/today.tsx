@@ -21,6 +21,8 @@ import { dayBounds, formatDay, formatTime, weekBounds } from "@/lib/time";
 import { countAppointments, listAppointments, listPendingRequests } from "@/server/appointments";
 import { requireContext } from "@/server/context";
 import { appT } from "@/server/app-locale";
+import { onlineItems } from "@/server/online";
+import { OnlineSwitches } from "@/components/online/online-switches";
 
 const greeting = (hour: number) => (hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir");
 
@@ -256,10 +258,17 @@ export async function TodayPage({ searchParams }: { searchParams: Promise<{ bien
               <CopyLink url={bookingUrl} trackShare />
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 <Link href={appPagePath(ctx.business.slug)} target="_blank" className="inline-flex text-sm font-medium text-accent hover:text-accent-hover">{t("Voir ma page")}</Link>
-                <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-muted hover:text-text">Personnaliser</Link>
+                <Link href="/app/page-de-reservation" className="inline-flex text-sm font-medium text-muted hover:text-text">{t("Personnaliser")}</Link>
               </div>
             </div>
           </Card>
+
+          {ctx.can("settings.manage") ? (
+            <Card>
+              <CardHeader title={t("En ligne")} description={t("Coupez ou rallumez vos pages en un clic.")} />
+              <OnlineSwitches items={await onlineItems(ctx)} />
+            </Card>
+          ) : null}
 
           {next ? (
             <Card className="p-5">

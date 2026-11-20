@@ -1,3 +1,4 @@
+import { memberPhotoSql } from "@/server/member-photo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
@@ -25,7 +26,7 @@ export default async function TeamPage() {
   const ctx = await requireContext("team.view");
   const canManage = ctx.can("team.manage");
   const rows = await db
-    .select({ m: members, gradeName: grades.name })
+    .select({ m: members, gradeName: grades.name, photo: memberPhotoSql })
     .from(members)
     .leftJoin(grades, eq(grades.id, members.gradeId))
     .where(and(eq(members.businessId, ctx.business.id), inArray(members.status, ["active", "invited"])))
@@ -57,10 +58,10 @@ export default async function TeamPage() {
       ) : null}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border">
-          {rows.map(({ m, gradeName }) => {
+          {rows.map(({ m, gradeName, photo }) => {
             const content = (
               <>
-                <Avatar name={m.displayName} src={m.photoUrl} />
+                <Avatar name={m.displayName} src={photo} />
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {m.displayName}

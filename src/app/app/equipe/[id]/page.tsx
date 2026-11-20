@@ -1,3 +1,4 @@
+import { memberPhotoSql } from "@/server/member-photo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,8 +20,9 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const ctx = await requireContext("team.manage");
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
-  const [m] = await db.select().from(members).where(and(eq(members.id, id.data), eq(members.businessId, ctx.business.id)));
-  if (!m) notFound();
+  const [row] = await db.select({ m: members, photo: memberPhotoSql }).from(members).where(and(eq(members.id, id.data), eq(members.businessId, ctx.business.id)));
+  if (!row) notFound();
+  const m = row.m;
   const list = await db.select({ id: grades.id, name: grades.name }).from(grades).where(eq(grades.businessId, ctx.business.id)).orderBy(asc(grades.createdAt));
 
   return (
@@ -35,6 +37,8 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
         m={{
           id: m.id,
           displayName: m.displayName,
+          photo: row.photo,
+          ownPhoto: !!m.photoUrl,
           roleLabel: m.roleLabel ?? "",
           bio: m.bio ?? "",
           customInfo: m.customInfo.map((c) => `${t(c.label)} : ${c.value}`).join("\n"),

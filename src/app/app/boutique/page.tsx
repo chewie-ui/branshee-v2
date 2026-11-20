@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShopOrders } from "@/components/shop/shop-orders";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { OnlineToggle } from "@/components/online/online-switches";
 import { Boxes } from "lucide-react";
 import { requireContext } from "@/server/context";
 import { pickupCode, shopOrdersOf, shopOrigin, shopRights, shopSettingsOf } from "@/server/shop";
@@ -24,7 +25,7 @@ export default async function ShopPage() {
         action={ctx.canApp("stock") ? <Link href="/app/stock" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 text-sm font-medium hover:bg-surface-muted"><Boxes className="size-4" aria-hidden="true" />{t("Produits et stock")}</Link> : null}
       />
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-4">
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${s.enabled ? "bg-success-soft text-success" : "bg-surface-muted text-muted"}`}>{s.enabled ? "Ouverte" : "Fermée"}</span>
+        {shopRights(ctx).manage ? <OnlineToggle item={{ kind: "shop", label: "Boutique en ligne", on: s.enabled, hint: "Fermée : vos clients voient « Boutique fermée » et ne peuvent plus commander.", settingsHref: "/app/boutique/reglages" }} /> : <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${s.enabled ? "bg-success-soft text-success" : "bg-surface-muted text-muted"}`}>{s.enabled ? t("Ouverte") : t("Fermée")}</span>}
         {s.enabled ? <a href={url} target="_blank" rel="noopener" className="min-w-0 truncate text-sm font-medium text-accent hover:text-accent-hover">{url.replace(/^https?:\/\//, "")}</a> : <p className="text-sm text-muted">{t("Activez la boutique dans les réglages, puis cochez « En vente sur la boutique » sur vos produits (app Stock).")}</p>}
         {shopRights(ctx).manage ? <Link href="/app/boutique/reglages" className="ml-auto inline-flex h-9 items-center rounded-lg border border-border-strong px-3 text-sm font-medium hover:bg-surface-muted">{t("Réglages")}</Link> : null}
       </Card>

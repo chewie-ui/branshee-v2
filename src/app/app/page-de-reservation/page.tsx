@@ -10,6 +10,8 @@ import { PageTabs } from "@/components/booking-page/page-tabs";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
+import { onlineItems } from "@/server/online";
+import { OnlineToggle } from "@/components/online/online-switches";
 import { sanitizeRichText } from "@/server/rich-text";
 import { appMetadata } from "@/server/app-locale";
 import { appT } from "@/server/app-locale";
@@ -34,7 +36,12 @@ export default async function BookingPageContent() {
       <PageHeader
         title={t("Page de réservation")}
         description={t("Ce que vos clients voient quand ils réservent en ligne.")}
-        action={<ButtonLink href={appPagePath(ctx.business.slug)} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>{t("Voir ma page")}</ButtonLink>}
+        action={
+          <div className="flex flex-wrap items-start justify-end gap-3">
+            {ctx.can("settings.manage") ? <OnlineToggle item={(await onlineItems(ctx)).find((i) => i.kind === "booking")!} /> : null}
+            <ButtonLink href={appPagePath(ctx.business.slug)} target="_blank" variant="secondary" icon={<ExternalLink className="size-4" aria-hidden="true" />}>{t("Voir ma page")}</ButtonLink>
+          </div>
+        }
       />
       <PageTabs />
       <div className="mx-auto max-w-3xl space-y-6">

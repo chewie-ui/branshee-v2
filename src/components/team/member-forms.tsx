@@ -2,11 +2,12 @@
 
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
-import { UserMinus } from "lucide-react";
+import { Camera, UserMinus } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { addMember, removeMember, updateMember, type TeamState } from "@/server/actions/team";
+import { addMember, removeMember, setMemberPhoto, updateMember, type TeamState } from "@/server/actions/team";
 import { submitKeepingValues } from "@/lib/form";
 import { useT } from "@/components/app-locale";
 
@@ -59,7 +60,56 @@ export function AddMemberForm({ grades, defaultGradeId }: { grades: Grade[]; def
   );
 }
 
-type Member = { id: string; displayName: string; roleLabel: string; bio: string; customInfo: string; showRole: boolean; gradeId: string; isBookable: boolean; isActive: boolean; isOwner: boolean; timeOff: "inherit" | "yes" | "no"; isSelf: boolean };
+type Member = { id: string; displayName: string; photo: string | null; ownPhoto: boolean; roleLabel: string; bio: string; customInfo: string; showRole: boolean; gradeId: string; isBookable: boolean; isActive: boolean; isOwner: boolean; timeOff: "inherit" | "yes" | "no"; isSelf: boolean };
+
+/** Photo de profil : changée tout de suite ; sans photo choisie, celle du compte du membre s'affiche. */
+function MemberPhoto({ memberId, name, initial, own }: { memberId: string; name: string; initial: string | null; own: boolean }) {
+  const t = useT();
+  const [photo, setPhoto] = useState(initial);
+  const [mine, setMine] = useState(own);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  const send = (fd: FormData) =>
+    start(async () => {
+      const r = await setMemberPhoto(memberId, fd);
+      if (r.ok) {
+        setPhoto(r.url ?? null);
+        setMine(fd.get("remove") !== "1");
+      }
+      setMsg({ ok: r.ok, text: r.ok ? (fd.get("remove") === "1" ? t("Photo retirée.") : t("Photo enregistrée.")) : t(r.error ?? "Erreur.") });
+    });
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <Avatar name={name} src={photo} size="lg" className="size-16 text-base" />
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <label className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-strong px-4 text-sm font-medium hover:bg-surface-muted ${pending ? "pointer-events-none opacity-60" : ""}`}>
+            <Camera className="size-4" aria-hidden="true" />
+            {photo ? t("Changer la photo") : t("Ajouter une photo")}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const fd = new FormData();
+                fd.set("photo", f);
+                send(fd);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {mine ? (
+            <Button type="button" variant="ghost" loading={pending} onClick={() => { const fd = new FormData(); fd.set("remove", "1"); send(fd); }}>{t("Retirer")}</Button>
+          ) : null}
+        </div>
+        <p className="text-sm text-muted">{mine ? t("Affichée dans l'équipe et sur la page de réservation.") : photo ? t("Photo de son compte, utilisée par défaut.") : t("JPG, PNG ou WebP, 5 Mo maximum.")}</p>
+        {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+      </div>
+    </div>
+  );
+}
 
 export function EditMemberForm({ m, grades }: { m: Member; grades: Grade[] }) {
   const t = useT();
@@ -74,6 +124,7 @@ export function EditMemberForm({ m, grades }: { m: Member; grades: Grade[] }) {
       <Errors state={state} />
       <Card className="space-y-5 p-5">
         <h2 className="text-base font-semibold">{t("Profil public")}</h2>
+        <MemberPhoto memberId={m.id} name={m.displayName} initial={m.photo} own={m.ownPhoto} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t("Nom affiché")} htmlFor="displayName" error={err.displayName}>
             <Input id="displayName" name="displayName" defaultValue={m.displayName} maxLength={80} />

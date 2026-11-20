@@ -13,6 +13,7 @@ import { sendEmail } from "@/server/email/mailer";
 import { businessHas, collaboratorUsage } from "@/server/plan";
 import { syncSkydevUsers } from "@/server/billing";
 import { emails } from "@/server/email/templates";
+import { savePublicImage } from "@/server/storage";
 
 export type TeamState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
 
@@ -228,4 +229,36 @@ export async function deleteGrade(gradeId: string): Promise<{ ok: boolean; error
   await log(ctx, "grade.delete", `Grade supprimé : ${g.name}`);
   revalidatePath("/app/equipe/grades");
   redirect("/app/equipe/grades");
+}
+
+/**
+ * Photo de profil d'un membre (équipe, page de réservation). Le responsable de l'équipe la change pour tous ;
+ * chacun peut changer la sienne. Sans photo choisie, la photo de son compte s'affiche.
+ */
+export async function setMemberPhoto(memberId: string, fd: FormData): Promise<{ ok: boolean; url?: string | null; error?: string }> {
+  const ctx = await requireContext(undefined, { app: "employes" });
+  const id = z.uuid().safeParse(memberId);
+  if (!id.success) return { ok: false, error: "Membre introuvable." };
+  const self = id.data === ctx.member.id;
+  if (!self && !ctx.can("team.manage")) return { ok: false, error: "Vous ne pouvez changer que votre propre photo." };
+  const [m] = await db.select({ id: members.id, userId: members.userId, name: members.displayName }).from(members).where(and(eq(members.id, id.data), eq(members.businessId, ctx.business.id)));
+  if (!m) return { ok: false, error: "Membre introuvable." };
+  let url: string | null = null;
+  if (fd.get("remove") !== "1") {
+    const f = fd.get("photo");
+    if (!(f instanceof File) || f.size === 0) return { ok: false, error: "Choisissez une image." };
+    if (f.size > 5 * 1024 * 1024) return { ok: false, error: "Image trop lourde (5 Mo maximum)." };
+    try {
+      url = await savePublicImage(Buffer.from(await f.arrayBuffer()));
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Image invalide." };
+    }
+  }
+  await db.update(members).set({ photoUrl: url }).where(eq(members.id, m.id));
+  await db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action: "team.photo", description: `${url ? "Photo changée" : "Photo retirée"} : ${m.name}` });
+  revalidatePath("/app/equipe", "layout");
+  revalidatePath(`/${ctx.business.slug}`);
+  // Sans photo d'équipe : celle du compte (par défaut).
+  const [u] = !url && m.userId ? await db.select({ a: users.avatarUrl }).from(users).where(eq(users.id, m.userId)) : [];
+  return { ok: true, url: url ?? u?.a ?? null };
 }
