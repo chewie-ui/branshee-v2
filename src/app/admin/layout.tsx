@@ -7,6 +7,9 @@ import { db } from "@/db";
 import { Brand } from "@/components/brand";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { requireSuperadmin } from "@/server/admin";
+import { getSessionUser } from "@/server/auth/session";
+import { PersonalizationProvider } from "@/components/app/personalization";
+import { cleanPrefs } from "@/lib/ui-prefs";
 import { currentBrand } from "@/server/brand";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +25,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       (select count(*)::int from review_reports where status = 'pending') as reports,
       (select count(*)::int from job_titles where status = 'pending') as jobs,
       (select count(*)::int from error_logs where resolved_at is null) as health`);
+  const prefs = cleanPrefs((await getSessionUser())?.user.uiPrefs);
   return (
+    <PersonalizationProvider initial={prefs} notifications={false}>
     <div className="min-h-dvh">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
@@ -49,5 +54,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
+    </PersonalizationProvider>
   );
 }

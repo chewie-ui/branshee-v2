@@ -34,7 +34,7 @@ function Switch({ id, checked, onChange, label, hint }: { id: string; checked: b
  * Réglages › Personnalisation : thème, couleur, curseur, notifications, sons et confort.
  * Chaque changement s'applique tout de suite et est enregistré pour l'utilisateur (tous ses appareils).
  */
-export function PersonalizationForm() {
+export function PersonalizationForm({ notifications = true }: { notifications?: boolean }) {
   const ctx = usePersonalization();
   const t = useT();
   // Autorisation du navigateur, relue à chaque affichage (« default » côté serveur).
@@ -132,6 +132,7 @@ export function PersonalizationForm() {
         </div>
       </Card>
 
+      {notifications ? (<>
       <Card>
         <CardHeader title={t("Notifications")} description={t("Nouveaux rendez-vous, demandes, annulations, commandes de la boutique et messages de votre site. Elles arrivent aussi dans la cloche, en haut de l'écran.")} />
         <div className="divide-y divide-border px-5">
@@ -172,6 +173,8 @@ export function PersonalizationForm() {
           </div>
         </div>
       </Card>
+
+      </>) : null}
 
       <Card>
         <CardHeader title={t("Confort")} />

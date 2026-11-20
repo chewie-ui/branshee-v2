@@ -139,4 +139,4 @@ export const PREFS_STORAGE_KEY = "skydev-ui";
  * Script de la page (dans <head>, avant l'affichage) : espace pro seulement, applique la dernière personnalisation
  * connue sur cet appareil, sans flash. La personnalisation du compte la remplace dès le chargement.
  */
-export const EARLY_PREFS_SCRIPT = String.raw`(function(){try{var l=location;if(!(/^pro\./.test(l.hostname)||/^\/app(\/|$)/.test(l.pathname)))return;var a=JSON.parse(localStorage.getItem("skydev-ui")||"null");if(!a)return;var e=document.documentElement;for(var k in a)if(/^data-[a-z]+$/.test(k))e.setAttribute(k,String(a[k]));}catch(_){}})();`;
+export const EARLY_PREFS_SCRIPT = String.raw`(function(){try{var l=location;if(!(/^pro\./.test(l.hostname)||/^\/(app|admin|espace-client)(\/|$)/.test(l.pathname)))return;var a=JSON.parse(localStorage.getItem("skydev-ui")||"null");if(!a)return;var e=document.documentElement;for(var k in a)if(/^data-[a-z]+$/.test(k))e.setAttribute(k,String(a[k]));}catch(_){}})();`;

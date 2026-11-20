@@ -32,7 +32,7 @@ const isBooking = (kind: string) => kind === "booking";
  * (cloche, bulle dans le site, notification de l'ordinateur, son). Les nouvelles notifications sont relevées toutes les
  * 30 secondes tant qu'un onglet est ouvert.
  */
-export function PersonalizationProvider({ initial, children }: { initial: UiPrefs; children: ReactNode }) {
+export function PersonalizationProvider({ initial, children, notifications = true }: { initial: UiPrefs; children: ReactNode; notifications?: boolean }) {
   const [prefs, setPrefs] = useState(initial);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -103,6 +103,8 @@ export function PersonalizationProvider({ initial, children }: { initial: UiPref
   }, [announce]);
 
   useEffect(() => {
+    // Espace client et admin : thème, curseur et confort seulement, pas de notifications de l'espace pro.
+    if (!notifications) return;
     const first = setTimeout(() => void poll(), 0);
     const id = setInterval(() => {
       if (!document.hidden || prefsRef.current.notifDesktop || prefsRef.current.sound) void poll();
@@ -114,7 +116,7 @@ export function PersonalizationProvider({ initial, children }: { initial: UiPref
       clearInterval(id);
       window.removeEventListener("focus", onFocus);
     };
-  }, [poll]);
+  }, [poll, notifications]);
 
   const update = useCallback(async (patch: Partial<UiPrefs>) => {
     setPrefs((p) => ({ ...p, ...patch }));

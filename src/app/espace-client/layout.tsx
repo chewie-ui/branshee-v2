@@ -8,6 +8,8 @@ import { currentBrand } from "@/server/brand";
 import { ClientNav } from "@/components/client/client-nav";
 import { ClientTopBar } from "@/components/client/client-top-bar";
 import { requireClient } from "@/server/client-account";
+import { PersonalizationProvider } from "@/components/app/personalization";
+import { cleanPrefs } from "@/lib/ui-prefs";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     .where(and(eq(members.userId, user.id), eq(members.status, "active"), eq(members.isActive, true), isNull(businesses.deletedAt)))
     .orderBy(asc(businesses.createdAt));
   return (
+    <PersonalizationProvider initial={cleanPrefs(user.uiPrefs)} notifications={false}>
     <div className="min-h-dvh">
       <SpaceUrlFix />
       <header className="sticky top-0 z-30 border-b border-border bg-surface">
@@ -35,5 +38,6 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
+    </PersonalizationProvider>
   );
 }

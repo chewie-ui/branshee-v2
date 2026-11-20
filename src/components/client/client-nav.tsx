@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/espace-client/factures", label: "Factures" },
   { href: "/espace-client/avis", label: "Mes avis" },
   { href: "/espace-client/parametres", label: "Paramètres" },
+  { href: "/espace-client/personnalisation", label: "Personnalisation" },
 ];
 
 /** Onglets de l'espace client : toujours les mêmes (chaque page explique quoi faire quand elle est vide). */
