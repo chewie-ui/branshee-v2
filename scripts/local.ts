@@ -70,7 +70,9 @@ async function main() {
 
   console.log(`
 ────────────────────────────────────────────────────────
-  Branshee tourne sur   http://localhost:${APP_PORT}
+  Skydev tourne sur     http://skydev.localhost:${APP_PORT}
+  Espace pro            http://pro.skydev.localhost:${APP_PORT}
+  Espace client         http://client.skydev.localhost:${APP_PORT}
 
   Pro (propriétaire)  claire@cabinet-horizon.example
   Pro (collaborateur) thomas@cabinet-horizon.example
@@ -85,11 +87,21 @@ async function main() {
   const fast = process.argv.includes("--rapide");
   if (fast) {
     console.log("▶ Construction de la version rapide (2 à 3 minutes, une seule fois par mise à jour)…");
-    const built = await new Promise<number>((ok) => run("npx", ["next", "build"], { ...env, NODE_ENV: "production" }).on("exit", (c) => ok(c ?? 1)));
+    const build = () => new Promise<number>((ok) => run("npx", ["next", "build"], { ...env, NODE_ENV: "production" }).on("exit", (c) => ok(c ?? 1)));
+    // Next.js peut s'arrêter une première fois pour afficher un avis de mise à jour : on relance une fois.
+    let built = await build();
+    if (built !== 0) {
+      console.log("▶ Nouvel essai de la construction…");
+      built = await build();
+    }
     if (built !== 0) throw new Error("La construction a échoué (voir les messages ci-dessus).");
   }
-  const app = run("npx", fast ? ["next", "start", "-p", String(APP_PORT)] : ["next", "dev", "-p", String(APP_PORT)], env);
+  const args = fast ? ["next", "start", "-p", String(APP_PORT)] : ["next", "dev", "-p", String(APP_PORT)];
+  let app = run("npx", args, env);
   let stopping = false;
+  // Arrêt dans les 30 premières secondes (avis de mise à jour de Next.js) : relancé une fois.
+  const startedAt = Date.now();
+  let retried = false;
   const stop = async () => {
     if (stopping) return;
     stopping = true;
@@ -99,7 +111,17 @@ async function main() {
   };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
-  app.on("exit", stop);
+  const onExit = () => {
+    if (!stopping && !retried && Date.now() - startedAt < 30_000) {
+      retried = true;
+      console.log("▶ Relance du serveur…");
+      app = run("npx", args, env);
+      app.on("exit", onExit);
+      return;
+    }
+    void stop();
+  };
+  app.on("exit", onExit);
 }
 
 main().catch(async (e) => {
