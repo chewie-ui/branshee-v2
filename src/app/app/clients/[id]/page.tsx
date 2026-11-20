@@ -31,6 +31,7 @@ import { decrypt } from "@/lib/field-crypto";
 import { clientWord } from "@/lib/terminology";
 import { formatDay, formatPrice, formatTime, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
+import { navHref } from "@/server/space-url";
 import { normalizeMsisdn } from "@/server/sms";
 import { currentBrand } from "@/server/brand";
 import { CustomerBillingForm } from "@/components/invoicing/customer-billing-form";
@@ -109,12 +110,13 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   // Onglet des autres apps (factures, projets, ventes…) : nommé d'après ce qu'il contient.
   const activity = skydev ? await customerActivity(ctx, { id: customer.id, email: customer.email }) : null;
   const activityTab = activity ? activityLabel(activity) : null;
+  const base = await navHref(`/app/clients/${customer.id}`);
   const tabs = [
-    { key: "apercu", label: t("Aperçu"), href: `/app/clients/${customer.id}` },
-    { key: "rdv", label: `Rendez-vous (${history.length})`, href: `/app/clients/${customer.id}?onglet=rendez-vous` },
-    { key: "dossier", label: "Dossier", href: `/app/clients/${customer.id}?onglet=dossier` },
-    { key: "partage", label: t("Partagé avec le client"), href: `/app/clients/${customer.id}?onglet=partage` },
-    ...(skydev && activityTab ? [{ key: "tout", label: activityTab, href: `/app/clients/${customer.id}?onglet=tout` }] : []),
+    { key: "apercu", label: t("Aperçu"), href: base },
+    { key: "rdv", label: `Rendez-vous (${history.length})`, href: `${base}?onglet=rendez-vous` },
+    { key: "dossier", label: "Dossier", href: `${base}?onglet=dossier` },
+    { key: "partage", label: t("Partagé avec le client"), href: `${base}?onglet=partage` },
+    ...(skydev && activityTab ? [{ key: "tout", label: activityTab, href: `${base}?onglet=tout` }] : []),
   ];
 
 
@@ -147,7 +149,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
       <nav className="-mx-1 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1" aria-label={t("Onglets de la fiche")} data-tour="customer-tabs">
         {tabs.map((tb) => (
-          <Link key={tb.key} href={tb.href} aria-current={tab === tb.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === tb.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
+          <Link key={tb.key} href={tb.href} prefetch={false} scroll={false} aria-current={tab === tb.key ? "page" : undefined} className={cn("-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap", tab === tb.key ? "border-accent text-text" : "border-transparent text-muted hover:text-text")}>
             {t(tb.label)}
           </Link>
         ))}

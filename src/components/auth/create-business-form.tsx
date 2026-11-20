@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/field";
 import { useAppLocale } from "@/components/app-locale";
 import { COUNTRY_CODES } from "@/lib/countries";
 import { useT } from "@/components/app-locale";
+import { ProfessionPicker } from "@/components/ui/profession-picker";
 
 const STEPS = ["Votre établissement", "Votre métier", "Où exercez-vous ?"];
 /** Skydev : pour toutes les entreprises, pas seulement les indépendants sur rendez-vous. */
@@ -34,11 +35,11 @@ export function CreateBusinessForm({ professions, company = false, countries = [
   const [name, setName] = useState(state?.values?.name ?? "");
   const [type, setType] = useState(state?.values?.businessType ?? "");
   const [stepError, setStepError] = useState<string | null>(null);
-  const known = !type.trim() || professions.some((p) => norm(p) === norm(type));
-  const suggestions = locale === "fr" && type.trim().length >= 2 ? professions.filter((p) => norm(p).includes(norm(type))).slice(0, company ? 8 : 6) : [];
+  const known = professions.some((p) => norm(p) === norm(type));
 
   const next = () => {
     if (step === 0 && name.trim().length < 2) return setStepError(company ? t("Indiquez le nom de votre entreprise.") : t("Indiquez le nom de votre établissement."));
+    if (step === 1 && !known) return setStepError(company ? t("Choisissez votre activité dans la liste.") : t("Choisissez votre métier dans la liste."));
     setStepError(null);
     setStep((s) => Math.min(2, s + 1));
   };
@@ -65,17 +66,9 @@ export function CreateBusinessForm({ professions, company = false, countries = [
       </div>
 
       <div hidden={step !== 1} className="space-y-2">
-        <Field label={company ? t("Activité") : t("Métier")} htmlFor="businessType" error={err.businessType} hint={company ? t("Choisissez dans la liste, ou écrivez la vôtre.") : t("Choisissez dans la liste, ou écrivez le vôtre.")}>
-          <Input id="businessType" name="businessType" value={type} onChange={(e) => setType(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), next())} placeholder={company ? t("Kiné, coiffeur, plombier, restaurant, agence web…") : t("Kinésithérapeute, coiffeur, ostéopathe…")} maxLength={60} autoComplete="off" />
+        <Field label={company ? t("Activité") : t("Métier")} htmlFor="businessType" error={err.businessType ?? (step === 1 ? stepError ?? undefined : undefined)} hint={company ? t("Tapez quelques lettres puis choisissez dans la liste. Rien ne correspond ? Choisissez « Indépendant (autre) » ou « PME (autre) ».") : t("Tapez quelques lettres puis choisissez dans la liste. Rien ne correspond ? Choisissez « Autre ».")}>
+          <ProfessionPicker id="businessType" name="businessType" options={professions} value={type} onChange={(v) => { setType(v); setStepError(null); }} onEnter={next} invalid={!!err.businessType} placeholder={company ? t("Kiné, coiffeur, plombier, restaurant, agence web…") : t("Kinésithérapeute, coiffeur, ostéopathe…")} />
         </Field>
-        {suggestions.length && !known ? (
-          <ul className="flex flex-wrap gap-2" aria-label={t("Suggestions")}>
-            {suggestions.map((s) => (
-              <li key={s}><button type="button" onClick={() => setType(s)} className="rounded-full border border-border px-3 py-1.5 text-sm hover:border-accent hover:text-accent">{s}</button></li>
-            ))}
-          </ul>
-        ) : null}
-        {locale === "fr" && !known && type.trim().length >= 2 ? <p className="text-sm text-muted">{company ? t("Cette activité n'est pas encore dans notre liste : nous l'ajouterons après vérification. Vous pouvez continuer.") : t("Ce métier n'est pas encore dans notre liste : nous l'ajouterons après vérification. Vous pouvez continuer.")}</p> : null}
       </div>
 
       <div hidden={step !== 2} className="space-y-4">

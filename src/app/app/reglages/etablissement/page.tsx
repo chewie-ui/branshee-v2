@@ -11,6 +11,7 @@ import { CountryForm } from "@/components/settings/country-form";
 import { countryOptions } from "@/lib/countries";
 import { currentBrand } from "@/server/brand";
 import { appMetadata } from "@/server/app-locale";
+import { professionList } from "@/server/site";
 
 export const generateMetadata = appMetadata("Établissement · Réglages");
 
@@ -21,6 +22,7 @@ export default async function BusinessSettingsPage() {
     <div className="space-y-6">
       <div id="logo" className="scroll-mt-20"><LogoCard photoUrl={b!.photoUrl} name={b!.name} /></div>
       <BusinessForm
+        professions={await professionList({ allActivities: ctx.business.brand === "skydev" })}
         b={{ name: b!.name, businessType: b!.businessType ?? "", description: b!.description ?? "", email: b!.email ?? "", phone: b!.phone ?? "" }}
       />
       <ContactModeForm mode={contactModeOf(b!.contactMode)} note={b!.contactNote ?? ""} hasPhone={!!b!.phone} />

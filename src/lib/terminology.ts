@@ -6,7 +6,7 @@ const PATIENT_KEYWORDS = [
   "médecin", "medecin", "docteur", "dentiste", "orthodont", "kinésithérap", "kinesitherap", "kiné", "kine",
   "ostéopath", "osteopath", "chiropract", "psycholog", "psychiatr", "psychothérap", "psychotherap",
   "infirmier", "infirmière", "sage-femme", "podolog", "orthophon", "orthopt", "opticien",
-  "diététic", "dietetic", "nutrition", "acupunc", "naturopath", "homéopath", "homeopath",
+  "diététic", "dietetic", "logopèd", "logoped", "audiolog", "audioprothés", "bandagiste", "orthésiste", "prothésiste dentaire", "hygiéniste dentaire", "puéricult", "nutrition", "acupunc", "naturopath", "homéopath", "homeopath",
   "sophrolog", "hypnothérap", "hypnotherap", "ergothérap", "ergotherap", "psychomotric",
   "neurolog", "rhumatolog", "gastroentérolog", "gastroenterolog", "endocrinolog", "allergolog",
   "sexolog", "gériatr", "geriatr", "cardiolog", "dermatolog", "ophtalmolog", "pédiatr", "pediatr",

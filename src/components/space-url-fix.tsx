@@ -13,7 +13,7 @@ export function SpaceUrlFix() {
     if (!m) return;
     const prefix = m[1] === "pro" ? "/app" : "/espace-client";
     const cur = window.location.pathname;
-    if (cur === prefix || cur.startsWith(`${prefix}/`)) window.history.replaceState(null, "", (cur.slice(prefix.length) || "/") + window.location.search + window.location.hash);
+    if (cur === prefix || cur.startsWith(`${prefix}/`)) window.history.replaceState(window.history.state, "", (cur.slice(prefix.length) || "/") + window.location.search + window.location.hash);
   }, [path]);
   return null;
 }

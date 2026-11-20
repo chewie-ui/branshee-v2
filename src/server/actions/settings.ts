@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { allowedProfession } from "@/server/site";
 import { eq } from "drizzle-orm";
 import { optionalPhone, z } from "@/lib/zod";
 import { db } from "@/db";
@@ -37,12 +38,15 @@ export async function saveBusinessInfo(_prev: SettingsState, fd: FormData): Prom
   });
   if (!parsed.success) return fail(parsed.error);
   const v = parsed.data;
+  // Métier obligatoire, choisi dans la liste (officielle + validés par l'équipe).
+  const job = await allowedProfession(v.businessType, { allActivities: ctx.business.brand === "skydev" });
+  if (!job) return { error: "Vérifiez les champs indiqués.", fieldErrors: { businessType: "Choisissez un métier dans la liste." } };
 
   await db
     .update(businesses)
     .set({
       name: v.name,
-      businessType: v.businessType || null,
+      businessType: job,
       description: v.description || null,
       email: v.email || null,
       phone: v.phone || null,

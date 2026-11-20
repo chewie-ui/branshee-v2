@@ -18,6 +18,13 @@ export async function professionList(opts: { allActivities?: boolean } = {}) {
   return [...base, ...extra].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
+/** Le métier fait-il partie de la liste proposée (officielle + validés par l'équipe) ? Renvoie son libellé exact. */
+export async function allowedProfession(name: string, opts: { allActivities?: boolean } = {}) {
+  const k = professionKey(name);
+  if (!k) return null;
+  return (await professionList(opts)).find((p) => professionKey(p) === k) ?? null;
+}
+
 /** Établissements visibles publiquement : ni supprimés, ni en pause, propriétaire actif. */
 export const visible = and(isNull(businesses.deletedAt), isNull(businesses.pausedAt), isNull(users.disabledAt), eq(businesses.isDemo, false));
 const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`).replace(/[\s'-]+/g, "%")}%`;

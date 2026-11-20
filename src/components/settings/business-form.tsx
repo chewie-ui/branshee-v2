@@ -2,12 +2,13 @@
 
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { saveBusinessInfo } from "@/server/actions/settings";
+import { ProfessionPicker } from "@/components/ui/profession-picker";
 import { Section, SettingsForm } from "./settings-form";
 import { useT } from "@/components/app-locale";
 
 type B = { name: string; businessType: string; description: string; email: string; phone: string };
 
-export function BusinessForm({ b }: { b: B }) {
+export function BusinessForm({ b, professions }: { b: B; professions: string[] }) {
   const t = useT();
   return (
     <SettingsForm action={saveBusinessInfo}>
@@ -18,8 +19,8 @@ export function BusinessForm({ b }: { b: B }) {
               <Field label={t("Nom de l'établissement")} htmlFor="name" error={err.name}>
                 <Input id="name" name="name" defaultValue={b.name} maxLength={80} aria-invalid={!!err.name || undefined} />
               </Field>
-              <Field label={t("Métier")} htmlFor="businessType" error={err.businessType}>
-                <Input id="businessType" name="businessType" defaultValue={b.businessType} maxLength={60} />
+              <Field label={t("Métier")} htmlFor="businessType" error={err.businessType} hint={professions.some((p) => p.toLowerCase() === b.businessType.toLowerCase()) || !b.businessType ? undefined : `Actuel : « ${b.businessType} », hors liste. Choisissez le métier le plus proche.`}>
+                <ProfessionPicker id="businessType" name="businessType" options={professions} defaultValue={b.businessType} invalid={!!err.businessType} />
               </Field>
             </div>
             <Field label={t("Présentation")} htmlFor="description" hint={t("Deux ou trois phrases : utilisées dans l'annuaire et dans les résultats Google. Le texte détaillé « À propos » se rédige dans Page de réservation.")}>
