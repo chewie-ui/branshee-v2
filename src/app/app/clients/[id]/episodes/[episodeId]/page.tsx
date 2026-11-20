@@ -9,12 +9,15 @@ import { Card } from "@/components/ui/card";
 import { CareRecord, type SectionView } from "@/components/physio/care-record";
 import { EpisodeActions } from "@/components/physio/episode-actions";
 import { CareMeasures } from "@/components/physio/care-measures";
+import { CareSessions } from "@/components/physio/care-sessions";
+import { categoryForPathology, isBim } from "@/lib/inami-kine";
+import { businesses } from "@/db/schema";
 import { formatDay, zoned } from "@/lib/time";
 import { formatNiss } from "@/lib/niss";
 import { decrypt } from "@/lib/field-crypto";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
-import { CARE_SECTIONS, PATHOLOGY_KINDS, currentEntries, entryHistory, episodeOf, logRecordAccess, measuresOf, sessionsDone } from "@/server/physio";
+import { CARE_SECTIONS, PATHOLOGY_KINDS, currentEntries, entryHistory, episodeOf, logRecordAccess, measuresOf, sessionsDone, sessionsOf } from "@/server/physio";
 
 export const generateMetadata = () => appMetadata("Épisode de soins");
 
@@ -32,7 +35,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   const tz = ctx.business.timezone;
   const canManage = ctx.can("records.manage");
   const canExport = ctx.can("records.export");
-  const [entries, done, measures] = await Promise.all([currentEntries(e.id, ctx.user.id), sessionsDone(e), measuresOf(e.id)]);
+  const [entries, done, measures, sessions, [biz]] = await Promise.all([currentEntries(e.id, ctx.user.id), sessionsDone(e), measuresOf(e.id), sessionsOf(e), db.select({ conv: businesses.inamiConventioned }).from(businesses).where(eq(businesses.id, ctx.business.id))]);
   const stamp = (d: Date) => `${formatDay(d, tz, "d MMM yyyy")} ${format(zoned(d, tz), "HH:mm")}`;
   const histories = await Promise.all(entries.filter((x) => x.versions > 1).map(async (x) => [x.key, await entryHistory(ctx.business.id, x.key)] as const));
   const hist = new Map(histories);
@@ -68,7 +71,8 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         <div><p className="text-muted">Accord / notification</p><p className={`mt-1 font-medium ${approvalSoon ? "text-warning" : ""}`}>{e.approvalStart || e.approvalEnd ? `${day(e.approvalStart)} → ${day(e.approvalEnd)}` : "—"}</p></div>
       </Card>
       {over ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">Plus de séances que prescrites : une nouvelle prescription ou une demande de séances supplémentaires est nécessaire.</p> : null}
-      <EpisodeActions canExport={canExport} customerId={c.id} episodeId={e.id} closed={e.status === "closed"} canManage={canManage} form={{ title: e.title, prescriberName: e.prescriberName ?? "", prescriberInami: e.prescriberInami ?? "", prescriptionDate: e.prescriptionDate ?? "", sessionsPrescribed: e.sessionsPrescribed != null ? String(e.sessionsPrescribed) : "", pathologyKind: e.pathologyKind, nomenclature: e.nomenclature ?? "", approvalStart: e.approvalStart ?? "", approvalEnd: e.approvalEnd ?? "" }} />
+      <EpisodeActions canExport={canExport} customerId={c.id} episodeId={e.id} closed={e.status === "closed"} canManage={canManage} form={{ title: e.title, prescriberName: e.prescriberName ?? "", prescriberInami: e.prescriberInami ?? "", prescriptionDate: e.prescriptionDate ?? "", sessionsPrescribed: e.sessionsPrescribed != null ? String(e.sessionsPrescribed) : "", pathologyKind: e.pathologyKind, nomenclature: e.nomenclature ?? "", inamiPlace: e.inamiPlace, approvalStart: e.approvalStart ?? "", approvalEnd: e.approvalEnd ?? "" }} />
+      <CareSessions episodeId={e.id} canManage={canManage} canSettings={ctx.can("settings.manage")} place={e.inamiPlace} category={categoryForPathology(e.pathologyKind)} defaultCode={e.nomenclature ?? ""} bim={isBim(c.ct1)} conventioned={biz?.conv ?? null} sessions={sessions.map((x) => ({ id: x.id, date: formatDay(x.startsAt, tz, "d MMM yyyy"), service: x.service ?? "Séance", code: x.code ?? "" }))} />
       <CareMeasures episodeId={e.id} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} measures={measures.map((m) => ({ id: m.id, key: m.measureKey, label: m.label, value: m.value, unit: m.unit ?? "", side: m.side ?? "", date: m.measuredOn, author: m.authorName, deleted: m.deletedAt ? `supprimée par ${m.deletedByName ?? "?"} le ${stamp(m.deletedAt)}` : null }))} />
       <CareRecord episodeId={e.id} sections={sections} canManage={canManage} today={format(zoned(new Date(), tz), "yyyy-MM-dd")} />
     </div>

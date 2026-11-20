@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import { saveEpisode } from "@/server/actions/physio";
+import { INAMI_KINE_VERSION, INAMI_PLACES, categoryForPathology, codesFor, shortLabel } from "@/lib/inami-kine";
 
 export type EpisodeRow = { id: string; title: string; kind: string; kindLabel: string; prescriptionDate: string | null; prescriber: string | null; done: number; prescribed: number | null; status: string; approvalEnd: string | null };
-export type EpisodeForm = { title: string; prescriberName: string; prescriberInami: string; prescriptionDate: string; sessionsPrescribed: string; pathologyKind: string; nomenclature: string; approvalStart: string; approvalEnd: string };
+export type EpisodeForm = { title: string; prescriberName: string; prescriberInami: string; prescriptionDate: string; sessionsPrescribed: string; pathologyKind: string; nomenclature: string; inamiPlace: string; approvalStart: string; approvalEnd: string };
 
 const KINDS = [
   ["courante", "Pathologie courante"],
@@ -28,6 +29,9 @@ const day = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : 
 export function EpisodeEditor({ customerId, episodeId, initial, onDone }: { customerId: string; episodeId: string | null; initial: EpisodeForm; onDone?: (id: string) => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [kind, setKind] = useState(initial.pathologyKind || "courante");
+  const [place, setPlace] = useState(initial.inamiPlace || "I.a)");
+  const [code, setCode] = useState(initial.nomenclature);
+  const options = codesFor(place, categoryForPathology(kind)).filter((c) => c.category !== 0);
   const [pending, start] = useTransition();
   return (
     <form
@@ -64,8 +68,17 @@ export function EpisodeEditor({ customerId, episodeId, initial, onDone }: { cust
         <Field label="N° INAMI prescripteur" htmlFor="ep-presci">
           <Input id="ep-presci" name="prescriberInami" defaultValue={initial.prescriberInami} maxLength={20} inputMode="numeric" />
         </Field>
-        <Field label="Code de nomenclature (facultatif)" htmlFor="ep-nom">
-          <Input id="ep-nom" name="nomenclature" defaultValue={initial.nomenclature} maxLength={60} />
+        <Field label="Lieu des séances" htmlFor="ep-place">
+          <Select id="ep-place" name="inamiPlace" value={place} onChange={(e) => setPlace(e.target.value)}>
+            {Object.entries(INAMI_PLACES).map(([k, l]) => <option key={k} value={k}>{k} {l.replace(/^Prestations effectuées /, "")}</option>)}
+          </Select>
+        </Field>
+        <Field label="Code de nomenclature par défaut" htmlFor="ep-nom" className="sm:col-span-3" hint={`Nomenclature INAMI, tarifs au ${INAMI_KINE_VERSION.split("-").reverse().join("/")}. Repris pour chaque séance, modifiable séance par séance.`}>
+          <Select id="ep-nom" name="nomenclature" value={code} onChange={(e) => setCode(e.target.value)}>
+            <option value="">Aucun</option>
+            {code && !options.some((o) => o.code === code) ? <option value={code}>{code}</option> : null}
+            {options.map((c) => <option key={c.code} value={c.code}>{c.code} · {shortLabel(c, 80)} · {c.fee.toFixed(2).replace(".", ",")} €</option>)}
+          </Select>
         </Field>
         {kind !== "courante" ? (
           <>

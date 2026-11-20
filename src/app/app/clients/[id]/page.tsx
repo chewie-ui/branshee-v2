@@ -344,7 +344,7 @@ async function EpisodesTab({ customer, businessId, canManage }: { customer: type
   const rows = eps.map((e) => ({ id: e.id, title: e.title, kind: e.pathologyKind, kindLabel: PATHOLOGY_KINDS.find((k) => k.key === e.pathologyKind)?.label ?? e.pathologyKind, prescriptionDate: e.prescriptionDate, prescriber: e.prescriberName, done: counts[e.id] ?? 0, prescribed: e.sessionsPrescribed, status: e.status, approvalEnd: e.approvalEnd }));
   return (
     <div className="mx-auto mb-4 max-w-3xl">
-      <EpisodesList customerId={customer.id} rows={rows} canManage={canManage} defaults={{ title: "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", prescriptionDate: "", sessionsPrescribed: "", pathologyKind: "courante", nomenclature: "", approvalStart: "", approvalEnd: "" }} />
+      <EpisodesList customerId={customer.id} rows={rows} canManage={canManage} defaults={{ title: "", prescriberName: customer.prescriberName ?? "", prescriberInami: customer.prescriberInami ?? "", prescriptionDate: "", sessionsPrescribed: "", pathologyKind: "courante", nomenclature: "567011", inamiPlace: "I.a)", approvalStart: "", approvalEnd: "" }} />
     </div>
   );
 }

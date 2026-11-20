@@ -138,6 +138,8 @@ export const appointments = pgTable(
     internalNote: encryptedText("internal_note"),
     overbooked: boolean("overbooked").notNull().default(false),
     noShow: boolean("no_show").notNull().default(false),
+    /** Code de nomenclature INAMI de la séance (kiné), pour l'attestation et le ticket modérateur. */
+    inamiCode: text("inami_code"),
     noShowReason: noShowReasonEnum("no_show_reason"),
 
     /** Jeton secret des liens « annuler / reprogrammer » envoyés au client. */

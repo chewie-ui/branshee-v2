@@ -25,6 +25,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>Une prescription correspond à un épisode : onglet Dossier, « Nouvel épisode ». Indiquez la date de prescription, le nombre de séances prescrites et la situation (pathologie courante, liste E, Fa, Fb). Pour E, Fa et Fb, renseignez les dates de l&apos;accord ou de la notification : elles s&apos;affichent dans la synthèse à l&apos;ouverture de la fiche, avec le compteur de séances.</p>
+        <p>Choisissez aussi le lieu des séances (cabinet, domicile…) et le code de nomenclature INAMI par défaut. La carte « Séances et nomenclature » de l&apos;épisode liste chaque séance honorée avec son code, l&apos;honoraire, le remboursement de la mutuelle et la part du patient (selon que le patient est BIM, d&apos;après son code CT1, et que vous êtes conventionné). Les tarifs sont ceux de la circulaire INAMI en vigueur.</p>
         <p>Le compteur reprend les rendez-vous honorés depuis la date de prescription. Une alerte apparaît quand les séances prescrites sont dépassées ou quand l&apos;accord se termine dans moins de 14 jours.</p>
       </>
     ),

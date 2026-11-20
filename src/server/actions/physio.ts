@@ -2,16 +2,17 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
-import { activityLogs, businesses, careEntries, careEpisodes, careMeasures, customers, members } from "@/db/schema";
+import { activityLogs, appointments, businesses, careEntries, careEpisodes, careMeasures, customers, members } from "@/db/schema";
 import { blindIndex, encrypt } from "@/lib/field-crypto";
 import { nissFacts, normalizeNiss, validNiss } from "@/lib/niss";
 import { parseCodes } from "@/lib/care-codes";
 import { measureDef } from "@/lib/care-measures";
+import { INAMI_PLACES, inamiCode } from "@/lib/inami-kine";
 import { requireContext, type AppContext } from "@/server/context";
-import { canReadEntry, episodeOf, isCareSection, logRecordAccess } from "@/server/physio";
+import { canReadEntry, episodeOf, isCareSection, logRecordAccess, sessionsOf } from "@/server/physio";
 
 type Result = { ok: true; message: string; id?: string } | { ok: false; error: string };
 const RO = { ok: false as const, error: "Mode supervision : lecture seule." };
@@ -92,7 +93,8 @@ const episodeSchema = z.object({
   prescriptionDate: isoDate.optional().or(z.literal("")),
   sessionsPrescribed: z.preprocess((v) => (v === "" || v == null ? null : Number(v)), z.number().int().min(1).max(500).nullable()),
   pathologyKind: z.enum(["courante", "E", "Fa", "Fb", "perinatal", "palliatif", "11bis", "autre"]),
-  nomenclature: opt(60),
+  nomenclature: z.string().trim().max(10).optional().transform((v) => (v ? v : null)).refine((v) => !v || !!inamiCode(v), "Code de nomenclature inconnu."),
+  inamiPlace: z.string().refine((v) => v in INAMI_PLACES, "Lieu inconnu.").optional(),
   approvalStart: isoDate.optional().or(z.literal("")),
   approvalEnd: isoDate.optional().or(z.literal("")),
 });
@@ -107,7 +109,7 @@ export async function saveEpisode(customerId: string, episodeId: string | null, 
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Vérifiez les champs." };
   const d = v.data;
   if (d.approvalStart && d.approvalEnd && d.approvalEnd < d.approvalStart) return { ok: false, error: "La fin de l'accord est avant son début." };
-  const values = { title: d.title, prescriberName: d.prescriberName ?? c.prescriberName, prescriberInami: d.prescriberInami ?? c.prescriberInami, prescriptionDate: d.prescriptionDate || null, sessionsPrescribed: d.sessionsPrescribed, pathologyKind: d.pathologyKind, nomenclature: d.nomenclature, approvalStart: d.approvalStart || null, approvalEnd: d.approvalEnd || null, updatedAt: new Date() };
+  const values = { title: d.title, prescriberName: d.prescriberName ?? c.prescriberName, prescriberInami: d.prescriberInami ?? c.prescriberInami, prescriptionDate: d.prescriptionDate || null, sessionsPrescribed: d.sessionsPrescribed, pathologyKind: d.pathologyKind, nomenclature: d.nomenclature, inamiPlace: d.inamiPlace ?? "I.a)", approvalStart: d.approvalStart || null, approvalEnd: d.approvalEnd || null, updatedAt: new Date() };
   let id = episodeId;
   if (episodeId) {
     const e = await episodeOf(ctx.business.id, episodeId);
@@ -245,4 +247,42 @@ export async function saveMyInami(value: string): Promise<Result> {
   await db.update(members).set({ inami: v || null }).where(eq(members.id, ctx.member.id));
   revalidatePath("/app/clients");
   return { ok: true, message: v ? "N° INAMI enregistré." : "N° INAMI retiré." };
+}
+
+/** Code de nomenclature d'une séance de l'épisode (null = retirer). */
+export async function setSessionCode(episodeId: string, appointmentId: string, code: string | null): Promise<Result> {
+  const ctx = await requireContext("records.manage", { app: "clients" });
+  if (ctx.impersonating) return RO;
+  const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
+  if (!e || !z.uuid().safeParse(appointmentId).success) return { ok: false, error: "Introuvable." };
+  const c = code ? inamiCode(code) : null;
+  if (code && !c) return { ok: false, error: "Code de nomenclature inconnu." };
+  if (!(await sessionsOf(e)).some((x) => x.id === appointmentId)) return { ok: false, error: "Cette séance ne fait pas partie de l'épisode." };
+  await db.update(appointments).set({ inamiCode: c ? code!.replace(/\D/g, "") : null }).where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, ctx.business.id)));
+  await logRecordAccess(ctx, e.customerId, "edit", `Nomenclature séance : ${code ?? "retirée"}`);
+  revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
+  return { ok: true, message: "Code enregistré." };
+}
+
+/** Applique le code par défaut de l'épisode à toutes ses séances qui n'ont pas encore de code. */
+export async function applyDefaultSessionCode(episodeId: string): Promise<Result> {
+  const ctx = await requireContext("records.manage", { app: "clients" });
+  if (ctx.impersonating) return RO;
+  const e = z.uuid().safeParse(episodeId).success ? await episodeOf(ctx.business.id, episodeId) : null;
+  if (!e) return { ok: false, error: "Introuvable." };
+  if (!e.nomenclature || !inamiCode(e.nomenclature)) return { ok: false, error: "Choisissez d'abord le code par défaut de l'épisode (Modifier la prescription)." };
+  const todo = (await sessionsOf(e)).filter((x) => !x.code).map((x) => x.id);
+  if (!todo.length) return { ok: true, message: "Toutes les séances ont déjà un code." };
+  await db.update(appointments).set({ inamiCode: e.nomenclature }).where(and(eq(appointments.businessId, ctx.business.id), inArray(appointments.id, todo)));
+  await logRecordAccess(ctx, e.customerId, "edit", `Nomenclature appliquée à ${todo.length} séance(s)`);
+  revalidatePath(`/app/clients/${e.customerId}/episodes/${e.id}`);
+  return { ok: true, message: `Code ${e.nomenclature} appliqué à ${todo.length} séance${todo.length > 1 ? "s" : ""}.` };
+}
+
+/** Kiné conventionné ou non (détermine le remboursement de la mutuelle affiché). */
+export async function saveConventioned(value: boolean): Promise<Result> {
+  const ctx = await requireContext("settings.manage", { write: true });
+  await db.update(businesses).set({ inamiConventioned: value }).where(eq(businesses.id, ctx.business.id));
+  revalidatePath("/app/clients");
+  return { ok: true, message: value ? "Enregistré : conventionné." : "Enregistré : non conventionné." };
 }

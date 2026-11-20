@@ -54,6 +54,17 @@ export async function episodesOf(businessId: string, customerId: string) {
   return db.select().from(careEpisodes).where(and(eq(careEpisodes.businessId, businessId), eq(careEpisodes.customerId, customerId))).orderBy(desc(careEpisodes.createdAt));
 }
 
+/** Séances honorées pendant l'épisode, avec leur code de nomenclature (plus anciennes d'abord). */
+export async function sessionsOf(e: typeof careEpisodes.$inferSelect) {
+  const from = e.prescriptionDate ? new Date(`${e.prescriptionDate}T00:00:00Z`) : e.createdAt;
+  const to = e.closedAt ?? new Date();
+  return db
+    .select({ id: appointments.id, startsAt: appointments.startsAt, service: appointments.serviceName, code: appointments.inamiCode })
+    .from(appointments)
+    .where(and(eq(appointments.customerId, e.customerId), eq(appointments.businessId, e.businessId), eq(appointments.kind, "appointment"), eq(appointments.status, "confirmed"), eq(appointments.noShow, false), gte(appointments.startsAt, from), lte(appointments.endsAt, to)))
+    .orderBy(asc(appointments.startsAt));
+}
+
 /** Séances honorées pendant l'épisode (de la prescription à la clôture), pour le compteur « 12 / 18 ». */
 export async function sessionsDone(e: typeof careEpisodes.$inferSelect) {
   const from = e.prescriptionDate ? new Date(`${e.prescriptionDate}T00:00:00Z`) : e.createdAt;

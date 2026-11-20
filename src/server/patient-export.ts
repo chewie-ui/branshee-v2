@@ -47,11 +47,11 @@ export async function patientExport(ctx: AppContext, c: typeof customers.$inferS
       prescriber: { name: c.prescriberName, inami: c.prescriberInami }, generalPractitioner: { name: c.gpName, inami: c.gpInami },
       generalInfo: safe(c.generalInfoEnc), archivedAt: c.archivedAt, createdAt: c.createdAt,
     },
-    appointments: appts.map((a) => ({ id: a.id, startsAt: a.startsAt, endsAt: a.endsAt, service: a.serviceName, status: a.status, noShow: a.noShow })),
+    appointments: appts.map((a) => ({ id: a.id, startsAt: a.startsAt, endsAt: a.endsAt, service: a.serviceName, status: a.status, noShow: a.noShow, inamiCode: a.inamiCode })),
     notes: notes.map((n) => ({ id: n.id, date: n.date, title: n.title, note: safe(n.noteEnc), todo: safe(n.todoEnc), attachment: n.attachmentName })),
     careEpisodes: episodes.map((e) => ({
       id: e.id, title: e.title, prescriber: { name: e.prescriberName, inami: e.prescriberInami }, prescriptionDate: e.prescriptionDate,
-      sessionsPrescribed: e.sessionsPrescribed, pathologyKind: e.pathologyKind, nomenclature: e.nomenclature,
+      sessionsPrescribed: e.sessionsPrescribed, pathologyKind: e.pathologyKind, nomenclature: e.nomenclature, inamiPlace: e.inamiPlace,
       approval: { start: e.approvalStart, end: e.approvalEnd }, status: e.status, closedAt: e.closedAt, createdAt: e.createdAt,
       entries: entries.filter((x) => x.episodeId === e.id).map((x) => ({ key: x.entryKey, section: x.section, version: x.version, date: x.entryDate, deleted: !!x.deleted, confidential: !!x.confidential, lifecycle: x.passive ? "passive" : "active", codes: x.codes, content: safe(x.contentEnc), author: x.authorName, at: x.createdAt })),
       measures: measures.filter((m) => m.episodeId === e.id).map((m) => ({ key: m.measureKey, label: m.label, value: m.value, unit: m.unit, side: m.side, date: m.measuredOn, author: m.authorName, deletedAt: m.deletedAt })),

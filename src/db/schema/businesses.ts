@@ -64,6 +64,8 @@ export const businesses = pgTable(
     timezone: text("timezone").notNull().default("Europe/Brussels"),
     /** Verrouillage de session après N minutes sans activité (dossiers patients). Null = jamais. */
     autoLockMinutes: integer("auto_lock_minutes"),
+    /** Kiné conventionné INAMI (tarifs et remboursements de la nomenclature) : null = non précisé. */
+    inamiConventioned: boolean("inami_conventioned"),
 
     pausedAt: timestamp("paused_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

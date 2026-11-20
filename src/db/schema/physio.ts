@@ -25,7 +25,10 @@ export const careEpisodes = pgTable(
     sessionsPrescribed: integer("sessions_prescribed"),
     /** courante | E | Fa | Fb | autre */
     pathologyKind: text("pathology_kind").notNull().default("courante"),
+    /** Code de nomenclature par défaut des séances de l'épisode. */
     nomenclature: text("nomenclature"),
+    /** Lieu des prestations au sens de la nomenclature (I.a) cabinet, II. domicile…). */
+    inamiPlace: text("inami_place").notNull().default("I.a)"),
     approvalStart: date("approval_start"),
     approvalEnd: date("approval_end"),
     /** open | closed */
