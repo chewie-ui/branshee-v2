@@ -27,6 +27,7 @@ export async function TeamPriceNotice({ businessId }: { businessId: string }) {
         {t("L'abonnement compte chaque personne de l'équipe, avec un prix qui baisse à chaque ajout :")}{" "}
         <span className="font-medium">{users} {users > 1 ? t("personnes") : t("personne")} = {total} € TVAC {t("par mois")}</span>
         {", "}{t("la prochaine personne ajoutée")} <span className="font-medium">{next ? `+${next} €` : t("offerte")}</span>.{" "}
+        {users > 1 ? <>{t("Pour payer moins, retirez d'abord les personnes dont vous n'avez pas besoin (clic sur leur nom › Retirer de l'équipe).")}{" "}</> : null}
         {link}
       </p>
     );

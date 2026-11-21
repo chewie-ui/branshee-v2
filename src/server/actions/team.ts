@@ -158,7 +158,8 @@ export async function updateMember(memberId: string, _prev: TeamState, fd: FormD
 }
 
 export async function removeMember(memberId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
+  // Permis même sans abonnement (lecture seule) : retirer des personnes fait baisser le prix avant de s'abonner.
+  const ctx = await requireContext("team.manage", { write: true, app: "employes", allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const [m] = await db.select().from(members).where(and(eq(members.id, z.uuid().parse(memberId)), eq(members.businessId, ctx.business.id)));
   if (!m) return { ok: false, error: "Membre introuvable." };

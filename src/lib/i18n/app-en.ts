@@ -3836,4 +3836,5 @@ export const EN: Record<string, string> = {
   "Invitation annulée.": "Invitation cancelled.",
   "Ce membre a déjà son propre accès.": "This member already has their own access.",
   "Cette adresse est déjà utilisée par un autre membre de l'équipe.": "This address is already used by another team member.",
+  "Pour payer moins, retirez d'abord les personnes dont vous n'avez pas besoin (clic sur leur nom › Retirer de l'équipe).": "To pay less, first remove the people you don't need (click their name › Remove from team).",
 };
