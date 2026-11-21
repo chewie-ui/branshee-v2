@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
+import { adminCancelSubscription, grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
+import type { AdminSubInfo } from "@/server/admin-billing";
 import { MAX_USERS, teamQuote, tierLabels } from "@/lib/skydev-plans";
 
 export function PauseToggle({ id, paused }: { id: string; paused: boolean }) {
@@ -209,5 +210,107 @@ export function DisableUserButton({ id, disabled }: { id: string; disabled: bool
       </Button>
       {error ? <span className="text-sm text-danger" role="alert">{error}</span> : null}
     </div>
+  );
+}
+
+const euro = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
+
+/**
+ * Annuler l'abonnement d'un client (tout de suite ou à l'échéance) et/ou le rembourser.
+ * Le remboursement crée une note de crédit Stripe sur la dernière facture payée, envoyée au client.
+ */
+export function CancelSubscriptionForm({ businessId, info }: { businessId: string; info: AdminSubInfo }) {
+  const [pending, start] = useTransition();
+  const sub = info.subscription;
+  const active = !!sub && ["active", "trialing", "past_due", "unpaid", "incomplete"].includes(sub.status);
+  const [when, setWhen] = useState<"now" | "period_end" | "refund_only">(active ? "now" : "refund_only");
+  const [refund, setRefund] = useState<"none" | "full" | "partial">("none");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const last = info.lastPaid;
+  const canRefund = !!last && last.refundableCents > 0;
+  const amountCents = refund === "full" ? (last?.refundableCents ?? 0) : refund === "partial" ? Math.round((toNum(amount) ?? 0) * 100) : 0;
+  const nothing = when === "refund_only" && refund === "none";
+
+  const summary = [
+    when === "now" ? "L'abonnement s'arrête maintenant (plus aucun prélèvement, l'accès payant se ferme)." : when === "period_end" ? `L'abonnement s'arrête à l'échéance${sub?.periodEnd ? ` (${new Date(sub.periodEnd).toLocaleDateString("fr-BE")})` : ""} : plus de prélèvement ensuite.` : "L'abonnement continue.",
+    refund === "none" ? "Pas de remboursement." : `Note de crédit de ${euro(amountCents)} sur la facture ${last?.number ?? ""}${last?.outOfBand ? " — payée hors carte : remboursement à faire par virement." : ", remboursée sur sa carte (5 à 10 jours)."} Le client la reçoit par email et la retrouve dans Factures et cartes.`,
+  ].join(" ");
+
+  if (!sub) return <p className="text-sm text-muted">Aucun abonnement Stripe pour cet établissement.</p>;
+  return (
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!confirm || nothing) return;
+        start(async () => {
+          const r = await adminCancelSubscription(businessId, { when, refund, amount: refund === "partial" ? toNum(amount) ?? 0 : undefined, reason });
+          setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "C'est fait.") : (r.error ?? "Erreur.") });
+          if (r.ok) setConfirm(false);
+        });
+      }}
+    >
+      <p className="text-sm">
+        Statut : <b>{sub.status}</b>
+        {sub.cancelAtPeriodEnd ? " · annulation déjà prévue à l'échéance" : ""}
+        {sub.periodEnd ? ` · période en cours jusqu'au ${new Date(sub.periodEnd).toLocaleDateString("fr-BE")}` : ""} · {sub.collection === "invoice" ? "facture envoyée (virement)" : "prélèvement carte"}
+        <br />
+        Dernière facture payée : {last ? <><b>{last.number}</b> du {new Date(last.date).toLocaleDateString("fr-BE")}, {euro(last.paidCents)}{last.refundableCents < last.paidCents ? ` (déjà remboursé : ${euro(last.paidCents - last.refundableCents)})` : ""}</> : "aucune"}
+      </p>
+
+      <fieldset className="space-y-2">
+        <legend className="mb-1 text-sm font-medium">Annulation</legend>
+        {(
+          [
+            ["now", "Annuler tout de suite", "Plus de prélèvement, l'accès payant se ferme maintenant.", !active],
+            ["period_end", "Annuler à l'échéance", "Il garde l'accès jusqu'à la fin de la période déjà payée.", !active || sub.cancelAtPeriodEnd],
+            ["refund_only", "Ne pas annuler", "Seulement rembourser (geste commercial, erreur de facturation…).", false],
+          ] as const
+        ).map(([v, title, text, disabled]) => (
+          <label key={v} className={`flex min-h-11 items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-accent ${disabled ? "opacity-50" : "cursor-pointer"}`}>
+            <input type="radio" name="when" className="mt-1 size-4 accent-[var(--accent)]" checked={when === v} disabled={disabled} onChange={() => setWhen(v)} />
+            <span className="text-sm"><span className="font-medium">{title}</span><span className="block text-muted">{text}</span></span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="mb-1 text-sm font-medium">Remboursement</legend>
+        {(
+          [
+            ["none", "Pas de remboursement", ""],
+            ["full", "Rembourser toute la dernière facture", canRefund ? euro(last!.refundableCents) : "rien à rembourser"],
+            ["partial", "Rembourser une partie", canRefund ? `jusqu'à ${euro(last!.refundableCents)}` : "rien à rembourser"],
+          ] as const
+        ).map(([v, title, text]) => (
+          <label key={v} className={`flex min-h-11 items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-accent ${v !== "none" && !canRefund ? "opacity-50" : "cursor-pointer"}`}>
+            <input type="radio" name="refund" className="mt-1 size-4 accent-[var(--accent)]" checked={refund === v} disabled={v !== "none" && !canRefund} onChange={() => setRefund(v)} />
+            <span className="text-sm"><span className="font-medium">{title}</span>{text ? <span className="block text-muted">{text}</span> : null}</span>
+          </label>
+        ))}
+        {refund === "partial" ? (
+          <Field label="Montant à rembourser (€ TVAC)" htmlFor="refund-amount">
+            <Input id="refund-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="ex. 14,50" className="w-40" />
+          </Field>
+        ) : null}
+      </fieldset>
+
+      <Field label="Motif (facultatif, repris sur la note de crédit)" htmlFor="cancel-reason">
+        <Input id="cancel-reason" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="ex. Résiliation demandée par le client" />
+      </Field>
+
+      {!nothing ? <p className="rounded-lg bg-surface-muted p-3 text-sm">{summary}</p> : null}
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+        <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
+        Je confirme : c&apos;est définitif (une note de crédit ne s&apos;annule pas).
+      </label>
+      <Button type="submit" variant="danger" loading={pending} disabled={!confirm || nothing || (refund === "partial" && !(amountCents > 0 && amountCents <= (last?.refundableCents ?? 0)))}>
+        {when === "refund_only" ? "Rembourser" : refund === "none" ? "Annuler l'abonnement" : "Annuler et rembourser"}
+      </Button>
+      {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
+    </form>
   );
 }

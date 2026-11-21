@@ -15,10 +15,17 @@ export async function BillingInvoices({ businessId, brand }: { businessId: strin
     open: { label: t("À payer"), tone: "warning" as const },
     void: { label: t("Annulée"), tone: "neutral" as const },
     uncollectible: { label: t("Impayée"), tone: "danger" as const },
+    credit: { label: t("Note de crédit"), tone: "accent" as const },
   };
+  const statusOf = (i: (typeof invoices)[number]) =>
+    i.kind === "invoice" && i.status === "paid" && i.creditedCents > 0
+      ? i.creditedCents >= i.totalCents
+        ? { label: t("Remboursée"), tone: "neutral" as const }
+        : { label: t("Remboursée en partie"), tone: "neutral" as const }
+      : STATUS[i.status];
   return (
     <Card id="factures">
-      <CardHeader title={t("Vos factures")} description={t("Les factures de votre abonnement {brand}, à télécharger en PDF. Elles vous sont aussi envoyées par email.", { brand })} />
+      <CardHeader title={t("Vos factures")} description={t("Les factures de votre abonnement {brand} et les notes de crédit (remboursements), à télécharger en PDF. Elles vous sont aussi envoyées par email.", { brand })} />
       {invoices.length === 0 ? (
         <div className="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted">
           <FileText className="size-8" aria-hidden="true" />
@@ -29,12 +36,12 @@ export async function BillingInvoices({ businessId, brand }: { businessId: strin
           {invoices.map((i) => (
             <li key={i.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t("Facture")} {i.number ?? ""}</p>
-                <p className="text-xs text-muted">{day(i.date)}</p>
+                <p className="text-sm font-medium">{i.kind === "credit_note" ? t("Note de crédit") : t("Facture")} {i.number ?? ""}</p>
+                <p className="text-xs text-muted">{day(i.date)}{i.ofInvoice ? ` · ${t("sur la facture {n}", { n: i.ofInvoice })}` : ""}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold tabular-nums">{money(i.totalCents, i.currency)}</span>
-                <Badge tone={STATUS[i.status].tone}>{STATUS[i.status].label}</Badge>
+                <Badge tone={statusOf(i).tone}>{statusOf(i).label}</Badge>
                 {i.payUrl ? (
                   <a href={i.payUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                     {t("Payer")} <ExternalLink className="size-3.5" aria-hidden="true" />

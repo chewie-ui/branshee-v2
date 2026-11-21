@@ -10,6 +10,7 @@ import { requireSuperadmin } from "@/server/admin";
 import { billableUsers, isSkydevItemPrice, lockedProPrice, planFromStripePrice, skydevPriceForBusiness, syncSubscription } from "@/server/billing";
 import { MAX_USERS } from "@/lib/skydev-plans";
 import { stripe } from "@/server/payments";
+import { adminSubInfo } from "@/server/admin-billing";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -146,4 +147,66 @@ export async function setUserDisabled(userId: string, disabled: boolean): Promis
   if (disabled) await db.delete(sessions).where(eq(sessions.userId, id));
   revalidatePath("/admin", "layout");
   return { ok: true };
+}
+
+/**
+ * Annule l'abonnement d'un établissement (tout de suite ou à l'échéance), avec ou sans remboursement.
+ * Remboursement = NOTE DE CRÉDIT sur la dernière facture payée (une facture payée ne s'efface pas) :
+ * Stripe l'envoie au client par email, rembourse sa carte (ou note un remboursement par virement si la facture
+ * avait été payée hors carte), et elle apparaît dans ses Factures et cartes.
+ */
+export async function adminCancelSubscription(
+  businessId: string,
+  input: { when: "now" | "period_end" | "refund_only"; refund: "none" | "full" | "partial"; amount?: number; reason?: string },
+): Promise<Result> {
+  const admin = await requireSuperadmin();
+  const id = z.uuid().parse(businessId);
+  const s = stripe();
+  if (!s) return { ok: false, error: "Stripe n'est pas configuré." };
+  if (!["now", "period_end", "refund_only"].includes(input.when) || !["none", "full", "partial"].includes(input.refund)) return { ok: false, error: "Choix invalide." };
+  if (input.when === "refund_only" && input.refund === "none") return { ok: false, error: "Rien à faire : choisissez une annulation ou un remboursement." };
+  const info = await adminSubInfo(id);
+  if (!info.subscription) return { ok: false, error: "Aucun abonnement Stripe pour cet établissement." };
+  const reason = String(input.reason ?? "").trim().slice(0, 300);
+
+  // 1. Remboursement (note de crédit), avant l'annulation : si ça échoue, rien n'est annulé.
+  let refundText = "";
+  if (input.refund !== "none") {
+    const last = info.lastPaid;
+    if (!last || last.refundableCents <= 0) return { ok: false, error: "Aucune facture payée à rembourser sur cet abonnement." };
+    const cents = input.refund === "full" ? last.refundableCents : Math.round(Number(input.amount) * 100);
+    if (!Number.isFinite(cents) || cents <= 0 || cents > last.refundableCents) return { ok: false, error: `Indiquez un montant entre 0,01 € et ${(last.refundableCents / 100).toFixed(2).replace(".", ",")} €.` };
+    try {
+      const cn = await s.creditNotes.create({
+        invoice: last.id,
+        amount: cents,
+        ...(last.outOfBand ? { out_of_band_amount: cents } : { refund_amount: cents }),
+        reason: "order_change",
+        memo: reason || (input.when === "refund_only" ? "Remboursement" : "Annulation de l'abonnement et remboursement"),
+        email_type: "credit_note",
+        metadata: { businessId: id, by: "admin" },
+      });
+      refundText = ` Note de crédit ${cn.number} de ${(cents / 100).toFixed(2).replace(".", ",")} € sur la facture ${last.number ?? ""}${last.outOfBand ? " (payée hors carte : remboursez le client par virement)" : ", remboursée sur sa carte"}.`;
+    } catch (e) {
+      console.error("[admin] note de crédit :", e);
+      return { ok: false, error: `Le remboursement a échoué chez Stripe : ${e instanceof Error ? e.message : "erreur"}. Rien n'a été annulé.` };
+    }
+  }
+
+  // 2. Annulation.
+  let cancelText = "";
+  if (input.when !== "refund_only") {
+    const sub =
+      input.when === "now"
+        ? await s.subscriptions.cancel(info.subscription.id, { prorate: false, invoice_now: false, cancellation_details: { comment: reason || "Annulé par l'équipe Skydev" } })
+        : await s.subscriptions.update(info.subscription.id, { cancel_at_period_end: true, cancellation_details: { comment: reason || "Annulé par l'équipe Skydev" } });
+    await syncSubscription(sub);
+    cancelText = input.when === "now" ? " Abonnement annulé tout de suite." : " Abonnement annulé à l'échéance (il garde l'accès jusque-là).";
+  }
+
+  const description = `Abonnement :${cancelText}${refundText}${reason ? ` Motif : ${reason}` : ""}`.trim();
+  await db.insert(activityLogs).values({ businessId: id, userId: admin.id, actorName: "Équipe Skydev", action: "admin.subscription-cancel", description });
+  revalidatePath("/admin", "layout");
+  revalidatePath("/app", "layout");
+  return { ok: true, message: `C'est fait.${cancelText}${refundText}` };
 }

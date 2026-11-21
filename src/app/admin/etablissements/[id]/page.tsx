@@ -9,7 +9,8 @@ import { db } from "@/db";
 import { activityLogs, appointments, bookingPageSettings, businesses, members, services, subscriptions, users } from "@/db/schema";
 import { AdminEmbedCode } from "@/components/admin/embed-code";
 import { resolveTheme } from "@/lib/booking-theme";
-import { GrantPlanForm, LockedPriceForm, PauseToggle, UserPricingForm } from "@/components/admin/admin-actions";
+import { CancelSubscriptionForm, GrantPlanForm, LockedPriceForm, PauseToggle, UserPricingForm } from "@/components/admin/admin-actions";
+import { adminSubInfo } from "@/server/admin-billing";
 import { countBilledUsers } from "@/server/billing";
 import { pricingFrom, teamQuote } from "@/lib/skydev-plans";
 import { businessPlans } from "@/db/schema";
@@ -52,7 +53,7 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
     db.select({ id: activityLogs.id, at: activityLogs.createdAt, actor: activityLogs.actorName, description: activityLogs.description }).from(activityLogs).where(eq(activityLogs.businessId, b.id)).orderBy(desc(activityLogs.createdAt)).limit(10),
   ]);
 
-  const eff = await effectivePlan(b.id);
+  const [eff, subInfo] = await Promise.all([effectivePlan(b.id), adminSubInfo(b.id)]);
   const [lock] = await db.select({ cents: businessPlans.lockedPriceCents, offeredUsers: businessPlans.offeredUsers, userPriceCents: businessPlans.userPriceCents, extraUserPriceCents: businessPlans.extraUserPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, b.id));
   const isSkydev = (b.brand ?? (await currentBrand()).id) === "skydev";
   const pricing = pricingFrom(lock);
@@ -131,6 +132,15 @@ export default async function AdminBusiness({ params }: { params: Promise<{ id: 
             </div>
           </Card>
         )}
+
+        {subInfo.subscription ? (
+          <Card>
+            <CardHeader title="Annuler ou rembourser l'abonnement" description="Annulation tout de suite ou à l'échéance, avec ou sans remboursement. Un remboursement crée une note de crédit (la facture payée reste, la note de crédit la compense)." />
+            <div className="p-5">
+              <CancelSubscriptionForm businessId={b.id} info={subInfo} />
+            </div>
+          </Card>
+        ) : null}
 
         {!b.deletedAt ? (
           <Card>

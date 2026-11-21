@@ -3843,4 +3843,8 @@ export const EN: Record<string, string> = {
   "Carte introuvable : choisissez « Payer avec une autre carte ».": "Card not found: choose “Pay with another card”.",
   "Il manque le nom ou l'adresse de facturation : choisissez « Payer avec une autre carte » (ils vous seront demandés une seule fois).": "Your billing name or address is missing: choose “Pay with another card” (asked only once).",
   "Le paiement avec cette carte n'a pas abouti (refus ou confirmation demandée par la banque). Choisissez « Payer avec une autre carte » pour confirmer chez Stripe.": "Payment with this card didn't go through (declined or your bank asked for confirmation). Choose “Pay with another card” to confirm with Stripe.",
+  "Remboursée": "Refunded",
+  "Remboursée en partie": "Partly refunded",
+  "sur la facture {n}": "on invoice {n}",
+  "Les factures de votre abonnement {brand} et les notes de crédit (remboursements), à télécharger en PDF. Elles vous sont aussi envoyées par email.": "Your {brand} subscription invoices and credit notes (refunds), to download as PDF. They are also sent to you by email.",
 };
