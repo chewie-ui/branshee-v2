@@ -61,6 +61,19 @@ export function PersonalizationProvider({ initial, children, notifications = tru
     };
   }, [prefs]);
 
+  // Nouveau curseur choisi : le navigateur ne redessine le curseur qu'au prochain mouvement de la souris. Un voile
+  // invisible posé puis retiré sous la souris (2 images) l'oblige à le recalculer tout de suite.
+  const cursorRef = useRef(prefs.cursor);
+  useEffect(() => {
+    if (cursorRef.current === prefs.cursor) return;
+    cursorRef.current = prefs.cursor;
+    const veil = document.createElement("div");
+    veil.setAttribute("aria-hidden", "true");
+    veil.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:transparent";
+    document.body.appendChild(veil);
+    requestAnimationFrame(() => requestAnimationFrame(() => veil.remove()));
+  }, [prefs.cursor]);
+
   useEffect(() => unlockAudioOnGesture(), []);
 
   const announce = useCallback(
