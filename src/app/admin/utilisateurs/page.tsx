@@ -4,7 +4,8 @@ import { Search } from "lucide-react";
 import { desc, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
-import { DisableUserButton } from "@/components/admin/admin-actions";
+import { DeleteSuspectsButton, DisableUserButton } from "@/components/admin/admin-actions";
+import { suspectAccounts } from "@/server/suspect-accounts";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
@@ -35,6 +36,8 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
     .where(q ? or(ilike(users.email, like), ilike(users.fullName, like)) : undefined)
     .orderBy(desc(users.createdAt))
     .limit(100);
+  const suspects = await suspectAccounts();
+  const suspectIds = new Set(suspects.map((x) => x.id));
 
   return (
     <>
@@ -46,6 +49,16 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
           // eslint-disable-next-line @next/next/no-html-link-for-pages
           <a href="/admin/utilisateurs/export" className="inline-flex h-10 items-center rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Exporter (CSV)</a>}
       />
+      {suspects.length ? (
+        <Card className="mb-4 border-warning/40 p-4">
+          <p className="text-sm">
+            <b>{suspects.length} faux compte{suspects.length > 1 ? "s" : ""} probable{suspects.length > 1 ? "s" : ""}</b> (robots) : email jamais confirmé, nom d&apos;un seul mot tapé au hasard, aucun établissement, aucune équipe, aucune fiche client.
+            Les inscriptions sont maintenant protégées contre ces robots ; ces comptes-là peuvent être supprimés sans rien perdre.
+          </p>
+          <p className="mt-1 text-xs text-muted">{suspects.slice(0, 12).map((x) => x.name).join(", ")}{suspects.length > 12 ? "…" : ""}</p>
+          <div className="mt-3"><DeleteSuspectsButton ids={suspects.map((x) => x.id)} /></div>
+        </Card>
+      ) : null}
       <form className="relative mb-4 max-w-md" role="search">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
         <Input name="q" defaultValue={q} placeholder="Nom ou email" className="pl-9" aria-label="Rechercher un utilisateur" />
@@ -62,6 +75,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                     <Link href={`/admin/utilisateurs/${u.id}`} className="truncate font-medium hover:underline">{u.name}</Link>
                     {u.isSuperadmin ? <Badge tone="accent">Super-admin</Badge> : null}
                     {u.disabledAt ? <Badge tone="danger">Désactivé</Badge> : null}
+                    {suspectIds.has(u.id) ? <Badge tone="warning">Faux compte probable</Badge> : null}
                   </p>
                   <p className="truncate text-sm text-muted">{u.email}</p>
                 </div>

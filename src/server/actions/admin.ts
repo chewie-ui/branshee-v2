@@ -2,7 +2,7 @@
 
 import { TZDate } from "@date-fns/tz";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { activityLogs, businessPlans, businesses, notificationSettings, sessions, users } from "@/db/schema";
@@ -11,6 +11,7 @@ import { billableUsers, isSkydevItemPrice, lockedProPrice, planFromStripePrice, 
 import { MAX_USERS } from "@/lib/skydev-plans";
 import { stripe } from "@/server/payments";
 import { adminSubInfo } from "@/server/admin-billing";
+import { suspectWhere } from "@/server/suspect-accounts";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -223,4 +224,15 @@ export async function markPeppolSent(docId: string, sent: boolean): Promise<Resu
   console.info(`[admin] ${admin.email} · ${docId} : ${sent ? "envoyé par Peppol" : "envoi Peppol annulé"}`);
   revalidatePath("/admin/factures");
   return { ok: true, message: sent ? "Noté comme envoyé par Peppol." : "Remis dans « à envoyer »." };
+}
+
+/** Supprime les faux comptes de robots (liste recalculée ici : seuls ceux qui remplissent encore tous les critères partent). */
+export async function deleteSuspectAccounts(ids: string[]): Promise<Result> {
+  const admin = await requireSuperadmin();
+  const list = z.array(z.uuid()).max(500).safeParse(ids);
+  if (!list.success || !list.data.length) return { ok: false, error: "Aucun compte à supprimer." };
+  const gone = await db.delete(users).where(and(inArray(users.id, list.data), suspectWhere)).returning({ id: users.id });
+  console.info(`[admin] ${admin.email} : ${gone.length} faux comptes supprimés`);
+  revalidatePath("/admin/utilisateurs");
+  return { ok: true, message: `${gone.length} faux compte${gone.length > 1 ? "s" : ""} supprimé${gone.length > 1 ? "s" : ""}.` };
 }

@@ -6,6 +6,7 @@ import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { loginEvents, sessions, users, verificationCodes } from "@/db/schema";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
+import { looksRandomName } from "@/server/auth/bot-guard";
 import { rateLimit, resetRateLimit } from "@/server/auth/rate-limit";
 import { decrypt } from "@/lib/field-crypto";
 import { verifyTotp } from "@/lib/totp";
@@ -92,7 +93,9 @@ async function register(body: Record<string, unknown>) {
   if (!parsed.success) return invalid(parsed.error.issues[0]!.message, { field: String(parsed.error.issues[0]!.path[0]) });
   if (typeof body.confirmPassword === "string" && body.confirmPassword !== parsed.data.password) return invalid("Les mots de passe ne correspondent pas.", { field: "confirmPassword" });
   const m = await meta();
-  if (!rateLimit(`register:${m.ip}`, 10, 60 * 60 * 1000).ok) return fail(429, "rate_limited", "Trop de tentatives. Réessayez dans une heure.");
+  if (!rateLimit(`register:${m.ip}`, 5, 60 * 60 * 1000).ok || !rateLimit("register-api-global", 40, 60 * 60 * 1000).ok) return fail(429, "rate_limited", "Trop de tentatives. Réessayez dans une heure.");
+  // Robots : nom tapé au hasard (« Pxktwyytc ») → refusé, rien n'est créé.
+  if (looksRandomName(parsed.data.fullName)) return invalid("Indiquez votre prénom et votre nom.", { field: "fullName" });
   const { fullName, email, password } = parsed.data;
   const [existing] = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${email}`);
   if (existing) return fail(409, "email_taken", "Un compte existe déjà avec cet email. Connectez-vous.");

@@ -4,6 +4,7 @@ import { featureStatus } from "@/server/features";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
+import { formToken } from "@/server/auth/bot-guard";
 import { Card } from "@/components/ui/card";
 import { getSessionUser } from "@/server/auth/session";
 import { GoogleButton } from "@/components/auth/google-button";
@@ -55,7 +56,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       {sp.ref ? <p className="mt-4 rounded-lg bg-accent-soft p-3 text-center text-sm text-accent-soft-foreground">{en ? `You were invited by a business already on ${brand.name}. Create your business space: free trial, no card.` : `Vous êtes invité par un professionnel déjà sur ${brand.name}. Créez votre espace entreprise : essai gratuit, sans carte.`}</p> : null}
       <Card className="mt-6 p-6">
         {googleConfigured() ? <GoogleButton suite={sp.ref ? undefined : (sp.suite ?? (client ? "/espace-client" : undefined))} refCode={sp.ref?.slice(0, 40)} label={en ? "Sign up with Google" : "S'inscrire avec Google"} locale={l} /> : null}
-        <RegisterForm client={client} next={sp.suite} refCode={sp.ref?.slice(0, 40)} defaults={{ email: sp.email?.slice(0, 200), fullName: sp.nom?.slice(0, 120) }} locale={l} />
+        <RegisterForm client={client} next={sp.suite} refCode={sp.ref?.slice(0, 40)} defaults={{ email: sp.email?.slice(0, 200), fullName: sp.nom?.slice(0, 120) }} locale={l} formToken={formToken("register")} />
       </Card>
       <p className="mt-6 text-center text-sm text-muted">
         {en ? "Already have an account?" : "Déjà un compte ?"}{" "}

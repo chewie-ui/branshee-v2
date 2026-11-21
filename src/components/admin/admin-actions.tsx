@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { adminCancelSubscription, grantPlan, markPeppolSent, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
+import { adminCancelSubscription, deleteSuspectAccounts, grantPlan, markPeppolSent, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
 import type { AdminSubInfo } from "@/server/admin-billing";
 import { MAX_USERS, teamQuote, tierLabels } from "@/lib/skydev-plans";
 
@@ -331,5 +331,27 @@ export function PeppolToggle({ docId, sent }: { docId: string; sent: boolean }) 
       </button>
       {err ? <span className="block text-xs text-danger" role="alert">{err}</span> : null}
     </span>
+  );
+}
+
+/** Supprime d'un coup les faux comptes détectés (confirmation obligatoire). */
+export function DeleteSuspectsButton({ ids }: { ids: string[] }) {
+  const [pending, start] = useTransition();
+  const [confirm, setConfirm] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  if (!ids.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {confirm ? (
+        <>
+          <span className="text-sm">Supprimer définitivement ces {ids.length} comptes ?</span>
+          <Button size="sm" variant="danger" loading={pending} onClick={() => start(async () => { const r = await deleteSuspectAccounts(ids); setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "C'est fait.") : (r.error ?? "Erreur.") }); setConfirm(false); })}>Oui, supprimer</Button>
+          <Button size="sm" variant="ghost" disabled={pending} onClick={() => setConfirm(false)}>Annuler</Button>
+        </>
+      ) : (
+        <Button size="sm" variant="danger" onClick={() => setConfirm(true)}>Supprimer les {ids.length} faux comptes</Button>
+      )}
+      {msg ? <span className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</span> : null}
+    </div>
   );
 }

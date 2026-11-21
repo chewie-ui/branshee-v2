@@ -9,7 +9,7 @@ import { submitKeepingValues } from "@/lib/form";
 import { AUTH_T, authMsg } from "@/lib/auth-i18n";
 import type { SiteLocale } from "@/lib/site-locale";
 
-export function RegisterForm({ client = false, next, refCode, defaults = {}, locale = "fr" }: { client?: boolean; next?: string; refCode?: string; defaults?: { email?: string; fullName?: string }; locale?: SiteLocale }) {
+export function RegisterForm({ client = false, next, refCode, defaults = {}, locale = "fr", formToken }: { client?: boolean; next?: string; refCode?: string; defaults?: { email?: string; fullName?: string }; locale?: SiteLocale; formToken: string }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(register, undefined);
   const f = state?.fieldErrors ?? {};
   const err = { fullName: authMsg(f.fullName, locale), email: authMsg(f.email, locale), password: authMsg(f.password, locale) };
@@ -25,6 +25,12 @@ export function RegisterForm({ client = false, next, refCode, defaults = {}, loc
       {next ? <input type="hidden" name="next" value={next} /> : null}
       {refCode ? <input type="hidden" name="ref" value={refCode} /> : null}
       <input type="hidden" name="lang" value={locale} />
+      <input type="hidden" name="ft" value={formToken} />
+      {/* Champ piège invisible : seuls les robots le remplissent. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="website">Site web</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+      </div>
       <Field label={t.fullName} htmlFor="fullName" error={err.fullName}>
         <Input id="fullName" name="fullName" autoComplete="name" required defaultValue={state?.values?.fullName ?? defaults.fullName} aria-invalid={!!err.fullName || undefined} />
       </Field>

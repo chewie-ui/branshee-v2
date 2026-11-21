@@ -10,6 +10,7 @@ import { loginEvents, pageViews, users } from "@/db/schema";
 import { visitorId } from "@/server/visitor";
 import { burnPasswordCheck, hashPassword, isLegacyHash, verifyPassword } from "@/server/auth/password";
 import { rateLimit, resetRateLimit } from "@/server/auth/rate-limit";
+import { checkBot } from "@/server/auth/bot-guard";
 import { clearPendingTwoFactor, createSession, destroySession, getPendingTwoFactor, setPendingTwoFactor } from "@/server/auth/session";
 import { decrypt } from "@/lib/field-crypto";
 import { verifyTotp } from "@/lib/totp";
@@ -78,7 +79,17 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values };
 
   const meta = await clientMeta();
-  if (!rateLimit(`register:${meta.ip}`, 10, 60 * 60 * 1000).ok) return { error: "Trop de tentatives. Réessayez dans une heure.", values };
+  if (!rateLimit(`register:${meta.ip}`, 5, 60 * 60 * 1000).ok) return { error: "Trop de tentatives. Réessayez dans une heure.", values };
+
+  // Robots (faux comptes avec l'adresse de vraies personnes, pour les inonder d'emails) : rien n'est créé ni envoyé.
+  const verdict = checkBot("register", formData, { name: parsed.data.fullName });
+  if (verdict.bot) {
+    console.warn(`[inscription] bloquée (${verdict.reason}) · ip ${meta.ip}`);
+    const msg = verdict.reason === "nom au hasard" ? "Indiquez votre prénom et votre nom." : verdict.reason === "trop rapide" ? "Un instant : patientez quelques secondes puis cliquez à nouveau." : "La page a expiré : rechargez-la puis réessayez.";
+    return { error: msg, values };
+  }
+  // Garde-fou global : au-delà, c'est une vague de robots (les vraies inscriptions restent bien en dessous).
+  if (formData.get("kind") === "client" && !rateLimit("register-client-global", 40, 60 * 60 * 1000).ok) return { error: "Inscriptions momentanément suspendues. Réessayez dans une heure.", values };
 
   const { fullName, email, password } = parsed.data;
   const [existing] = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${email}`);

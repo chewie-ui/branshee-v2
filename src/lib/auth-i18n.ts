@@ -2,6 +2,10 @@ import type { SiteLocale } from "@/lib/site-locale";
 
 /** Messages des actions de connexion / inscription, traduits côté navigateur pour le site anglais. */
 const EN: Record<string, string> = {
+  "Indiquez votre prénom et votre nom.": "Enter your first and last name.",
+  "Un instant : patientez quelques secondes puis cliquez à nouveau.": "One moment: wait a few seconds and click again.",
+  "La page a expiré : rechargez-la puis réessayez.": "This page has expired: reload it and try again.",
+  "Inscriptions momentanément suspendues. Réessayez dans une heure.": "Sign-ups are temporarily paused. Try again in an hour.",
   "Adresse email invalide.": "Please enter a valid email address.",
   "Ce compte a été désactivé. Pour en savoir plus, écrivez-nous depuis la page Contact.": "This account has been disabled. To find out more, contact us.",
   "Code incorrect ou expiré.": "Wrong or expired code.",
