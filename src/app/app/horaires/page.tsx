@@ -1,16 +1,14 @@
 import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { format } from "date-fns";
-import { and, asc, eq, gte, isNull } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { bookingSettings, members, scheduleExceptions, weeklyHours } from "@/db/schema";
 import { ExceptionForm, ExceptionList, type ExceptionRow } from "@/components/schedule/exceptions";
 import { ScheduleMode } from "@/components/schedule/schedule-mode";
-import { WeeklyHoursEditor } from "@/components/schedule/weekly-hours-editor";
+import { MemberHours, type HoursGrid } from "@/components/schedule/member-hours";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn } from "@/lib/cn";
 import { formatDay, zoned } from "@/lib/time";
 import { requireContext } from "@/server/context";
 import { appMetadata } from "@/server/app-locale";
@@ -42,26 +40,25 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
   const selected = mode === "per_member" ? (team.find((m) => m.id === membre) ?? team.find((m) => m.id === ctx.member.id) ?? team[0]) : undefined;
   const editingMemberId = selected?.id ?? null;
 
-  const canEditWeek =
-    editingMemberId === null
-      ? ctx.can("availability.manageShared")
-      : ctx.can(editingMemberId === ctx.member.id ? "availability.manageOwnSchedule" : "availability.manageOthersSchedule");
+  const canEditFor = (memberId: string | null) =>
+    memberId === null ? ctx.can("availability.manageShared") : ctx.can(memberId === ctx.member.id ? "availability.manageOwnSchedule" : "availability.manageOthersSchedule");
 
+  // Toutes les grilles d'un coup (une requête) : le passage d'un membre à l'autre se fait sans recharger la page.
   const hours = await db
     .select()
     .from(weeklyHours)
-    .where(and(eq(weeklyHours.businessId, bid), editingMemberId === null ? isNull(weeklyHours.memberId) : eq(weeklyHours.memberId, editingMemberId)))
+    .where(and(eq(weeklyHours.businessId, bid), mode === "per_member" ? isNotNull(weeklyHours.memberId) : isNull(weeklyHours.memberId)))
     .orderBy(asc(weeklyHours.weekday), asc(weeklyHours.startTime));
-  const week: Record<number, { start: string; end: string }[]> = {};
-  for (const h of hours) (week[h.weekday] ??= []).push({ start: hhmm(h.startTime), end: hhmm(h.endTime) });
-
-  // Résumé de la semaine type : jours ouverts, heures, créneaux théoriques.
-  const minutesOf = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-  const weekMin = Object.values(week).flat().reduce((n, r) => n + Math.max(0, minutesOf(r.end) - minutesOf(r.start)), 0);
-  const openDays = Object.values(week).filter((r) => r.length).length;
+  const weekOf = (memberId: string | null) => {
+    const week: Record<number, { start: string; end: string }[]> = {};
+    for (const h of hours) if ((h.memberId ?? null) === memberId) (week[h.weekday] ??= []).push({ start: hhmm(h.startTime), end: hhmm(h.endTime) });
+    return week;
+  };
+  const grids: HoursGrid[] =
+    mode === "per_member"
+      ? team.map((m) => ({ id: m.id, name: m.name, isMe: m.id === ctx.member.id, week: weekOf(m.id), canEdit: canEditFor(m.id) }))
+      : [{ id: null, name: "", isMe: false, week: weekOf(null), canEdit: canEditFor(null) }];
   const interval = settings?.slotIntervalMin ?? 30;
-  const slotsPerWeek = Object.values(week).flat().reduce((n, r) => n + Math.max(0, Math.floor((minutesOf(r.end) - minutesOf(r.start)) / interval)), 0);
-  const fmtH = (m: number) => `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, "0") : ""}`;
 
   // Congés et fermetures à venir, et à qui l'utilisateur peut en ajouter.
   const exRows = await db.select().from(scheduleExceptions).where(and(eq(scheduleExceptions.businessId, bid), gte(scheduleExceptions.date, today))).orderBy(asc(scheduleExceptions.date)).limit(200);
@@ -94,35 +91,7 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
         {team.length > 1 ? <ScheduleMode value={mode} canEdit={ctx.can("availability.manageShared")} /> : null}
 
         <Card className="overflow-hidden">
-          <CardHeader
-            title={mode === "shared" ? t("Horaires de la semaine") : `Horaires de ${selected?.name ?? ""}`}
-            description={mode === "shared" ? t("Valables pour toute l'équipe.") : t("Chaque membre a sa propre grille.")}
-          />
-          {mode === "per_member" && team.length > 1 ? (
-            <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3" role="group" aria-label={t("Choisir le membre")}>
-              {team.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/app/horaires?membre=${m.id}`}
-                  aria-current={m.id === selected?.id ? "true" : undefined}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-sm font-medium",
-                    m.id === selected?.id ? "border-accent bg-accent-soft text-accent-soft-foreground" : "border-border bg-surface text-muted hover:text-text",
-                  )}
-                >
-                  {m.name}
-                  {m.id === ctx.member.id ? " (moi)" : ""}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-surface-muted px-5 py-3 text-sm">
-            <span><strong className="tabular-nums">{openDays}</strong> jour{openDays > 1 ? "s" : ""} ouvert{openDays > 1 ? "s" : ""}</span>
-            <span><strong className="tabular-nums">{fmtH(weekMin)}</strong> par semaine</span>
-            <span title={`Départs possibles toutes les ${interval} min`}>≈ <strong className="tabular-nums">{slotsPerWeek}</strong> créneaux de {interval} min</span>
-            <Link href={appPagePath(ctx.business.slug)} target="_blank" className="ml-auto font-medium text-accent hover:text-accent-hover">{t("Voir comme un client ↗")}</Link>
-          </div>
-          <WeeklyHoursEditor key={`${mode}-${editingMemberId}`} memberId={editingMemberId} initial={week} canEdit={canEditWeek} />
+          <MemberHours mode={mode} grids={grids} initialId={editingMemberId} interval={interval} previewHref={appPagePath(ctx.business.slug)} />
         </Card>
 
         <Card className="overflow-hidden" data-tour="exceptions">

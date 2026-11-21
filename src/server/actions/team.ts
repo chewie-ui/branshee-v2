@@ -11,7 +11,8 @@ import { NO_PERMISSIONS, PERMISSIONS, type Permissions } from "@/lib/permissions
 import { requireContext, type AppContext } from "@/server/context";
 import { sendEmail } from "@/server/email/mailer";
 import { businessHas, collaboratorUsage } from "@/server/plan";
-import { syncSkydevUsers } from "@/server/billing";
+import { brandOrigin, syncSkydevUsers } from "@/server/billing";
+import { businessBrand } from "@/server/brand";
 import { emails } from "@/server/email/templates";
 import { savePublicImage } from "@/server/storage";
 
@@ -34,6 +35,13 @@ const addSchema = z.object({
   gradeId: z.string(),
   isBookable: z.boolean(),
 });
+
+/** Email d'invitation, avec le lien de la marque de l'établissement (pro.skydev.be ou branshee.com). */
+async function sendInvite(ctx: AppContext, email: string, hasAccount: boolean) {
+  const appUrl = brandOrigin(businessBrand(ctx.business)).replace(/\/$/, "");
+  const mail = emails.teamInvitation({ businessName: ctx.business.name, inviterName: ctx.user.name, hasAccount, url: hasAccount ? `${appUrl}/app/etablissements` : `${appUrl}/inscription?email=${encodeURIComponent(email)}` });
+  await sendEmail({ ...mail, to: email, template: "team_invitation", businessId: ctx.business.id });
+}
 
 /** Ajoute un membre. Avec un email, il est relié à son compte (existant ou créé plus tard). */
 export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamState> {
@@ -77,9 +85,7 @@ export async function addMember(_prev: TeamState, fd: FormData): Promise<TeamSta
     joinedAt: v.email ? null : new Date(),
   });
   if (v.email) {
-    const appUrl = (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
-    const mail = emails.teamInvitation({ businessName: ctx.business.name, inviterName: ctx.user.name, hasAccount: !!userId, url: userId ? `${appUrl}/app/etablissements` : `${appUrl}/inscription?email=${encodeURIComponent(v.email)}` });
-    await sendEmail({ ...mail, to: v.email, template: "team_invitation", businessId: ctx.business.id });
+    await sendInvite(ctx, v.email, !!userId);
   }
   await log(ctx, "team.add", `Membre ajouté : ${v.displayName}`);
   await syncSkydevUsers(ctx.business.id).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
@@ -261,4 +267,41 @@ export async function setMemberPhoto(memberId: string, fd: FormData): Promise<{ 
   // Sans photo d'équipe : celle du compte (par défaut).
   const [u] = !url && m.userId ? await db.select({ a: users.avatarUrl }).from(users).where(eq(users.id, m.userId)) : [];
   return { ok: true, url: url ?? u?.a ?? null };
+}
+
+/**
+ * Membre ajouté sans email : on lui donne un accès plus tard. Il garde sa fiche (agenda, horaires, rendez-vous).
+ * Compte existant avec cette adresse vérifiée → relié tout de suite ; sinon il est relié quand il crée son compte
+ * avec cette adresse et la confirme (voir linkInvitations). L'email peut être changé ou retiré tant qu'il n'est pas relié.
+ */
+export async function setMemberAccessEmail(memberId: string, rawEmail: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const ctx = await requireContext("team.manage", { write: true, app: "employes" });
+  if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
+  const id = z.uuid().safeParse(memberId);
+  if (!id.success) return { ok: false, error: "Membre introuvable." };
+  const [m] = await db.select().from(members).where(and(eq(members.id, id.data), eq(members.businessId, ctx.business.id)));
+  if (!m || m.status !== "active") return { ok: false, error: "Membre introuvable." };
+  if (m.userId) return { ok: false, error: "Ce membre a déjà son propre accès." };
+  const email = rawEmail.trim().toLowerCase();
+  if (!email) {
+    await db.update(members).set({ inviteEmail: null }).where(eq(members.id, m.id));
+    await log(ctx, "team.invite_cancel", `Invitation annulée : ${m.displayName}`);
+    revalidatePath(`/app/equipe/${m.id}`);
+    revalidatePath("/app/equipe");
+    return { ok: true, message: "Invitation annulée." };
+  }
+  if (!z.email().safeParse(email).success) return { ok: false, error: "Email invalide." };
+  const [dup] = await db.select({ id: members.id }).from(members).where(and(eq(members.businessId, ctx.business.id), sql`lower(${members.inviteEmail}) = ${email}`, sql`${members.id} <> ${m.id}`));
+  const [u] = await db.select({ id: users.id, verified: users.emailVerifiedAt }).from(users).where(sql`lower(${users.email}) = ${email}`);
+  const [inTeam] = u ? await db.select({ id: members.id }).from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.userId, u.id))) : [];
+  if (dup || inTeam) return { ok: false, error: "Cette adresse est déjà utilisée par un autre membre de l'équipe." };
+  // Compte existant et confirmé : relié tout de suite (accès immédiat) ; sinon, relié à la création du compte.
+  const linkNow = !!u?.verified;
+  await db.update(members).set({ inviteEmail: email, ...(linkNow ? { userId: u!.id } : {}) }).where(eq(members.id, m.id));
+  await sendInvite(ctx, email, !!u);
+  await log(ctx, "team.invite", `Accès envoyé à ${m.displayName} (${email})`);
+  await syncSkydevUsers(ctx.business.id).catch((e) => console.error("[billing] utilisateurs Skydev :", e));
+  revalidatePath(`/app/equipe/${m.id}`);
+  revalidatePath("/app/equipe");
+  return { ok: true, message: linkNow ? `${m.displayName} a maintenant accès avec son compte (${email}).` : `Invitation envoyée à ${email}. ${m.displayName} aura accès dès qu'il aura créé son compte avec cette adresse.` };
 }

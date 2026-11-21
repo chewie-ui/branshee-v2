@@ -36,7 +36,7 @@ export function AddMemberForm({ grades, defaultGradeId }: { grades: Grade[]; def
             <Input id="roleLabel" name="roleLabel" maxLength={60} />
           </Field>
         </div>
-        <Field label={t("Email (facultatif)")} htmlFor="email" error={err.email} hint={t("Pour qu'il puisse se connecter : il reçoit une invitation, crée son compte avec cette adresse, confirme son e-mail puis accepte l'invitation.")}>
+        <Field label={t("Email (facultatif)")} htmlFor="email" error={err.email} hint={t("Avec un email, il reçoit une invitation et pourra se connecter. Sans email, il apparaît dans l'agenda et peut recevoir des rendez-vous, mais sans accès : vous pourrez ajouter son email plus tard depuis sa fiche.")}>
           <Input id="email" name="email" type="email" aria-invalid={!!err.email || undefined} />
         </Field>
         <Field label="Grade" htmlFor="gradeId" hint={t("Définit ce qu'il peut voir et faire dans l'espace pro.")}>

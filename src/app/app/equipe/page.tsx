@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { grades, members } from "@/db/schema";
+import { grades, members, users } from "@/db/schema";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -26,9 +26,10 @@ export default async function TeamPage() {
   const ctx = await requireContext("team.view");
   const canManage = ctx.can("team.manage");
   const rows = await db
-    .select({ m: members, gradeName: grades.name, photo: memberPhotoSql })
+    .select({ m: members, gradeName: grades.name, photo: memberPhotoSql, email: users.email })
     .from(members)
     .leftJoin(grades, eq(grades.id, members.gradeId))
+    .leftJoin(users, eq(users.id, members.userId))
     .where(and(eq(members.businessId, ctx.business.id), inArray(members.status, ["active", "invited"])))
     .orderBy(asc(members.createdAt));
   const requests = canManage ? await db.select().from(members).where(and(eq(members.businessId, ctx.business.id), eq(members.status, "requested"))).orderBy(asc(members.createdAt)) : [];
@@ -58,7 +59,7 @@ export default async function TeamPage() {
       ) : null}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-border">
-          {rows.map(({ m, gradeName, photo }) => {
+          {rows.map(({ m, gradeName, photo, email }) => {
             const content = (
               <>
                 <Avatar name={m.displayName} src={photo} />
@@ -67,11 +68,12 @@ export default async function TeamPage() {
                     {m.displayName}
                     {m.id === ctx.member.id ? <span className="text-sm font-normal text-muted">{t("(vous)")}</span> : null}
                   </p>
-                  <p className="truncate text-sm text-muted">{m.roleLabel ?? (m.inviteEmail && !m.userId ? m.inviteEmail : "—")}</p>
+                  <p className="truncate text-sm text-muted">{m.roleLabel ?? (canManage ? (email ?? m.inviteEmail) : null) ?? (m.userId ? "—" : t("Sans email"))}</p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   {m.isOwner ? <Badge tone="accent">Propriétaire</Badge> : gradeName ? <Badge>{gradeName}</Badge> : null}
-                  {m.status === "invited" ? <Badge tone="warning">{t("Invitation en attente")}</Badge> : null}
+                  {m.status === "invited" || (!m.userId && m.inviteEmail) ? <Badge tone="warning">{t("Invitation en attente")}</Badge> : null}
+                  {m.status === "active" && !m.userId && !m.inviteEmail ? <Badge>{t("Sans accès")}</Badge> : null}
                   {!m.isActive ? <Badge tone="danger">Désactivé</Badge> : null}
                   {!m.isBookable ? <Badge>{t("Non réservable")}</Badge> : null}
                 </div>
