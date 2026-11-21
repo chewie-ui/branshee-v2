@@ -7,7 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
 import { ADDONS, LIMITS, PLANS, PLAN_RANK, eur, excludingVat, type Plan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
-import { cancelPlan, checkPromo, choosePlan, claimReferral, openBillingPortal, resumePlan, setCustomUrlAddon, setExtraSeats } from "@/server/actions/billing";
+import { cancelPlan, checkPromo, choosePlan, claimReferral, resumePlan, setCustomUrlAddon, setExtraSeats } from "@/server/actions/billing";
 
 type Current = { plan: Plan; source: string; status: string; periodEnd: string | null; cancelAtPeriodEnd: boolean; grantedUntil: string | null; isTrial: boolean; extraSeats: number; customUrlAddon: boolean; interval: "month" | "year" | null };
 type R = { ok: true; message?: string; url?: string } | { ok: false; error: string };
@@ -92,8 +92,7 @@ export function BillingPanel({
           </div>
           {paid && canManage ? (
             <div className="flex flex-wrap gap-2">
-              <ButtonLink href="#factures" variant="secondary" size="sm">Mes factures</ButtonLink>
-              <Button variant="secondary" size="sm" loading={pending} onClick={() => run(openBillingPortal)}>Carte bancaire</Button>
+              <ButtonLink href="/app/reglages/factures" variant="secondary" size="sm">Factures et cartes</ButtonLink>
               {current.cancelAtPeriodEnd ? <Button size="sm" loading={pending} onClick={() => run(resumePlan)}>Reprendre l&apos;abonnement</Button> : <Button variant="ghost" size="sm" loading={pending} onClick={() => run(cancelPlan)}>Résilier</Button>}
             </div>
           ) : null}

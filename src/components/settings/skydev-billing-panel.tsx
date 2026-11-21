@@ -9,7 +9,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { eur, excludingVat, type Plan } from "@/lib/plans";
 import { PUBLIC_PRICING, SKYDEV_ADDONS, SKYDEV_FEATURES, SKYDEV_NAME, USER_TIERS, teamQuote, tierLabels, type UserPricing } from "@/lib/skydev-plans";
-import { cancelPlan, choosePlan, openBillingPortal, resumePlan, setCustomUrlAddon, setModuleAddon } from "@/server/actions/billing";
+import { cancelPlan, choosePlan, resumePlan, setCustomUrlAddon, setModuleAddon } from "@/server/actions/billing";
 import { useT } from "@/components/app-locale";
 
 export type SkydevCurrent = {
@@ -102,8 +102,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
           </div>
           {paid && canManage ? (
             <div className="flex flex-wrap gap-2">
-              <ButtonLink href="#factures" variant="secondary" size="sm">{t("Mes factures")}</ButtonLink>
-              <Button variant="secondary" size="sm" loading={busy === "portal"} onClick={() => run("portal", openBillingPortal)}>{t("Carte bancaire")}</Button>
+              <ButtonLink href="/app/reglages/factures" variant="secondary" size="sm">{t("Factures et cartes")}</ButtonLink>
               {current.cancelAtPeriodEnd ? (
                 <Button size="sm" loading={busy === "resume"} onClick={() => run("resume", resumePlan)}>{t("Reprendre")}</Button>
               ) : (
