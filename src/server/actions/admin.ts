@@ -210,3 +210,17 @@ export async function adminCancelSubscription(
   revalidatePath("/app", "layout");
   return { ok: true, message: `C'est fait.${cancelText}${refundText}` };
 }
+
+/** Note qu'une facture (ou note de crédit) a été envoyée par Peppol, ou retire cette note. */
+export async function markPeppolSent(docId: string, sent: boolean): Promise<Result> {
+  const admin = await requireSuperadmin();
+  const s = stripe();
+  if (!s) return { ok: false, error: "Stripe n'est pas configuré." };
+  const value = sent ? new Date().toISOString() : "";
+  if (/^in_[A-Za-z0-9]+$/.test(docId)) await s.invoices.update(docId, { metadata: { peppol_sent: value } });
+  else if (/^cn_[A-Za-z0-9]+$/.test(docId)) await s.creditNotes.update(docId, { metadata: { peppol_sent: value } });
+  else return { ok: false, error: "Document introuvable." };
+  console.info(`[admin] ${admin.email} · ${docId} : ${sent ? "envoyé par Peppol" : "envoi Peppol annulé"}`);
+  revalidatePath("/admin/factures");
+  return { ok: true, message: sent ? "Noté comme envoyé par Peppol." : "Remis dans « à envoyer »." };
+}

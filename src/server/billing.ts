@@ -297,6 +297,46 @@ async function syncModules(businessId: string, items: Map<ModuleAddon, string>) 
   }
 }
 
+/**
+ * Facture payée par un client assujetti à la TVA (n° sur la facture) : elle doit aussi partir par Peppol.
+ * Alerte à l'équipe Skydev avec tout ce qu'il faut pour la refaire dans l'outil Peppol.
+ */
+export async function notifyPeppolInvoice(inv: Stripe.Invoice) {
+  if (!inv.customer_tax_ids?.length || inv.metadata?.peppol_alerted) return;
+  const s = stripe();
+  if (!s || !inv.id) return;
+  const to = process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be";
+  const eurs = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
+  const ht = inv.total_excluding_tax ?? inv.total;
+  const line = inv.lines?.data?.[0];
+  const period = line?.period ? `${new Date(line.period.start * 1000).toLocaleDateString("fr-BE")} → ${new Date(line.period.end * 1000).toLocaleDateString("fr-BE")}` : "—";
+  const a = inv.customer_address;
+  const base = (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
+  await sendEmail({
+    to,
+    ...emails.skydevTeamAlert({
+      subject: `Facture ${inv.number ?? ""} à envoyer par Peppol : ${inv.customer_name ?? inv.customer_email ?? ""}`,
+      title: "Facture à envoyer par Peppol",
+      intro: `Ce client a un numéro de TVA : refaites cette facture dans votre outil Peppol avec les mêmes montants, puis marquez-la « envoyée » dans Admin › Factures : ${base}/admin/factures?statut=peppol`,
+      details: [
+        { label: "Facture Stripe", value: inv.number ?? inv.id },
+        { label: "Client", value: inv.customer_name ?? "—" },
+        { label: "N° de TVA", value: inv.customer_tax_ids.map((t) => t.value).join(", ") },
+        { label: "Adresse", value: a ? [a.line1, [a.postal_code, a.city].filter(Boolean).join(" "), a.country].filter(Boolean).join(", ") : "—" },
+        { label: "Objet", value: (line?.description ?? "").replace(/ \(at [^)]*\)$/, "") || "—" },
+        { label: "Période", value: period },
+        { label: "HTVA", value: eurs(ht) },
+        { label: "TVA 21 %", value: eurs(inv.total - ht) },
+        { label: "TVAC", value: eurs(inv.total) },
+      ],
+      note: "Alerte interne automatique : le client n'a pas reçu ce message.",
+    }),
+    template: "peppol_invoice",
+  });
+  // Une seule alerte par facture, même si Stripe renvoie l'événement.
+  await s.invoices.update(inv.id, { metadata: { ...(inv.metadata ?? {}), peppol_alerted: "1" } }).catch(() => {});
+}
+
 async function notifyModuleActivated(businessId: string, key: ModuleAddon) {
   const [b] = await db.select({ name: businesses.name, email: users.email, owner: users.fullName }).from(businesses).innerJoin(users, eq(users.id, businesses.ownerId)).where(eq(businesses.id, businessId));
   if (!b) return;

@@ -3862,4 +3862,7 @@ export const EN: Record<string, string> = {
   "Ex. BE0123456789. Laissez vide si vous n'êtes pas assujetti à la TVA.": "E.g. BE0123456789. Leave empty if you're not VAT-registered.",
   "Coordonnées enregistrées : elles figureront sur vos prochaines factures.": "Details saved: they'll appear on your next invoices.",
   "Il manque l'adresse de facturation : complétez vos coordonnées dans Réglages › Factures et cartes (ou choisissez « Payer avec une autre carte »).": "Your billing address is missing: complete your details in Settings › Invoices & cards (or choose “Pay with another card”).",
+  "Assujetti à la TVA (indépendant ou société) ?": "VAT-registered (self-employed or company)?",
+  "Ajoutez votre n° de TVA": "Add your VAT number",
+  "avant de payer : il sera sur vos factures.": "before paying: it will appear on your invoices.",
 };

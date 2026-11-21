@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { adminCancelSubscription, grantPlan, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
+import { adminCancelSubscription, grantPlan, markPeppolSent, setBusinessPaused, setLockedPrice, setUserDisabled, setUserPricing } from "@/server/actions/admin";
 import type { AdminSubInfo } from "@/server/admin-billing";
 import { MAX_USERS, teamQuote, tierLabels } from "@/lib/skydev-plans";
 
@@ -312,5 +312,24 @@ export function CancelSubscriptionForm({ businessId, info }: { businessId: strin
       </Button>
       {msg ? <p className={msg.ok ? "text-sm text-success" : "text-sm text-danger"} role={msg.ok ? "status" : "alert"}>{msg.text}</p> : null}
     </form>
+  );
+}
+
+/** Factures à envoyer par Peppol : « Envoyée » une fois faite dans l'outil Peppol (ou annuler si erreur). */
+export function PeppolToggle({ docId, sent }: { docId: string; sent: boolean }) {
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <span className="mt-1 block">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => start(async () => { const r = await markPeppolSent(docId, !sent); setErr(r.ok ? null : (r.error ?? "Erreur.")); })}
+        className={sent ? "text-xs text-muted underline-offset-2 hover:underline disabled:opacity-60" : "inline-flex min-h-8 items-center rounded-md border border-border-strong px-2 text-xs font-medium hover:bg-surface-muted disabled:opacity-60"}
+      >
+        {pending ? "…" : sent ? "Annuler" : "Marquer envoyée"}
+      </button>
+      {err ? <span className="block text-xs text-danger" role="alert">{err}</span> : null}
+    </span>
   );
 }

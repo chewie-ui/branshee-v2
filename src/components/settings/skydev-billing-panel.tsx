@@ -217,6 +217,13 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
               ) : (
                 <p className="text-sm text-muted">{t("Seul le titulaire du compte peut gérer l'abonnement.")}</p>
               )}
+              {canManage && !paid ? (
+                <p className="mt-3 text-xs text-muted">
+                  {t("Assujetti à la TVA (indépendant ou société) ?")}{" "}
+                  <Link href="/app/reglages/factures#coordonnees" className="font-medium text-accent hover:text-accent-hover">{t("Ajoutez votre n° de TVA")}</Link>{" "}
+                  {t("avant de payer : il sera sur vos factures.")}
+                </p>
+              ) : null}
               <p className="mt-3 text-xs text-muted">
                 {paid
                   ? t("Quand vous ajoutez ou retirez quelqu'un dans Équipe, l'abonnement s'adapte tout seul, au prorata.")

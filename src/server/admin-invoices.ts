@@ -33,6 +33,9 @@ export type AdminDoc = {
   userId: string | null;
   businessId: string | null;
   businessName: string | null;
+  /** Client assujetti à la TVA (n° sur la facture) : la facture doit aussi partir par Peppol. */
+  peppol: "todo" | "sent" | null;
+  peppolSentAt: Date | null;
 };
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -54,6 +57,13 @@ const ts = (n: number | null | undefined) => (n ? new Date(n * 1000) : null);
 function subscriptionOf(inv: Stripe.Invoice): string | null {
   const s = inv.parent?.subscription_details?.subscription;
   return typeof s === "string" ? s : (s?.id ?? null);
+}
+
+/** Suivi Peppol : à envoyer tant que la date d'envoi n'est pas notée (métadonnée Stripe `peppol_sent`). */
+function peppolOf(b2b: boolean, meta: Stripe.Metadata | null | undefined): Pick<AdminDoc, "peppol" | "peppolSentAt"> {
+  if (!b2b) return { peppol: null, peppolSentAt: null };
+  const sent = meta?.peppol_sent ? new Date(meta.peppol_sent) : null;
+  return sent && !Number.isNaN(sent.getTime()) ? { peppol: "sent", peppolSentAt: sent } : { peppol: "todo", peppolSentAt: null };
 }
 
 export async function listAdminDocuments(): Promise<{ docs: AdminDoc[]; configured: boolean; truncated: boolean }> {
@@ -127,6 +137,7 @@ export async function listAdminDocuments(): Promise<{ docs: AdminDoc[]; configur
       userId,
       businessId,
       businessName: businessId ? (nameOf.get(businessId) ?? null) : null,
+      ...peppolOf(!!inv.customer_tax_ids?.length && ["paid", "open"].includes(inv.status ?? ""), inv.metadata),
     };
   });
 
@@ -159,6 +170,7 @@ export async function listAdminDocuments(): Promise<{ docs: AdminDoc[]; configur
       userId: src?.userId ?? null,
       businessId: src?.businessId ?? null,
       businessName: src?.businessName ?? null,
+      ...peppolOf(!!src?.customerVat && cn.status !== "void", cn.metadata),
     });
   }
 
@@ -170,7 +182,7 @@ export async function listAdminDocuments(): Promise<{ docs: AdminDoc[]; configur
 export function filterDocs(docs: AdminDoc[], f: { status?: string; q?: string; period?: string }) {
   const q = f.q?.trim().toLowerCase() ?? "";
   return docs.filter((d) => {
-    if (f.status === "credit" ? d.kind !== "credit" : f.status && f.status !== "all" && (d.kind !== "invoice" || d.status !== f.status)) return false;
+    if (f.status === "peppol" ? d.peppol !== "todo" : f.status === "credit" ? d.kind !== "credit" : f.status && f.status !== "all" && (d.kind !== "invoice" || d.status !== f.status)) return false;
     if (f.period && !d.date.toISOString().startsWith(f.period)) return false;
     if (q && ![d.number, d.customerName, d.customerEmail, d.customerVat, d.businessName, d.description].some((v) => v?.toLowerCase().includes(q))) return false;
     return true;

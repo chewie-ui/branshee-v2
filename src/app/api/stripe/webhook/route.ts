@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { completeCheckout, syncSubscription } from "@/server/billing";
+import { completeCheckout, syncSubscription, notifyPeppolInvoice } from "@/server/billing";
 import { stripe } from "@/server/payments";
 import { recordError } from "@/server/health";
 import { completeSmsTopup } from "@/server/sms";
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
         break;
       case "invoice.paid":
       case "invoice.payment_failed": {
+        if (event.type === "invoice.paid") await notifyPeppolInvoice(event.data.object).catch((e) => console.error("[peppol] alerte :", e));
         const subId = (event.data.object as unknown as { subscription?: string | null; parent?: { subscription_details?: { subscription?: string } } }).subscription ?? (event.data.object as unknown as { parent?: { subscription_details?: { subscription?: string } } }).parent?.subscription_details?.subscription;
         if (subId) await syncSubscription(await s.subscriptions.retrieve(subId));
         break;

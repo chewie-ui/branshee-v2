@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDay } from "@/lib/time";
 import { requireSuperadmin } from "@/server/admin";
+import { PeppolToggle } from "@/components/admin/admin-actions";
 import { filterDocs, listAdminDocuments, STATUS_LABEL, totalsOf, type AdminDoc } from "@/server/admin-invoices";
 
 export const metadata: Metadata = { title: "Factures" };
@@ -20,6 +21,7 @@ const FILTERS = [
   { value: "open", label: "À payer" },
   { value: "void", label: "Annulées" },
   { value: "credit", label: "Notes de crédit" },
+  { value: "peppol", label: "Peppol à envoyer" },
 ];
 
 function tone(d: AdminDoc) {
@@ -45,6 +47,7 @@ export default async function AdminInvoices({ searchParams }: { searchParams: Pr
     const s = u.toString();
     return s ? `/admin/factures?${s}` : "/admin/factures";
   };
+  const peppolTodo = docs.filter((d) => d.peppol === "todo").length;
   const exportHref = `/admin/factures/export${period ? `?periode=${period}` : ""}`;
 
   return (
@@ -64,6 +67,12 @@ export default async function AdminInvoices({ searchParams }: { searchParams: Pr
         <Card className="p-5 text-sm text-muted">Stripe n&apos;est pas configuré sur ce serveur.</Card>
       ) : (
         <>
+          {peppolTodo ? (
+            <p className="mb-4 rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm text-warning" role="status">
+              <b>{peppolTodo} document{peppolTodo > 1 ? "s" : ""} à envoyer par Peppol</b> : ces clients ont un n° de TVA, la facture doit aussi partir par Peppol (refaites-la dans votre outil Peppol avec les mêmes montants, puis « Marquer envoyée »).{" "}
+              <Link href={href({ statut: "peppol" })} className="font-medium underline">Voir la liste</Link>
+            </p>
+          ) : null}
           <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
               { label: "Encaissé TVAC", value: eur(t.ttc), sub: `${t.paid} facture${t.paid > 1 ? "s" : ""} payée${t.paid > 1 ? "s" : ""}` },
@@ -89,7 +98,7 @@ export default async function AdminInvoices({ searchParams }: { searchParams: Pr
             <nav aria-label="Statut" className="flex flex-wrap gap-1">
               {FILTERS.map((f) => (
                 <Link key={f.value} href={href({ statut: f.value })} aria-current={status === f.value ? "page" : undefined} className={`rounded-lg px-3 py-2 text-sm font-medium ${status === f.value ? "bg-accent-soft text-accent-soft-foreground" : "text-muted hover:bg-surface-muted hover:text-text"}`}>
-                  {f.label}
+                  {f.label}{f.value === "peppol" && peppolTodo ? ` (${peppolTodo})` : ""}
                 </Link>
               ))}
             </nav>
@@ -151,6 +160,13 @@ export default async function AdminInvoices({ searchParams }: { searchParams: Pr
                       <td className="px-3 py-3">
                         <Badge tone={tone(d)}>{d.kind === "credit" ? (d.status === "void" ? "Note annulée" : "Note de crédit") : (STATUS_LABEL[d.status] ?? d.status)}</Badge>
                         {d.paidAt ? <span className="mt-1 block text-xs text-muted">le {formatDay(d.paidAt, TZ, "d MMM")}</span> : null}
+                        {d.peppol ? (
+                          <span className="mt-2 block">
+                            <Badge tone={d.peppol === "sent" ? "success" : "warning"}>{d.peppol === "sent" ? "Peppol envoyée" : "Peppol à envoyer"}</Badge>
+                            {d.peppolSentAt ? <span className="block text-xs text-muted">le {formatDay(d.peppolSentAt, TZ, "d MMM")}</span> : null}
+                            <PeppolToggle docId={d.id} sent={d.peppol === "sent"} />
+                          </span>
+                        ) : null}
                       </td>
                       <td className="px-5 py-3">
                         <span className="flex justify-end gap-1">
