@@ -8,7 +8,9 @@
  * - `advanceOnClick` : un clic sur l'élément passe à l'étape suivante (liens qui changent de page).
  */
 export type TourStep = { path: string; go?: string; target?: string; title: string; body: string; advanceOnClick?: boolean };
-export type Tour = { key: string; icon: string; title: string; desc: string; steps: TourStep[] };
+/** Icône de la visite (dessin Lucide, voir TOUR_ICONS dans le centre d'aide). */
+export type TourIcon = "rocket" | "tag" | "users" | "target" | "user" | "notebook" | "dayOff" | "clock" | "profile" | "invite" | "questionnaire" | "shield";
+export type Tour = { key: string; icon: TourIcon; title: string; desc: string; steps: TourStep[] };
 
 const HOURS = "^/app/horaires$";
 const NEW_SERVICE = "^/app/prestations/nouvelle$";
@@ -17,7 +19,7 @@ const SAVE = "main form button[type=submit]";
 export const TOURS: Tour[] = [
   {
     key: "onboarding",
-    icon: "🚀",
+    icon: "rocket",
     title: "Bien démarrer",
     desc: "Horaires, première prestation et couleurs de votre page, en moins de 5 minutes.",
     steps: [
@@ -31,7 +33,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "service",
-    icon: "🏷️",
+    icon: "tag",
     title: "Créer une prestation",
     desc: "Ajouter une prestation (nom, prix, durée, couleur), étape par étape.",
     steps: [
@@ -45,7 +47,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "groupSessions",
-    icon: "🧘",
+    icon: "users",
     title: "Créer un cours collectif",
     desc: "Une séance à plusieurs participants (yoga, atelier, cours de groupe).",
     steps: [
@@ -57,7 +59,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "editServiceTargeting",
-    icon: "🎯",
+    icon: "target",
     title: "Proposer une prestation selon la réponse",
     desc: "Poser une question avant la réservation et n'afficher que les prestations adaptées.",
     steps: [
@@ -67,7 +69,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "clientView",
-    icon: "👤",
+    icon: "user",
     title: "Voir la fiche d'un client",
     desc: "Toutes les infos d'un client : aperçu, rendez-vous et dossier de suivi.",
     steps: [
@@ -79,7 +81,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "clientNote",
-    icon: "📝",
+    icon: "notebook",
     title: "Écrire dans un dossier client",
     desc: "Ajouter une note de suivi datée (constat, à faire, PDF).",
     steps: [
@@ -90,7 +92,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "daysOff",
-    icon: "🌴",
+    icon: "dayOff",
     title: "Ajouter un congé",
     desc: "Bloquer une date ou une période pour ne plus recevoir de réservations.",
     steps: [
@@ -102,7 +104,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "availability",
-    icon: "🕒",
+    icon: "clock",
     title: "Mes disponibilités",
     desc: "Activer vos jours d'ouverture et régler vos horaires.",
     steps: [
@@ -112,7 +114,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "settings",
-    icon: "⚙️",
+    icon: "profile",
     title: "Modifier mon profil",
     desc: "Changer votre nom, votre photo et vos informations de compte.",
     steps: [
@@ -122,7 +124,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "collaborators",
-    icon: "🤝",
+    icon: "invite",
     title: "Inviter un collaborateur",
     desc: "Ajouter un membre à votre équipe et lui attribuer un grade.",
     steps: [
@@ -134,7 +136,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "questionnaire",
-    icon: "📋",
+    icon: "questionnaire",
     title: "Créer un questionnaire",
     desc: "Poser des questions à vos clients avant qu'ils confirment leur réservation.",
     steps: [
@@ -144,7 +146,7 @@ export const TOURS: Tour[] = [
   },
   {
     key: "cancellationPolicy",
-    icon: "🛡️",
+    icon: "shield",
     title: "Politique d'annulation",
     desc: "Configurer une retenue automatique en cas d'annulation tardive ou d'absence.",
     steps: [

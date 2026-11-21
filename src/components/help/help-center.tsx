@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, PlayCircle, Search } from "lucide-react";
 import { startTour } from "@/components/app/guided-tour";
 import { Card, CardHeader } from "@/components/ui/card";
-import { TOURS } from "@/lib/tours";
+import { CalendarOff, ChevronDown, ChevronRight, ClipboardList, Clock, NotebookPen, PlayCircle, Rocket, Search, ShieldCheck, Tag, Target, UserCog, UserPlus, UserRound, Users, type LucideIcon } from "lucide-react";
+import { TOURS, type TourIcon } from "@/lib/tours";
+
+const TOUR_ICONS: Record<TourIcon, LucideIcon> = { rocket: Rocket, tag: Tag, users: Users, target: Target, user: UserRound, notebook: NotebookPen, dayOff: CalendarOff, clock: Clock, profile: UserCog, invite: UserPlus, questionnaire: ClipboardList, shield: ShieldCheck };
+function TourGlyph({ icon }: { icon: TourIcon }) {
+  const Icon = TOUR_ICONS[icon];
+  return <Icon className="size-5" />;
+}
 import { useT } from "@/components/app-locale";
 
 type Section = { id: string; title: string; videos: { id: string; title: string; url: string; duration?: string }[]; faqs: { id: string; question: string; answerHtml: string; answerText: string }[] };
@@ -61,7 +67,9 @@ export function HelpCenter({ sections, toursTitle: tt, showTours = true }: { sec
           <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
             {tours.map((tp) => (
               <button key={tp.key} type="button" onClick={() => startTour(tp.key)} className="group flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-accent hover:bg-accent-soft/40">
-                <span className="text-2xl leading-none" aria-hidden="true">{tp.icon}</span>
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground" aria-hidden="true">
+                  <TourGlyph icon={tp.icon} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">{t(tp.title)}</span>
                   <span className="mt-0.5 block text-sm text-muted">{t(tp.desc)}</span>

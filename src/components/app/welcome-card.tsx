@@ -3,7 +3,7 @@
 import { useBrandName } from "@/components/brand-context";
 
 import { useRouter } from "next/navigation";
-import { Info, Play } from "lucide-react";
+import { Info, PartyPopper, Play } from "lucide-react";
 import { startTour } from "@/components/app/guided-tour";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/app-locale";
@@ -15,7 +15,7 @@ export function WelcomeCard({ firstName }: { firstName: string }) {
   const brand = useBrandName();
   return (
     <div className="mb-6 rounded-2xl border border-accent/30 bg-accent-soft/50 px-6 py-8 text-center">
-      <p className="text-4xl" aria-hidden="true">🎉</p>
+      <span className="mx-auto inline-flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground" aria-hidden="true"><PartyPopper className="size-6" /></span>
       <h2 className="mt-2 text-xl font-semibold tracking-tight">Bienvenue sur {brand}, {firstName} !</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">{t("On configure votre établissement ensemble : on vous montre exactement où cliquer, étape par étape. Ça prend moins de 5 minutes.")}</p>
       <div className="mt-5 flex flex-col items-center gap-3">
