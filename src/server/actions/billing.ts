@@ -164,7 +164,9 @@ export async function openBillingPortal(): Promise<Result> {
   const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (!stripe()) return { ok: false, error: "Facturation non configurée." };
   const customer = await getOrCreateCustomer({ id: ctx.user.id, email: ctx.user.email, fullName: ctx.user.name });
-  const portal = await stripe()!.billingPortal.sessions.create({ customer, return_url: `${brandOrigin(businessBrand(ctx.business))}/app/reglages/abonnement`, locale: "fr" });
+  const portal = await stripe()!.billingPortal.sessions.create({ customer, return_url: `${brandOrigin(businessBrand(ctx.business))}/app/reglages/abonnement`, locale: "fr" }).catch(() => null);
+  // Portail Stripe pas encore activé : on n'affiche pas d'erreur technique, les factures restent sur la page.
+  if (!portal) return { ok: false, error: "Le changement de carte n'est pas encore disponible en ligne : écrivez-nous via Aide et on s'en occupe. Vos factures sont en bas de cette page." };
   return { ok: true, url: portal.url };
 }
 

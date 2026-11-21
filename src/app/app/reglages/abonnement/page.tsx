@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { BillingInvoices } from "@/components/settings/billing-invoices";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ArrowRight, Gift } from "lucide-react";
 import type { Metadata } from "next";
 import { FeatureStatusPage } from "@/components/feature-status";
@@ -64,6 +67,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           pricing={pricing}
           current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key), billedUsers: current.billedUsers }}
         />
+        {canManage ? <Suspense fallback={<PageSkeleton />}><BillingInvoices businessId={ctx.business.id} brand="Skydev" /></Suspense> : null}
       </div>
     );
   }
@@ -85,6 +89,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         campaign={campaign ? { endsAt: campaign.endsAt?.toISOString() ?? null, firstPeriodCents: campaign.firstPeriodCents, plan: campaign.plan } : null}
         current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null }}
       />
+      {canManage ? <Suspense fallback={<PageSkeleton />}><BillingInvoices businessId={ctx.business.id} brand="Branshee" /></Suspense> : null}
       {canManage && ref ? <ReferralCard code={code} link={`${origin}/inscription?ref=${code}`} paying={ref.paying} claimable={ref.claimable} claimed={ref.claimed} invited={invited.map((f) => ({ name: f.name, createdAt: f.createdAt.toISOString(), paying: !!f.paid }))} /> : null}
     </div>
   );

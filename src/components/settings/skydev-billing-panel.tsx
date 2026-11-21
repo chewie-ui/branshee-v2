@@ -102,7 +102,8 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
           </div>
           {paid && canManage ? (
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" loading={busy === "portal"} onClick={() => run("portal", openBillingPortal)}>{t("Factures et carte")}</Button>
+              <ButtonLink href="#factures" variant="secondary" size="sm">{t("Mes factures")}</ButtonLink>
+              <Button variant="secondary" size="sm" loading={busy === "portal"} onClick={() => run("portal", openBillingPortal)}>{t("Carte bancaire")}</Button>
               {current.cancelAtPeriodEnd ? (
                 <Button size="sm" loading={busy === "resume"} onClick={() => run("resume", resumePlan)}>{t("Reprendre")}</Button>
               ) : (

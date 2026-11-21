@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Check, Copy, Gift, Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
 import { ADDONS, LIMITS, PLANS, PLAN_RANK, eur, excludingVat, type Plan } from "@/lib/plans";
@@ -92,7 +92,8 @@ export function BillingPanel({
           </div>
           {paid && canManage ? (
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" loading={pending} onClick={() => run(openBillingPortal)}>Cartes et factures</Button>
+              <ButtonLink href="#factures" variant="secondary" size="sm">Mes factures</ButtonLink>
+              <Button variant="secondary" size="sm" loading={pending} onClick={() => run(openBillingPortal)}>Carte bancaire</Button>
               {current.cancelAtPeriodEnd ? <Button size="sm" loading={pending} onClick={() => run(resumePlan)}>Reprendre l&apos;abonnement</Button> : <Button variant="ghost" size="sm" loading={pending} onClick={() => run(cancelPlan)}>Résilier</Button>}
             </div>
           ) : null}
