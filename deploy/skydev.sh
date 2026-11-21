@@ -85,8 +85,9 @@ ENV
 
   step "Tâches planifiées Skydev (rappels, quotidien)"
   ( crontab -l 2>/dev/null | grep -v '# skydev' || true
-    echo "*/15 * * * * curl -fsS -X POST -H 'Authorization: Bearer ${CRON_SECRET}' http://127.0.0.1:${PORT}/api/cron/reminders > /dev/null # skydev"
-    echo "5 10 * * * curl -fsS -X POST -H 'Authorization: Bearer ${CRON_SECRET}' http://127.0.0.1:${PORT}/api/cron/daily > /dev/null # skydev"
+    echo "*/15 * * * * curl -fsS --retry 6 --retry-delay 20 --retry-all-errors -X POST -H 'Authorization: Bearer ${CRON_SECRET}' http://127.0.0.1:${PORT}/api/cron/reminders > /dev/null # skydev"
+    # Réessaie pendant ~10 min si le site redémarre (mise en ligne) au moment du passage.
+    echo "5 10 * * * curl -fsS --retry 20 --retry-delay 30 --retry-all-errors -X POST -H 'Authorization: Bearer ${CRON_SECRET}' http://127.0.0.1:${PORT}/api/cron/daily > /dev/null # skydev"
     echo "30 3 * * * umask 077; mkdir -p ${DIR}/backups; pg_dump '${DATABASE_URL}' | gzip > ${DIR}/backups/\$(date +\\%F).sql.gz && find ${DIR}/backups -name '*.sql.gz' -mtime +14 -delete # skydev"
   ) | crontab -
   echo; echo "✔ Skydev prêt sur le port ${PORT}. Étape suivante : pointer le DNS, puis bash skydev.sh nginx"
