@@ -52,7 +52,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
       {suspects.length ? (
         <Card className="mb-4 border-warning/40 p-4">
           <p className="text-sm">
-            <b>{suspects.length} faux compte{suspects.length > 1 ? "s" : ""} probable{suspects.length > 1 ? "s" : ""}</b> (robots) : email jamais confirmé, nom d&apos;un seul mot tapé au hasard, aucun établissement, aucune équipe, aucune fiche client.
+            <b>{suspects.length} faux compte{suspects.length > 1 ? "s" : ""} probable{suspects.length > 1 ? "s" : ""}</b> (robots) : email jamais confirmé depuis plus d&apos;un jour, nom d&apos;un seul mot, aucun établissement, aucune équipe, aucune fiche client.
             Les inscriptions sont maintenant protégées contre ces robots ; ces comptes-là peuvent être supprimés sans rien perdre.
           </p>
           <p className="mt-1 text-xs text-muted">{suspects.slice(0, 12).map((x) => x.name).join(", ")}{suspects.length > 12 ? "…" : ""}</p>
