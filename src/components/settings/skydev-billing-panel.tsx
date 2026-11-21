@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Globe, MessageSquareText, Minus, PhoneCall, Plus, WandSparkles } from "lucide-react";
+import { Check, CreditCard, Globe, MessageSquareText, Minus, PhoneCall, Plus, WandSparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -36,7 +37,8 @@ const daysLeft = (iso: string) => Math.max(1, Math.ceil((new Date(iso).getTime()
  * Abonnement Skydev : un seul abonnement pour toutes les apps, payé par utilisateur (prix dégressif), et des options
  * sur le même abonnement. `teamUsers` = personnes de l'équipe aujourd'hui (base de l'abonnement).
  */
-export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pricing = PUBLIC_PRICING }: { current: SkydevCurrent; enabled: boolean; canManage: boolean; teamUsers: number; pricing?: UserPricing }) {
+export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pricing = PUBLIC_PRICING, savedCard = null }: { current: SkydevCurrent; enabled: boolean; canManage: boolean; teamUsers: number; pricing?: UserPricing; savedCard?: { id: string; label: string } | null }) {
+  const router = useRouter();
   const t = useT();
   const [interval, setInterval_] = useState<"month" | "year">(current.interval ?? "month");
   const [users, setUsers] = useState(teamUsers);
@@ -61,6 +63,7 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
       }
       setBusy(null);
       setMsg(r.ok ? { ok: true, text: r.message ?? t("C'est fait.") } : { ok: false, text: r.error });
+      if (r.ok) router.refresh();
     });
   };
 
@@ -197,7 +200,17 @@ export function SkydevBillingPanel({ current, enabled, canManage, teamUsers, pri
                   Aujourd&apos;hui, pour votre équipe de {teamUsers} personne{teamUsers > 1 ? "s" : ""} : <span className="font-medium">{eur(teamMonthly)} TVAC / mois</span>.
                 </p>
               ) : null}
-              {canManage ? (
+              {canManage && !paid && savedCard ? (
+                <div className="space-y-2">
+                  <Button className="w-full" disabled={!enabled || !!busy} loading={busy === "card"} icon={<CreditCard className="size-4" aria-hidden="true" />} onClick={() => run("card", () => choosePlan({ plan: "pro_plus", interval, savedCard: savedCard.id }))}>
+                    {t("Payer en un clic · {card}", { card: savedCard.label })}
+                  </Button>
+                  <Button className="w-full" variant="secondary" disabled={!enabled || !!busy} loading={busy === "plan"} onClick={() => run("plan", () => choosePlan({ plan: "pro_plus", interval }))}>
+                    {t("Payer avec une autre carte (Stripe)")}
+                  </Button>
+                  <p className="text-center text-xs text-muted">{`${teamUsers} utilisateur${teamUsers > 1 ? "s" : ""} · ${eur(teamMonthly)} TVAC / ${t("mois")}${interval === "year" ? ` · ${t("payé à l'année")}` : ""}`}</p>
+                </div>
+              ) : canManage ? (
                 <Button className="w-full" variant={isCurrent ? "secondary" : "primary"} disabled={isCurrent || !enabled} loading={busy === "plan"} onClick={() => run("plan", () => choosePlan({ plan: "pro_plus", interval }))}>
                   {isCurrent ? t("Votre abonnement") : paid ? (interval === "year" ? t("Passer à l'annuel") : t("Passer au mensuel")) : `S'abonner · ${teamUsers} utilisateur${teamUsers > 1 ? "s" : ""} · ${eur(teamMonthly)} / mois`}
                 </Button>

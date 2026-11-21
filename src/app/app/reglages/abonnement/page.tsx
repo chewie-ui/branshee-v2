@@ -14,6 +14,7 @@ import { effectivePlan } from "@/server/plan";
 
 import { ensureReferralCode } from "@/server/referral";
 import { SkydevBillingPanel } from "@/components/settings/skydev-billing-panel";
+import { listPaymentMethods } from "@/server/billing-methods";
 import { businessModules } from "@/db/schema";
 import { businessBrand } from "@/server/brand";
 import { appMetadata } from "@/server/app-locale";
@@ -46,6 +47,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     const [mods, teamUsers, pricing] = await Promise.all([db.select({ key: businessModules.moduleKey }).from(businessModules).where(eq(businessModules.businessId, ctx.business.id)), countBilledUsers(ctx.business.id), businessPricing(ctx.business.id)]);
     const sp = await searchParams;
     const notice = NOTICES[sp.paiement ?? ""];
+    // Carte déjà enregistrée (Réglages › Factures et cartes) : proposée pour s'abonner en un clic.
+    const paidNow = current.source === "stripe" || current.source === "account";
+    const savedCard = canManage && !paidNow && !ctx.impersonating ? await listPaymentMethods(ctx).then(({ methods }) => methods.find((m) => m.isDefault && !m.expired) ?? methods.find((m) => m.kind === "card" && !m.expired) ?? null).catch(() => null) : null;
     return (
       <div className="space-y-6">
         {sp.bloque && current.source === "free" ? <p className="rounded-lg border border-danger/30 bg-danger-soft p-3 text-sm text-danger" role="alert"><b>{t("Votre essai gratuit est terminé.")}</b> Votre espace est en lecture seule : choisissez votre abonnement ci-dessous pour continuer à créer et modifier. Toutes vos données sont conservées.{canManage ? null : " Demandez au responsable de l'entreprise de s'abonner."}</p> : null}
@@ -62,6 +66,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           enabled={billingEnabled("skydev")}
           teamUsers={teamUsers}
           pricing={pricing}
+          savedCard={savedCard ? { id: savedCard.id, label: savedCard.label } : null}
           current={{ plan: current.plan, source: current.source, status: current.status, periodEnd: current.periodEnd?.toISOString() ?? null, cancelAtPeriodEnd: current.cancelAtPeriodEnd, grantedUntil: current.grantedUntil?.toISOString() ?? null, isTrial: current.isTrial, extraSeats: current.extraSeats, customUrlAddon: current.customUrlAddon, interval: row?.interval ?? null, modules: mods.map((m) => m.key), billedUsers: current.billedUsers }}
         />
       </div>

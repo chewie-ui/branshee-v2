@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
 import { REFERRAL_MONTH_CENTS } from "@/lib/referral";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, billableUsers, businessPricing, describePromo, skydevPriceForBusiness, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate } from "@/server/billing";
+import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, billableUsers, businessPricing, describePromo, skydevPriceForBusiness, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate, completeDirectSubscription } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
 import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, teamQuote, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
@@ -40,7 +40,7 @@ export async function checkPromo(input: { code: string; plan: string; interval: 
  * Choisir un forfait : abonnement existant → changement au prorata ; sinon page de paiement Stripe.
  * Code promo (essai, % ou montant), campagne de lancement ou offre par défaut appliqués une seule fois.
  */
-export async function choosePlan(input: { plan: string; interval: string; promo?: string }): Promise<Result> {
+export async function choosePlan(input: { plan: string; interval: string; promo?: string; savedCard?: string }): Promise<Result> {
   const ctx = await requireContext("billing.manage", { allowLocked: true });
   if (ctx.impersonating) return { ok: false, error: "Action réservée au titulaire du compte (session de supervision)." };
   const parsed = planSchema.safeParse(input);
@@ -129,6 +129,39 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
       }
     }
   }
+  // Paiement en un clic avec une carte déjà enregistrée (Réglages › Factures et cartes) : pas de passage par la page Stripe.
+  if (input.savedCard) {
+    const pmId = String(input.savedCard);
+    const pm = /^pm_[A-Za-z0-9]{6,60}$/.test(pmId) ? await s.paymentMethods.retrieve(pmId).catch(() => null) : null;
+    const pmCustomer = pm ? (typeof pm.customer === "string" ? pm.customer : pm.customer?.id) : null;
+    if (!pm || pmCustomer !== customer) return { ok: false, error: "Carte introuvable : choisissez « Payer avec une autre carte »." };
+    const c = await s.customers.retrieve(customer);
+    // Mentions obligatoires de la facture : sans nom ni adresse enregistrés, on passe par la page de paiement (qui les demande).
+    if (c.deleted || !c.name || !c.address?.line1) return { ok: false, error: "Il manque le nom ou l'adresse de facturation : choisissez « Payer avec une autre carte » (ils vous seront demandés une seule fois)." };
+    const meta = (params.metadata ?? metadata) as Record<string, string>;
+    try {
+      const sub = await s.subscriptions.create({
+        customer,
+        items: [{ price, quantity: users }],
+        default_payment_method: pm.id,
+        default_tax_rates: [await vatRate()],
+        metadata: meta,
+        ...(params.discounts ? { discounts: params.discounts.map((d) => ({ coupon: d.coupon! })) } : {}),
+        ...(params.subscription_data?.trial_period_days ? { trial_period_days: params.subscription_data.trial_period_days } : {}),
+        // Si la banque demande une confirmation (3D Secure), rien n'est créé : on propose alors la page de paiement.
+        payment_behavior: "error_if_incomplete",
+      });
+      await completeDirectSubscription(sub, meta);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      console.error("[billing] paiement en un clic :", msg);
+      return { ok: false, error: "Le paiement avec cette carte n'a pas abouti (refus ou confirmation demandée par la banque). Choisissez « Payer avec une autre carte » pour confirmer chez Stripe." };
+    }
+    await log(ctx, "billing.subscribe", `Abonnement ${planName} (${interval === "year" ? "annuel" : "mensuel"}) payé avec la carte enregistrée`);
+    revalidatePath("/app", "layout");
+    return { ok: true, message: `Bienvenue ! Votre abonnement ${planName} est actif. La facture est dans Réglages › Factures et cartes.` };
+  }
+
   // Abonnement pris pendant l'essai gratuit : il démarre (et se paie) tout de suite ; l'essai s'arrête alors.
   if (!params.discounts) params.allow_promotion_codes = true;
   const session = await s.checkout.sessions.create(params);

@@ -3837,4 +3837,10 @@ export const EN: Record<string, string> = {
   "Ce membre a déjà son propre accès.": "This member already has their own access.",
   "Cette adresse est déjà utilisée par un autre membre de l'équipe.": "This address is already used by another team member.",
   "Pour payer moins, retirez d'abord les personnes dont vous n'avez pas besoin (clic sur leur nom › Retirer de l'équipe).": "To pay less, first remove the people you don't need (click their name › Remove from team).",
+  "Payer en un clic · {card}": "Pay in one click · {card}",
+  "Payer avec une autre carte (Stripe)": "Pay with another card (Stripe)",
+  "payé à l'année": "billed yearly",
+  "Carte introuvable : choisissez « Payer avec une autre carte ».": "Card not found: choose “Pay with another card”.",
+  "Il manque le nom ou l'adresse de facturation : choisissez « Payer avec une autre carte » (ils vous seront demandés une seule fois).": "Your billing name or address is missing: choose “Pay with another card” (asked only once).",
+  "Le paiement avec cette carte n'a pas abouti (refus ou confirmation demandée par la banque). Choisissez « Payer avec une autre carte » pour confirmer chez Stripe.": "Payment with this card didn't go through (declined or your bank asked for confirmation). Choose “Pay with another card” to confirm with Stripe.",
 };

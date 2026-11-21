@@ -394,6 +394,17 @@ export async function completeCheckout(session: Stripe.Checkout.Session) {
   return synced;
 }
 
+/** Abonnement payé directement avec une carte enregistrée (sans page Stripe) : activé, code promo consommé. */
+export async function completeDirectSubscription(sub: Stripe.Subscription, metadata: Record<string, string>) {
+  const synced = await syncSubscription(sub);
+  const promoId = metadata.promoCodeId;
+  const userId = metaUser(metadata);
+  if (synced && promoId && userId) {
+    const inserted = await db.insert(promoRedemptions).values({ promoCodeId: promoId, userId }).onConflictDoNothing().returning({ id: promoRedemptions.promoCodeId });
+    if (inserted.length) await db.update(promoCodes).set({ usedCount: sql`${promoCodes.usedCount} + 1` }).where(eq(promoCodes.id, promoId));
+  }
+  return synced;
+}
 
 let vatRateId: string | null = null;
 /** Taux de TVA Stripe (21 %, Belgique, compris dans le prix) appliqué aux factures Branshee ; créé une fois, puis réutilisé. */
