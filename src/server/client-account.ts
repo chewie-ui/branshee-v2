@@ -104,7 +104,7 @@ export async function reviewEligibility(userId: string, businessId: string) {
  */
 export async function listMyOrders(email: string) {
   return db
-    .select({ id: shopOrders.id, number: shopOrders.number, status: shopOrders.status, fulfilment: shopOrders.fulfilment, totalCents: shopOrders.totalCents, token: shopOrders.token, createdAt: shopOrders.createdAt, lines: shopOrders.lines, business: { name: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl } })
+    .select({ id: shopOrders.id, number: shopOrders.number, status: shopOrders.status, fulfilment: shopOrders.fulfilment, totalCents: shopOrders.totalCents, token: shopOrders.token, createdAt: shopOrders.createdAt, lines: shopOrders.lines, invoiceId: shopOrders.invoiceId, business: { name: businesses.name, slug: businesses.slug, photoUrl: businesses.photoUrl } })
     .from(shopOrders)
     .innerJoin(businesses, eq(businesses.id, shopOrders.businessId))
     .where(and(sql`lower(${shopOrders.email}) = ${email.toLowerCase()}`, isNull(businesses.deletedAt), sql`not (${shopOrders.status} = 'pending_payment' and ${shopOrders.createdAt} < now() - interval '2 days')`))

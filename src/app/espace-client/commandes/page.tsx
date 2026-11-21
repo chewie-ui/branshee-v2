@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, ShoppingBag } from "lucide-react";
+import { ChevronRight, FileText, ShoppingBag } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatDay } from "@/lib/time";
-import { listMyOrders, requireClient } from "@/server/client-account";
+import { listMyInvoices, listMyOrders, requireClient } from "@/server/client-account";
 import { pickupCode } from "@/server/shop";
 
 export const metadata: Metadata = { title: "Mes commandes" };
@@ -22,10 +22,15 @@ const eur = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
 
 export default async function MyOrders() {
   const user = await requireClient("/espace-client/commandes");
-  const list = await listMyOrders(user.email);
+  const [list, invoices] = await Promise.all([listMyOrders(user.email), listMyInvoices(user.id)]);
+  // Facture de la commande, si elle est émise et rattachée à son compte (même contrôle que « Mes factures »).
+  const invoiceOf = new Map(invoices.filter((d) => d.docType === "invoice").map((d) => [d.id, d.number]));
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Mes commandes</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Mes commandes</h1>
+        <p className="mt-1 text-sm text-muted">La facture de chaque achat se télécharge à droite de la commande, et toutes vos factures sont dans l&apos;onglet Factures.</p>
+      </div>
       {list.length === 0 ? (
         <Card className="p-6 text-center text-sm text-muted">
           <ShoppingBag className="mx-auto mb-2 size-8" aria-hidden="true" />
@@ -39,8 +44,8 @@ export default async function MyOrders() {
               const showCode = o.fulfilment === "pickup" && !["pending_payment", "cancelled", "done"].includes(o.status);
               const items = o.lines.reduce((n, l) => n + l.qty, 0);
               return (
-                <li key={o.id}>
-                  <Link href={`/commande/${o.token}`} className="flex items-center gap-4 px-5 py-4 text-sm transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+                <li key={o.id} className="flex items-stretch">
+                  <Link href={`/commande/${o.token}`} className="flex min-w-0 flex-1 items-center gap-4 px-5 py-4 text-sm transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
                     <Avatar name={o.business.name} src={o.business.photoUrl} />
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <p className="flex flex-wrap items-center gap-2"><span className="font-medium">{o.business.name}</span><Badge tone={st.tone}>{st.label}</Badge></p>
@@ -56,6 +61,12 @@ export default async function MyOrders() {
                     ) : null}
                     <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
                   </Link>
+                  {o.invoiceId && invoiceOf.has(o.invoiceId) ? (
+                    <a href={`/espace-client/factures/${o.invoiceId}`} className="flex shrink-0 items-center gap-2 border-l border-border px-4 text-sm font-medium text-accent transition-colors duration-150 hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" aria-label={`Télécharger la facture ${invoiceOf.get(o.invoiceId)}`}>
+                      <FileText className="size-4" aria-hidden="true" />
+                      <span className="hidden sm:inline">Facture</span>
+                    </a>
+                  ) : null}
                 </li>
               );
             })}
