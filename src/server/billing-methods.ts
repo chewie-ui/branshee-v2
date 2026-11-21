@@ -68,3 +68,16 @@ export async function listPaymentMethods(ctx: AppContext): Promise<{ methods: Pa
     }),
   };
 }
+
+export type BillingDetails = { name: string; line1: string; postalCode: string; city: string; country: string; vat: string; vatStatus: "verified" | "pending" | "unverified" | "unavailable" | null };
+
+/** Coordonnées imprimées sur les factures de l'abonnement (nom ou société, adresse, n° de TVA). */
+export async function billingDetails(ctx: AppContext): Promise<BillingDetails | null> {
+  const s = stripe();
+  const customer = await billingCustomer(ctx);
+  if (!s || !customer) return null;
+  const [c, ids] = await Promise.all([s.customers.retrieve(customer).catch(() => null), s.customers.listTaxIds(customer, { limit: 5 }).then((r) => r.data).catch(() => [])]);
+  if (!c || c.deleted) return null;
+  const vat = ids.find((t) => t.type === "eu_vat");
+  return { name: c.name ?? "", line1: c.address?.line1 ?? "", postalCode: c.address?.postal_code ?? "", city: c.address?.city ?? "", country: c.address?.country ?? "BE", vat: vat?.value ?? "", vatStatus: vat?.verification?.status ?? null };
+}

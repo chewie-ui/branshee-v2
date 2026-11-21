@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { activityLogs } from "@/db/schema";
 import { businessSubscription, billingCustomer, defaultMethodId } from "@/server/billing-methods";
+import { z } from "@/lib/zod";
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 
@@ -85,4 +86,56 @@ export async function removePaymentMethod(pmId: string): Promise<Result> {
   await log(g.ctx, "billing.method_remove", "Moyen de paiement retiré");
   revalidatePath(PATH);
   return { ok: true, message: "Moyen de paiement retiré." };
+}
+
+const detailsSchema = z.object({
+  name: z.string().trim().min(2, "Indiquez le nom ou la société.").max(120),
+  line1: z.string().trim().min(3, "Indiquez la rue et le numéro.").max(200),
+  postalCode: z.string().trim().min(3, "Code postal invalide.").max(12),
+  city: z.string().trim().min(2, "Indiquez la ville.").max(80),
+  country: z.string().trim().regex(/^[A-Z]{2}$/, "Pays invalide."),
+  vat: z.string().max(20),
+});
+
+/** N° de TVA au format européen : « BE0123456789 » (Belgique : 10 chiffres, le 0 initial est ajouté s'il manque). */
+function normalizeVat(raw: string): string | null {
+  const v = raw.toUpperCase().replace(/[\s.\-]/g, "");
+  if (!v) return "";
+  if (/^\d{9,10}$/.test(v)) return `BE${v.padStart(10, "0")}`;
+  if (/^BE\d{9,10}$/.test(v)) return `BE${v.slice(2).padStart(10, "0")}`;
+  return /^[A-Z]{2}[A-Z0-9]{2,13}$/.test(v) ? v : null;
+}
+
+/** Coordonnées de facturation : nom ou société, adresse et n° de TVA, repris sur toutes les prochaines factures. */
+export async function saveBillingDetails(input: { name: string; line1: string; postalCode: string; city: string; country: string; vat: string }): Promise<Result & { fieldErrors?: Record<string, string> }> {
+  const g = await guard();
+  if ("error" in g) return { ok: false, error: g.error! };
+  const parsed = detailsSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
+    return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors };
+  }
+  const v = parsed.data;
+  const vat = normalizeVat(v.vat);
+  if (vat === null) return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { vat: "Numéro de TVA invalide (ex. BE0123456789)." } };
+  const customer = await billingCustomer(g.ctx, { create: true });
+  if (!customer) return { ok: false, error: "Paiement non configuré." };
+  const s = stripe()!;
+  await s.customers.update(customer, { name: v.name, address: { line1: v.line1, postal_code: v.postalCode, city: v.city, country: v.country } });
+  const ids = await s.customers.listTaxIds(customer, { limit: 10 }).then((r) => r.data);
+  const current = ids.find((t) => t.type === "eu_vat");
+  if (current?.value !== (vat || undefined)) {
+    for (const t of ids.filter((t) => t.type === "eu_vat")) await s.customers.deleteTaxId(customer, t.id);
+    if (vat) {
+      try {
+        await s.customers.createTaxId(customer, { type: "eu_vat", value: vat });
+      } catch {
+        return { ok: false, error: "Vérifiez les champs indiqués.", fieldErrors: { vat: "Stripe refuse ce numéro de TVA : vérifiez-le (ex. BE0123456789)." } };
+      }
+    }
+  }
+  await log(g.ctx, "billing.details", "Coordonnées de facturation mises à jour");
+  revalidatePath(PATH);
+  return { ok: true, message: "Coordonnées enregistrées : elles figureront sur vos prochaines factures." };
 }

@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { referralStatus } from "@/server/referral-status";
 import { REFERRAL_MONTH_CENTS } from "@/lib/referral";
 import { activityLogs, businessPlans, referralCredits, users } from "@/db/schema";
-import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, billableUsers, businessPricing, describePromo, skydevPriceForBusiness, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate, completeDirectSubscription } from "@/server/billing";
+import { META, activeCampaign, addonPriceFor, billingEnabled, brandOrigin, billableUsers, businessPricing, describePromo, skydevPriceForBusiness, findPromo, getOrCreateCustomer, hadSubscriptionBefore, isAddonPrice, lockedProPrice, modulePrice, monthlyPriceCents, planFromPrice, planFromStripePrice, priceFor, syncSubscription, vatRate, completeDirectSubscription, ensureSkydevProductName } from "@/server/billing";
 import { businessBrand } from "@/server/brand";
 import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, teamQuote, type ModuleAddon } from "@/lib/skydev-plans";
 import { requireContext, type AppContext } from "@/server/context";
@@ -61,6 +61,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
   if (!price) return { ok: false, error: "Le paiement des abonnements n'est pas encore configuré sur ce serveur." };
   const planName = brand === "skydev" ? SKYDEV_NAME : plan === "pro" ? "Pro" : "Pro+";
   const s = stripe()!;
+  if (brand === "skydev") await ensureSkydevProductName();
 
   const live = await liveSubscription(ctx);
   if (live) {
@@ -137,7 +138,7 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     if (!pm || pmCustomer !== customer) return { ok: false, error: "Carte introuvable : choisissez « Payer avec une autre carte »." };
     const c = await s.customers.retrieve(customer);
     // Mentions obligatoires de la facture : sans nom ni adresse enregistrés, on passe par la page de paiement (qui les demande).
-    if (c.deleted || !c.name || !c.address?.line1) return { ok: false, error: "Il manque le nom ou l'adresse de facturation : choisissez « Payer avec une autre carte » (ils vous seront demandés une seule fois)." };
+    if (c.deleted || !c.name || !c.address?.line1) return { ok: false, error: "Il manque l'adresse de facturation : complétez vos coordonnées dans Réglages › Factures et cartes (ou choisissez « Payer avec une autre carte »)." };
     const meta = (params.metadata ?? metadata) as Record<string, string>;
     try {
       const sub = await s.subscriptions.create({

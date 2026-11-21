@@ -114,6 +114,22 @@ export async function skydevCustomPrice(first: number, extra: number | null, int
   return created.id;
 }
 
+/** Intitulé légal de la ligne de facture (nature du service, pas seulement « Skydev »). */
+export const SKYDEV_PRODUCT_NAME = "Abonnement au logiciel Skydev (SaaS) – toutes les apps, prix par utilisateur";
+let productNamed = false;
+/** Renomme une fois le produit Stripe de l'abonnement Skydev : son nom est l'intitulé de la ligne sur chaque facture. */
+export async function ensureSkydevProductName() {
+  const s = stripe();
+  const base = skydevPriceFor("month");
+  if (productNamed || !s || !base) return;
+  const ref = await s.prices.retrieve(base, { expand: ["product"] }).catch(() => null);
+  const product = ref && typeof ref.product !== "string" && !("deleted" in ref.product && ref.product.deleted) ? (ref.product as Stripe.Product) : null;
+  if (product && product.name !== SKYDEV_PRODUCT_NAME) {
+    await s.products.update(product.id, { name: SKYDEV_PRODUCT_NAME, description: "Logiciel en ligne Skydev pour indépendants : rendez-vous, site, boutique, facturation et autres apps. Abonnement mensuel ou annuel, facturé par utilisateur de l'équipe." }).catch((e) => console.error("[billing] nom du produit :", e));
+  }
+  productNamed = true;
+}
+
 /** Conditions de l'établissement (utilisateurs offerts, prix par utilisateur). */
 export async function businessPricing(businessId: string): Promise<UserPricing> {
   const [row] = await db.select({ offeredUsers: businessPlans.offeredUsers, userPriceCents: businessPlans.userPriceCents, extraUserPriceCents: businessPlans.extraUserPriceCents }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
@@ -146,6 +162,7 @@ export async function countBilledUsers(businessId: string) {
 export async function syncSkydevUsers(businessId: string) {
   const s = stripe();
   if (!s) return;
+  await ensureSkydevProductName();
   const [row] = await db.select({ sub: businessPlans.stripeSubscriptionId, billed: businessPlans.billedUsers }).from(businessPlans).where(eq(businessPlans.businessId, businessId));
   if (!row?.sub || row.billed == null) return;
   const sub = await s.subscriptions.retrieve(row.sub).catch(() => null);
