@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/app/sidebar";
 import { RegisterServiceWorker } from "@/components/app/register-sw";
 import { AdminMessages } from "@/components/app/admin-messages";
 import { GuidedTour } from "@/components/app/guided-tour";
+import { HelpLauncher } from "@/components/help/help-launcher";
 import { ImpersonationBar, SupervisionPrompt } from "@/components/app/supervision";
 import { activeAdminMessages, supportUnread } from "@/server/support";
 import { FeatureStatusPage } from "@/components/feature-status";
@@ -123,6 +124,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           {children}
         </SkydevShell>
         {ai ? <AssistantPanel /> : null}
+        <HelpLauncher raised={ai} />
         <RegisterServiceWorker />
         <GuidedTour />
         </div>
@@ -139,6 +141,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <Sidebar brand={brand.id} groups={groups} footer={NAV_FOOTER.filter(visible)} business={ctx.business} businesses={ctx.businesses} user={ctx.user} pendingCount={pending} supportUnread={unread} />
       <RegisterServiceWorker />
       <GuidedTour />
+      <HelpLauncher />
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {banners}
