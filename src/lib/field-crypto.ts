@@ -19,13 +19,30 @@ export function encrypt(plain: string | null | undefined): string | null {
   return ["v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), data.toString("base64url")].join(".");
 }
 
+/**
+ * Clés de lecture : la clé actuelle, puis l'ancienne (DATA_ENCRYPTION_KEY_PREVIOUS) pour les données chiffrées
+ * avant une fusion de bases (Branshee → Skydev). On écrit toujours avec la clé actuelle.
+ */
+export function readKeys(): Buffer[] {
+  const prev = process.env.DATA_ENCRYPTION_KEY_PREVIOUS;
+  return [key(), ...(prev && /^[0-9a-f]{64}$/i.test(prev) ? [Buffer.from(prev, "hex")] : [])];
+}
+
 export function decrypt(stored: string | null | undefined): string | null {
   if (!stored) return null;
   const [version, iv, tag, data] = stored.split(".");
   if (version !== "v1" || !iv || !tag || data === undefined) throw new Error("Format chiffré inconnu.");
-  const decipher = createDecipheriv("aes-256-gcm", key(), Buffer.from(iv, "base64url"));
-  decipher.setAuthTag(Buffer.from(tag, "base64url"));
-  return Buffer.concat([decipher.update(Buffer.from(data, "base64url")), decipher.final()]).toString("utf8");
+  let lastError: unknown;
+  for (const k of readKeys()) {
+    try {
+      const decipher = createDecipheriv("aes-256-gcm", k, Buffer.from(iv, "base64url"));
+      decipher.setAuthTag(Buffer.from(tag, "base64url"));
+      return Buffer.concat([decipher.update(Buffer.from(data, "base64url")), decipher.final()]).toString("utf8");
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
 }
 
 /**

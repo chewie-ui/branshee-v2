@@ -11,15 +11,22 @@ import { completeShopPayment, expireShopCheckout } from "@/server/shop";
  */
 export async function POST(req: Request) {
   const s = stripe();
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!s || !secret) return new Response("Non configuré", { status: 503 });
+  // Plusieurs secrets possibles (séparés par des virgules) : un par adresse de webhook déclarée chez Stripe
+  // (branshee.com et skydev.be pointent sur la même application après la fusion).
+  const secrets = (process.env.STRIPE_WEBHOOK_SECRET ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (!s || !secrets.length) return new Response("Non configuré", { status: 503 });
   const body = await req.text();
-  let event: Stripe.Event;
-  try {
-    event = s.webhooks.constructEvent(body, req.headers.get("stripe-signature") ?? "", secret);
-  } catch {
-    return new Response("Signature invalide", { status: 400 });
+  const signature = req.headers.get("stripe-signature") ?? "";
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = s.webhooks.constructEvent(body, signature, secret);
+      break;
+    } catch {
+      /* secret suivant */
+    }
   }
+  if (!event) return new Response("Signature invalide", { status: 400 });
   try {
     switch (event.type) {
       case "checkout.session.completed":

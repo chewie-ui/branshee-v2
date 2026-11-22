@@ -1,1 +1,1 @@
-ALTER TABLE "form_questions" ADD COLUMN "service_ids" uuid[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "form_questions" ADD COLUMN IF NOT EXISTS "service_ids" uuid[] DEFAULT '{}' NOT NULL;

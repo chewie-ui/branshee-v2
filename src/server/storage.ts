@@ -2,6 +2,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, normalize, resolve, sep } from "node:path";
+import { readKeys } from "@/lib/field-crypto";
 
 /**
  * Stockage des fichiers sur le disque du serveur (dossier STORAGE_DIR, « ./storage » par défaut).
@@ -37,9 +38,18 @@ function encryptBuffer(data: Buffer) {
 
 function decryptBuffer(blob: Buffer) {
   if (!blob.subarray(0, 4).equals(MAGIC)) throw new Error("Fichier chiffré illisible.");
-  const decipher = createDecipheriv("aes-256-gcm", key(), blob.subarray(4, 16));
-  decipher.setAuthTag(blob.subarray(16, 32));
-  return Buffer.concat([decipher.update(blob.subarray(32)), decipher.final()]);
+  // Clé actuelle, puis l'ancienne (fichiers chiffrés avant la fusion des bases).
+  let lastError: unknown;
+  for (const k of readKeys()) {
+    try {
+      const decipher = createDecipheriv("aes-256-gcm", k, blob.subarray(4, 16));
+      decipher.setAuthTag(blob.subarray(16, 32));
+      return Buffer.concat([decipher.update(blob.subarray(32)), decipher.final()]);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
 }
 
 /** Enregistre un fichier privé chiffré ; renvoie sa référence à stocker en base (« v2/<uuid> »). */
