@@ -122,6 +122,15 @@ export function LiveChat({
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
 
+  // Champ qui grandit avec le texte (jusqu'à 5 lignes), sans barre de défilement avant.
+  const grow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+    el.style.overflowY = el.scrollHeight > 132 ? "auto" : "hidden";
+  };
+  useEffect(() => grow(area.current), [text]);
+
   const pickFile = (f: File | null) => {
     setError(null);
     if (f && !f.type.startsWith("image/")) return setError("Seules les images sont acceptées.");
@@ -224,6 +233,7 @@ export function LiveChat({
             value={text}
             onChange={(e) => {
               setText(e.target.value);
+              grow(e.currentTarget);
               const now = Date.now();
               if (e.target.value && now - lastPing.current > 3000) {
                 lastPing.current = now;
@@ -246,7 +256,7 @@ export function LiveChat({
             rows={1}
             maxLength={4000}
             placeholder={placeholder}
-            className="max-h-32 min-h-11 flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2.5 text-base placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent/30 sm:text-sm"
+            className="h-11 min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-border bg-surface px-3 py-2.5 text-base leading-6 placeholder:truncate placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent/30 sm:text-sm"
           />
           <button type="submit" disabled={!text.trim() && !file} className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50" aria-label="Envoyer">
             {shown.some((p) => p.status === "sending") ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}

@@ -45,12 +45,11 @@ export function ProSupportChat({ initial, className, onEnded }: { initial?: Supp
 
   const ended = thread.closedAt ? (
     <div className="mt-3 rounded-xl border border-border p-4 text-center text-sm">
-      <p className="font-medium">Discussion terminée</p>
       {thread.rated || rating ? (
-        <p className="mt-1 text-muted">Merci pour votre avis !</p>
+        <p className="font-medium">Merci pour votre avis !</p>
       ) : (
         <>
-          <p className="mt-1 text-muted">Comment s&apos;est passé cet échange ?</p>
+          <p className="font-medium">Comment s&apos;est passé cet échange ?</p>
           <div className="mt-2 flex justify-center gap-1" role="radiogroup" aria-label="Votre note">
             {[1, 2, 3, 4, 5].map((n) => (
               <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={`${n} étoile${n > 1 ? "s" : ""}`} onClick={() => { setRating(n); void rateSupport(n); }} className="flex size-10 items-center justify-center rounded-lg text-warning transition-transform duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-accent">
@@ -91,7 +90,7 @@ export function ProSupportChat({ initial, className, onEnded }: { initial?: Supp
         typing={supportTyping}
         otherName={`Équipe ${brand}`}
         afterMessages={ended}
-        placeholder={thread.closedAt ? "Écrivez pour rouvrir la discussion…" : "Votre message…"}
+        placeholder="Votre message…"
       />
     </div>
   );

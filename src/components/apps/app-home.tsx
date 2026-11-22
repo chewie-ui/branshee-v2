@@ -51,6 +51,23 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
 
   return (
     <div className="mx-auto max-w-4xl">
+      {admin.length ? (
+        <section aria-labelledby="admin-h" className="mb-10">
+          <h2 id="admin-h" className="mb-3 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Administration")}</h2>
+          {/* Cartes centrées : une rangée incomplète reste au milieu. */}
+          <ul className="flex flex-wrap justify-center gap-3">
+            {admin.map((a) => (
+              <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
+                <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{t(a.label)}</span><span className="line-clamp-2 block text-xs text-muted">{t(a.hint)}</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h2 className="mt-10 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Applications")}</h2>
+        </section>
+      ) : null}
       <ul className="grid grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-5">
         {pinned.map((app) => {
           const tag = tagOf(app, activeAddons, t);
@@ -110,22 +127,6 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
 
       {afterApps ? <div className="mt-12">{afterApps}</div> : null}
 
-      {admin.length ? (
-        <section aria-labelledby="admin-h" className="mt-12">
-          <h2 id="admin-h" className="mb-3 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Administration")}</h2>
-          {/* Cartes centrées : une rangée incomplète reste au milieu. */}
-          <ul className="flex flex-wrap justify-center gap-3">
-            {admin.map((a) => (
-              <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
-                <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{t(a.label)}</span><span className="line-clamp-2 block text-xs text-muted">{t(a.hint)}</span></span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       {/* Sur mesure : demander n'importe quelle modif d'une app, ou une app nouvelle. */}
       <Link href="/app/sur-mesure" className="group mx-auto mt-12 flex max-w-3xl items-center gap-4 rounded-2xl border border-dashed border-border-strong bg-surface p-5 transition-colors duration-150 hover:border-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">

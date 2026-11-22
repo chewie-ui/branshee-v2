@@ -25,7 +25,7 @@ export function AdminSupportChat({ userId, name, initial }: { userId: string; na
         send={(fd) => replySupport(userId, fd)}
         typing={() => adminSupportTyping(userId)}
         otherName={name}
-        placeholder="Votre réponse (email seulement si le pro n'est pas devant le chat)…"
+        placeholder="Votre réponse…"
       />
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-2">
         {!thread?.closedAt ? (
