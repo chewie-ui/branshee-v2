@@ -3950,4 +3950,7 @@ export const EN: Record<string, string> = {
   "Faites-vous trouver": "Get found",
   "Une page complète passe devant les autres dans l'annuaire et sur Google.": "A complete page ranks ahead of others in the directory and on Google.",
   "+{n} autre(s)": "+{n} more",
+  "app déplaçable": "movable app",
+  "{app} : glissez, ou flèches gauche et droite pour déplacer": "{app}: drag, or use left and right arrows to move",
+  "Glissez les apps pour changer leur ordre. Le « − » les retire de l'accueil.": "Drag apps to reorder them. The “−” removes them from the home page.",
 };

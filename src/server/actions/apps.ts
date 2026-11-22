@@ -56,13 +56,25 @@ export async function setAppPinned(appId: string, pinned: boolean): Promise<Resu
 const APP_NEEDS = { boutique: ["stock"] } as const;
 
 /** Épingler une app en favori (préférence personnelle) : elle passe en tête de l'accueil et dans les raccourcis. */
+/** Ordre des apps de l'accueil, choisi par glisser-déposer (propre à chaque membre). */
+export async function setAppOrder(ids: unknown): Promise<Result> {
+  const ctx = await requireContext(undefined, { allowLocked: true });
+  if (!Array.isArray(ids)) return { ok: false, error: "Ordre invalide." };
+  const order = [...new Set(ids.filter((x): x is string => typeof x === "string" && APPS.some((a) => a.id === x)))].slice(0, 80);
+  await db.update(members).set({ prefs: sql`${members.prefs} || ${JSON.stringify({ appOrder: order })}::jsonb` }).where(eq(members.id, ctx.member.id));
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
 export async function setFavoriteApp(appId: string, fav: boolean): Promise<Result> {
   const ctx = await requireContext(undefined, { allowLocked: true });
   if (!APPS.some((a) => a.id === appId) || !ctx.canApp(appId)) return { ok: false, error: "App inconnue." };
   const [m] = await db.select({ p: members.prefs }).from(members).where(eq(members.id, ctx.member.id));
   const list = (m?.p.favApps ?? []).filter((x) => x !== appId && APPS.some((a) => a.id === x));
   if (fav) list.push(appId);
-  await db.update(members).set({ prefs: sql`${members.prefs} || ${JSON.stringify({ favApps: list.slice(0, 12) })}::jsonb` }).where(eq(members.id, ctx.member.id));
+  // Ordre libre déjà choisi : une app épinglée passe en tête de cet ordre.
+  const order = m?.p.appOrder?.length ? [...(fav ? [appId] : []), ...m.p.appOrder.filter((x) => x !== appId || !fav)] : undefined;
+  await db.update(members).set({ prefs: sql`${members.prefs} || ${JSON.stringify({ favApps: list.slice(0, 12), ...(order ? { appOrder: order } : {}) })}::jsonb` }).where(eq(members.id, ctx.member.id));
   revalidatePath("/app", "layout");
   return { ok: true, message: fav ? "App épinglée." : "App désépinglée." };
 }

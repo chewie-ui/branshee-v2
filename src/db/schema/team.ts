@@ -65,7 +65,7 @@ export const members = pgTable(
 
     joinedAt: timestamp("joined_at", { withTimezone: true }),
     /** Préférences personnelles : apps favorites (épinglées en tête de l'accueil et en raccourcis). */
-    prefs: jsonb("prefs").$type<{ favApps?: string[]; reviewAsk?: { done?: boolean; later?: string } }>().notNull().default({}),
+    prefs: jsonb("prefs").$type<{ favApps?: string[]; appOrder?: string[]; reviewAsk?: { done?: boolean; later?: string } }>().notNull().default({}),
     legacyId: legacyId(),
     ...timestamps,
   },

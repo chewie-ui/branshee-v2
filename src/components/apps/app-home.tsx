@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Minus, Pin, Plus, SlidersHorizontal, Wand2 } from "lucide-react";
@@ -9,7 +9,7 @@ import { AppIcon } from "@/components/apps/app-icon";
 import { Button, ButtonLink } from "@/components/ui/button";
 import type { AppIcon as AppIconName } from "@/lib/apps";
 import { cn } from "@/lib/cn";
-import { setAppPinned, setFavoriteApp } from "@/server/actions/apps";
+import { setAppOrder, setAppPinned, setFavoriteApp } from "@/server/actions/apps";
 import { useT } from "@/components/app-locale";
 import type { T } from "@/lib/i18n/app";
 
@@ -30,7 +30,55 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [, start] = useTransition();
-  const pinned = apps.filter((a) => a.pinned);
+  const pinnedRaw = apps.filter((a) => a.pinned);
+  // Glisser-déposer (mode « Modifier l'accueil ») : ordre local pendant le geste, enregistré au relâchement.
+  const [order, setOrder] = useState<string[] | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const startOrder = useRef<string[]>([]);
+  const pinned = order ? [...order.map((id) => pinnedRaw.find((a) => a.id === id)).filter((a): a is VisibleApp => !!a), ...pinnedRaw.filter((a) => !order.includes(a.id))] : pinnedRaw;
+  const saveOrder = (ids: string[]) => {
+    if (ids.join() === pinnedRaw.map((a) => a.id).join()) return setOrder(null);
+    start(async () => {
+      await setAppOrder(ids);
+      router.refresh();
+    });
+  };
+  const onPointerDown = (e: React.PointerEvent, id: string) => {
+    if (!editing || (e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    startOrder.current = pinned.map((a) => a.id as string);
+    setOrder(startOrder.current);
+    setDragId(id);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragId) return;
+    const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>("[data-app-id]")?.dataset.appId;
+    if (!over || over === dragId) return;
+    setOrder((cur) => {
+      const list = [...(cur ?? startOrder.current)];
+      const from = list.indexOf(dragId), to = list.indexOf(over);
+      if (from < 0 || to < 0) return cur;
+      list.splice(from, 1);
+      list.splice(to, 0, dragId);
+      return list;
+    });
+  };
+  const onPointerUp = () => {
+    if (!dragId) return;
+    setDragId(null);
+    if (order) saveOrder(order);
+  };
+  // Clavier : flèches gauche / droite sur une app en mode édition.
+  const moveBy = (id: string, delta: number) => {
+    const list: string[] = pinned.map((a) => a.id);
+    const i = list.indexOf(id), j = i + delta;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    list.splice(i, 1);
+    list.splice(j, 0, id);
+    setOrder(list);
+    saveOrder(list);
+  };
   const others = apps.filter((a) => !a.pinned);
   const favToggle = (id: string, fav: boolean) => {
     setBusy(id);
@@ -73,7 +121,34 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
           const tag = tagOf(app, activeAddons, t);
           const removable = editing && app.id !== "reglages";
           return (
-            <li key={app.id} className="group/tile relative">
+            <li
+              key={app.id}
+              data-app-id={app.id}
+              className={cn("group/tile relative", editing && "touch-none select-none", dragId === app.id && "z-10 scale-105 opacity-80")}
+              onPointerDown={(e) => onPointerDown(e, app.id)}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            >
+              {editing ? (
+                <div
+                  tabIndex={0}
+                  role="button"
+                  aria-roledescription={t("app déplaçable")}
+                  aria-label={t("{app} : glissez, ou flèches gauche et droite pour déplacer", { app: app.name })}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); moveBy(app.id, -1); }
+                    if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); moveBy(app.id, 1); }
+                  }}
+                  className={cn("group flex cursor-grab flex-col items-center gap-2.5 rounded-2xl p-2 text-center outline-offset-4 focus-visible:outline-2 focus-visible:outline-accent", dragId === app.id && "cursor-grabbing")}
+                >
+                <span className="relative flex size-16 items-center justify-center rounded-2xl border border-border bg-surface text-accent shadow-sm transition-[transform,box-shadow,border-color] duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-md sm:size-20">
+                  <AppIcon icon={app.icon} className="size-7 sm:size-8" />
+                </span>
+                <span className="text-sm font-medium text-text">{app.name}</span>
+                {tag ? <span className={`-mt-1.5 rounded px-1.5 text-[11px] font-semibold ${tag.cls}`}>{t(tag.text)}</span> : null}
+                </div>
+              ) : (
               <Link href={app.href} className="group flex flex-col items-center gap-2.5 rounded-2xl p-2 text-center outline-offset-4">
                 <span className="relative flex size-16 items-center justify-center rounded-2xl border border-border bg-surface text-accent shadow-sm transition-[transform,box-shadow,border-color] duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-md sm:size-20">
                   <AppIcon icon={app.icon} className="size-7 sm:size-8" />
@@ -81,6 +156,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
                 <span className="text-sm font-medium text-text">{app.name}</span>
                 {tag ? <span className={`-mt-1.5 rounded px-1.5 text-[11px] font-semibold ${tag.cls}`}>{t(tag.text)}</span> : null}
               </Link>
+              )}
               {!removable && app.id !== "reglages" ? (
                 <button
                   type="button"
@@ -116,9 +192,10 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, fo
         </li>
       </ul>
 
+      {editing ? <p className="mt-6 text-center text-sm text-muted">{t("Glissez les apps pour changer leur ordre. Le « − » les retire de l'accueil.")}</p> : null}
       {canEdit ? (
         <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-          <Button variant="secondary" size="sm" icon={<SlidersHorizontal className="size-4" aria-hidden="true" />} onClick={() => setEditing((v) => !v)} aria-pressed={editing}>
+          <Button variant="secondary" size="sm" icon={<SlidersHorizontal className="size-4" aria-hidden="true" />} onClick={() => { setEditing((v) => !v); setOrder(null); }} aria-pressed={editing}>
             {editing ? t("Terminé") : t("Modifier l'accueil")}
           </Button>
           <ButtonLink href="/app/demarrer" variant="ghost" size="sm">{t("Refaire le questionnaire")}</ButtonLink>

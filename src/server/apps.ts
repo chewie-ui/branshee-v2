@@ -27,6 +27,8 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number; wit
   const [hidden, [biz], [me]] = await Promise.all([hiddenNavHrefs(), db.select({ o: businesses.onboarding }).from(businesses).where(eq(businesses.id, ctx.business.id)), db.select({ p: members.prefs }).from(members).where(eq(members.id, ctx.member.id))]);
   // Apps favorites de ce membre : en tête, dans l'ordre où il les a épinglées.
   const favs = (me?.p.favApps ?? []).filter((x): x is string => typeof x === "string");
+  // Ordre choisi par glisser-déposer sur l'accueil (prioritaire) ; les apps absentes de la liste suivent.
+  const order = (me?.p.appOrder ?? []).filter((x): x is string => typeof x === "string");
   // Apps rangées hors de l'accueil (questionnaire de départ ou choix du responsable).
   const off = new Set(biz?.o.hiddenApps ?? []);
   const clients = t(clientWord(ctx.business.businessType, { plural: true, capitalize: true }));
@@ -55,7 +57,13 @@ export async function visibleApps(ctx: AppContext, opts: { pending?: number; wit
   }))
     .filter((a) => a.nav.length > 0)
     .map((a) => ({ ...a, href: a.nav.some((n) => n.href === a.href) ? a.href : a.nav[0]!.href }))
-    .sort((x, y) => (x.fav === y.fav ? (x.fav ? favs.indexOf(x.id) - favs.indexOf(y.id) : 0) : x.fav ? -1 : 1));
+    .sort((x, y) => {
+      if (order.length) {
+        const ix = order.indexOf(x.id), iy = order.indexOf(y.id);
+        if (ix !== -1 || iy !== -1) return ix === -1 ? 1 : iy === -1 ? -1 : ix - iy;
+      }
+      return x.fav === y.fav ? (x.fav ? favs.indexOf(x.id) - favs.indexOf(y.id) : 0) : x.fav ? -1 : 1;
+    });
 }
 
 /** Le questionnaire de départ a-t-il été rempli pour cet établissement ? */
