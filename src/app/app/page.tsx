@@ -22,6 +22,9 @@ import { slugify } from "@/lib/slug";
 import { de } from "@/lib/cn";
 import { pageFacts } from "@/server/directory";
 import { makeT } from "@/lib/i18n/app";
+import { MyPageCard } from "@/components/apps/my-page-card";
+import { onlineItems } from "@/server/online";
+import { publicPagePath } from "@/server/brand";
 
 /** Demande d'avis due : entreprise créée il y a plus de 14 jours, pas encore faite, « plus tard » écoulé. */
 function reviewAskDue(since: Date, r: { done?: boolean; later?: string } | undefined) {
@@ -84,12 +87,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
   const searchLabel = searchHref && facts ? `${(m?.nom ?? facts.btype ?? "").toLowerCase()} à ${facts.city?.trim()}` : null;
   // Clés de module (tel_ia) → identifiants d'app (tel-ia).
   const active = mods.map((m) => m.key.replace(/_/g, "-"));
+  // Raccourci « Ma page en ligne » : voir, couper ou remettre en ligne la page publique sans ouvrir d'app.
+  const appIds = new Set(apps.map((a) => a.id as string));
+  const myPage = canEdit && (appIds.has("rdv") || appIds.has("site"))
+    ? { url: `${(process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "")}${await publicPagePath(ctx.business.slug)}`, items: await onlineItems(ctx) }
+    : null;
   return (
     <>
       <div className="mt-2 mb-10 text-center">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("Bonjour {name}", { name: firstName ?? "" })}</h1>
         <p className="mt-1 text-sm text-muted">{ready ? t("Votre espace est prêt. Ouvrez une app pour commencer.") : ctx.user.locale === "en" ? t("Les apps de {business}.", { business: ctx.business.name }) : `Les apps ${de(ctx.business.name)}.`}</p>
       </div>
+      {myPage ? <MyPageCard url={myPage.url} items={myPage.items} hasSiteApp={appIds.has("site")} locale={ctx.user.locale ?? "fr"} /> : null}
       {score ? <PageScoreCard items={score.items} percent={score.percent} slug={ctx.business.slug} searchHref={searchHref} searchLabel={searchLabel} locale={ctx.user.locale ?? "fr"} /> : null}
       {askReview ? <ReviewAsk href={SKYDEV_GOOGLE_REVIEW} /> : null}
       {ctx.can("billing.manage") ? (

@@ -3865,4 +3865,8 @@ export const EN: Record<string, string> = {
   "Assujetti à la TVA (indépendant ou société) ?": "VAT-registered (self-employed or company)?",
   "Ajoutez votre n° de TVA": "Add your VAT number",
   "avant de payer : il sera sur vos factures.": "before paying: it will appear on your invoices.",
+  "Adresse et QR code": "Address and QR code",
+  "Ma page en ligne": "My online page",
+  "À cette adresse, vos visiteurs voient votre site web, avec la prise de rendez-vous intégrée.": "At this address, visitors see your website, with booking built in.",
+  "À cette adresse, vos visiteurs voient votre page de prise de rendez-vous.": "At this address, visitors see your booking page.",
 };
