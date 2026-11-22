@@ -22,7 +22,7 @@ export function MyPageCard({ url, items, locale = "fr" }: { url: string; items: 
     { href: "/app/page-de-reservation/partager", label: t("QR code"), icon: QrCode },
   ];
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface" aria-labelledby="my-page">
+    <section className="rounded-2xl border border-border bg-surface" aria-labelledby="my-page">
       <div className="space-y-3 p-5">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-foreground" aria-hidden="true"><Globe2 className="size-5" /></span>
@@ -35,7 +35,7 @@ export function MyPageCard({ url, items, locale = "fr" }: { url: string; items: 
         <CopyLink url={url} />
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {links.map((l) => (
-            <Link key={l.label} href={l.href} target={l.external ? "_blank" : undefined} rel={l.external ? "noopener" : undefined} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Link key={l.label} href={l.href} target={l.external ? "_blank" : undefined} rel={l.external ? "noopener" : undefined} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-8">
               <l.icon className="size-4" aria-hidden="true" />
               {l.label}
             </Link>
@@ -43,7 +43,7 @@ export function MyPageCard({ url, items, locale = "fr" }: { url: string; items: 
         </div>
       </div>
       {items.length ? (
-        <details className="group mt-auto border-t border-border">
+        <details className="group border-t border-border">
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-5 py-2 text-sm font-medium hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
             <span className="flex-1">{t("Mettre en ligne ou couper")}</span>
             <span className="text-xs text-muted">{t("{on} sur {total} en ligne", { on: items.filter((i) => i.on).length, total: items.length })}</span>

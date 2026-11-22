@@ -107,7 +107,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
           myPage || score || askReview ? (
             <>
               {askReview ? <ReviewAsk href={SKYDEV_GOOGLE_REVIEW} /> : null}
-              <div className={cn("grid grid-cols-1 items-stretch gap-4", myPage && score && "lg:grid-cols-2")}>
+              <div className={cn("grid grid-cols-1 items-start gap-4", myPage && score && "lg:grid-cols-2")}>
                 {myPage ? <MyPageCard url={myPage.url} items={myPage.items} locale={ctx.user.locale ?? "fr"} /> : null}
                 {score ? <PageScoreCard items={score.items} percent={score.percent} searchHref={searchHref} searchLabel={searchLabel} locale={ctx.user.locale ?? "fr"} /> : null}
               </div>

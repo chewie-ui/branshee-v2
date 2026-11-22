@@ -12,7 +12,7 @@ export function PageScoreCard({ items, percent, searchHref, searchLabel, locale 
   const todo = items.filter((i) => !i.done);
   const next = todo[0];
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5" aria-labelledby="page-score">
+    <section className="rounded-2xl border border-border bg-surface p-5" aria-labelledby="page-score">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-foreground" aria-hidden="true">{next ? <Search className="size-5" /> : <Check className="size-5" />}</span>
         <div className="min-w-0 flex-1">
@@ -28,7 +28,7 @@ export function PageScoreCard({ items, percent, searchHref, searchLabel, locale 
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={t("Page complétée")}>
         <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${percent}%` }} />
       </div>
-      <div className="mt-auto pt-4">
+      <div className="pt-4">
         {next ? (
           <Link href={next.href} className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium transition-colors duration-150 hover:border-accent/40 hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <span className="text-muted">{t("À faire :")}</span>
