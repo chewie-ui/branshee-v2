@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Minus, Pin, Plus, SlidersHorizontal, Wand2 } from "lucide-react";
@@ -24,7 +24,7 @@ function tagOf(app: VisibleApp, activeAddons: string[], t: T) {
  * Accueil Skydev : les apps de l'entreprise en grandes icônes (comme un écran de téléphone),
  * puis la tuile « App store » pour en ajouter d'autres. Le responsable peut ranger son accueil.
  */
-export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: VisibleApp[]; activeAddons: string[]; canEdit: boolean; admin?: { href: string; label: string; hint: string; icon: AppIconName }[] }) {
+export function AppHome({ apps, activeAddons, canEdit, admin = [], afterApps, footer }: { apps: VisibleApp[]; activeAddons: string[]; canEdit: boolean; admin?: { href: string; label: string; hint: string; icon: AppIconName }[]; afterApps?: ReactNode; footer?: ReactNode }) {
   const router = useRouter();
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -51,24 +51,6 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
 
   return (
     <div className="mx-auto max-w-4xl">
-      {admin.length ? (
-        <section aria-labelledby="admin-h" className="mb-10">
-          <h2 id="admin-h" className="mb-3 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Administration")}</h2>
-          {/* Cartes centrées : une rangée incomplète reste au milieu. */}
-          <ul className="flex flex-wrap justify-center gap-3">
-            {admin.map((a) => (
-              <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
-                <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{t(a.label)}</span><span className="line-clamp-2 block text-xs text-muted">{t(a.hint)}</span></span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <h2 className="mt-10 mb-1 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Applications")}</h2>
-          <p className="mb-2 text-center text-xs text-muted">{t("Épinglez les apps que vous utilisez le plus : elles passent en premier et deviennent des raccourcis dans chaque app.")}</p>
-        </section>
-      ) : null}
       <ul className="grid grid-cols-3 gap-x-3 gap-y-8 sm:grid-cols-4 sm:gap-x-6 lg:grid-cols-5">
         {pinned.map((app) => {
           const tag = tagOf(app, activeAddons, t);
@@ -118,12 +100,31 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
       </ul>
 
       {canEdit ? (
-        <div className="mt-8 flex flex-wrap justify-center gap-2">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
           <Button variant="secondary" size="sm" icon={<SlidersHorizontal className="size-4" aria-hidden="true" />} onClick={() => setEditing((v) => !v)} aria-pressed={editing}>
             {editing ? t("Terminé") : t("Modifier l'accueil")}
           </Button>
           <ButtonLink href="/app/demarrer" variant="ghost" size="sm">{t("Refaire le questionnaire")}</ButtonLink>
         </div>
+      ) : null}
+
+      {afterApps ? <div className="mt-12">{afterApps}</div> : null}
+
+      {admin.length ? (
+        <section aria-labelledby="admin-h" className="mt-12">
+          <h2 id="admin-h" className="mb-3 text-center text-sm font-semibold tracking-wide text-muted uppercase">{t("Administration")}</h2>
+          {/* Cartes centrées : une rangée incomplète reste au milieu. */}
+          <ul className="flex flex-wrap justify-center gap-3">
+            {admin.map((a) => (
+              <li key={a.href} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]">
+                <Link href={a.href} className="flex h-full min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 hover:border-accent lg:flex-col lg:items-stretch">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><AppIcon icon={a.icon} className="size-5" /></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-medium">{t(a.label)}</span><span className="line-clamp-2 block text-xs text-muted">{t(a.hint)}</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {/* Sur mesure : demander n'importe quelle modif d'une app, ou une app nouvelle. */}
@@ -136,6 +137,7 @@ export function AppHome({ apps, activeAddons, canEdit, admin = [] }: { apps: Vis
         <span className="hidden shrink-0 items-center gap-1 text-sm font-medium text-accent sm:inline-flex">{t("Sur mesure")}<ArrowRight className="size-4" aria-hidden="true" /></span>
         <ArrowRight className="size-5 shrink-0 text-accent sm:hidden" aria-hidden="true" />
       </Link>
+      {footer}
 
     </div>
   );

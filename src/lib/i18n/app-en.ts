@@ -3942,4 +3942,12 @@ export const EN: Record<string, string> = {
   "fait": "done",
   "{done} sur {total} fait": "{done} of {total} done",
   "Écrire au support": "Write to support",
+  "Changer l'adresse": "Change address",
+  "Vos visiteurs voient votre site web, avec la réservation.": "Visitors see your website, with booking.",
+  "Vos visiteurs voient votre page de prise de rendez-vous.": "Visitors see your booking page.",
+  "Mettre en ligne ou couper": "Turn on or off",
+  "{on} sur {total} en ligne": "{on} of {total} online",
+  "Faites-vous trouver": "Get found",
+  "Une page complète passe devant les autres dans l'annuaire et sur Google.": "A complete page ranks ahead of others in the directory and on Google.",
+  "+{n} autre(s)": "+{n} more",
 };

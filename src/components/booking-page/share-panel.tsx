@@ -20,7 +20,7 @@ export function SlugCard({ origin, slug, prefix = "" }: { origin: string; slug: 
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const url = `${origin}${prefix}/${saved}`;
   return (
-    <Card>
+    <Card id="adresse" className="scroll-mt-6">
       <CardHeader title={t("Votre lien de réservation")} description={t("À mettre sur Google, Instagram, WhatsApp, vos cartes de visite…")} />
       <div className="space-y-5 p-5">
         <CopyLink url={url} trackShare />

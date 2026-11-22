@@ -19,7 +19,7 @@ import { SubscriptionSummary } from "@/components/apps/subscription-summary";
 import { PageScoreCard } from "@/components/directory/page-score-card";
 import { matchMetier, metierVilleUrl, pageCompleteness } from "@/lib/directory";
 import { slugify } from "@/lib/slug";
-import { de } from "@/lib/cn";
+import { cn, de } from "@/lib/cn";
 import { pageFacts } from "@/server/directory";
 import { makeT } from "@/lib/i18n/app";
 import { MyPageCard } from "@/components/apps/my-page-card";
@@ -94,25 +94,40 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ b
     : null;
   return (
     <>
-      <div className="mt-2 mb-10 text-center">
+      <div className="mt-2 mb-8 text-center">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("Bonjour {name}", { name: firstName ?? "" })}</h1>
         <p className="mt-1 text-sm text-muted">{ready ? t("Votre espace est prêt. Ouvrez une app pour commencer.") : ctx.user.locale === "en" ? t("Les apps de {business}.", { business: ctx.business.name }) : `Les apps ${de(ctx.business.name)}.`}</p>
       </div>
-      {myPage ? <MyPageCard url={myPage.url} items={myPage.items} hasSiteApp={appIds.has("site")} locale={ctx.user.locale ?? "fr"} /> : null}
-      {score ? <PageScoreCard items={score.items} percent={score.percent} slug={ctx.business.slug} searchHref={searchHref} searchLabel={searchLabel} locale={ctx.user.locale ?? "fr"} /> : null}
-      {askReview ? <ReviewAsk href={SKYDEV_GOOGLE_REVIEW} /> : null}
-      {ctx.can("billing.manage") ? (
-        <Link href="/app/parrainage" className="group mx-auto mb-8 flex max-w-3xl items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-accent-soft-foreground sm:text-base">{t("Invitez un pro, gagnez 1 mois offert")}</span>
-            <span className="block text-sm text-accent-soft-foreground/80">{t("Chaque personne qui s'abonne grâce à vous = 29 € offerts sur votre abonnement.")}</span>
-          </span>
-          <span className="hidden shrink-0 items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground group-hover:bg-accent-hover sm:inline-flex">{t("Inviter")}<ArrowRight className="size-4" aria-hidden="true" /></span>
-          <ArrowRight className="size-5 shrink-0 text-accent-soft-foreground sm:hidden" aria-hidden="true" />
-        </Link>
-      ) : null}
-      <AppHome apps={apps.filter((a) => !ADMIN_APPS.has(a.id))} activeAddons={active} canEdit={canEdit} admin={admin} />
+      <AppHome
+        apps={apps.filter((a) => !ADMIN_APPS.has(a.id))}
+        activeAddons={active}
+        canEdit={canEdit}
+        admin={admin}
+        afterApps={
+          myPage || score || askReview ? (
+            <>
+              {askReview ? <ReviewAsk href={SKYDEV_GOOGLE_REVIEW} /> : null}
+              <div className={cn("grid grid-cols-1 items-stretch gap-4", myPage && score && "lg:grid-cols-2")}>
+                {myPage ? <MyPageCard url={myPage.url} items={myPage.items} locale={ctx.user.locale ?? "fr"} /> : null}
+                {score ? <PageScoreCard items={score.items} percent={score.percent} searchHref={searchHref} searchLabel={searchLabel} locale={ctx.user.locale ?? "fr"} /> : null}
+              </div>
+            </>
+          ) : null
+        }
+        footer={
+        ctx.can("billing.manage") ? (
+          <Link href="/app/parrainage" className="group mx-auto mt-6 flex max-w-3xl items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft p-4 transition-colors duration-150 hover:border-accent/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Gift className="size-5" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-accent-soft-foreground sm:text-base">{t("Invitez un pro, gagnez 1 mois offert")}</span>
+              <span className="block text-sm text-accent-soft-foreground/80">{t("Chaque personne qui s'abonne grâce à vous = 29 € offerts sur votre abonnement.")}</span>
+            </span>
+            <span className="hidden shrink-0 items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground group-hover:bg-accent-hover sm:inline-flex">{t("Inviter")}<ArrowRight className="size-4" aria-hidden="true" /></span>
+            <ArrowRight className="size-5 shrink-0 text-accent-soft-foreground sm:hidden" aria-hidden="true" />
+          </Link>
+        ) : null
+        }
+      />
       {/* Essai ou abonnement absent : le bandeau du haut le dit déjà. */}
       {ctx.can("billing.manage") && (plan.source === "stripe" || plan.source === "account" || (plan.source === "granted" && !plan.isTrial)) ? (
         <div className="mx-auto mt-12 max-w-3xl">

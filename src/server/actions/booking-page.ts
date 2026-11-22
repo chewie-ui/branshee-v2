@@ -1,5 +1,7 @@
 "use server";
 
+import { businessBrand } from "@/server/brand";
+
 import { isReservedSubdomain } from "@/lib/app-subdomains";
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
@@ -223,7 +225,8 @@ export async function saveTheme(input: unknown): Promise<Result> {
 
 export async function saveSlug(input: string): Promise<Result & { slug?: string }> {
   const ctx = await requireContext("customization.manage", { app: "rdv" });
-  if (!(await businessHas(ctx.business.id, "customUrl"))) return { ok: false, error: "L'URL personnalisée est incluse dans le forfait Pro+, ou en option à 5 €/mois avec le forfait Pro (Réglages › Abonnement)." };
+  if (!(await businessHas(ctx.business.id, "customUrl")))
+    return { ok: false, error: businessBrand(ctx.business) === "skydev" ? "Changer l'adresse de votre page est compris dans l'abonnement Skydev : choisissez votre abonnement dans Réglages › Abonnement." : "L'URL personnalisée est incluse dans le forfait Pro+, ou en option à 5 €/mois avec le forfait Pro (Réglages › Abonnement)." };
   const slug = slugify(String(input ?? ""));
   if (slug.length < 3) return { ok: false, error: "3 caractères minimum (lettres, chiffres, tirets)." };
   if (RESERVED_SLUGS.has(slug) || isReservedSubdomain(slug)) return { ok: false, error: "Cette adresse est réservée, choisissez-en une autre." };
