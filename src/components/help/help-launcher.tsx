@@ -10,10 +10,12 @@ import { useSpacePath } from "@/lib/use-space-path";
 import { useT } from "@/components/app-locale";
 import { startTour } from "@/components/app/guided-tour";
 import { helpStatus, type HelpStatus } from "@/server/actions/help";
+import { ProSupportChat } from "@/components/support/pro-support-chat";
 
 // Écrans plein écran (caisse, cuisine) et le centre d'aide lui-même : pas de bouton par-dessus.
 const HIDDEN = ["/app/caisse", "/app/commandes", "/app/aide"];
 const KEY = "sky-help-guide";
+const CHAT = "__chat";
 
 /**
  * Bouton « Aide » sur toutes les pages de l'app : « Que voulez-vous faire ? », des guides par objectif
@@ -59,6 +61,34 @@ export function HelpLauncher({ raised = false }: { raised?: boolean }) {
     };
   }, [open, pathname]);
 
+  // Discussion en cours avec l'équipe : le bouton devient une bulle de chat (avec les messages non lus).
+  const [chat, setChat] = useState<{ active: boolean; unread: number }>({ active: false, unread: 0 });
+  useEffect(() => {
+    let stop = false;
+    let timer = 0;
+    const peek = async () => {
+      if (document.visibilityState === "visible" && !open) {
+        try {
+          const r = await fetch("/api/support?peek=1", { cache: "no-store" });
+          if (r.ok && !stop) setChat(await r.json());
+        } catch {
+          /* hors ligne */
+        }
+      }
+      if (!stop) timer = window.setTimeout(peek, 20000);
+    };
+    void peek();
+    return () => {
+      stop = true;
+      window.clearTimeout(timer);
+    };
+  }, [open]);
+  // Une réponse arrive et le pro est ailleurs : la discussion s'ouvre directement au clic.
+  const openChat = () => {
+    pick(CHAT);
+    setOpen(true);
+  };
+
   const guides = useMemo(() => HELP_GUIDES.filter((g) => !status || status.allowed.includes(g.key)), [status]);
   // Recherche : on garde ce qui correspond le mieux (une question à deux objectifs fait ressortir les deux guides).
   const scored = useMemo(() => {
@@ -85,37 +115,54 @@ export function HelpLauncher({ raised = false }: { raised?: boolean }) {
   const tours = useMemo(() => scored.filter((x) => !("keywords" in x.item)).map((x) => x.item as (typeof TOURS)[number]), [scored]);
 
   if (HIDDEN.some((h) => pathname === h || pathname.startsWith(`${h}/`))) return null;
-  const guide = guideKey ? guides.find((g) => g.key === guideKey) : null;
+  const inChat = guideKey === CHAT;
+  const guide = guideKey && !inChat ? guides.find((g) => g.key === guideKey) : null;
   const close = () => setOpen(false);
 
   return (
     <>
       {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn("fixed right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full border border-border bg-surface px-4 font-medium text-text shadow-lg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent print:hidden", raised ? "bottom-20" : "bottom-4")}
-          aria-haspopup="dialog"
-        >
-          <LifeBuoy className="size-5 text-accent" aria-hidden="true" />
-          {t("Aide")}
-        </button>
+        chat.active ? (
+          <button
+            type="button"
+            onClick={openChat}
+            className={cn("fixed right-4 z-40 flex size-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent print:hidden", raised ? "bottom-20" : "bottom-4")}
+            aria-label={chat.unread ? t("Discussion avec l'équipe, {n} nouveau(x) message(s)", { n: chat.unread }) : t("Rouvrir la discussion avec l'équipe")}
+          >
+            <MessageCircle className="size-6" aria-hidden="true" />
+            {chat.unread ? <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-danger px-1 text-xs leading-5 font-semibold text-white ring-2 ring-surface">{chat.unread}</span> : null}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className={cn("fixed right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full border border-border bg-surface px-4 font-medium text-text shadow-lg transition-colors duration-150 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent print:hidden", raised ? "bottom-20" : "bottom-4")}
+            aria-haspopup="dialog"
+          >
+            <LifeBuoy className="size-5 text-accent" aria-hidden="true" />
+            {t("Aide")}
+            {chat.unread ? <span className="rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-white">{chat.unread}</span> : null}
+          </button>
+        )
       ) : (
         <section role="dialog" aria-modal="false" aria-labelledby="help-title" className="fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] flex-col rounded-t-2xl border border-border bg-surface shadow-2xl sm:inset-x-auto sm:right-4 sm:bottom-4 sm:h-[min(680px,85dvh)] sm:w-[420px] sm:rounded-2xl print:hidden">
           <header className="flex items-center gap-2 border-b border-border px-4 py-3">
-            {guide ? (
+            {guide || inChat ? (
               <button type="button" onClick={() => pick(null)} className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-accent" aria-label={t("Retour aux guides")}>
                 <ArrowLeft className="size-5" aria-hidden="true" />
               </button>
             ) : (
               <span className="flex size-10 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground" aria-hidden="true"><LifeBuoy className="size-5" /></span>
             )}
-            <h2 id="help-title" className="min-w-0 flex-1 truncate font-semibold">{guide ? t(guide.title) : t("Besoin d'aide ?")}</h2>
-            <button type="button" onClick={close} className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-accent" aria-label={t("Fermer l'aide")}>
+            <h2 id="help-title" className="min-w-0 flex-1 truncate font-semibold">{inChat ? t("Discuter avec l'équipe") : guide ? t(guide.title) : t("Besoin d'aide ?")}</h2>
+            <button type="button" onClick={close} className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-2 focus-visible:outline-accent" aria-label={inChat ? t("Réduire la discussion") : t("Fermer l'aide")}>
               <X className="size-5" aria-hidden="true" />
             </button>
           </header>
 
+          {inChat ? (
+            <ProSupportChat onEnded={() => setChat({ active: false, unread: 0 })} />
+          ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
             {guide ? (
               <GuideView guide={guide} status={status} onLeave={close} />
@@ -175,16 +222,19 @@ export function HelpLauncher({ raised = false }: { raised?: boolean }) {
               </div>
             )}
           </div>
+          )}
 
-          <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-4 py-3 text-sm">
-            <span className="text-muted">{t("Toujours bloqué ?")}</span>
-            <Link href="/app/aide#contact" onClick={close} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover">
-              <MessageCircle className="size-4" aria-hidden="true" />{t("Écrire au support")}
-            </Link>
-            <Link href="/app/aide" onClick={close} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover">
-              <BookOpen className="size-4" aria-hidden="true" />{t("Centre d'aide")}
-            </Link>
-          </footer>
+          {!inChat ? (
+            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-4 py-3 text-sm">
+              <span className="text-muted">{t("Toujours bloqué ?")}</span>
+              <button type="button" onClick={() => pick(CHAT)} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover">
+                <MessageCircle className="size-4" aria-hidden="true" />{chat.active ? t("Reprendre la discussion") : t("Discuter avec l'équipe")}
+              </button>
+              <Link href="/app/aide" onClick={close} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent hover:text-accent-hover">
+                <BookOpen className="size-4" aria-hidden="true" />{t("Centre d'aide")}
+              </Link>
+            </footer>
+          ) : null}
         </section>
       )}
     </>

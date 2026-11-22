@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "@/lib/zod";
 import { db } from "@/db";
 import { adminMessages, helpSections, reviewReports, reviews, supportMessages, supportThreads, users } from "@/db/schema";
@@ -11,37 +11,52 @@ import { requireSuperadmin } from "@/server/admin";
 import { sendEmail } from "@/server/email/mailer";
 import { emails } from "@/server/email/templates";
 import { sanitizeArticleHtml } from "@/server/rich-text";
+import { storeSupportImage } from "@/server/support-image";
 
 type Result = { ok: boolean; error?: string; message?: string };
 const appUrl = () => (process.env.APP_URL ?? "https://branshee.com").replace(/\/$/, "");
 
 // ─── Support ─────────────────────────────────────────────────────────────────
 
-/** Réponse de l'équipe : visible dans l'aide du pro, badge non lu, et email de notification. */
-export async function replySupport(userId: string, body: string): Promise<Result> {
+/** Réponse de l'équipe (texte et / ou image) : instantanée dans le chat du pro ; email seulement s'il n'est pas devant. */
+export async function replySupport(userId: string, fd: FormData): Promise<Result & { id?: string }> {
   await requireSuperadmin();
   const id = z.uuid().parse(userId);
-  const text = String(body ?? "").trim();
-  if (!text) return { ok: false, error: "Écrivez une réponse." };
+  const text = String(fd.get("body") ?? "").trim();
   if (text.length > 4000) return { ok: false, error: "Réponse trop longue." };
+  const img = await storeSupportImage(fd.get("image"));
+  if (!img.ok) return img;
+  if (!text && !img.ref) return { ok: false, error: "Écrivez une réponse." };
   const [t] = await db
     .update(supportThreads)
-    .set({ unreadByUser: sql`${supportThreads.unreadByUser} + 1`, unreadByAdmin: 0, lastMessageAt: new Date(), closedAt: null })
+    .set({ unreadByUser: sql`${supportThreads.unreadByUser} + 1`, unreadByAdmin: 0, adminReadAt: new Date(), adminTypingAt: null, lastMessageAt: new Date(), closedAt: null, closedBy: null })
     .where(eq(supportThreads.userId, id))
-    .returning({ id: supportThreads.userId });
+    .returning({ id: supportThreads.userId, seenAt: supportThreads.userReadAt });
   if (!t) return { ok: false, error: "Conversation introuvable." };
-  await db.insert(supportMessages).values({ threadUserId: id, sender: "admin", body: text });
-  const [u] = await db.select({ email: users.email, name: users.fullName }).from(users).where(eq(users.id, id));
-  if (u) after(() => sendEmail({ to: u.email, ...emails.supportReply({ name: u.name.split(" ")[0] ?? u.name, body: text, url: `${appUrl()}/app/aide#contact` }), template: "support_reply" }).then(() => undefined));
-  revalidatePath("/admin/support");
-  return { ok: true };
+  const [m] = await db.insert(supportMessages).values({ threadUserId: id, sender: "admin", body: text, imageRef: img.ref }).returning({ id: supportMessages.id });
+  // Le pro a la discussion ouverte (vue il y a moins de 2 minutes) : il voit la réponse en direct, pas d'email.
+  const watching = !!t.seenAt && Date.now() - t.seenAt.getTime() < 2 * 60_000;
+  const [u] = watching ? [] : await db.select({ email: users.email, name: users.fullName }).from(users).where(eq(users.id, id));
+  if (u) after(() => sendEmail({ to: u.email, ...emails.supportReply({ name: u.name.split(" ")[0] ?? u.name, body: text || "(image)", url: `${appUrl()}/app/aide#contact` }), template: "support_reply" }).then(() => undefined));
+  return { ok: true, id: m?.id };
+}
+
+/** « L'équipe écrit… » côté pro. */
+export async function adminSupportTyping(userId: string): Promise<void> {
+  await requireSuperadmin();
+  await db.update(supportThreads).set({ adminTypingAt: new Date() }).where(eq(supportThreads.userId, z.uuid().parse(userId)));
 }
 
 /** Clôture : le pro est invité à noter l'échange ; un nouveau message de sa part rouvre la conversation. */
 export async function closeSupport(userId: string): Promise<Result> {
   await requireSuperadmin();
   const id = z.uuid().parse(userId);
-  await db.update(supportThreads).set({ closedAt: new Date(), rating: null, unreadByAdmin: 0, unreadByUser: sql`${supportThreads.unreadByUser} + 1` }).where(eq(supportThreads.userId, id));
+  const [t] = await db
+    .update(supportThreads)
+    .set({ closedAt: new Date(), closedBy: "admin", rating: null, unreadByAdmin: 0, unreadByUser: sql`${supportThreads.unreadByUser} + 1` })
+    .where(and(eq(supportThreads.userId, id), isNull(supportThreads.closedAt)))
+    .returning({ id: supportThreads.userId });
+  if (t) await db.insert(supportMessages).values({ threadUserId: id, sender: "admin", kind: "system", body: "Discussion terminée par l'équipe." });
   revalidatePath("/admin/support");
   return { ok: true };
 }

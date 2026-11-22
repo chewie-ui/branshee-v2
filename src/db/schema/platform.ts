@@ -73,6 +73,13 @@ export const supportThreads = pgTable("support_threads", {
   rating: integer("rating"),
   /** Conversation clôturée par l'équipe : le pro est invité à la noter ; un nouveau message la rouvre. */
   closedAt: timestamp("closed_at", { withTimezone: true }),
+  /** Qui a terminé la discussion : le pro (« Terminer la discussion ») ou l'équipe. */
+  closedBy: text("closed_by", { enum: ["user", "admin"] }),
+  /** Chat en direct : « … est en train d'écrire » (frappe il y a moins de quelques secondes) et « Vu ». */
+  userTypingAt: timestamp("user_typing_at", { withTimezone: true }),
+  adminTypingAt: timestamp("admin_typing_at", { withTimezone: true }),
+  userReadAt: timestamp("user_read_at", { withTimezone: true }),
+  adminReadAt: timestamp("admin_read_at", { withTimezone: true }),
   ...timestamps,
 });
 
@@ -94,7 +101,11 @@ export const supportMessages = pgTable(
       .notNull()
       .references(() => supportThreads.userId, { onDelete: "cascade" }),
     sender: text("sender", { enum: ["user", "admin"] }).notNull(),
+    /** « system » : message automatique (accueil, fin de discussion), affiché au centre. */
+    kind: text("kind", { enum: ["message", "system"] }).notNull().default("message"),
     body: text("body").notNull(),
+    /** Image jointe (fichier privé chiffré, servi par /api/support/image/<id>). */
+    imageRef: text("image_ref"),
     createdAt: timestamps.createdAt,
   },
   (t) => [index("support_messages_thread_idx").on(t.threadUserId, t.createdAt)],

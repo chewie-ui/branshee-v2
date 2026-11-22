@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, Plus, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { closeSupport, decideReviewReport, deleteAdminMessage, deleteHelpSection, deleteSupportThread, moveHelpSection, replySupport, saveHelpSection, sendAdminMessage } from "@/server/actions/admin-relations";
+import { decideReviewReport, deleteAdminMessage, deleteHelpSection, moveHelpSection, saveHelpSection, sendAdminMessage } from "@/server/actions/admin-relations";
 
 const textarea = "w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent/30";
 
@@ -18,44 +18,6 @@ export function AutoRefresh({ seconds = 15 }: { seconds?: number }) {
     return () => window.clearInterval(t);
   }, [router, seconds]);
   return null;
-}
-
-export function SupportReply({ userId, closed }: { userId: string; closed: boolean }) {
-  const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState(false);
-  const [pending, start] = useTransition();
-  return (
-    <div className="border-t border-border p-4">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          start(async () => {
-            const r = await replySupport(userId, text);
-            if (r.ok) setText("");
-            setError(r.ok ? null : (r.error ?? "Erreur."));
-          });
-        }}
-      >
-        <label htmlFor="reply" className="sr-only">Réponse</label>
-        <textarea id="reply" value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={4000} placeholder="Votre réponse (le pro est prévenu par email)…" className={textarea} />
-        {error ? <p className="mt-1 text-sm text-danger" role="alert">{error}</p> : null}
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Button type="submit" size="sm" loading={pending} disabled={!text.trim()} icon={<Send className="size-4" aria-hidden="true" />}>Répondre</Button>
-          {!closed ? <Button type="button" size="sm" variant="secondary" disabled={pending} onClick={() => start(async () => void (await closeSupport(userId)))}>Clôturer (demander une note)</Button> : null}
-          {confirm ? (
-            <span className="ml-auto flex items-center gap-2 text-sm">
-              Supprimer la conversation ?
-              <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm(false)}>Non</Button>
-              <Button type="button" size="sm" variant="danger" loading={pending} onClick={() => start(async () => void (await deleteSupportThread(userId)))}>Oui</Button>
-            </span>
-          ) : (
-            <Button type="button" size="sm" variant="ghost" className="ml-auto text-danger hover:text-danger" onClick={() => setConfirm(true)} icon={<Trash2 className="size-4" aria-hidden="true" />}>Supprimer</Button>
-          )}
-        </div>
-      </form>
-    </div>
-  );
 }
 
 export function AdminMessageForm() {

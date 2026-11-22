@@ -505,6 +505,13 @@
       "when": 1795200100000,
       "tag": "0071_personnalisation",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795200200000,
+      "tag": "0072_support_live",
+      "breakpoints": true
     }
   ]
 }

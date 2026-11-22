@@ -1,19 +1,50 @@
 import "server-only";
-import { and, asc, desc, eq, gt, isNull, notExists, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNull, notExists, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { adminMessageDismissals, adminMessages, helpSections, supportMessages, supportThreads } from "@/db/schema";
 
-export type SupportMessageView = { id: string; sender: "user" | "admin"; body: string; createdAt: string };
+export type SupportMessageView = { id: string; sender: "user" | "admin"; kind: "message" | "system"; body: string; image: boolean; createdAt: string };
+export type SupportThreadView = { closedAt: string | null; closedBy: "user" | "admin" | null; rated: boolean; unread: number; otherTyping: boolean; otherReadAt: string | null };
+export type SupportLive = { thread: SupportThreadView | null; messages: SupportMessageView[]; now: string };
 
-/** Conversation de support d'un pro (les 300 derniers messages). */
-export async function getSupportThread(userId: string) {
-  const [thread] = await db.select().from(supportThreads).where(eq(supportThreads.userId, userId));
-  if (!thread) return { thread: null, messages: [] as SupportMessageView[] };
-  const rows = await db.select().from(supportMessages).where(eq(supportMessages.threadUserId, userId)).orderBy(desc(supportMessages.createdAt)).limit(300);
+/** « En train d'écrire » : dernière frappe il y a moins de 6 secondes. */
+const TYPING_MS = 6000;
+
+const view = (m: typeof supportMessages.$inferSelect): SupportMessageView => ({ id: m.id, sender: m.sender, kind: m.kind, body: m.body, image: !!m.imageRef, createdAt: m.createdAt.toISOString() });
+
+/**
+ * État du chat de support vu d'un côté (le pro ou l'équipe) : messages (tous, ou depuis `since`),
+ * l'autre côté en train d'écrire, et jusqu'où il a lu (« Vu »). `markRead` : ce côté a la discussion sous les yeux.
+ */
+export async function supportLive(userId: string, side: "user" | "admin", opts: { since?: Date | null; markRead?: boolean } = {}): Promise<SupportLive> {
+  const [t] = await db.select().from(supportThreads).where(eq(supportThreads.userId, userId));
+  const now = new Date();
+  if (!t) return { thread: null, messages: [], now: now.toISOString() };
+  const rows = opts.since
+    ? await db.select().from(supportMessages).where(and(eq(supportMessages.threadUserId, userId), gte(supportMessages.createdAt, opts.since))).orderBy(asc(supportMessages.createdAt)).limit(200)
+    : (await db.select().from(supportMessages).where(eq(supportMessages.threadUserId, userId)).orderBy(desc(supportMessages.createdAt)).limit(300)).reverse();
+  if (opts.markRead) {
+    await db.update(supportThreads).set(side === "user" ? { unreadByUser: 0, userReadAt: now } : { unreadByAdmin: 0, adminReadAt: now }).where(eq(supportThreads.userId, userId));
+  }
+  const otherTypingAt = side === "user" ? t.adminTypingAt : t.userTypingAt;
+  const otherReadAt = side === "user" ? t.adminReadAt : t.userReadAt;
   return {
-    thread: { unreadByUser: thread.unreadByUser, closedAt: thread.closedAt?.toISOString() ?? null, rated: !!thread.rating },
-    messages: rows.reverse().map((m) => ({ id: m.id, sender: m.sender, body: m.body, createdAt: m.createdAt.toISOString() })),
+    thread: {
+      closedAt: t.closedAt?.toISOString() ?? null,
+      closedBy: t.closedBy ?? null,
+      rated: !!t.rating,
+      unread: opts.markRead ? 0 : side === "user" ? t.unreadByUser : t.unreadByAdmin,
+      otherTyping: !!otherTypingAt && now.getTime() - otherTypingAt.getTime() < TYPING_MS,
+      otherReadAt: otherReadAt?.toISOString() ?? null,
+    },
+    messages: rows.map(view),
+    now: now.toISOString(),
   };
+}
+
+/** Conversation de support d'un pro (première affichage de la page d'aide). */
+export async function getSupportThread(userId: string) {
+  return supportLive(userId, "user");
 }
 
 export async function supportUnread(userId: string) {

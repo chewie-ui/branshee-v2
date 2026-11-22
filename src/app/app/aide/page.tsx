@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Mail, MessageCircle } from "lucide-react";
 import { HelpCenter } from "@/components/help/help-center";
-import { SupportChat } from "@/components/help/support-chat";
+import { ProSupportChat } from "@/components/support/pro-support-chat";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireContext } from "@/server/context";
@@ -35,9 +35,9 @@ export default async function HelpPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <HelpCenter sections={sections} toursTitle={sky ? t("Visites guidées de l'app RDV") : undefined} showTours={!sky || ctx.canApp("rdv")} />
         <div id="contact" className="scroll-mt-6 space-y-6 lg:sticky lg:top-6 lg:self-start">
-          <Card>
-            <CardHeader title={t("Écrire à l'équipe")} description={t("Réponse humaine, souvent dans la journée.")} />
-            <SupportChat initial={thread} firstName={ctx.user.name.split(" ")[0] ?? ""} />
+          <Card className="flex h-[560px] max-h-[80dvh] flex-col overflow-hidden">
+            <CardHeader title={t("Discuter avec l'équipe")} description={t("Chat en direct avec un humain, en général en quelques minutes en journée.")} />
+            <ProSupportChat initial={thread} />
           </Card>
           <Card className="divide-y divide-border">
             <a href={`mailto:${supportEmail}`} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-surface-muted">
