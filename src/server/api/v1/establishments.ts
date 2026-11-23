@@ -8,7 +8,7 @@ import { listMemberships } from "@/server/memberships";
 import { effectivePlan, canUserCreateBusiness } from "@/server/plan";
 import { deletePublicImage } from "@/server/storage";
 import { apiAuth } from "@/server/api/als";
-import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route } from "@/server/api/http";
+import { bool, ensureOk, fail, formData, has, invalid, str, type ApiRequest, type Route, isSuccessRedirect } from "@/server/api/http";
 import { APP_PLAN, needCtx } from "@/server/api/v1/shared";
 import { readPhoto } from "@/server/api/v1/account";
 
@@ -58,7 +58,7 @@ async function create(r: ApiRequest) {
     const res = await createBusinessAction(undefined, formData({ name, businessType: str(r.body.businessType, 120), city: str(r.body.city, 120) }));
     if (res?.error || res?.fieldErrors) return invalid(res.error ?? Object.values(res.fieldErrors ?? {})[0] ?? "Création impossible.");
   } catch (e) {
-    if (!String((e as { digest?: string })?.digest ?? "").startsWith("NEXT_REDIRECT")) throw e;
+    if (!isSuccessRedirect(e)) throw e;
   }
   const [latest] = await db.select().from(businesses).where(and(eq(businesses.ownerId, r.auth!.userId), isNull(businesses.deletedAt))).orderBy(desc(businesses.createdAt)).limit(1);
   if (!latest) return fail(500, "server_error", "Création impossible.");
