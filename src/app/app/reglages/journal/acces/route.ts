@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { customers, recordAccessLogs } from "@/db/schema";
 import { requireContext } from "@/server/context";
 import { logRecordAccess } from "@/server/physio";
-
-const csv = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+import { toCsv } from "@/server/csv";
 
 /** Journal des accès aux dossiers patients (12 derniers mois), en CSV. L'export lui-même est tracé. */
 export async function GET() {
@@ -20,6 +19,7 @@ export async function GET() {
   await logRecordAccess(ctx, null, "export", "Export du journal des accès");
   const label: Record<string, string> = { view: "Consultation", edit: "Modification", export: "Export", print: "Impression" };
   const fmt = new Intl.DateTimeFormat("fr-BE", { timeZone: ctx.business.timezone, dateStyle: "short", timeStyle: "medium" });
-  const body = ["Date;Utilisateur;Patient;Action;Détail", ...rows.map((r) => [fmt.format(r.at), r.user, r.patient ?? "", label[r.action] ?? r.action, r.detail ?? ""].map(csv).join(";"))].join("\r\n");
-  return new Response("﻿" + body, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="journal-acces-dossiers.csv"`, "Cache-Control": "private, no-store" } });
+  // toCsv : cellules protégées contre l'injection de formules (un nom de patient « =HYPERLINK(…) » ne s'exécute pas dans Excel).
+  const body = toCsv(["Date", "Utilisateur", "Patient", "Action", "Détail"], rows.map((r) => [fmt.format(r.at), r.user, r.patient ?? "", label[r.action] ?? r.action, r.detail ?? ""]));
+  return new Response(body, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="journal-acces-dossiers.csv"`, "Cache-Control": "private, no-store" } });
 }

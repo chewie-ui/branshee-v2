@@ -188,6 +188,7 @@ export async function deleteCareEntry(episodeId: string, entryKey: string): Prom
 /** Verrouillage de session après inactivité (minutes ; null = jamais). */
 export async function saveAutoLock(minutes: number | null): Promise<Result> {
   const ctx = await requireContext("settings.manage", { write: true });
+  if (ctx.impersonating) return RO;
   if (minutes != null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 240)) return { ok: false, error: "Durée invalide." };
   await db.update(businesses).set({ autoLockMinutes: minutes }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app");
@@ -242,6 +243,7 @@ export async function deleteCareMeasure(episodeId: string, measureId: string): P
 /** N° INAMI du soignant connecté (en-tête des documents, messages Kmehr). */
 export async function saveMyInami(value: string): Promise<Result> {
   const ctx = await requireContext(undefined, { write: true });
+  if (ctx.impersonating) return RO;
   const v = value.trim();
   if (v && !/^[0-9][0-9 .-]{7,18}$/.test(v)) return { ok: false, error: "N° INAMI invalide (11 chiffres, ex. 5-12345-67-890)." };
   await db.update(members).set({ inami: v || null }).where(eq(members.id, ctx.member.id));
@@ -282,6 +284,7 @@ export async function applyDefaultSessionCode(episodeId: string): Promise<Result
 /** Kiné conventionné ou non (détermine le remboursement de la mutuelle affiché). */
 export async function saveConventioned(value: boolean): Promise<Result> {
   const ctx = await requireContext("settings.manage", { write: true });
+  if (ctx.impersonating) return RO;
   await db.update(businesses).set({ inamiConventioned: value }).where(eq(businesses.id, ctx.business.id));
   revalidatePath("/app/clients");
   return { ok: true, message: value ? "Enregistré : conventionné." : "Enregistré : non conventionné." };

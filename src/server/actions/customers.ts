@@ -173,7 +173,9 @@ export async function deleteCustomerAndLeave(customerId: string) {
  * les coordonnées manquantes sont complétées, puis la fiche en double est supprimée.
  */
 export async function mergeCustomers(targetId: string, sourceId: string): Promise<{ ok: boolean; error?: string }> {
-  const ctx = await requireContext("customers.manage", { app: "clients" });
+  const ctx = await requireContext("customers.manage", { app: "clients", write: true });
+  // Fusion irréversible (une fiche supprimée) : jamais en supervision.
+  if (ctx.impersonating) return { ok: false, error: "Mode supervision : lecture seule." };
   if (targetId === sourceId) return { ok: false, error: "Choisissez une autre fiche." };
   const [target, source] = await Promise.all([ownCustomer(ctx.business.id, targetId), ownCustomer(ctx.business.id, sourceId)]);
   if (!target || !source) return { ok: false, error: "Fiche introuvable." };

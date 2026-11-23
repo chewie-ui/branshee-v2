@@ -14,6 +14,7 @@ import { MODULE_ADDONS, SKYDEV_ADDONS, SKYDEV_NAME, SKYDEV_PLAN, teamQuote, type
 import { requireContext, type AppContext } from "@/server/context";
 import { stripe } from "@/server/payments";
 import { effectivePlan } from "@/server/plan";
+import { isStartedSubscription, oneClickIdempotencyKey } from "@/lib/billing-oneclick";
 
 type Result = { ok: true; message?: string; url?: string } | { ok: false; error: string };
 const log = (ctx: AppContext, action: string, description: string) => db.insert(activityLogs).values({ businessId: ctx.business.id, userId: ctx.user.id, actorName: ctx.user.name, action, description });
@@ -87,14 +88,14 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     client_reference_id: ctx.user.id,
     line_items: [{ price, quantity: users }],
     metadata,
-    // TVA belge 21 % ajoutée aux prix (hors TVA) ; vaut aussi pour les options ajoutées plus tard.
+    // TVA belge 21 % comprise dans les prix (taux « inclusive ») ; vaut aussi pour les options ajoutées plus tard.
     subscription_data: { metadata, default_tax_rates: [await vatRate()] },
     payment_method_collection: "if_required",
     success_url: `${origin}/app/reglages/abonnement/retour?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/reglages/abonnement`,
     locale: "fr",
     // Mentions légales : nom, adresse complète et n° de TVA (entreprises) repris sur la facture.
-    custom_text: { submit: { message: "Indiquez le nom et l'adresse complète à mettre sur la facture. Si vous êtes une entreprise assujettie à la TVA, cochez « J'achète en tant qu'entreprise » et ajoutez votre numéro de TVA. En payant, vous acceptez les conditions d'utilisation de Branshee (branshee.com/conditions-utilisation)." } },
+    custom_text: { submit: { message: `Indiquez le nom et l'adresse complète à mettre sur la facture. Si vous êtes une entreprise assujettie à la TVA, cochez « J'achète en tant qu'entreprise » et ajoutez votre numéro de TVA. En payant, vous acceptez les conditions d'utilisation de ${brand === "skydev" ? "Skydev (skydev.be/conditions-utilisation)" : "Branshee (branshee.com/conditions-utilisation)"}.` } },
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     customer_update: { name: "auto", address: "auto" },
@@ -141,6 +142,8 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
     if (c.deleted || !c.name || !c.address?.line1) return { ok: false, error: "Il manque l'adresse de facturation : complétez vos coordonnées dans Réglages › Factures et cartes (ou choisissez « Payer avec une autre carte »)." };
     const meta = (params.metadata ?? metadata) as Record<string, string>;
     try {
+      // Clé d'idempotence : un double clic (ou deux onglets) ne crée jamais deux abonnements ni deux prélèvements.
+      const idempotencyKey = oneClickIdempotencyKey({ businessId: ctx.business.id, paymentMethodId: pm.id, priceId: price, quantity: users, interval, promoId: promo?.id });
       const sub = await s.subscriptions.create({
         customer,
         items: [{ price, quantity: users }],
@@ -151,11 +154,14 @@ export async function choosePlan(input: { plan: string; interval: string; promo?
         ...(params.subscription_data?.trial_period_days ? { trial_period_days: params.subscription_data.trial_period_days } : {}),
         // Si la banque demande une confirmation (3D Secure), rien n'est créé : on propose alors la page de paiement.
         payment_behavior: "error_if_incomplete",
-      });
+      }, { idempotencyKey });
+      if (!isStartedSubscription(sub.status)) return { ok: false, error: "Le paiement avec cette carte n'a pas abouti. Choisissez « Payer avec une autre carte » pour confirmer chez Stripe." };
       await completeDirectSubscription(sub, meta);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
       console.error("[billing] paiement en un clic :", msg);
+      // Même clé, autres paramètres (code promo : nouveau coupon à chaque envoi) : le premier envoi est déjà en cours.
+      if ((e as { type?: string })?.type === "StripeIdempotencyError") return { ok: false, error: "Ce paiement est déjà en cours : patientez quelques secondes puis rechargez la page." };
       return { ok: false, error: "Le paiement avec cette carte n'a pas abouti (refus ou confirmation demandée par la banque). Choisissez « Payer avec une autre carte » pour confirmer chez Stripe." };
     }
     await log(ctx, "billing.subscribe", `Abonnement ${planName} (${interval === "year" ? "annuel" : "mensuel"}) payé avec la carte enregistrée`);

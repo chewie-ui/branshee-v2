@@ -305,6 +305,9 @@ export async function notifyPeppolInvoice(inv: Stripe.Invoice) {
   if (!inv.customer_tax_ids?.length || inv.metadata?.peppol_alerted) return;
   const s = stripe();
   if (!s || !inv.id) return;
+  // L'événement renvoyé par Stripe (nouvel essai après une erreur) contient l'ancienne facture : relire la marque à jour.
+  const fresh = await s.invoices.retrieve(inv.id).catch(() => null);
+  if (fresh?.metadata?.peppol_alerted) return;
   const to = process.env.SKYDEV_CONTACT_EMAIL || "info@skydev.be";
   const eurs = (c: number) => `${(c / 100).toFixed(2).replace(".", ",")} €`;
   const ht = inv.total_excluding_tax ?? inv.total;
