@@ -1,3 +1,4 @@
+import { poweredByForPublic } from "@/server/referral";
 import { appPagePath } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
   const tx = publicTexts(locale).loyalty;
   const c = await cardByToken((await params).token);
   if (!c) notFound();
-  const [s, moves] = await Promise.all([loyaltySettingsOf(c.businessId), cardHistory(c.id)]);
+  const [s, moves, by] = await Promise.all([loyaltySettingsOf(c.businessId), cardHistory(c.id), poweredByForPublic(c.businessId)]);
   const ready = c.stamps >= s.goal;
   const shown = Math.min(c.stamps, s.goal);
   const theme = resolveLoyaltyTheme(s.theme);
@@ -83,6 +84,7 @@ export default async function PublicLoyaltyCard({ params, searchParams }: { para
         {offers.shop ? <Link href={`/boutique/${c.slug}`} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><ShoppingBag className="size-4" aria-hidden="true" />{tx.order}</Link> : null}
         {offers.rdv ? <Link href={appPagePath(c.slug)} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface text-sm font-medium transition-colors duration-150 hover:bg-surface-muted"><CalendarDays className="size-4" aria-hidden="true" />{tx.book}</Link> : null}
         <p className="text-center text-xs" style={{ color: colors.pageText }}>{tx.keep}</p>
+        {by ? <p className="text-center text-xs" style={{ color: colors.pageText }}>Carte de fidélité par <a href={by.url} className="font-medium underline-offset-2 hover:underline">{by.name}</a></p> : null}
       </div>
     </div>
   );

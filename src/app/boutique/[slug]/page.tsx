@@ -10,6 +10,8 @@ import { db } from "@/db";
 import { businesses, members } from "@/db/schema";
 import { getSessionUser } from "@/server/auth/session";
 import { decodeShopTheme, resolveShopTheme, shopFont, shopVars } from "@/lib/shop-theme";
+import { poweredByForPublic } from "@/server/referral";
+import { PoweredBy } from "@/components/public/powered-by";
 
 export const dynamic = "force-dynamic";
 type Params = Promise<{ slug: string }>;
@@ -35,6 +37,7 @@ export default async function ShopFrontPage({ params, searchParams }: { params: 
   if (!s) notFound();
   const theme = (preview ? decodeShopTheme(sp.theme) : null) ?? resolveShopTheme(s.settings.theme);
   const font = shopFont(theme);
+  const by = await poweredByForPublic(s.business.id);
   return (
     <>
     {font ? <link rel="stylesheet" href={font} /> : null}
@@ -50,6 +53,7 @@ export default async function ShopFrontPage({ params, searchParams }: { params: 
       tx={publicTexts(locale).shop}
       intl={intlLocale(locale)}
     />
+    <PoweredBy by={by} label="Boutique en ligne par" className="pb-28 pt-2" />
     </>
   );
 }

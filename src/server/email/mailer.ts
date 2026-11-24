@@ -48,6 +48,8 @@ async function requestBrand() {
 
 /** La marque de l'établissement concerné passe avant l'adresse visitée (tâches planifiées, emails à l'équipe). */
 async function mailBrand(businessId?: string | null) {
+  // Depuis la bascule (22/11/2026), Branshee est devenu Skydev : tous les emails sont signés Skydev.
+  if (process.env.BRANSHEE_TO_SKYDEV === "1") return "skydev" as const;
   if (businessId) {
     const [b] = await db.select({ brand: businesses.brand }).from(businesses).where(eq(businesses.id, businessId)).catch(() => []);
     if (b?.brand === "skydev" || b?.brand === "branshee") return b.brand;
@@ -58,7 +60,11 @@ async function mailBrand(businessId?: string | null) {
 /** Emails déclenchés depuis Skydev : le nom « Branshee » devient « Skydev » (les liens restent ceux de l'app). */
 function asSkydev(mail: OutgoingEmail): OutgoingEmail {
   const swap = (t: string) => t.replace(/Branshee/g, "Skydev");
-  return { ...mail, subject: swap(mail.subject), html: swap(mail.html), text: swap(mail.text) };
+  // Pied des emails aux clients des pros (« rendez-vous géré avec Skydev ») : le nom devient un lien vers skydev.be,
+  // pour que les clients qui sont eux-mêmes indépendants découvrent Skydev.
+  const link = (h: string) =>
+    h.replace(/(géré avec|managed with|beheerd met|verwaltet mit|gestionada con|gestito con) Skydev/g, '$1 <a href="https://skydev.be/?utm_source=email&amp;utm_medium=footer" style="color:#71717a;text-decoration:underline">Skydev</a>');
+  return { ...mail, subject: swap(mail.subject), html: link(swap(mail.html)), text: swap(mail.text).replace(/(géré avec|managed with) Skydev/g, "$1 Skydev (skydev.be)") };
 }
 
 export async function sendEmail(input: OutgoingEmail): Promise<boolean> {

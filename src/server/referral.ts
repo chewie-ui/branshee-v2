@@ -33,3 +33,10 @@ export async function poweredByFor(businessId: string, brand: { id: string; name
   const code = owner ? await ensureReferralCode(owner.id, owner.name).catch(() => "") : "";
   return { name: brand.name, url: code ? `${base}/inscription?ref=${code}` : base };
 }
+
+/** Même mention pour les autres pages publiques (boutique, carte de fidélité), sauf forfait « sans mention ». */
+export async function poweredByForPublic(businessId: string) {
+  const [{ businessHas }, { currentBrand }] = await Promise.all([import("@/server/plan"), import("@/server/brand")]);
+  if (await businessHas(businessId, "noBranding")) return undefined;
+  return poweredByFor(businessId, await currentBrand());
+}
